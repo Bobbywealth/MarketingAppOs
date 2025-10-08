@@ -1,0 +1,126 @@
+📌 One-Page Spec: Marketing Team App CRM (MTA CRM)
+
+Purpose:
+A custom CRM under the Marketing Team App (MTA) brand designed for digital marketing agencies. It manages clients, campaigns, onboarding intake, lead pipelines, billing, communication, and content approvals — all in one place.
+
+Core Modules
+1. Client Management
+
+Profiles: contact info, socials, project notes.
+
+Contract & document storage.
+
+Tags for service type (social media, lead gen, design, etc.).
+
+History of tasks, campaigns, and communications.
+
+2. Project & Campaign Tracking
+
+Assign tasks with deadlines & progress.
+
+Calendar view for campaigns & deliverables.
+
+Admin/Client dashboard with live campaign status.
+
+3. Communication & Notifications
+
+Internal team chat tied to projects.
+
+Notifications: uploads, approvals, task updates.
+
+Email/SMS reminders for deadlines & meetings.
+
+4. Lead Generation & Sales Pipeline
+
+Kanban pipeline (Lead → Contacted → Proposal → Closed).
+
+Lead scoring (hot/warm/cold).
+
+Automated reminders for follow-ups.
+
+5. Admin & Customization
+
+Roles: Admin, Staff, Client.
+
+Templates (contracts, proposals, invoices).
+
+White-label ready (MTA branding + client branding options).
+
+Extended Modules
+6. Onboarding & Intake Hub
+
+Intake forms for new clients (brand assets, credentials, goals).
+
+“First 30 days” automated checklist.
+
+Auto-assign onboarding tasks to staff.
+
+7. Content Calendar & Approvals
+
+Social media post scheduler (multi-platform).
+
+Client approval workflow before publishing.
+
+Media asset library (logos, graphics, captions).
+
+8. Finance & Billing
+
+Retainer & subscription tracking.
+
+Invoices + payment status (Stripe/PayPal).
+
+Ad spend reconciliation vs. invoices.
+
+9. Support & Ticketing
+
+Ticket submission for client requests.
+
+Priority levels (normal/urgent).
+
+SLA timers for response & resolution.
+
+10. Simple Reports
+
+Weekly/monthly snapshots (leads generated, posts published, tasks done).
+
+Auto-generated PDF/Email exports.
+
+11. Team Management
+
+Assign staff per client/project.
+
+Workload view (who’s busy vs. available).
+
+Private notes (internal only).
+
+12. Security & Compliance
+
+Two-factor login.
+
+Audit logs for all client & doc changes.
+
+Secure storage for client credentials.
+
+Design & UX
+
+Match MTA site branding (blue/orange/clean UI).
+
+Sleek dashboard, Notion/HubSpot style.
+
+Mobile & desktop responsive.
+
+Global search + quick navigation bar.
+
+Tech Stack (Recommended)
+
+Frontend: Next.js / React
+
+Backend: Node.js + Express
+
+Database: MongoDB or PostgreSQL
+
+Payments: Stripe / PayPal API
+
+Auth: JWT + 2FA (Auth0 optional)
+
+Hosting: Render / Vercel
