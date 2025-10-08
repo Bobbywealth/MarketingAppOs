@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Search, Mail, Phone, Globe } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Search, Mail, Phone, Globe, Building2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -63,13 +63,13 @@ export default function Clients() {
 
   if (isLoading) {
     return (
-      <div className="min-h-full bg-muted/30">
-        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+      <div className="min-h-full gradient-mesh">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <Card key={i} className="p-6">
-                <div className="h-16 bg-muted rounded animate-pulse mb-4"></div>
-                <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+              <Card key={i} className="glass p-6">
+                <div className="h-16 bg-muted/50 rounded-lg shimmer mb-4"></div>
+                <div className="h-4 bg-muted/50 rounded w-3/4 shimmer"></div>
               </Card>
             ))}
           </div>
@@ -79,141 +79,180 @@ export default function Clients() {
   }
 
   return (
-    <div className="min-h-full bg-muted/30">
-      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-6">
+    <div className="min-h-full gradient-mesh">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12 space-y-8">
+        {/* Premium Header Section */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Clients</h1>
-            <p className="text-muted-foreground">Manage your client relationships</p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gradient" data-testid="text-page-title">Clients</h1>
+            <p className="text-lg text-muted-foreground">Manage your client relationships</p>
           </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-client">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Client</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateClient} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Client Name *</Label>
-                  <Input id="name" name="name" required data-testid="input-client-name" />
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="shadow-lg hover:shadow-xl transition-all" data-testid="button-add-client">
+                <Plus className="w-5 h-5 mr-2" />
+                Add Client
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl glass-strong">
+              <DialogHeader>
+                <DialogTitle className="text-2xl">Create New Client</DialogTitle>
+                <DialogDescription>Add a new client to your CRM system</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateClient} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Client Name *</Label>
+                    <Input id="name" name="name" required data-testid="input-client-name" className="glass" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company</Label>
+                    <Input id="company" name="company" data-testid="input-company" className="glass" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" data-testid="input-email" className="glass" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" name="phone" data-testid="input-phone" className="glass" />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input id="website" name="website" placeholder="https://" data-testid="input-website" className="glass" />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="serviceTags">Service Tags (comma-separated)</Label>
+                    <Input id="serviceTags" name="serviceTags" placeholder="social media, lead gen, design" data-testid="input-service-tags" className="glass" />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea id="notes" name="notes" rows={3} data-testid="input-notes" className="glass" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company</Label>
-                  <Input id="company" name="company" data-testid="input-company" />
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createClientMutation.isPending} data-testid="button-submit-client" className="shadow-md">
+                    {createClientMutation.isPending ? "Creating..." : "Create Client"}
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" data-testid="input-email" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" data-testid="input-phone" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input id="website" name="website" placeholder="https://" data-testid="input-website" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="serviceTags">Service Tags (comma-separated)</Label>
-                  <Input id="serviceTags" name="serviceTags" placeholder="social media, lead gen, design" data-testid="input-service-tags" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea id="notes" name="notes" data-testid="input-notes" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createClientMutation.isPending} data-testid="button-submit-client">
-                  {createClientMutation.isPending ? "Creating..." : "Create Client"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          placeholder="Search clients..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-          data-testid="input-search-clients"
-        />
-      </div>
+        {/* Search Bar */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search clients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 glass shadow-sm"
+            data-testid="input-search-clients"
+          />
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredClients?.map((client) => (
-          <Card key={client.id} className="p-6 shadow-sm hover:shadow-md transition-all hover-elevate" data-testid={`card-client-${client.id}`}>
-            <div className="flex items-start gap-4 mb-4">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={client.logoUrl || ""} />
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {client.name.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold truncate">{client.name}</h3>
-                {client.company && (
-                  <p className="text-sm text-muted-foreground truncate">{client.company}</p>
+        {/* Premium Client Cards with Stagger Animation */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in">
+          {filteredClients?.map((client) => (
+            <Card 
+              key={client.id} 
+              className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border"
+              data-testid={`card-client-${client.id}`}
+            >
+              {/* Gradient Overlay on Hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              <CardContent className="relative p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="relative">
+                    <Avatar className="h-14 w-14 border-2 border-primary/20 shadow-md">
+                      <AvatarImage src={client.logoUrl || ""} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-lg font-bold">
+                        {client.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-background shadow-sm"></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-primary transition-colors">
+                      {client.name}
+                    </h3>
+                    {client.company && (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Building2 className="w-3.5 h-3.5" />
+                        <span className="truncate">{client.company}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  {client.email && (
+                    <div className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                        <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="truncate text-muted-foreground">{client.email}</span>
+                    </div>
+                  )}
+                  {client.phone && (
+                    <div className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                        <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <span className="truncate text-muted-foreground">{client.phone}</span>
+                    </div>
+                  )}
+                  {client.website && (
+                    <div className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                        <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="truncate text-muted-foreground">{client.website}</span>
+                    </div>
+                  )}
+                </div>
+
+                {client.serviceTags && client.serviceTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-border/50">
+                    {client.serviceTags.map((tag, idx) => (
+                      <Badge 
+                        key={idx} 
+                        variant="secondary" 
+                        className="text-xs font-medium bg-gradient-to-r from-primary/10 to-purple-500/10 hover:from-primary/20 hover:to-purple-500/20 transition-all"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-            <div className="space-y-2 mb-4">
-              {client.email && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="w-3 h-3" />
-                  <span className="truncate">{client.email}</span>
-                </div>
-              )}
-              {client.phone && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="w-3 h-3" />
-                  <span>{client.phone}</span>
-                </div>
-              )}
-              {client.website && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Globe className="w-3 h-3" />
-                  <span className="truncate">{client.website}</span>
-                </div>
-              )}
-            </div>
-
-            {client.serviceTags && client.serviceTags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {client.serviceTags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
-
+        {/* Premium Empty State */}
         {filteredClients?.length === 0 && (
-          <Card className="border-dashed bg-background/60">
+          <Card className="border-dashed border-2 glass-strong">
             <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-primary" />
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6 shadow-lg">
+                <Search className="w-10 h-10 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No Clients Found</h3>
-              <p className="text-muted-foreground max-w-md">
+              <h3 className="text-xl font-semibold mb-2">No Clients Found</h3>
+              <p className="text-muted-foreground max-w-md mb-6">
                 {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first client"}
               </p>
+              {!searchTerm && (
+                <Button onClick={() => setDialogOpen(true)} size="lg" className="shadow-lg">
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Your First Client
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}

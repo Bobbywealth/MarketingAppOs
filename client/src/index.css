@@ -344,16 +344,25 @@
   /* Premium Visual Utilities */
   .glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
   }
 
-  .glass-strong {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
+  /* Glass with blur - use sparingly for performance */
+  @media (min-width: 768px) {
+    .glass-strong {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+    }
+  }
+
+  /* Mobile fallback - no blur for performance */
+  @media (max-width: 767px) {
+    .glass-strong {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+    }
   }
 
   .gradient-mesh {

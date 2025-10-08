@@ -97,8 +97,8 @@ export default function Dashboard() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {metric.title}
                 </CardTitle>
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${metric.iconBg} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                  <metric.icon className={`w-6 h-6 bg-gradient-to-br ${metric.gradientFrom} ${metric.gradientTo} bg-clip-text text-transparent`} style={{WebkitTextFillColor: 'transparent'}} />
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${metric.gradientFrom} ${metric.gradientTo} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                  <metric.icon className="w-6 h-6 text-white" />
                 </div>
               </CardHeader>
               <CardContent className="relative">

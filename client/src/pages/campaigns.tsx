@@ -3,8 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Calendar, DollarSign, Target } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,40 +56,40 @@ export default function Campaigns() {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusGradient = (status: string) => {
     switch (status) {
-      case "active": return "bg-chart-3 text-white";
-      case "planning": return "bg-chart-1 text-white";
-      case "paused": return "bg-chart-4 text-white";
-      case "completed": return "bg-muted text-muted-foreground";
-      default: return "bg-secondary text-secondary-foreground";
+      case "active": return "from-emerald-500 to-teal-500";
+      case "planning": return "from-blue-500 to-cyan-500";
+      case "paused": return "from-amber-500 to-orange-500";
+      case "completed": return "from-slate-400 to-slate-500";
+      default: return "from-slate-400 to-slate-500";
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeGradient = (type: string) => {
     switch (type) {
-      case "social": return "bg-chart-1/10 text-chart-1 border-chart-1/20";
-      case "ads": return "bg-chart-2/10 text-chart-2 border-chart-2/20";
-      case "content": return "bg-chart-3/10 text-chart-3 border-chart-3/20";
-      case "email": return "bg-chart-4/10 text-chart-4 border-chart-4/20";
-      default: return "bg-secondary text-secondary-foreground";
+      case "social": return "from-blue-500/20 to-cyan-500/20";
+      case "ads": return "from-orange-500/20 to-pink-500/20";
+      case "content": return "from-emerald-500/20 to-teal-500/20";
+      case "email": return "from-violet-500/20 to-purple-500/20";
+      default: return "from-slate-400/20 to-slate-500/20";
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-full bg-muted/30">
-        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+      <div className="min-h-full gradient-mesh">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <Card key={i}>
+              <Card key={i} className="glass">
                 <CardHeader>
-                  <div className="h-6 bg-muted rounded w-3/4 animate-pulse"></div>
+                  <div className="h-6 bg-muted/50 rounded w-3/4 shimmer"></div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="h-4 bg-muted rounded animate-pulse"></div>
-                    <div className="h-4 bg-muted rounded w-5/6 animate-pulse"></div>
+                    <div className="h-4 bg-muted/50 rounded shimmer"></div>
+                    <div className="h-4 bg-muted/50 rounded w-5/6 shimmer"></div>
                   </div>
                 </CardContent>
               </Card>
@@ -101,30 +101,31 @@ export default function Campaigns() {
   }
 
   return (
-    <div className="min-h-full bg-muted/30">
-      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-6">
+    <div className="min-h-full gradient-mesh">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12 space-y-8">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Campaigns</h1>
-            <p className="text-muted-foreground">Manage your marketing campaigns</p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Campaigns</h1>
+            <p className="text-lg text-muted-foreground">Manage your marketing campaigns</p>
           </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-add-campaign">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button size="lg" className="shadow-lg hover:shadow-xl transition-all" data-testid="button-add-campaign">
+              <Plus className="w-5 h-5 mr-2" />
               New Campaign
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl glass-strong">
             <DialogHeader>
-              <DialogTitle>Create New Campaign</DialogTitle>
+              <DialogTitle className="text-2xl">Create New Campaign</DialogTitle>
+              <DialogDescription>Set up a new marketing campaign for your client</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateCampaign} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="clientId">Client *</Label>
                   <Select name="clientId" required>
-                    <SelectTrigger data-testid="select-campaign-client">
+                    <SelectTrigger data-testid="select-campaign-client" className="glass">
                       <SelectValue placeholder="Select client" />
                     </SelectTrigger>
                     <SelectContent>
@@ -138,12 +139,12 @@ export default function Campaigns() {
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="name">Campaign Name *</Label>
-                  <Input id="name" name="name" required data-testid="input-campaign-name" />
+                  <Input id="name" name="name" required data-testid="input-campaign-name" className="glass" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="type">Type *</Label>
                   <Select name="type" required>
-                    <SelectTrigger data-testid="select-campaign-type">
+                    <SelectTrigger data-testid="select-campaign-type" className="glass">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -157,7 +158,7 @@ export default function Campaigns() {
                 <div className="space-y-2">
                   <Label htmlFor="status">Status *</Label>
                   <Select name="status" defaultValue="planning">
-                    <SelectTrigger data-testid="select-campaign-status">
+                    <SelectTrigger data-testid="select-campaign-status" className="glass">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -170,30 +171,30 @@ export default function Campaigns() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Start Date</Label>
-                  <Input id="startDate" name="startDate" type="date" data-testid="input-start-date" />
+                  <Input id="startDate" name="startDate" type="date" data-testid="input-start-date" className="glass" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date</Label>
-                  <Input id="endDate" name="endDate" type="date" data-testid="input-end-date" />
+                  <Input id="endDate" name="endDate" type="date" data-testid="input-end-date" className="glass" />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="budget">Budget ($)</Label>
-                  <Input id="budget" name="budget" type="number" data-testid="input-budget" />
+                  <Input id="budget" name="budget" type="number" data-testid="input-budget" className="glass" />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="goals">Goals</Label>
-                  <Textarea id="goals" name="goals" data-testid="input-goals" />
+                  <Textarea id="goals" name="goals" data-testid="input-goals" className="glass" />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" name="description" data-testid="input-description" />
+                  <Textarea id="description" name="description" data-testid="input-description" className="glass" />
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createCampaignMutation.isPending} data-testid="button-submit-campaign">
+                <Button type="submit" disabled={createCampaignMutation.isPending} data-testid="button-submit-campaign" className="shadow-md">
                   {createCampaignMutation.isPending ? "Creating..." : "Create Campaign"}
                 </Button>
               </div>
@@ -202,46 +203,96 @@ export default function Campaigns() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in">
         {campaigns?.map((campaign) => (
-          <Card key={campaign.id} className="hover-elevate transition-shadow" data-testid={`card-campaign-${campaign.id}`}>
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                <Badge className={getStatusColor(campaign.status)} variant="secondary">
+          <Card 
+            key={campaign.id} 
+            className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border"
+            data-testid={`card-campaign-${campaign.id}`}
+          >
+            {/* Gradient Overlay */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${getTypeGradient(campaign.type)} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+            
+            <CardHeader className="relative">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">
+                  {campaign.name}
+                </CardTitle>
+                <Badge className={`bg-gradient-to-r ${getStatusGradient(campaign.status)} text-white shadow-md`}>
                   {campaign.status}
                 </Badge>
               </div>
-              <Badge className={`${getTypeColor(campaign.type)} border w-fit`} variant="outline">
+              <Badge className={`bg-gradient-to-r ${getTypeGradient(campaign.type)} border-0 w-fit shadow-sm`} variant="outline">
                 {campaign.type}
               </Badge>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="relative space-y-4">
               {campaign.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
+                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                   {campaign.description}
                 </p>
               )}
-              {campaign.budget && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Budget: </span>
-                  <span className="font-medium">${campaign.budget.toLocaleString()}</span>
-                </div>
-              )}
-              {campaign.startDate && campaign.endDate && (
-                <div className="text-xs text-muted-foreground">
-                  {new Date(campaign.startDate).toLocaleDateString()} - {new Date(campaign.endDate).toLocaleDateString()}
-                </div>
-              )}
+              
+              <div className="space-y-2">
+                {campaign.budget && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg hover-elevate transition-all">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                      <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Budget</p>
+                      <p className="text-sm font-semibold font-mono">${campaign.budget.toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {campaign.startDate && campaign.endDate && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg hover-elevate transition-all">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Duration</p>
+                      <p className="text-sm font-medium">
+                        {new Date(campaign.startDate).toLocaleDateString()} - {new Date(campaign.endDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {campaign.goals && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg hover-elevate transition-all">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                      <Target className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Goals</p>
+                      <p className="text-sm line-clamp-1">{campaign.goals}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {campaigns?.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No campaigns yet</p>
-        </div>
+        <Card className="border-dashed border-2 glass-strong">
+          <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6 shadow-lg">
+              <Target className="w-10 h-10 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No Campaigns Yet</h3>
+            <p className="text-muted-foreground max-w-md mb-6">
+              Get started by creating your first marketing campaign
+            </p>
+            <Button onClick={() => setDialogOpen(true)} size="lg" className="shadow-lg">
+              <Plus className="w-5 h-5 mr-2" />
+              Create Your First Campaign
+            </Button>
+          </CardContent>
+        </Card>
       )}
       </div>
     </div>
