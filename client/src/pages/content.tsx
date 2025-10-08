@@ -3,8 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Check, X, Calendar, Image } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,14 +61,14 @@ export default function Content() {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusGradient = (status: string) => {
     switch (status) {
-      case "approved": return "bg-chart-3 text-white";
-      case "pending": return "bg-chart-4 text-white";
-      case "rejected": return "bg-destructive text-destructive-foreground";
-      case "published": return "bg-chart-5 text-white";
-      case "draft": return "bg-muted text-muted-foreground";
-      default: return "bg-secondary text-secondary-foreground";
+      case "approved": return "from-emerald-500 to-teal-500";
+      case "pending": return "from-amber-500 to-orange-500";
+      case "rejected": return "from-red-500 to-pink-500";
+      case "published": return "from-purple-500 to-indigo-500";
+      case "draft": return "from-slate-400 to-slate-500";
+      default: return "from-slate-400 to-slate-500";
     }
   };
 
@@ -84,25 +84,28 @@ export default function Content() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="p-6">
-              <div className="space-y-3">
-                <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
-                <div className="h-20 bg-muted rounded animate-pulse"></div>
-                <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
-              </div>
-            </Card>
-          ))}
+      <div className="min-h-full gradient-mesh">
+        <div className="p-6 lg:p-8 xl:p-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="p-6 border-0 shadow-lg">
+                <div className="space-y-3">
+                  <div className="h-4 bg-muted/50 rounded w-3/4 shimmer"></div>
+                  <div className="h-20 bg-muted/50 rounded shimmer"></div>
+                  <div className="h-4 bg-muted/50 rounded w-1/2 shimmer"></div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-full gradient-mesh">
+      <div className="p-6 lg:p-8 xl:p-12 space-y-8">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Content Calendar</h1>
           <p className="text-muted-foreground">Schedule and manage social media content</p>

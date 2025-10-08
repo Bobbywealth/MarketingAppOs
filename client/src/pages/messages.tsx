@@ -52,14 +52,14 @@ export default function Messages() {
   };
 
   return (
-    <div className="p-8 h-[calc(100vh-4rem)]">
-      <div className="h-full flex flex-col">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Team Messages</h1>
-          <p className="text-muted-foreground">Internal communication for projects and clients</p>
+    <div className="min-h-full gradient-mesh h-[calc(100vh-4rem)]">
+      <div className="h-full flex flex-col p-6 lg:p-8 xl:p-12">
+        <div className="mb-6 space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Team Messages</h1>
+          <p className="text-lg text-muted-foreground">Internal communication for projects and clients</p>
         </div>
 
-        <Card className="flex-1 flex flex-col min-h-0">
+        <Card className="flex-1 flex flex-col min-h-0 border-0 shadow-2xl">
           <div className="p-4 border-b">
             <Select value={selectedClient} onValueChange={setSelectedClient}>
               <SelectTrigger data-testid="select-client">

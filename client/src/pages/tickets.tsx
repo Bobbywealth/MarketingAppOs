@@ -3,8 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, AlertCircle, MessageSquare, Clock } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,47 +61,50 @@ export default function Tickets() {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusGradient = (status: string) => {
     switch (status) {
-      case "open": return "bg-chart-4 text-white";
-      case "in_progress": return "bg-chart-1 text-white";
-      case "resolved": return "bg-chart-3 text-white";
-      case "closed": return "bg-muted text-muted-foreground";
-      default: return "bg-secondary text-secondary-foreground";
+      case "open": return "from-amber-500 to-orange-500";
+      case "in_progress": return "from-blue-500 to-cyan-500";
+      case "resolved": return "from-emerald-500 to-teal-500";
+      case "closed": return "from-slate-400 to-slate-500";
+      default: return "from-slate-400 to-slate-500";
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityGradient = (priority: string) => {
     return priority === "urgent" 
-      ? "bg-destructive text-destructive-foreground" 
-      : "bg-secondary text-secondary-foreground";
+      ? "from-red-500 to-orange-500" 
+      : "from-blue-500 to-cyan-500";
   };
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i} className="p-6">
-              <div className="space-y-3">
-                <div className="h-5 bg-muted rounded w-2/3 animate-pulse"></div>
-                <div className="h-4 bg-muted rounded animate-pulse"></div>
-                <div className="h-4 bg-muted rounded w-1/3 animate-pulse"></div>
-              </div>
-            </Card>
-          ))}
+      <div className="min-h-full gradient-mesh">
+        <div className="p-6 lg:p-8 xl:p-12">
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="p-6 border-0 shadow-lg">
+                <div className="space-y-3">
+                  <div className="h-5 bg-muted/50 rounded w-2/3 shimmer"></div>
+                  <div className="h-4 bg-muted/50 rounded shimmer"></div>
+                  <div className="h-4 bg-muted/50 rounded w-1/3 shimmer"></div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Support Tickets</h1>
-          <p className="text-muted-foreground">Manage client support requests</p>
-        </div>
+    <div className="min-h-full gradient-mesh">
+      <div className="p-6 lg:p-8 xl:p-12 space-y-8">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Support Tickets</h1>
+            <p className="text-lg text-muted-foreground">Manage client support requests</p>
+          </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-ticket">

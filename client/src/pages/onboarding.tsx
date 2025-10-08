@@ -30,18 +30,18 @@ export default function Onboarding() {
 
   if (clientsLoading || tasksLoading) {
     return (
-      <div className="min-h-full bg-muted/30">
-        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+      <div className="min-h-full gradient-mesh">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12">
           <div className="space-y-6">
             {[...Array(3)].map((_, i) => (
-              <Card key={i}>
+              <Card key={i} className="border-0 shadow-lg">
                 <CardHeader>
-                  <div className="h-6 bg-muted rounded w-48 animate-pulse"></div>
+                  <div className="h-6 bg-muted/50 rounded w-48 shimmer"></div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="h-4 bg-muted rounded animate-pulse"></div>
-                    <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+                    <div className="h-4 bg-muted/50 rounded shimmer"></div>
+                    <div className="h-4 bg-muted/50 rounded w-3/4 shimmer"></div>
                   </div>
                 </CardContent>
               </Card>
@@ -53,22 +53,22 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-full bg-muted/30">
-      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-6">
+    <div className="min-h-full gradient-mesh">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12 space-y-8">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Client Onboarding</h1>
-            <p className="text-muted-foreground">Track 30-day onboarding progress for new clients</p>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Client Onboarding</h1>
+            <p className="text-lg text-muted-foreground">Track 30-day onboarding progress for new clients</p>
           </div>
         </div>
 
         {onboardingClients.length === 0 ? (
-          <Card className="border-dashed bg-background/60">
+          <Card className="border-dashed border-2 glass-strong">
             <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Users className="w-8 h-8 text-primary" />
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center mb-6 shadow-lg">
+                <Users className="w-10 h-10 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No Active Onboarding</h3>
+              <h3 className="text-xl font-semibold mb-2">No Active Onboarding</h3>
               <p className="text-muted-foreground max-w-md mb-6">
                 When clients are in their 30-day onboarding period, they'll appear here with their progress and tasks.
               </p>
@@ -90,7 +90,7 @@ export default function Onboarding() {
             const progress = getProgress(client.id);
 
             return (
-              <Card key={client.id} data-testid={`card-onboarding-${client.id}`} className="shadow-sm hover:shadow-md transition-shadow">
+              <Card key={client.id} data-testid={`card-onboarding-${client.id}`} className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border">
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">

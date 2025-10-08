@@ -3,8 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, DollarSign, Calendar, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,31 +52,33 @@ export default function Invoices() {
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusGradient = (status: string) => {
     switch (status) {
-      case "paid": return "bg-chart-3 text-white";
-      case "sent": return "bg-chart-1 text-white";
-      case "overdue": return "bg-destructive text-destructive-foreground";
-      case "draft": return "bg-muted text-muted-foreground";
-      default: return "bg-secondary text-secondary-foreground";
+      case "paid": return "from-emerald-500 to-teal-500";
+      case "sent": return "from-blue-500 to-cyan-500";
+      case "overdue": return "from-red-500 to-orange-500";
+      case "draft": return "from-slate-400 to-slate-500";
+      default: return "from-slate-400 to-slate-500";
     }
   };
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i} className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2 flex-1">
-                  <div className="h-5 bg-muted rounded w-32 animate-pulse"></div>
-                  <div className="h-4 bg-muted rounded w-48 animate-pulse"></div>
+      <div className="min-h-full gradient-mesh">
+        <div className="p-6 lg:p-8 xl:p-12">
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="p-6 border-0 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2 flex-1">
+                    <div className="h-5 bg-muted/50 rounded w-32 shimmer"></div>
+                    <div className="h-4 bg-muted/50 rounded w-48 shimmer"></div>
+                  </div>
+                  <div className="h-8 bg-muted/50 rounded w-24 shimmer"></div>
                 </div>
-                <div className="h-8 bg-muted rounded w-24 animate-pulse"></div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -86,12 +88,13 @@ export default function Invoices() {
   const pendingAmount = invoices?.filter(inv => inv.status === "sent").reduce((sum, inv) => sum + inv.amount, 0) || 0;
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Invoices & Billing</h1>
-          <p className="text-muted-foreground">Manage invoices and track payments</p>
-        </div>
+    <div className="min-h-full gradient-mesh">
+      <div className="p-6 lg:p-8 xl:p-12 space-y-8">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Invoices & Billing</h1>
+            <p className="text-lg text-muted-foreground">Manage invoices and track payments</p>
+          </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-invoice">
