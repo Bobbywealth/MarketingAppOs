@@ -36,7 +36,9 @@ import { eq, desc } from "drizzle-orm";
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserRole(userId: string, role: string): Promise<User>;
 
   // Client operations
   getClients(): Promise<Client[]>;
@@ -109,6 +111,10 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -121,6 +127,18 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+    return user;
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) {
+      throw new Error("User not found");
+    }
     return user;
   }
 
