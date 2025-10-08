@@ -12,6 +12,7 @@ import {
   insertInvoiceSchema,
   insertTicketSchema,
   insertMessageSchema,
+  insertClientDocumentSchema,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 
@@ -599,6 +600,68 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Search failed" });
+    }
+  });
+
+  // Client Document routes
+  app.get("/api/clients/:clientId/documents", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const documents = await storage.getClientDocuments(req.params.clientId);
+      res.json(documents);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/documents", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      
+      const requestSchema = insertClientDocumentSchema.omit({ 
+        id: true, 
+        createdAt: true, 
+        objectPath: true, 
+        uploadedBy: true,
+        clientId: true,
+      }).extend({
+        uploadUrl: z.string(),
+      });
+      
+      const validatedData = requestSchema.parse(req.body);
+      
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        validatedData.uploadUrl,
+        {
+          owner: userId,
+          visibility: "private",
+        }
+      );
+
+      const documentData = insertClientDocumentSchema.parse({
+        clientId: req.params.clientId,
+        name: validatedData.name,
+        description: validatedData.description,
+        objectPath: objectPath,
+        fileType: validatedData.fileType,
+        fileSize: validatedData.fileSize,
+        uploadedBy: userId,
+      });
+
+      const document = await storage.createClientDocument(documentData);
+      res.status(201).json(document);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.delete("/api/clients/:clientId/documents/:documentId", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteClientDocument(req.params.documentId);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete document" });
     }
   });
 

@@ -268,6 +268,30 @@ export const onboardingTasksRelations = relations(onboardingTasks, ({ one }) => 
   }),
 }));
 
+// Client Documents table
+export const clientDocuments = pgTable("client_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  objectPath: varchar("object_path").notNull(), // Path to object in storage
+  fileType: varchar("file_type"), // pdf, doc, image, etc
+  fileSize: integer("file_size"), // in bytes
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const clientDocumentsRelations = relations(clientDocuments, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientDocuments.clientId],
+    references: [clients.id],
+  }),
+  uploader: one(users, {
+    fields: [clientDocuments.uploadedBy],
+    references: [users.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const upsertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, updatedAt: true });
@@ -279,6 +303,7 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true,
 export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({ id: true, createdAt: true });
+export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({ id: true, createdAt: true });
 
 // TypeScript types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -310,3 +335,6 @@ export type Message = typeof messages.$inferSelect;
 
 export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
 export type OnboardingTask = typeof onboardingTasks.$inferSelect;
+
+export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
+export type ClientDocument = typeof clientDocuments.$inferSelect;

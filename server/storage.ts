@@ -9,6 +9,7 @@ import {
   tickets,
   messages,
   onboardingTasks,
+  clientDocuments,
   type User,
   type UpsertUser,
   type Client,
@@ -29,6 +30,8 @@ import {
   type InsertMessage,
   type OnboardingTask,
   type InsertOnboardingTask,
+  type ClientDocument,
+  type InsertClientDocument,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -92,6 +95,11 @@ export interface IStorage {
 
   // Onboarding task operations
   getOnboardingTasks(): Promise<OnboardingTask[]>;
+
+  // Client document operations
+  getClientDocuments(clientId: string): Promise<ClientDocument[]>;
+  createClientDocument(document: InsertClientDocument): Promise<ClientDocument>;
+  deleteClientDocument(id: string): Promise<void>;
 
   // Global search
   globalSearch(query: string): Promise<{
@@ -366,6 +374,20 @@ export class DatabaseStorage implements IStorage {
   // Onboarding task operations
   async getOnboardingTasks(): Promise<OnboardingTask[]> {
     return await db.select().from(onboardingTasks).orderBy(onboardingTasks.dueDay);
+  }
+
+  // Client document operations
+  async getClientDocuments(clientId: string): Promise<ClientDocument[]> {
+    return await db.select().from(clientDocuments).where(eq(clientDocuments.clientId, clientId)).orderBy(desc(clientDocuments.createdAt));
+  }
+
+  async createClientDocument(document: InsertClientDocument): Promise<ClientDocument> {
+    const [doc] = await db.insert(clientDocuments).values(document).returning();
+    return doc;
+  }
+
+  async deleteClientDocument(id: string): Promise<void> {
+    await db.delete(clientDocuments).where(eq(clientDocuments.id, id));
   }
 
   // Global search
