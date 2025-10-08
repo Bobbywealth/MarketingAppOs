@@ -493,6 +493,28 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Global search route
+  app.get("/api/search", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const query = req.query.q as string;
+      if (!query || query.trim().length < 2) {
+        return res.json({
+          clients: [],
+          campaigns: [],
+          leads: [],
+          contentPosts: [],
+          invoices: [],
+          tickets: [],
+        });
+      }
+      const results = await storage.globalSearch(query.trim());
+      res.json(results);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Search failed" });
+    }
+  });
+
   // Object storage routes
   app.get("/api/upload-url", isAuthenticated, async (_req: Request, res: Response) => {
     try {

@@ -90,6 +90,16 @@ export interface IStorage {
 
   // Onboarding task operations
   getOnboardingTasks(): Promise<OnboardingTask[]>;
+
+  // Global search
+  globalSearch(query: string): Promise<{
+    clients: Client[];
+    campaigns: Campaign[];
+    leads: Lead[];
+    contentPosts: ContentPost[];
+    invoices: Invoice[];
+    tickets: Ticket[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -338,6 +348,41 @@ export class DatabaseStorage implements IStorage {
   // Onboarding task operations
   async getOnboardingTasks(): Promise<OnboardingTask[]> {
     return await db.select().from(onboardingTasks).orderBy(onboardingTasks.dueDay);
+  }
+
+  // Global search
+  async globalSearch(query: string) {
+    const searchTerm = `%${query.toLowerCase()}%`;
+
+    const [clientResults, campaignResults, leadResults, contentResults, invoiceResults, ticketResults] = await Promise.all([
+      db.select().from(clients).where(
+        sql`LOWER(${clients.name}) LIKE ${searchTerm} OR LOWER(${clients.email}) LIKE ${searchTerm} OR LOWER(${clients.company}) LIKE ${searchTerm}`
+      ).limit(5),
+      db.select().from(campaigns).where(
+        sql`LOWER(${campaigns.name}) LIKE ${searchTerm} OR LOWER(${campaigns.description}) LIKE ${searchTerm}`
+      ).limit(5),
+      db.select().from(leads).where(
+        sql`LOWER(${leads.name}) LIKE ${searchTerm} OR LOWER(${leads.email}) LIKE ${searchTerm} OR LOWER(${leads.company}) LIKE ${searchTerm}`
+      ).limit(5),
+      db.select().from(contentPosts).where(
+        sql`LOWER(${contentPosts.title}) LIKE ${searchTerm}`
+      ).limit(5),
+      db.select().from(invoices).where(
+        sql`LOWER(${invoices.invoiceNumber}) LIKE ${searchTerm}`
+      ).limit(5),
+      db.select().from(tickets).where(
+        sql`LOWER(${tickets.subject}) LIKE ${searchTerm} OR LOWER(${tickets.description}) LIKE ${searchTerm}`
+      ).limit(5)
+    ]);
+
+    return {
+      clients: clientResults,
+      campaigns: campaignResults,
+      leads: leadResults,
+      contentPosts: contentResults,
+      invoices: invoiceResults,
+      tickets: ticketResults,
+    };
   }
 }
 

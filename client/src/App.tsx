@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { useAuth } from "@/hooks/useAuth";
 
 import Landing from "@/pages/landing";
@@ -84,8 +85,11 @@ function AppContent() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between px-4 py-3 border-b bg-background">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <header className="flex items-center justify-between gap-4 px-4 py-3 border-b bg-background">
+              <div className="flex items-center gap-2 flex-1">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <GlobalSearch />
+              </div>
               <ThemeToggle />
             </header>
             <main className="flex-1 overflow-auto">
