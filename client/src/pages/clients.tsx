@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -63,26 +63,29 @@ export default function Clients() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="p-6">
-              <div className="h-16 bg-muted rounded animate-pulse mb-4"></div>
-              <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
-            </Card>
-          ))}
+      <div className="min-h-full bg-muted/30">
+        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="p-6">
+                <div className="h-16 bg-muted rounded animate-pulse mb-4"></div>
+                <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Clients</h1>
-          <p className="text-muted-foreground">Manage your client relationships</p>
-        </div>
+    <div className="min-h-full bg-muted/30">
+      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Clients</h1>
+            <p className="text-muted-foreground">Manage your client relationships</p>
+          </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-client">
@@ -151,7 +154,7 @@ export default function Clients() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredClients?.map((client) => (
-          <Card key={client.id} className="p-6 hover-elevate transition-shadow" data-testid={`card-client-${client.id}`}>
+          <Card key={client.id} className="p-6 shadow-sm hover:shadow-md transition-all hover-elevate" data-testid={`card-client-${client.id}`}>
             <div className="flex items-start gap-4 mb-4">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={client.logoUrl || ""} />
@@ -201,11 +204,20 @@ export default function Clients() {
         ))}
       </div>
 
-      {filteredClients?.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No clients found</p>
-        </div>
-      )}
+        {filteredClients?.length === 0 && (
+          <Card className="border-dashed bg-background/60">
+            <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Search className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No Clients Found</h3>
+              <p className="text-muted-foreground max-w-md">
+                {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first client"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

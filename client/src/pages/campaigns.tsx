@@ -78,33 +78,36 @@ export default function Campaigns() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-6 bg-muted rounded w-3/4 animate-pulse"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-4 bg-muted rounded animate-pulse"></div>
-                  <div className="h-4 bg-muted rounded w-5/6 animate-pulse"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="min-h-full bg-muted/30">
+        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <div className="h-6 bg-muted rounded w-3/4 animate-pulse"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-5/6 animate-pulse"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Campaigns</h1>
-          <p className="text-muted-foreground">Manage your marketing campaigns</p>
-        </div>
+    <div className="min-h-full bg-muted/30">
+      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Campaigns</h1>
+            <p className="text-muted-foreground">Manage your marketing campaigns</p>
+          </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-campaign">
@@ -240,6 +243,7 @@ export default function Campaigns() {
           <p className="text-muted-foreground">No campaigns yet</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

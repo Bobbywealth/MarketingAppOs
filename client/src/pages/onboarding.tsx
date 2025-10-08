@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Circle, Users, Plus } from "lucide-react";
 import type { Client, OnboardingTask } from "@shared/schema";
 
 export default function Onboarding() {
@@ -29,62 +30,90 @@ export default function Onboarding() {
 
   if (clientsLoading || tasksLoading) {
     return (
-      <div className="p-8">
-        <div className="space-y-6">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <div className="h-6 bg-muted rounded w-48 animate-pulse"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="h-4 bg-muted rounded animate-pulse"></div>
-                  <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="min-h-full bg-muted/30">
+        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+          <div className="space-y-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <div className="h-6 bg-muted rounded w-48 animate-pulse"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Client Onboarding</h1>
-        <p className="text-muted-foreground">Track 30-day onboarding progress for new clients</p>
-      </div>
+    <div className="min-h-full bg-muted/30">
+      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Client Onboarding</h1>
+            <p className="text-muted-foreground">Track 30-day onboarding progress for new clients</p>
+          </div>
+        </div>
 
-      {onboardingClients.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground py-8">
-              No clients currently in onboarding
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
+        {onboardingClients.length === 0 ? (
+          <Card className="border-dashed bg-background/60">
+            <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No Active Onboarding</h3>
+              <p className="text-muted-foreground max-w-md mb-6">
+                When clients are in their 30-day onboarding period, they'll appear here with their progress and tasks.
+              </p>
+              <div className="flex gap-3">
+                <Button variant="outline" size="sm" data-testid="button-view-clients">
+                  View All Clients
+                </Button>
+                <Button size="sm" data-testid="button-add-client">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Client
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
         <div className="space-y-6">
           {onboardingClients.map((client) => {
             const tasks = getClientTasks(client.id);
             const progress = getProgress(client.id);
 
             return (
-              <Card key={client.id} data-testid={`card-onboarding-${client.id}`}>
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-4">
-                    <CardTitle className="text-xl">{client.name}</CardTitle>
-                    <Badge variant="secondary" className="bg-chart-1/10 text-chart-1">
+              <Card key={client.id} data-testid={`card-onboarding-${client.id}`} className="shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white font-semibold text-sm">
+                        {client.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl mb-1">{client.name}</CardTitle>
+                        {client.company && (
+                          <p className="text-sm text-muted-foreground">{client.company}</p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                       Day {tasks[0]?.dueDay || 1} of 30
                     </Badge>
                   </div>
-                  <div className="space-y-2 pt-2">
+                  <div className="space-y-2 pt-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Onboarding Progress</span>
-                      <span className="font-medium">{progress}%</span>
+                      <span className="font-semibold text-primary">{progress}%</span>
                     </div>
-                    <Progress value={progress} className="h-2" />
+                    <Progress value={progress} className="h-2.5" />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -122,6 +151,7 @@ export default function Onboarding() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }
