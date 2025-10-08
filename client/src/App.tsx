@@ -21,17 +21,7 @@ import Onboarding from "@/pages/onboarding";
 import Messages from "@/pages/messages";
 import NotFound from "@/pages/not-found";
 
-function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
-
+function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
     <Switch>
       {!isAuthenticated ? (
@@ -74,7 +64,7 @@ function AppContent() {
     return (
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <Router isAuthenticated={isAuthenticated} />
       </TooltipProvider>
     );
   }
@@ -93,7 +83,7 @@ function AppContent() {
               <ThemeToggle />
             </header>
             <main className="flex-1 overflow-auto">
-              <Router />
+              <Router isAuthenticated={isAuthenticated} />
             </main>
           </div>
         </div>
