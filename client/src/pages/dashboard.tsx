@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Dashboard() {
@@ -14,7 +14,9 @@ export default function Dashboard() {
       change: "+12%",
       changeType: "positive" as const,
       icon: Users,
-      color: "text-chart-1",
+      gradientFrom: "from-blue-500",
+      gradientTo: "to-cyan-500",
+      iconBg: "from-blue-500/20 to-cyan-500/20",
     },
     {
       title: "Active Campaigns",
@@ -22,7 +24,9 @@ export default function Dashboard() {
       change: "+8%",
       changeType: "positive" as const,
       icon: Megaphone,
-      color: "text-chart-2",
+      gradientFrom: "from-orange-500",
+      gradientTo: "to-pink-500",
+      iconBg: "from-orange-500/20 to-pink-500/20",
     },
     {
       title: "Pipeline Value",
@@ -30,7 +34,9 @@ export default function Dashboard() {
       change: "+23%",
       changeType: "positive" as const,
       icon: TrendingUp,
-      color: "text-chart-3",
+      gradientFrom: "from-emerald-500",
+      gradientTo: "to-teal-500",
+      iconBg: "from-emerald-500/20 to-teal-500/20",
     },
     {
       title: "Revenue (MTD)",
@@ -38,22 +44,24 @@ export default function Dashboard() {
       change: "-5%",
       changeType: "negative" as const,
       icon: DollarSign,
-      color: "text-chart-4",
+      gradientFrom: "from-violet-500",
+      gradientTo: "to-purple-500",
+      iconBg: "from-violet-500/20 to-purple-500/20",
     },
   ];
 
   if (isLoading) {
     return (
-      <div className="min-h-full bg-muted/30">
-        <div className="max-w-7xl mx-auto p-4 lg:p-8">
+      <div className="min-h-full gradient-mesh">
+        <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
-              <Card key={i}>
+              <Card key={i} className="glass">
                 <CardHeader className="pb-2">
-                  <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                  <div className="h-4 bg-muted/50 rounded w-24 shimmer"></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-8 bg-muted rounded w-16 animate-pulse"></div>
+                  <div className="h-8 bg-muted/50 rounded w-16 shimmer"></div>
                 </CardContent>
               </Card>
             ))}
@@ -64,30 +72,45 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-full bg-muted/30">
-      <div className="max-w-7xl mx-auto p-4 lg:p-8 space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2" data-testid="text-page-title">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's your agency overview</p>
+    <div className="min-h-full gradient-mesh">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12 space-y-8">
+        {/* Premium Header */}
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
+            Dashboard
+          </h1>
+          <p className="text-lg text-muted-foreground">Welcome back! Here's your agency overview</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Premium Metric Cards with Stagger Animation */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-fade-in">
           {metrics.map((metric) => (
-            <Card key={metric.title} className="shadow-sm hover:shadow-md transition-all hover-elevate">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+            <Card 
+              key={metric.title} 
+              className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift gradient-border"
+              data-testid={`card-metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              {/* Gradient Background Overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${metric.iconBg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+              
+              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {metric.title}
                 </CardTitle>
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-orange-500/10 flex items-center justify-center`}>
-                  <metric.icon className={`w-5 h-5 ${metric.color}`} />
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${metric.iconBg} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}>
+                  <metric.icon className={`w-6 h-6 bg-gradient-to-br ${metric.gradientFrom} ${metric.gradientTo} bg-clip-text text-transparent`} style={{WebkitTextFillColor: 'transparent'}} />
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative">
                 <div className="flex items-end justify-between">
-                  <div className="text-3xl font-bold tracking-tight" data-testid={`metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <div className="text-4xl font-bold tracking-tight font-mono" data-testid={`metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
                     {metric.value}
                   </div>
-                  <div className={`flex items-center gap-0.5 text-sm font-medium ${metric.changeType === 'positive' ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-500'}`}>
+                  <div className={`flex items-center gap-0.5 text-sm font-semibold px-2.5 py-1 rounded-full ${
+                    metric.changeType === 'positive' 
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  }`}>
                     {metric.changeType === 'positive' ? (
                       <ArrowUpRight className="w-4 h-4" />
                     ) : (
@@ -101,49 +124,79 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Activity Sections with Premium Design */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="shadow-sm">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
-            </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {stats?.recentActivity?.map((activity: any, index: number) => (
-                <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                  <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{activity.title}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
+          {/* Recent Activity */}
+          <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-primary" />
                 </div>
-              )) || (
-                <p className="text-sm text-muted-foreground">No recent activity</p>
+                <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {stats?.recentActivity?.length > 0 ? (
+                <div className="space-y-4">
+                  {stats.recentActivity.map((activity: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg hover-elevate transition-all">
+                      <div className={`w-2 h-2 rounded-full mt-2 ${
+                        activity.type === 'success' ? 'bg-emerald-500' : 
+                        activity.type === 'warning' ? 'bg-amber-500' : 'bg-primary'
+                      }`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{activity.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mx-auto mb-4">
+                    <Activity className="w-8 h-8 text-primary/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">No recent activity</p>
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-          <Card className="shadow-sm">
-            <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">Upcoming Deadlines</CardTitle>
-            </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {stats?.upcomingDeadlines?.map((deadline: any, index: number) => (
-                <div key={index} className="flex items-start justify-between gap-3 pb-3 border-b last:border-0">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{deadline.task}</p>
-                    <p className="text-xs text-muted-foreground">{deadline.client}</p>
-                  </div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {deadline.dueDate}
-                  </div>
+          {/* Upcoming Deadlines */}
+          <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-orange-500/5 via-transparent to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-pink-500/20 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-orange-500" />
                 </div>
-              )) || (
-                <p className="text-sm text-muted-foreground">No upcoming deadlines</p>
+                <CardTitle className="text-xl font-semibold">Upcoming Deadlines</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {stats?.upcomingDeadlines?.length > 0 ? (
+                <div className="space-y-4">
+                  {stats.upcomingDeadlines.map((deadline: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg hover-elevate transition-all">
+                      <div className={`w-2 h-2 rounded-full mt-2 ${
+                        deadline.urgent ? 'bg-rose-500 pulse-glow' : 'bg-amber-500'
+                      }`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{deadline.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{deadline.date}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500/10 to-pink-500/10 flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-8 h-8 text-orange-500/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">No upcoming deadlines</p>
+                </div>
               )}
-            </div>
-          </CardContent>
+            </CardContent>
           </Card>
         </div>
       </div>

@@ -91,6 +91,15 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
+  /* Premium Visual Effects */
+  --orange: 25 95% 53%;
+  --purple: 250 70% 60%;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 60% / 0.2) 0px, transparent 50%),
+                   radial-gradient(at 100% 100%, hsl(25 95% 53% / 0.15) 0px, transparent 50%);
+  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+
   /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
 
   /* Fallback for older browsers */
@@ -203,6 +212,12 @@
   --shadow-xl: 0px 20px 25px -5px hsl(0 0% 0% / 0.42), 0px 10px 15px -7px hsl(0 0% 0% / 0.32);
   --shadow-2xl: 0px 25px 50px -12px hsl(0 0% 0% / 0.50);
 
+  /* Premium Visual Effects - Dark Mode */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 70% / 0.15) 0px, transparent 50%),
+                   radial-gradient(at 100% 100%, hsl(25 95% 65% / 0.1) 0px, transparent 50%);
+  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
 }
 
 @layer base {
@@ -324,5 +339,147 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Premium Visual Utilities */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .glass-strong {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+  }
+
+  .gradient-mesh {
+    background-image: var(--gradient-mesh);
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--shimmer-gradient);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--orange)));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .gradient-border:hover::before {
+    opacity: 1;
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--orange)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-purple {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--purple)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .card-hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 
+      0 10px 20px -4px hsl(var(--primary) / 0.15),
+      0 6px 12px -6px hsl(var(--primary) / 0.1);
+  }
+
+  .gradient-bg-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--purple)));
+  }
+
+  .gradient-bg-orange {
+    background: linear-gradient(135deg, hsl(var(--orange)), hsl(25 95% 63%));
+  }
+
+  .gradient-bg-success {
+    background: linear-gradient(135deg, hsl(var(--chart-3)), hsl(142 71% 55%));
+  }
+
+  .icon-gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--purple) / 0.05));
+  }
+
+  /* Stagger animation for children */
+  .stagger-fade-in > * {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease forwards;
+  }
+
+  .stagger-fade-in > *:nth-child(1) { animation-delay: 0.05s; }
+  .stagger-fade-in > *:nth-child(2) { animation-delay: 0.1s; }
+  .stagger-fade-in > *:nth-child(3) { animation-delay: 0.15s; }
+  .stagger-fade-in > *:nth-child(4) { animation-delay: 0.2s; }
+  .stagger-fade-in > *:nth-child(5) { animation-delay: 0.25s; }
+  .stagger-fade-in > *:nth-child(6) { animation-delay: 0.3s; }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Pulse animation for important items */
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 20px 4px hsl(var(--primary) / 0.2);
+    }
   }
 }
