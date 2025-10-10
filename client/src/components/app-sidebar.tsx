@@ -22,6 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -110,16 +111,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
+      <SidebarHeader className="flex items-center justify-center py-4">
+        <img 
+          src={mtaLogo} 
+          alt="Marketing Team App" 
+          className="h-16 w-auto"
+          data-testid="img-logo"
+        />
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <div className="px-4 py-6 mb-4">
-            <img 
-              src={mtaLogo} 
-              alt="Marketing Team App" 
-              className="h-24 w-auto"
-              data-testid="img-logo"
-            />
-          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredMenuItems.map((item) => (
