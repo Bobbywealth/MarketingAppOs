@@ -67,10 +67,11 @@ Preferred communication style: Simple, everyday language.
 
 **Primary Database (PostgreSQL):**
 - **Schema Design:** Normalized relational model with foreign key relationships
-- **Key Tables:** users, clients, campaigns, tasks, taskComments, leads, contentPosts, invoices, tickets, messages, onboardingTasks, clientDocuments, sessions
+- **Key Tables:** users, clients (with Stripe integration fields: stripeCustomerId, stripeSubscriptionId), campaigns, tasks, taskComments, leads, contentPosts, invoices, tickets, messages, onboardingTasks, clientDocuments, sessions
 - **Relationships:** One-to-many (client→campaigns, client→leads, task→taskComments) and many-to-many via junction patterns
 - **Timestamps:** Automatic created_at/updated_at tracking on all entities
 - **Data Types:** Extensive use of JSONB for flexible metadata and arrays for tags/categories
+- **Stripe Integration:** Client records link to Stripe customers and subscriptions for billing automation
 
 **File Storage (Google Cloud Storage):**
 - **Object Storage Service** abstraction layer for file uploads
@@ -109,8 +110,14 @@ Preferred communication style: Simple, everyday language.
 - **Neon Database:** Serverless PostgreSQL with WebSocket support for connection pooling
 - **Replit Infrastructure:** OIDC authentication provider, sidecar service for secrets management
 
-**Payment Processing (Future/Partial):**
-- **Stripe:** Integration scaffolded with @stripe/stripe-js and @stripe/react-stripe-js
+**Payment Processing:**
+- **Stripe:** Full subscription tracking integration
+  - Secure API endpoints for subscription data retrieval
+  - Monthly Recurring Revenue (MRR) calculation with proper handling of quantities and billing intervals
+  - Customer data sanitization to prevent PII leakage
+  - Subscription status tracking linked to client records via stripeCustomerId and stripeSubscriptionId fields
+  - Dashboard metrics showing active subscriptions count and total MRR
+  - Invoices page displays active subscriptions with client name matching
 
 **Third-Party Libraries:**
 - **Radix UI:** Accessible component primitives (accordion, dialog, dropdown, popover, etc.)
