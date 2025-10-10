@@ -2,7 +2,7 @@
 
 ## Overview
 
-Marketing Team App CRM (MTA CRM) is a comprehensive customer relationship management system designed specifically for digital marketing agencies. The application manages the complete client lifecycle including client profiles, campaign tracking, lead pipeline management, content approval workflows, invoicing, ticket support, onboarding processes, and team communication.
+Marketing Team App CRM (MTA CRM) is a comprehensive customer relationship management system designed specifically for digital marketing agencies. The application manages the complete client lifecycle including client profiles, campaign tracking, lead pipeline management, content approval workflows, invoicing, ticket support, task management with team collaboration, onboarding processes, and team communication.
 
 The system is built as a modern full-stack web application with a React-based frontend and Express.js backend, featuring real-time data synchronization, role-based access control, and a premium glass morphism design system.
 
@@ -67,8 +67,8 @@ Preferred communication style: Simple, everyday language.
 
 **Primary Database (PostgreSQL):**
 - **Schema Design:** Normalized relational model with foreign key relationships
-- **Key Tables:** users, clients, campaigns, tasks, leads, contentPosts, invoices, tickets, messages, onboardingTasks, clientDocuments, sessions
-- **Relationships:** One-to-many (client→campaigns, client→leads) and many-to-many via junction patterns
+- **Key Tables:** users, clients, campaigns, tasks, taskComments, leads, contentPosts, invoices, tickets, messages, onboardingTasks, clientDocuments, sessions
+- **Relationships:** One-to-many (client→campaigns, client→leads, task→taskComments) and many-to-many via junction patterns
 - **Timestamps:** Automatic created_at/updated_at tracking on all entities
 - **Data Types:** Extensive use of JSONB for flexible metadata and arrays for tags/categories
 
