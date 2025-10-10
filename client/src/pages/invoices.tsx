@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign, Calendar, FileText } from "lucide-react";
+import { Plus, DollarSign, Calendar, FileText, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,12 @@ export default function Invoices() {
 
   const { data: clients } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+  });
+
+  const { data: stripeData } = useQuery({
+    queryKey: ["/api/stripe/subscriptions"],
+    retry: false,
+    meta: { returnNull: true },
   });
 
   const createInvoiceMutation = useMutation({
@@ -62,6 +68,16 @@ export default function Invoices() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "paid": return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+      case "sent": return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
+      case "overdue": return "bg-red-500/10 text-red-700 dark:text-red-400";
+      case "draft": return "bg-slate-500/10 text-slate-700 dark:text-slate-400";
+      default: return "bg-slate-500/10 text-slate-700 dark:text-slate-400";
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-full gradient-mesh">
@@ -86,6 +102,14 @@ export default function Invoices() {
 
   const totalRevenue = invoices?.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + inv.amount, 0) || 0;
   const pendingAmount = invoices?.filter(inv => inv.status === "sent").reduce((sum, inv) => sum + inv.amount, 0) || 0;
+
+  // Create a map of Stripe customer IDs to client names
+  const customerIdToClient = new Map();
+  clients?.forEach(client => {
+    if (client.stripeCustomerId) {
+      customerIdToClient.set(client.stripeCustomerId, client.name);
+    }
+  });
 
   return (
     <div className="min-h-full gradient-mesh">
@@ -198,7 +222,57 @@ export default function Invoices() {
         </Card>
       </div>
 
+      {/* Active Subscriptions Section */}
+      {stripeData && stripeData.activeSubscriptions > 0 && (
+        <Card className="glass-strong">
+          <CardHeader className="border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-semibold">Active Subscriptions</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">Recurring revenue from Stripe</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Monthly Recurring Revenue</p>
+                <p className="text-2xl font-bold text-primary" data-testid="metric-subscription-mrr">${stripeData.mrr.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              {stripeData.subscriptions
+                .filter((sub: any) => sub.status === 'active')
+                .slice(0, 10)
+                .map((sub: any) => (
+                  <div key={sub.id} className="flex items-center justify-between p-3 rounded-lg hover-elevate transition-all" data-testid={`subscription-${sub.id}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {customerIdToClient.get(sub.customerId) || sub.customerId.slice(0, 25) + '...'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {sub.cancelAtPeriodEnd ? 'Canceling' : 'Active'} • Renews {new Date(sub.currentPeriodEnd * 1000).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">${sub.amount.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">/{sub.interval}</p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="space-y-4">
+        <h2 className="text-2xl font-semibold">One-Time Invoices</h2>
         {invoices?.map((invoice) => (
           <Card key={invoice.id} className="hover-elevate transition-shadow" data-testid={`card-invoice-${invoice.id}`}>
             <CardContent className="pt-6">
