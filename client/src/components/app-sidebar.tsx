@@ -10,6 +10,7 @@ import {
   MessageSquare,
   LogOut
 } from "lucide-react";
+import mtaLogo from "@assets/mta-logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -104,9 +105,14 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-lg font-semibold text-primary px-4 py-3">
-            MTA CRM
-          </SidebarGroupLabel>
+          <div className="px-4 py-4 mb-2">
+            <img 
+              src={mtaLogo} 
+              alt="Marketing Team App" 
+              className="h-10 w-auto"
+              data-testid="img-logo"
+            />
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredMenuItems.map((item) => (
