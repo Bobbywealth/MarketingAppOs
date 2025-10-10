@@ -105,16 +105,17 @@ export default function Tickets() {
             <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Support Tickets</h1>
             <p className="text-lg text-muted-foreground">Manage client support requests</p>
           </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-ticket">
               <Plus className="w-4 h-4 mr-2" />
               New Ticket
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl glass-strong">
             <DialogHeader>
-              <DialogTitle>Create Support Ticket</DialogTitle>
+              <DialogTitle className="text-2xl">Create Support Ticket</DialogTitle>
+              <DialogDescription>Create a new support ticket for client assistance</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateTicket} className="space-y-4">
               <div className="space-y-4">
@@ -231,6 +232,7 @@ export default function Tickets() {
           <p className="text-muted-foreground">No support tickets</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

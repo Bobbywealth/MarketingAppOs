@@ -106,20 +106,21 @@ export default function Content() {
     <div className="min-h-full gradient-mesh">
       <div className="p-6 lg:p-8 xl:p-12 space-y-8">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold mb-2" data-testid="text-page-title">Content Calendar</h1>
-          <p className="text-muted-foreground">Schedule and manage social media content</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Content Calendar</h1>
+            <p className="text-lg text-muted-foreground">Schedule and manage social media content</p>
+          </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-post">
               <Plus className="w-4 h-4 mr-2" />
               New Post
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl glass-strong">
             <DialogHeader>
-              <DialogTitle>Create Content Post</DialogTitle>
+              <DialogTitle className="text-2xl">Create Content Post</DialogTitle>
+              <DialogDescription>Schedule a new social media post for your client</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreatePost} className="space-y-4">
               <div className="space-y-4">
@@ -228,6 +229,7 @@ export default function Content() {
           <p className="text-muted-foreground">No content posts yet</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

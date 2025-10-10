@@ -119,16 +119,17 @@ export default function Pipeline() {
             <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Sales Pipeline</h1>
             <p className="text-lg text-muted-foreground">Track leads through your sales process</p>
           </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-lead">
               <Plus className="w-4 h-4 mr-2" />
               Add Lead
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl glass-strong">
             <DialogHeader>
-              <DialogTitle>Create New Lead</DialogTitle>
+              <DialogTitle className="text-2xl">Create New Lead</DialogTitle>
+              <DialogDescription>Add a new lead to your sales pipeline</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateLead} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -203,10 +204,13 @@ export default function Pipeline() {
       <div className="flex gap-4 overflow-x-auto pb-4">
         {leadsByStage.map((stage) => (
           <div key={stage.id} className="flex-shrink-0 w-80">
-            <Card>
+            <Card className="border-0 shadow-lg">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-medium">{stage.label}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${stage.gradient} shadow-md`}></div>
+                    <CardTitle className="text-base font-semibold">{stage.label}</CardTitle>
+                  </div>
                   <Badge variant="secondary" className="font-mono">
                     {stage.leads.length}
                   </Badge>
@@ -216,13 +220,13 @@ export default function Pipeline() {
                 {stage.leads.map((lead) => (
                   <Card
                     key={lead.id}
-                    className="p-4 hover-elevate cursor-pointer transition-shadow"
+                    className="p-4 hover-elevate cursor-pointer transition-all border-0 bg-card/50"
                     data-testid={`card-lead-${lead.id}`}
                   >
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-medium text-sm">{lead.name}</h4>
-                        <Badge className={getScoreColor(lead.score)} variant="secondary">
+                        <Badge className={`bg-gradient-to-r ${getScoreGradient(lead.score)} text-white shadow-md`}>
                           {lead.score}
                         </Badge>
                       </div>
@@ -249,6 +253,7 @@ export default function Pipeline() {
             </Card>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

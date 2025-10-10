@@ -95,16 +95,17 @@ export default function Invoices() {
             <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Invoices & Billing</h1>
             <p className="text-lg text-muted-foreground">Manage invoices and track payments</p>
           </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-invoice">
               <Plus className="w-4 h-4 mr-2" />
               New Invoice
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl glass-strong">
             <DialogHeader>
-              <DialogTitle>Create New Invoice</DialogTitle>
+              <DialogTitle className="text-2xl">Create New Invoice</DialogTitle>
+              <DialogDescription>Generate a new invoice for your client</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateInvoice} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -237,6 +238,7 @@ export default function Invoices() {
           <p className="text-muted-foreground">No invoices yet</p>
         </div>
       )}
+      </div>
     </div>
   );
 }
