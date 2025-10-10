@@ -13,6 +13,7 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
+import Tasks from "@/pages/tasks";
 import Pipeline from "@/pages/pipeline";
 import Content from "@/pages/content";
 import Invoices from "@/pages/invoices";
@@ -31,6 +32,7 @@ function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
           <Route path="/" component={Dashboard} />
           <Route path="/clients" component={Clients} />
           <Route path="/campaigns" component={Campaigns} />
+          <Route path="/tasks" component={Tasks} />
           <Route path="/pipeline" component={Pipeline} />
           <Route path="/content" component={Content} />
           <Route path="/invoices" component={Invoices} />

@@ -7,6 +7,7 @@ import {
   insertClientSchema,
   insertCampaignSchema,
   insertTaskSchema,
+  insertTaskCommentSchema,
   insertLeadSchema,
   insertContentPostSchema,
   insertInvoiceSchema,
@@ -230,6 +231,32 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Task comment routes
+  app.get("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const comments = await storage.getTaskComments(req.params.taskId);
+      res.json(comments);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch task comments" });
+    }
+  });
+
+  app.post("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const validatedData = insertTaskCommentSchema.parse({
+        ...req.body,
+        taskId: req.params.taskId,
+        userId: user.claims.sub,
+      });
+      const comment = await storage.createTaskComment(validatedData);
+      res.status(201).json(comment);
+    } catch (error) {
+      handleValidationError(error, res);
     }
   });
 
@@ -550,8 +577,8 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // User management routes (admin only)
-  app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+  // User management routes (staff and admin only)
+  app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);

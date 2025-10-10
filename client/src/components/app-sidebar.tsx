@@ -1,7 +1,8 @@
 import { 
   LayoutDashboard, 
   Users, 
-  Megaphone, 
+  Megaphone,
+  ListTodo,
   TrendingUp, 
   Calendar, 
   DollarSign, 
@@ -45,6 +46,12 @@ const menuItems = [
     url: "/campaigns",
     icon: Megaphone,
     permission: "canManageCampaigns" as const,
+  },
+  {
+    title: "Tasks",
+    url: "/tasks",
+    icon: ListTodo,
+    permission: null, // Everyone can access tasks
   },
   {
     title: "Sales Pipeline",

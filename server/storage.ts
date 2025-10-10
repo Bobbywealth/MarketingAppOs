@@ -3,6 +3,7 @@ import {
   clients,
   campaigns,
   tasks,
+  taskComments,
   leads,
   contentPosts,
   invoices,
@@ -18,6 +19,8 @@ import {
   type InsertCampaign,
   type Task,
   type InsertTask,
+  type TaskComment,
+  type InsertTaskComment,
   type Lead,
   type InsertLead,
   type ContentPost,
@@ -62,6 +65,10 @@ export interface IStorage {
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
+  
+  // Task comment operations
+  getTaskComments(taskId: string): Promise<TaskComment[]>;
+  createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
 
   // Lead operations
   getLeads(): Promise<Lead[]>;
@@ -236,6 +243,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTask(id: string): Promise<void> {
     await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  // Task comment operations
+  async getTaskComments(taskId: string): Promise<TaskComment[]> {
+    return await db
+      .select()
+      .from(taskComments)
+      .where(eq(taskComments.taskId, taskId))
+      .orderBy(desc(taskComments.createdAt));
+  }
+
+  async createTaskComment(commentData: InsertTaskComment): Promise<TaskComment> {
+    const [comment] = await db.insert(taskComments).values(commentData).returning();
+    return comment;
   }
 
   // Lead operations

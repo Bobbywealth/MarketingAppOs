@@ -114,7 +114,7 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const tasksRelations = relations(tasks, ({ one }) => ({
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
   campaign: one(campaigns, {
     fields: [tasks.campaignId],
     references: [campaigns.id],
@@ -125,6 +125,27 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
   }),
   assignedTo: one(users, {
     fields: [tasks.assignedToId],
+    references: [users.id],
+  }),
+  comments: many(taskComments),
+}));
+
+// Task Comments table (for collaboration)
+export const taskComments = pgTable("task_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").references(() => tasks.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskComments.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskComments.userId],
     references: [users.id],
   }),
 }));
@@ -304,6 +325,7 @@ export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, c
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({ id: true, createdAt: true });
 export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({ id: true, createdAt: true });
+export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, createdAt: true });
 
 // TypeScript types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -338,3 +360,6 @@ export type OnboardingTask = typeof onboardingTasks.$inferSelect;
 
 export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
 export type ClientDocument = typeof clientDocuments.$inferSelect;
+
+export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
+export type TaskComment = typeof taskComments.$inferSelect;
