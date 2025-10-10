@@ -105,11 +105,11 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <div className="px-4 py-4 mb-2">
+          <div className="px-4 py-6 mb-2">
             <img 
               src={mtaLogo} 
               alt="Marketing Team App" 
-              className="h-10 w-auto"
+              className="h-16 w-auto"
               data-testid="img-logo"
             />
           </div>
