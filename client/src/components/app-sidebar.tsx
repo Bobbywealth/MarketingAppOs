@@ -111,11 +111,11 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="flex items-center justify-center py-4">
+      <SidebarHeader className="flex items-center justify-center py-3">
         <img 
           src={mtaLogo} 
           alt="Marketing Team App" 
-          className="h-16 w-auto"
+          className="h-24 w-auto"
           data-testid="img-logo"
         />
       </SidebarHeader>
