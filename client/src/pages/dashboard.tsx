@@ -1,10 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar } from "lucide-react";
+import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
+  });
+
+  const { data: stripeData } = useQuery({
+    queryKey: ["/api/stripe/subscriptions"],
+    retry: false,
+    meta: { returnNull: true }, // Don't throw error if Stripe not configured
   });
 
   const metrics = [
@@ -123,6 +130,68 @@ export default function Dashboard() {
             </Card>
           ))}
         </div>
+
+        {/* Stripe Subscription Metrics */}
+        {stripeData && (
+          <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-transparent">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-semibold">Subscription Overview</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">Active customer subscriptions from Stripe</p>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-sm">
+                  {stripeData.activeSubscriptions} Active
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Total Subscriptions</p>
+                  <p className="text-3xl font-bold" data-testid="metric-total-subscriptions">{stripeData.totalSubscriptions}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Active Subscriptions</p>
+                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-active-subscriptions">{stripeData.activeSubscriptions}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Monthly Recurring Revenue</p>
+                  <p className="text-3xl font-bold text-primary" data-testid="metric-mrr">${stripeData.mrr.toFixed(2)}</p>
+                </div>
+              </div>
+
+              {stripeData.subscriptions && stripeData.subscriptions.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Recent Subscriptions</h4>
+                  {stripeData.subscriptions.slice(0, 5).map((sub: any) => (
+                    <div key={sub.id} className="flex items-center justify-between p-3 rounded-lg hover-elevate transition-all" data-testid={`subscription-${sub.id}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          sub.status === 'active' ? 'bg-emerald-500' : 
+                          sub.status === 'canceled' ? 'bg-rose-500' : 'bg-amber-500'
+                        }`}></div>
+                        <div>
+                          <p className="text-sm font-medium">{typeof sub.customerId === 'string' ? sub.customerId.slice(0, 20) : 'Customer'}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{sub.status}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">${sub.amount.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">/{sub.interval}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Activity Sections with Premium Design */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

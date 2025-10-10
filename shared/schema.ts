@@ -57,6 +57,8 @@ export const clients = pgTable("clients", {
   assignedToId: varchar("assigned_to_id").references(() => users.id),
   notes: text("notes"),
   socialLinks: jsonb("social_links"), // {twitter, facebook, instagram, linkedin}
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

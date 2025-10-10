@@ -16,8 +16,17 @@ import {
   insertClientDocumentSchema,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
+import Stripe from "stripe";
 
 const objectStorageService = new ObjectStorageService();
+
+// Initialize Stripe if keys are present
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2024-11-20.acacia",
+  });
+}
 
 function handleValidationError(error: unknown, res: Response) {
   if (error instanceof ZodError) {
@@ -74,6 +83,85 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Stripe subscription stats
+  app.get("/api/stripe/subscriptions", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe is not configured" });
+      }
+
+      // Fetch all subscriptions from Stripe
+      const subscriptions = await stripe.subscriptions.list({
+        limit: 100,
+        expand: ['data.customer'],
+      });
+
+      // Calculate metrics
+      const activeSubscriptions = subscriptions.data.filter(sub => sub.status === 'active');
+      const mrr = activeSubscriptions.reduce((sum, sub) => {
+        const amount = sub.items.data[0]?.price?.recurring?.interval === 'month' 
+          ? (sub.items.data[0].price.unit_amount || 0) / 100
+          : 0;
+        return sum + amount;
+      }, 0);
+
+      res.json({
+        totalSubscriptions: subscriptions.data.length,
+        activeSubscriptions: activeSubscriptions.length,
+        mrr,
+        subscriptions: subscriptions.data.map(sub => ({
+          id: sub.id,
+          customerId: sub.customer,
+          status: sub.status,
+          amount: (sub.items.data[0]?.price?.unit_amount || 0) / 100,
+          interval: sub.items.data[0]?.price?.recurring?.interval,
+          currentPeriodEnd: sub.current_period_end,
+          cancelAtPeriodEnd: sub.cancel_at_period_end,
+        })),
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch Stripe subscriptions" });
+    }
+  });
+
+  // Get subscription for a specific client
+  app.get("/api/stripe/client/:clientId/subscription", isAuthenticated, requirePermission("canManageInvoices"), async (req: Request, res: Response) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Stripe is not configured" });
+      }
+
+      const client = await storage.getClient(req.params.clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      if (!client.stripeSubscriptionId) {
+        return res.json({ subscription: null });
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(client.stripeSubscriptionId, {
+        expand: ['customer', 'latest_invoice'],
+      });
+
+      res.json({
+        subscription: {
+          id: subscription.id,
+          status: subscription.status,
+          amount: (subscription.items.data[0]?.price?.unit_amount || 0) / 100,
+          interval: subscription.items.data[0]?.price?.recurring?.interval,
+          currentPeriodEnd: subscription.current_period_end,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          customer: subscription.customer,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch client subscription" });
     }
   });
 
