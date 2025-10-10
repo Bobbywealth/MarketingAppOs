@@ -93,34 +93,51 @@ export function registerRoutes(app: Express) {
         return res.status(503).json({ message: "Stripe is not configured" });
       }
 
-      // Fetch all subscriptions from Stripe
+      // Fetch all subscriptions from Stripe (without expanding to avoid PII leaks)
       const subscriptions = await stripe.subscriptions.list({
         limit: 100,
-        expand: ['data.customer'],
       });
 
       // Calculate metrics
       const activeSubscriptions = subscriptions.data.filter(sub => sub.status === 'active');
+      
+      // Calculate MRR properly: sum all items, account for quantity and interval
       const mrr = activeSubscriptions.reduce((sum, sub) => {
-        const amount = sub.items.data[0]?.price?.recurring?.interval === 'month' 
-          ? (sub.items.data[0].price.unit_amount || 0) / 100
-          : 0;
-        return sum + amount;
+        const subscriptionMrr = sub.items.data.reduce((itemSum, item) => {
+          const unitAmount = (item.price.unit_amount || 0) / 100;
+          const quantity = item.quantity || 1;
+          const interval = item.price.recurring?.interval;
+          
+          // Convert to monthly
+          let monthlyAmount = unitAmount * quantity;
+          if (interval === 'year') {
+            monthlyAmount = monthlyAmount / 12;
+          } else if (interval !== 'month') {
+            monthlyAmount = 0; // Ignore non-monthly/yearly intervals
+          }
+          
+          return itemSum + monthlyAmount;
+        }, 0);
+        
+        return sum + subscriptionMrr;
       }, 0);
 
       res.json({
         totalSubscriptions: subscriptions.data.length,
         activeSubscriptions: activeSubscriptions.length,
         mrr,
-        subscriptions: subscriptions.data.map(sub => ({
-          id: sub.id,
-          customerId: sub.customer,
-          status: sub.status,
-          amount: (sub.items.data[0]?.price?.unit_amount || 0) / 100,
-          interval: sub.items.data[0]?.price?.recurring?.interval,
-          currentPeriodEnd: sub.current_period_end,
-          cancelAtPeriodEnd: sub.cancel_at_period_end,
-        })),
+        subscriptions: subscriptions.data.map(sub => {
+          const firstItem = sub.items.data[0];
+          return {
+            id: sub.id,
+            customerId: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id || '',
+            status: sub.status,
+            amount: (firstItem?.price?.unit_amount || 0) / 100,
+            interval: firstItem?.price?.recurring?.interval,
+            currentPeriodEnd: sub.current_period_end,
+            cancelAtPeriodEnd: sub.cancel_at_period_end,
+          };
+        }),
       });
     } catch (error) {
       console.error(error);
