@@ -45,14 +45,17 @@ export function registerRoutes(app: Express) {
   // Dashboard stats
   app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
     try {
-      const clients = await storage.getClients();
-      const campaigns = await storage.getCampaigns();
-      const leads = await storage.getLeads();
-      const invoices = await storage.getInvoices();
-      const tasks = await storage.getTasks();
-      const tickets = await storage.getTickets();
-      const contentPosts = await storage.getContentPosts();
-      const websiteProjects = await storage.getWebsiteProjects();
+      // Batch all data fetches in parallel for performance
+      const [clients, campaigns, leads, invoices, tasks, tickets, contentPosts, websiteProjects] = await Promise.all([
+        storage.getClients(),
+        storage.getCampaigns(),
+        storage.getLeads(),
+        storage.getInvoices(),
+        storage.getTasks(),
+        storage.getTickets(),
+        storage.getContentPosts(),
+        storage.getWebsiteProjects(),
+      ]);
 
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
@@ -71,91 +74,117 @@ export function registerRoutes(app: Express) {
       // Recent Activity Feed - collect activities from all sources
       const recentActivity: any[] = [];
 
-      // Client activities
-      clients.slice(-5).forEach(client => {
-        recentActivity.push({
-          type: 'success',
-          title: `New client added: ${client.name}`,
-          time: formatActivityTime(client.createdAt),
-          timestamp: client.createdAt,
+      // Client activities (sort by timestamp, then take most recent)
+      [...clients]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5)
+        .forEach(client => {
+          recentActivity.push({
+            type: 'success',
+            title: `New client added: ${client.name}`,
+            time: formatActivityTime(client.createdAt),
+            timestamp: client.createdAt,
+          });
         });
-      });
 
       // Campaign activities
-      campaigns.slice(-5).forEach(campaign => {
-        const client = clients.find(c => c.id === campaign.clientId);
-        recentActivity.push({
-          type: 'info',
-          title: `Campaign ${campaign.status}: ${campaign.name}${client ? ` for ${client.name}` : ''}`,
-          time: formatActivityTime(campaign.updatedAt || campaign.createdAt),
-          timestamp: campaign.updatedAt || campaign.createdAt,
+      [...campaigns]
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+        .slice(0, 5)
+        .forEach(campaign => {
+          const client = clients.find(c => c.id === campaign.clientId);
+          recentActivity.push({
+            type: 'info',
+            title: `Campaign ${campaign.status}: ${campaign.name}${client ? ` for ${client.name}` : ''}`,
+            time: formatActivityTime(campaign.updatedAt || campaign.createdAt),
+            timestamp: campaign.updatedAt || campaign.createdAt,
+          });
         });
-      });
 
       // Task activities (completed tasks)
-      tasks.filter(t => t.status === 'completed').slice(-5).forEach(task => {
-        recentActivity.push({
-          type: 'success',
-          title: `Task completed: ${task.title}`,
-          time: formatActivityTime(task.completedAt || task.updatedAt),
-          timestamp: task.completedAt || task.updatedAt,
+      [...tasks]
+        .filter(t => t.status === 'completed')
+        .sort((a, b) => new Date(b.completedAt || b.updatedAt).getTime() - new Date(a.completedAt || a.updatedAt).getTime())
+        .slice(0, 5)
+        .forEach(task => {
+          recentActivity.push({
+            type: 'success',
+            title: `Task completed: ${task.title}`,
+            time: formatActivityTime(task.completedAt || task.updatedAt),
+            timestamp: task.completedAt || task.updatedAt,
+          });
         });
-      });
 
       // Lead activities
-      leads.slice(-5).forEach(lead => {
-        const statusColors: any = { 'prospect': 'info', 'qualified': 'warning', 'proposal': 'warning', 'closed': 'success', 'lost': 'error' };
-        recentActivity.push({
-          type: statusColors[lead.stage] || 'info',
-          title: `Lead ${lead.stage}: ${lead.name} - $${lead.value || 0}`,
-          time: formatActivityTime(lead.updatedAt || lead.createdAt),
-          timestamp: lead.updatedAt || lead.createdAt,
+      [...leads]
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+        .slice(0, 5)
+        .forEach(lead => {
+          const statusColors: any = { 'prospect': 'info', 'qualified': 'warning', 'proposal': 'warning', 'closed': 'success', 'lost': 'error' };
+          recentActivity.push({
+            type: statusColors[lead.stage] || 'info',
+            title: `Lead ${lead.stage}: ${lead.name} - $${lead.value || 0}`,
+            time: formatActivityTime(lead.updatedAt || lead.createdAt),
+            timestamp: lead.updatedAt || lead.createdAt,
+          });
         });
-      });
 
       // Invoice activities
-      invoices.filter(inv => inv.status === 'paid').slice(-3).forEach(invoice => {
-        const client = clients.find(c => c.id === invoice.clientId);
-        recentActivity.push({
-          type: 'success',
-          title: `Invoice paid: $${invoice.amount}${client ? ` from ${client.name}` : ''}`,
-          time: formatActivityTime(invoice.updatedAt || invoice.createdAt),
-          timestamp: invoice.updatedAt || invoice.createdAt,
+      [...invoices]
+        .filter(inv => inv.status === 'paid')
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+        .slice(0, 3)
+        .forEach(invoice => {
+          const client = clients.find(c => c.id === invoice.clientId);
+          recentActivity.push({
+            type: 'success',
+            title: `Invoice paid: $${invoice.amount}${client ? ` from ${client.name}` : ''}`,
+            time: formatActivityTime(invoice.updatedAt || invoice.createdAt),
+            timestamp: invoice.updatedAt || invoice.createdAt,
+          });
         });
-      });
 
       // Ticket activities
-      tickets.slice(-5).forEach(ticket => {
-        const statusColors: any = { 'open': 'warning', 'in_progress': 'info', 'resolved': 'success', 'closed': 'info' };
-        recentActivity.push({
-          type: statusColors[ticket.status] || 'info',
-          title: `Support ticket ${ticket.status}: ${ticket.subject}`,
-          time: formatActivityTime(ticket.updatedAt || ticket.createdAt),
-          timestamp: ticket.updatedAt || ticket.createdAt,
+      [...tickets]
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+        .slice(0, 5)
+        .forEach(ticket => {
+          const statusColors: any = { 'open': 'warning', 'in_progress': 'info', 'resolved': 'success', 'closed': 'info' };
+          recentActivity.push({
+            type: statusColors[ticket.status] || 'info',
+            title: `Support ticket ${ticket.status}: ${ticket.subject}`,
+            time: formatActivityTime(ticket.updatedAt || ticket.createdAt),
+            timestamp: ticket.updatedAt || ticket.createdAt,
+          });
         });
-      });
 
       // Content activities
-      contentPosts.slice(-3).forEach(post => {
-        const statusColors: any = { 'draft': 'info', 'pending': 'warning', 'approved': 'success', 'published': 'success', 'rejected': 'error' };
-        recentActivity.push({
-          type: statusColors[post.status] || 'info',
-          title: `Content ${post.status}: ${post.title}`,
-          time: formatActivityTime(post.updatedAt || post.createdAt),
-          timestamp: post.updatedAt || post.createdAt,
+      [...contentPosts]
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+        .slice(0, 3)
+        .forEach(post => {
+          const statusColors: any = { 'draft': 'info', 'pending': 'warning', 'approved': 'success', 'published': 'success', 'rejected': 'error' };
+          recentActivity.push({
+            type: statusColors[post.status] || 'info',
+            title: `Content ${post.status}: ${post.title}`,
+            time: formatActivityTime(post.updatedAt || post.createdAt),
+            timestamp: post.updatedAt || post.createdAt,
+          });
         });
-      });
 
       // Website project activities
-      websiteProjects.slice(-3).forEach(project => {
-        const client = clients.find(c => c.id === project.clientId);
-        recentActivity.push({
-          type: 'info',
-          title: `Website project ${project.stage}: ${project.projectName}${client ? ` for ${client.name}` : ''}`,
-          time: formatActivityTime(project.updatedAt || project.createdAt),
-          timestamp: project.updatedAt || project.createdAt,
+      [...websiteProjects]
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+        .slice(0, 3)
+        .forEach(project => {
+          const client = clients.find(c => c.id === project.clientId);
+          recentActivity.push({
+            type: 'info',
+            title: `Website project ${project.stage}: ${project.name}${client ? ` for ${client.name}` : ''}`,
+            time: formatActivityTime(project.updatedAt || project.createdAt),
+            timestamp: project.updatedAt || project.createdAt,
+          });
         });
-      });
 
       // Sort by timestamp (most recent first) and limit to 10
       const sortedActivity = recentActivity
