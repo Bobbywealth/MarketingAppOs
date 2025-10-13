@@ -14,6 +14,11 @@ import {
   insertTicketSchema,
   insertMessageSchema,
   insertClientDocumentSchema,
+  insertWebsiteProjectSchema,
+  insertProjectFeedbackSchema,
+  insertAnalyticsMetricSchema,
+  insertLeadActivitySchema,
+  insertLeadAutomationSchema,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import Stripe from "stripe";
@@ -872,6 +877,214 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // Website project routes
+  app.get("/api/website-projects", isAuthenticated, async (_req: Request, res: Response) => {
+    try {
+      const projects = await storage.getWebsiteProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch website projects" });
+    }
+  });
+
+  app.get("/api/website-projects/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const project = await storage.getWebsiteProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ message: "Website project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch website project" });
+    }
+  });
+
+  app.post("/api/website-projects", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertWebsiteProjectSchema.parse(req.body);
+      const project = await storage.createWebsiteProject(validatedData);
+      res.status(201).json(project);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/website-projects/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertWebsiteProjectSchema.partial().parse(req.body);
+      const project = await storage.updateWebsiteProject(req.params.id, validatedData);
+      res.json(project);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Website project not found") {
+        return res.status(404).json({ message: error.message });
+      }
+      handleValidationError(error, res);
+    }
+  });
+
+  app.delete("/api/website-projects/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteWebsiteProject(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete website project" });
+    }
+  });
+
+  // Project feedback routes
+  app.get("/api/website-projects/:projectId/feedback", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const feedback = await storage.getProjectFeedback(req.params.projectId);
+      res.json(feedback);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch project feedback" });
+    }
+  });
+
+  app.post("/api/website-projects/:projectId/feedback", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      const validatedData = insertProjectFeedbackSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+        userId,
+      });
+      const feedback = await storage.createProjectFeedback(validatedData);
+      res.status(201).json(feedback);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/project-feedback/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertProjectFeedbackSchema.partial().parse(req.body);
+      const feedback = await storage.updateProjectFeedback(req.params.id, validatedData);
+      res.json(feedback);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Project feedback not found") {
+        return res.status(404).json({ message: error.message });
+      }
+      handleValidationError(error, res);
+    }
+  });
+
+  app.delete("/api/project-feedback/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteProjectFeedback(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete project feedback" });
+    }
+  });
+
+  // Analytics metrics routes
+  app.get("/api/analytics/metrics", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const clientId = req.query.clientId as string | undefined;
+      const metrics = await storage.getAnalyticsMetrics(clientId);
+      res.json(metrics);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch analytics metrics" });
+    }
+  });
+
+  app.post("/api/analytics/metrics", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertAnalyticsMetricSchema.parse(req.body);
+      const metric = await storage.createAnalyticsMetric(validatedData);
+      res.status(201).json(metric);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.delete("/api/analytics/metrics/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteAnalyticsMetric(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete analytics metric" });
+    }
+  });
+
+  // Lead activity routes
+  app.get("/api/leads/:leadId/activities", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const activities = await storage.getLeadActivities(req.params.leadId);
+      res.json(activities);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch lead activities" });
+    }
+  });
+
+  app.post("/api/leads/:leadId/activities", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      const validatedData = insertLeadActivitySchema.parse({
+        ...req.body,
+        leadId: req.params.leadId,
+        userId,
+      });
+      const activity = await storage.createLeadActivity(validatedData);
+      res.status(201).json(activity);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  // Lead automation routes
+  app.get("/api/leads/:leadId/automations", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const automations = await storage.getLeadAutomations(req.params.leadId);
+      res.json(automations);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch lead automations" });
+    }
+  });
+
+  app.post("/api/leads/:leadId/automations", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertLeadAutomationSchema.parse({
+        ...req.body,
+        leadId: req.params.leadId,
+      });
+      const automation = await storage.createLeadAutomation(validatedData);
+      res.status(201).json(automation);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/lead-automations/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertLeadAutomationSchema.partial().parse(req.body);
+      const automation = await storage.updateLeadAutomation(req.params.id, validatedData);
+      res.json(automation);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.delete("/api/lead-automations/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteLeadAutomation(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete lead automation" });
     }
   });
 

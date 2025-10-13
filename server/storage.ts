@@ -13,6 +13,9 @@ import {
   messages,
   onboardingTasks,
   clientDocuments,
+  websiteProjects,
+  projectFeedback,
+  analyticsMetrics,
   type User,
   type UpsertUser,
   type Client,
@@ -41,6 +44,12 @@ import {
   type InsertOnboardingTask,
   type ClientDocument,
   type InsertClientDocument,
+  type WebsiteProject,
+  type InsertWebsiteProject,
+  type ProjectFeedback,
+  type InsertProjectFeedback,
+  type AnalyticsMetric,
+  type InsertAnalyticsMetric,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -123,6 +132,24 @@ export interface IStorage {
   getClientDocuments(clientId: string): Promise<ClientDocument[]>;
   createClientDocument(document: InsertClientDocument): Promise<ClientDocument>;
   deleteClientDocument(id: string): Promise<void>;
+
+  // Website project operations
+  getWebsiteProjects(): Promise<WebsiteProject[]>;
+  getWebsiteProject(id: string): Promise<WebsiteProject | undefined>;
+  createWebsiteProject(project: InsertWebsiteProject): Promise<WebsiteProject>;
+  updateWebsiteProject(id: string, data: Partial<InsertWebsiteProject>): Promise<WebsiteProject>;
+  deleteWebsiteProject(id: string): Promise<void>;
+
+  // Project feedback operations
+  getProjectFeedback(projectId: string): Promise<ProjectFeedback[]>;
+  createProjectFeedback(feedback: InsertProjectFeedback): Promise<ProjectFeedback>;
+  updateProjectFeedback(id: string, data: Partial<InsertProjectFeedback>): Promise<ProjectFeedback>;
+  deleteProjectFeedback(id: string): Promise<void>;
+
+  // Analytics metrics operations
+  getAnalyticsMetrics(clientId?: string): Promise<AnalyticsMetric[]>;
+  createAnalyticsMetric(metric: InsertAnalyticsMetric): Promise<AnalyticsMetric>;
+  deleteAnalyticsMetric(id: string): Promise<void>;
 
   // Global search
   globalSearch(query: string): Promise<{
@@ -469,6 +496,80 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClientDocument(id: string): Promise<void> {
     await db.delete(clientDocuments).where(eq(clientDocuments.id, id));
+  }
+
+  // Website project operations
+  async getWebsiteProjects(): Promise<WebsiteProject[]> {
+    return await db.select().from(websiteProjects).orderBy(desc(websiteProjects.createdAt));
+  }
+
+  async getWebsiteProject(id: string): Promise<WebsiteProject | undefined> {
+    const [project] = await db.select().from(websiteProjects).where(eq(websiteProjects.id, id));
+    return project;
+  }
+
+  async createWebsiteProject(projectData: InsertWebsiteProject): Promise<WebsiteProject> {
+    const [project] = await db.insert(websiteProjects).values(projectData).returning();
+    return project;
+  }
+
+  async updateWebsiteProject(id: string, data: Partial<InsertWebsiteProject>): Promise<WebsiteProject> {
+    const [project] = await db
+      .update(websiteProjects)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(websiteProjects.id, id))
+      .returning();
+    if (!project) {
+      throw new Error("Website project not found");
+    }
+    return project;
+  }
+
+  async deleteWebsiteProject(id: string): Promise<void> {
+    await db.delete(websiteProjects).where(eq(websiteProjects.id, id));
+  }
+
+  // Project feedback operations
+  async getProjectFeedback(projectId: string): Promise<ProjectFeedback[]> {
+    return await db.select().from(projectFeedback).where(eq(projectFeedback.projectId, projectId)).orderBy(desc(projectFeedback.createdAt));
+  }
+
+  async createProjectFeedback(feedbackData: InsertProjectFeedback): Promise<ProjectFeedback> {
+    const [feedback] = await db.insert(projectFeedback).values(feedbackData).returning();
+    return feedback;
+  }
+
+  async updateProjectFeedback(id: string, data: Partial<InsertProjectFeedback>): Promise<ProjectFeedback> {
+    const [feedback] = await db
+      .update(projectFeedback)
+      .set(data)
+      .where(eq(projectFeedback.id, id))
+      .returning();
+    if (!feedback) {
+      throw new Error("Project feedback not found");
+    }
+    return feedback;
+  }
+
+  async deleteProjectFeedback(id: string): Promise<void> {
+    await db.delete(projectFeedback).where(eq(projectFeedback.id, id));
+  }
+
+  // Analytics metrics operations
+  async getAnalyticsMetrics(clientId?: string): Promise<AnalyticsMetric[]> {
+    if (clientId) {
+      return await db.select().from(analyticsMetrics).where(eq(analyticsMetrics.clientId, clientId)).orderBy(desc(analyticsMetrics.date));
+    }
+    return await db.select().from(analyticsMetrics).orderBy(desc(analyticsMetrics.date));
+  }
+
+  async createAnalyticsMetric(metricData: InsertAnalyticsMetric): Promise<AnalyticsMetric> {
+    const [metric] = await db.insert(analyticsMetrics).values(metricData).returning();
+    return metric;
+  }
+
+  async deleteAnalyticsMetric(id: string): Promise<void> {
+    await db.delete(analyticsMetrics).where(eq(analyticsMetrics.id, id));
   }
 
   // Global search
