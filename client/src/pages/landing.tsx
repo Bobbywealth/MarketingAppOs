@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap } from "lucide-react";
-import mtaLogo from "@assets/mta-logo.png";
+import mtaLogoBlue from "@assets/mta-logo-blue.png";
 import heroImage from "@assets/stock_images/marketing_analytics__1be1259a.jpg";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 
@@ -15,7 +15,7 @@ export default function LandingPage() {
       <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={mtaLogo} alt="Marketing Team App" className="h-12 w-auto" data-testid="img-logo" />
+            <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto" data-testid="img-logo" />
             <span className="text-xl font-bold">Marketing Team</span>
           </div>
           <div className="flex items-center gap-4">
@@ -403,7 +403,7 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <img src={mtaLogo} alt="Marketing Team App" className="h-12 w-auto mb-4" />
+              <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto mb-4" />
               <p className="text-sm text-muted-foreground">
                 Navigate the digital landscape with Marketing Team App, the epitome of sophistication in digital marketing services.
               </p>
