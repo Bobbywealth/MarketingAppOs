@@ -7,9 +7,10 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
-import Landing from "@/pages/landing";
+import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
@@ -24,34 +25,29 @@ import WebsiteProjects from "@/pages/website-projects";
 import Analytics from "@/pages/analytics";
 import NotFound from "@/pages/not-found";
 
-function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
+function Router() {
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/clients" component={Clients} />
-          <Route path="/campaigns" component={Campaigns} />
-          <Route path="/tasks" component={Tasks} />
-          <Route path="/pipeline" component={Pipeline} />
-          <Route path="/content" component={Content} />
-          <Route path="/invoices" component={Invoices} />
-          <Route path="/tickets" component={Tickets} />
-          <Route path="/onboarding" component={Onboarding} />
-          <Route path="/messages" component={Messages} />
-          <Route path="/website-projects" component={WebsiteProjects} />
-          <Route path="/analytics" component={Analytics} />
-        </>
-      )}
+      <Route path="/auth" component={AuthPage} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/clients" component={Clients} />
+      <ProtectedRoute path="/campaigns" component={Campaigns} />
+      <ProtectedRoute path="/tasks" component={Tasks} />
+      <ProtectedRoute path="/pipeline" component={Pipeline} />
+      <ProtectedRoute path="/content" component={Content} />
+      <ProtectedRoute path="/invoices" component={Invoices} />
+      <ProtectedRoute path="/tickets" component={Tickets} />
+      <ProtectedRoute path="/onboarding" component={Onboarding} />
+      <ProtectedRoute path="/messages" component={Messages} />
+      <ProtectedRoute path="/website-projects" component={WebsiteProjects} />
+      <ProtectedRoute path="/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
@@ -61,16 +57,16 @@ function AppContent() {
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-spinner"></div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <TooltipProvider>
         <Toaster />
-        <Router isAuthenticated={isAuthenticated} />
+        <Router />
       </TooltipProvider>
     );
   }
@@ -89,7 +85,7 @@ function AppContent() {
               <ThemeToggle />
             </header>
             <main className="flex-1 overflow-auto">
-              <Router isAuthenticated={isAuthenticated} />
+              <Router />
             </main>
           </div>
         </div>
@@ -102,7 +98,9 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { isAuthenticated } from "./replitAuth";
+import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
 import {
@@ -42,27 +42,6 @@ function handleValidationError(error: unknown, res: Response) {
 }
 
 export function registerRoutes(app: Express) {
-  // Auth routes
-  app.get("/api/user", isAuthenticated, async (req: Request, res: Response) => {
-    const user = req.user as any;
-    if (!user?.claims?.sub) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const dbUser = await storage.getUser(user.claims.sub);
-    if (!dbUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Include permissions with user data
-    const permissions = rolePermissions[dbUser.role as UserRole] || rolePermissions[UserRole.STAFF];
-    
-    res.json({
-      ...dbUser,
-      permissions,
-    });
-  });
-
   // Dashboard stats
   app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
     try {

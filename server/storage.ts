@@ -18,6 +18,7 @@ import {
   analyticsMetrics,
   type User,
   type UpsertUser,
+  type InsertUser,
   type Client,
   type InsertClient,
   type Campaign,
@@ -55,10 +56,12 @@ import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createUser(user: InsertUser): Promise<User>;
   updateUserRole(userId: string, role: string): Promise<User>;
 
   // Client operations
@@ -197,6 +200,19 @@ export class DatabaseStorage implements IStorage {
     if (!user) {
       throw new Error("User not found");
     }
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .returning();
     return user;
   }
 
