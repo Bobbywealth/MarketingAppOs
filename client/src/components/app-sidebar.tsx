@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Globe,
   BarChart3,
+  Settings,
   LogOut
 } from "lucide-react";
 import mtaLogoWhite from "@assets/mta-logo.png";
@@ -104,6 +105,12 @@ const menuItems = [
     url: "/analytics",
     icon: BarChart3,
     permission: "canManageClients" as const,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+    permission: "canManageUsers" as const,
   },
 ];
 
