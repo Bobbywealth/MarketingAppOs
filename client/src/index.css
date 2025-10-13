@@ -99,6 +99,20 @@
   --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 60% / 0.2) 0px, transparent 50%),
                    radial-gradient(at 100% 100%, hsl(25 95% 53% / 0.15) 0px, transparent 50%);
   --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+}
+
+/* Floating Animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 
   /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
 
