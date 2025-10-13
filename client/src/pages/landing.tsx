@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LayoutDashboard, Users, TrendingUp, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LayoutDashboard, Users, TrendingUp, Calendar, Shield, UserCog, User } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -15,9 +16,65 @@ export default function Landing() {
           </p>
           <a href="/api/login">
             <Button size="lg" className="text-lg px-8" data-testid="button-login">
-              Get Started
+              Login to Continue
             </Button>
           </a>
+          <p className="text-sm text-muted-foreground mt-4">
+            Access for Admins, Staff Members, and Clients
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <Card className="border-2 hover-elevate">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <Shield className="w-10 h-10 text-primary" />
+                <Badge variant="default">Admin</Badge>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Admin Access</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Full system access</li>
+                <li>• Manage all clients and staff</li>
+                <li>• Configure billing and invoices</li>
+                <li>• View all analytics and reports</li>
+                <li>• System administration</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 hover-elevate">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <UserCog className="w-10 h-10 text-primary" />
+                <Badge variant="secondary">Staff</Badge>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Staff Member</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Manage assigned clients</li>
+                <li>• Create and track campaigns</li>
+                <li>• Handle support tickets</li>
+                <li>• Collaborate on tasks</li>
+                <li>• Content management</li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 hover-elevate">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <User className="w-10 h-10 text-primary" />
+                <Badge variant="outline">Client</Badge>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Client Portal</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• View campaign performance</li>
+                <li>• Approve content posts</li>
+                <li>• Submit support tickets</li>
+                <li>• Access invoices and billing</li>
+                <li>• Track project progress</li>
+              </ul>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
@@ -63,13 +120,13 @@ export default function Landing() {
         </div>
 
         <div className="bg-primary/5 rounded-lg p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">Ready to transform your agency?</h2>
+          <h2 className="text-2xl font-bold mb-4">Ready to get started?</h2>
           <p className="text-muted-foreground mb-6">
-            Join hundreds of marketing teams using MTA CRM to streamline their workflow
+            Whether you're an admin setting up your team, a staff member managing clients, or a client checking your campaigns - login to access your personalized dashboard
           </p>
           <a href="/api/login">
             <Button size="lg" data-testid="button-get-started">
-              Start Free Trial
+              Login Now
             </Button>
           </a>
         </div>
