@@ -14,13 +14,31 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto" data-testid="img-logo" />
-            <span className="text-xl font-bold">Marketing Team</span>
+          <div className="flex items-center gap-2">
+            <img src={mtaLogoBlue} alt="Marketing Team App" className="h-14 w-auto" data-testid="img-logo" />
           </div>
+          
+          <nav className="hidden md:flex items-center gap-8">
+            <a href="#home" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-home">
+              Home
+            </a>
+            <a href="#services" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-services">
+              Services
+            </a>
+            <a href="#blog" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-blog">
+              Blog
+            </a>
+            <a href="#about" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-about">
+              About Us
+            </a>
+            <a href="#contact" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-contact">
+              Contact Us
+            </a>
+          </nav>
+
           <div className="flex items-center gap-4">
             <Link href="/login">
-              <Button variant="ghost" data-testid="button-login-header">Login</Button>
+              <Button variant="ghost" className="hidden md:inline-flex" data-testid="button-login-header">Login</Button>
             </Link>
             <Link href="/login">
               <Button className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30" data-testid="button-get-started-header">
