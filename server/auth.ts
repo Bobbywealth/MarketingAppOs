@@ -140,12 +140,25 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
+  // Support both GET and POST for logout
+  const handleLogout = (req: any, res: any, next: any) => {
+    req.logout((err: any) => {
       if (err) return next(err);
-      res.sendStatus(200);
+      req.session.destroy((err: any) => {
+        if (err) return next(err);
+        res.clearCookie('connect.sid');
+        // Redirect for GET, return status for POST
+        if (req.method === 'GET') {
+          res.redirect('/');
+        } else {
+          res.sendStatus(200);
+        }
+      });
     });
-  });
+  };
+
+  app.get("/api/logout", handleLogout);
+  app.post("/api/logout", handleLogout);
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
