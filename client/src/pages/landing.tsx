@@ -12,7 +12,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b sticky top-0 z-50 gradient-animate backdrop-blur shadow-sm">
+      <header className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto" data-testid="img-logo" />
@@ -33,7 +33,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-24 px-4 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 hero-glow">
+      <section className="relative py-24 px-4 overflow-hidden gradient-animate-hero hero-glow">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.3),transparent_50%)]"></div>
         <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
