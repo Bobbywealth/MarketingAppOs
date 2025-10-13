@@ -12,7 +12,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur">
+      <header className="border-b sticky top-0 z-50 bg-gradient-to-r from-white via-blue-50/50 to-purple-50/50 backdrop-blur shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto" data-testid="img-logo" />
@@ -23,7 +23,7 @@ export default function LandingPage() {
               <Button variant="ghost" data-testid="button-login-header">Login</Button>
             </Link>
             <Link href="/login">
-              <Button className="gap-2 bg-orange-500 hover:bg-orange-600 text-white" data-testid="button-get-started-header">
+              <Button className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30" data-testid="button-get-started-header">
                 Get Started
                 <ArrowRight className="w-4 h-4" />
               </Button>
@@ -33,46 +33,51 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+      <section className="relative py-24 px-4 overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 hero-glow">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.3),transparent_50%)]"></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
         <div className="container mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-white space-y-6">
-              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 animate-pulse">
+            <div className="text-white space-y-8 slide-in-left">
+              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-sm px-4 py-2">
+                <span className="animate-pulse">● </span>
                 Wolfpaq Marketing
               </Badge>
-              <h1 className="text-5xl md:text-6xl font-bold leading-tight">
+              <h1 className="text-5xl md:text-7xl font-bold leading-tight text-shadow-soft">
                 Your Remote <br />
                 Digital Marketing <br />
-                <span className="text-green-400">Team</span>
+                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
               </h1>
-              <p className="text-lg text-blue-100">
+              <p className="text-xl text-blue-50 leading-relaxed">
                 The best solution for your business and scale up to success in digital business.
               </p>
-              <div className="flex gap-4 flex-wrap">
+              <div className="flex gap-4 flex-wrap pt-4">
                 <Link href="/login">
-                  <Button size="lg" className="gap-2 bg-orange-500 hover:bg-orange-600 text-white border-0" data-testid="button-get-started-hero">
+                  <Button size="lg" className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all px-8" data-testid="button-get-started-hero">
                     Discover more
                     <ArrowRight className="w-5 h-5" />
                   </Button>
                 </Link>
                 <Link href="/login">
-                  <Button size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20" data-testid="button-login-hero">
+                  <Button size="lg" variant="outline" className="glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-8" data-testid="button-login-hero">
                     Client Login
                   </Button>
                 </Link>
               </div>
             </div>
-            <div className="hidden lg:block relative">
+            <div className="hidden lg:block relative slide-in-right">
               <div className="relative animate-float">
-                <div className="absolute top-10 right-10 w-48 h-48 bg-blue-400/20 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-10 left-10 w-64 h-64 bg-purple-400/20 rounded-full blur-3xl"></div>
-                <img 
-                  src={heroImage} 
-                  alt="Marketing Dashboard Analytics" 
-                  className="relative z-10 w-full h-auto rounded-lg shadow-2xl transform hover:scale-105 transition-transform duration-500"
-                  data-testid="img-hero-dashboard"
-                />
+                <div className="absolute -top-4 -right-4 w-72 h-72 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-4 -left-4 w-72 h-72 bg-gradient-to-tr from-purple-400/30 to-pink-600/30 rounded-full blur-3xl"></div>
+                <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                  <img 
+                    src={heroImage} 
+                    alt="Marketing Dashboard Analytics" 
+                    className="w-full h-auto transform hover:scale-105 transition-transform duration-700"
+                    data-testid="img-hero-dashboard"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -80,42 +85,42 @@ export default function LandingPage() {
       </section>
 
       {/* Services Grid */}
-      <section className="py-16 px-4 -mt-16 relative z-20">
+      <section className="py-16 px-4 -mt-20 relative z-20">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="p-6 bg-white hover-elevate transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                <TrendingUp className="w-8 h-8 text-red-500" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-fade-in">
+            <Card className="p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-red-500">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center mb-6 shadow-md">
+                <TrendingUp className="w-10 h-10 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Digital Marketing</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-xl font-bold mb-3">Digital Marketing</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Ignite your brand's digital presence with our savvy digital marketing strategies.
               </p>
             </Card>
-            <Card className="p-6 bg-white hover-elevate transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-4">
-                <Globe className="w-8 h-8 text-orange-500" />
+            <Card className="p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-6 shadow-md">
+                <Globe className="w-10 h-10 text-orange-600" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Web Development</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-xl font-bold mb-3">Web Development</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Embark on a digital journey with our web wizards, crafting visually stunning websites.
               </p>
             </Card>
-            <Card className="p-6 bg-white hover-elevate transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                <Smartphone className="w-8 h-8 text-blue-500" />
+            <Card className="p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-6 shadow-md">
+                <Smartphone className="w-10 h-10 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Mobile App</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-xl font-bold mb-3">Mobile App</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Transform your dreams into app reality with sleek, user-friendly mobile applications.
               </p>
             </Card>
-            <Card className="p-6 bg-white hover-elevate transition-all duration-300 transform hover:-translate-y-1">
-              <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mb-4">
-                <Palette className="w-8 h-8 text-green-500" />
+            <Card className="p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-green-500">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-6 shadow-md">
+                <Palette className="w-10 h-10 text-green-600" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Graphics Design</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-xl font-bold mb-3">Graphics Design</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Unleash the power of visual storytelling with eye-catching designs.
               </p>
             </Card>
@@ -138,33 +143,38 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mt-16">
-            <Card className="p-8 text-center border-2 hover-elevate transition-all">
-              <div className="text-5xl font-bold text-blue-600 mb-2">4.9+</div>
-              <div className="flex justify-center gap-1 mb-2">
+          <div className="grid md:grid-cols-3 gap-8 mt-16 stagger-fade-in">
+            <Card className="p-10 text-center hover-lift shadow-lg hover:shadow-2xl transition-all bg-gradient-to-br from-white to-blue-50/30">
+              <div className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-3">4.9+</div>
+              <div className="flex justify-center gap-1 mb-3">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-4 h-4 fill-orange-500 text-orange-500" />
+                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
                 ))}
               </div>
-              <p className="text-sm font-semibold mb-1">Customer Review</p>
-              <p className="text-xs text-muted-foreground">Trusted by over 1000 clients</p>
+              <p className="text-base font-bold mb-2">Customer Review</p>
+              <p className="text-sm text-muted-foreground">Trusted by over 1000 clients</p>
             </Card>
 
-            <Card className="p-8 text-center border-2 hover-elevate transition-all">
-              <div className="text-5xl font-bold text-blue-600 mb-2">A+</div>
-              <div className="flex justify-center gap-1 mb-2">
+            <Card className="p-10 text-center hover-lift shadow-lg hover:shadow-2xl transition-all bg-gradient-to-br from-white to-green-50/30">
+              <div className="text-6xl font-bold bg-gradient-to-r from-green-600 to-emerald-800 bg-clip-text text-transparent mb-3">A+</div>
+              <div className="flex justify-center gap-1 mb-3">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-4 h-4 fill-orange-500 text-orange-500" />
+                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
                 ))}
               </div>
-              <p className="text-sm font-semibold mb-1">Business Class</p>
-              <p className="text-xs text-muted-foreground">Partnering with over 1,000 enterprises</p>
+              <p className="text-base font-bold mb-2">Business Class</p>
+              <p className="text-sm text-muted-foreground">Partnering with over 1,000 enterprises</p>
             </Card>
 
-            <Card className="p-8 text-center border-2 hover-elevate transition-all">
-              <div className="text-5xl font-bold text-blue-600 mb-2">15+</div>
-              <p className="text-sm font-semibold mb-1">Years Experience</p>
-              <p className="text-xs text-muted-foreground">Industry expertise</p>
+            <Card className="p-10 text-center hover-lift shadow-lg hover:shadow-2xl transition-all bg-gradient-to-br from-white to-purple-50/30">
+              <div className="text-6xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent mb-3">15+</div>
+              <div className="flex justify-center gap-1 mb-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
+                ))}
+              </div>
+              <p className="text-base font-bold mb-2">Years Experience</p>
+              <p className="text-sm text-muted-foreground">Industry expertise</p>
             </Card>
           </div>
         </div>
