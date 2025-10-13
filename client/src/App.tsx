@@ -12,6 +12,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
+import SignupPage from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
@@ -33,6 +34,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/signup" component={SignupPage} />
       {!user && <Route path="/" component={Landing} />}
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/clients" component={Clients} />

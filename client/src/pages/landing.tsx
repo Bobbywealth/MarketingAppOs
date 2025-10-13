@@ -40,7 +40,7 @@ export default function LandingPage() {
             <Link href="/login">
               <Button variant="ghost" className="hidden md:inline-flex" data-testid="button-login-header">Login</Button>
             </Link>
-            <Link href="/login">
+            <Link href="/signup">
               <Button className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30" data-testid="button-get-started-header">
                 Get Started
                 <ArrowRight className="w-4 h-4" />
@@ -71,7 +71,7 @@ export default function LandingPage() {
                 The best solution for your business and scale up to success in digital business.
               </p>
               <div className="flex gap-4 flex-wrap pt-4">
-                <Link href="/login">
+                <Link href="/signup">
                   <Button size="lg" className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all px-8" data-testid="button-get-started-hero">
                     Discover more
                     <ArrowRight className="w-5 h-5" />
@@ -232,7 +232,7 @@ export default function LandingPage() {
               <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Join us in transforming ideas into digital excellence, and together, we'll rock the online world.
               </p>
-              <Link href="/login">
+              <Link href="/signup">
                 <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                   Get Started
                   <ArrowRight className="w-5 h-5" />
@@ -389,7 +389,7 @@ export default function LandingPage() {
             Initiate a conversation about your vision and goals with Marketing Team App, where our experts 
             are eager to discuss your project and tailor a strategy that aligns with your business objectives.
           </p>
-          <Link href="/login">
+          <Link href="/signup">
             <Button size="lg" className="gap-2 bg-orange-500 hover:bg-orange-600 text-white border-0" data-testid="button-cta-get-started">
               Get Started
               <ArrowRight className="w-5 h-5" />

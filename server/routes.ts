@@ -42,6 +42,53 @@ function handleValidationError(error: unknown, res: Response) {
 }
 
 export function registerRoutes(app: Express) {
+  // Public signup endpoint (no authentication required)
+  app.post("/api/signup", async (req: Request, res: Response) => {
+    try {
+      const signupSchema = z.object({
+        company: z.string().min(1),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+        companySize: z.string().optional(),
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        services: z.array(z.string()),
+        budget: z.string().optional(),
+        notes: z.string().optional(),
+      });
+
+      const data = signupSchema.parse(req.body);
+
+      const clientData = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        website: data.website || null,
+        serviceTags: data.services,
+        status: "onboarding" as const,
+        notes: `Industry: ${data.industry || 'Not specified'}
+Company Size: ${data.companySize || 'Not specified'}
+Budget: ${data.budget || 'Not specified'}
+
+Additional Notes:
+${data.notes || 'None'}`,
+        assignedToId: null,
+        logoUrl: null,
+        socialLinks: null,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+      };
+
+      const client = await storage.createClient(clientData);
+      
+      res.json({ success: true, clientId: client.id });
+    } catch (error) {
+      return handleValidationError(error, res);
+    }
+  });
+
   // Dashboard stats
   app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
     try {
