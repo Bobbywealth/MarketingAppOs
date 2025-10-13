@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Calendar, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Plus, Globe, Calendar, AlertTriangle, CheckCircle2, Clock, Shield, Server } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,12 +29,12 @@ const STAGES = [
 const formSchema = insertWebsiteProjectSchema
   .omit({
     sslStatus: true,
-    sslExpiry: true,
     dnsStatus: true,
     dnsLastChecked: true,
   })
   .extend({
     hostingExpiry: z.string().optional(),
+    sslExpiry: z.string().optional(),
     launchDate: z.string().optional(),
   });
 
@@ -107,6 +107,7 @@ export default function WebsiteProjects() {
       domain: values.domain || null,
       hostingProvider: values.hostingProvider || null,
       hostingExpiry: values.hostingExpiry ? new Date(values.hostingExpiry) : null,
+      sslExpiry: values.sslExpiry ? new Date(values.sslExpiry) : null,
       progress: values.progress || 0,
       launchDate: values.launchDate ? new Date(values.launchDate) : null,
     };
@@ -128,6 +129,7 @@ export default function WebsiteProjects() {
       domain: project.domain ?? "",
       hostingProvider: project.hostingProvider ?? "",
       hostingExpiry: project.hostingExpiry ? format(new Date(project.hostingExpiry), "yyyy-MM-dd") : "",
+      sslExpiry: project.sslExpiry ? format(new Date(project.sslExpiry), "yyyy-MM-dd") : "",
       progress: project.progress ?? 0,
       launchDate: project.launchDate ? format(new Date(project.launchDate), "yyyy-MM-dd") : "",
     });
@@ -153,6 +155,28 @@ export default function WebsiteProjects() {
       default:
         return <Clock className="w-4 h-4 text-muted-foreground" />;
     }
+  };
+
+  const isExpiringSoon = (expiryDate: Date | string | null, days: number = 30) => {
+    if (!expiryDate) return false;
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const daysUntilExpiry = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry >= 0 && daysUntilExpiry <= days;
+  };
+
+  const isExpired = (expiryDate: Date | string | null) => {
+    if (!expiryDate) return false;
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    return expiry < now;
+  };
+
+  const getDaysUntilExpiry = (expiryDate: Date | string | null) => {
+    if (!expiryDate) return null;
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    return Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   if (projectsLoading) {
@@ -364,19 +388,34 @@ export default function WebsiteProjects() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="launchDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Launch Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} value={field.value ?? ""} data-testid="input-launch-date" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="sslExpiry"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SSL Certificate Expiry</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={field.value ?? ""} data-testid="input-ssl-expiry" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="launchDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Launch Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} value={field.value ?? ""} data-testid="input-launch-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <div className="flex gap-3 justify-end pt-4">
                     <Button
@@ -433,9 +472,24 @@ export default function WebsiteProjects() {
                       <CardHeader>
                         <div className="flex items-start justify-between gap-2">
                           <div className="space-y-1 flex-1 min-w-0">
-                            <CardTitle className="text-lg truncate" data-testid={`text-project-name-${project.id}`}>
-                              {project.name}
-                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-lg truncate" data-testid={`text-project-name-${project.id}`}>
+                                {project.name}
+                              </CardTitle>
+                              {(isExpired(project.sslExpiry) || isExpired(project.hostingExpiry)) && (
+                                <Badge variant="destructive" className="text-xs">
+                                  <AlertTriangle className="w-3 h-3 mr-1" />
+                                  Expired
+                                </Badge>
+                              )}
+                              {(isExpiringSoon(project.sslExpiry) || isExpiringSoon(project.hostingExpiry)) && 
+                               !(isExpired(project.sslExpiry) || isExpired(project.hostingExpiry)) && (
+                                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Expiring Soon
+                                </Badge>
+                              )}
+                            </div>
                             <CardDescription className="truncate">
                               {getClientName(project.clientId)}
                             </CardDescription>
@@ -459,12 +513,21 @@ export default function WebsiteProjects() {
                           </div>
                         )}
 
-                        {project.sslStatus && (
+                        {project.sslExpiry && (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">SSL Status</span>
-                            <div className="flex items-center gap-2">
-                              {getSSLStatusIcon(project.sslStatus)}
-                              <span className="capitalize">{project.sslStatus.replace("_", " ")}</span>
+                            <span className="text-muted-foreground">SSL Certificate</span>
+                            <div className="flex items-center gap-1">
+                              <Shield className="w-3 h-3" />
+                              <span className={
+                                isExpired(project.sslExpiry) 
+                                  ? "text-red-600 dark:text-red-400" 
+                                  : isExpiringSoon(project.sslExpiry) 
+                                    ? "text-amber-600 dark:text-amber-400" 
+                                    : ""
+                              }>
+                                {isExpired(project.sslExpiry) && "Expired "}
+                                {format(new Date(project.sslExpiry), "MMM d, yyyy")}
+                              </span>
                             </div>
                           </div>
                         )}
@@ -473,8 +536,17 @@ export default function WebsiteProjects() {
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">Hosting Expires</span>
                             <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{format(new Date(project.hostingExpiry), "MMM d, yyyy")}</span>
+                              <Server className="w-3 h-3" />
+                              <span className={
+                                isExpired(project.hostingExpiry) 
+                                  ? "text-red-600 dark:text-red-400" 
+                                  : isExpiringSoon(project.hostingExpiry) 
+                                    ? "text-amber-600 dark:text-amber-400" 
+                                    : ""
+                              }>
+                                {isExpired(project.hostingExpiry) && "Expired "}
+                                {format(new Date(project.hostingExpiry), "MMM d, yyyy")}
+                              </span>
                             </div>
                           </div>
                         )}
