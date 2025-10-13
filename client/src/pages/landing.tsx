@@ -39,9 +39,11 @@ export default function LandingPage() {
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <div className="w-64 p-2">
-                      <a href="#digital-marketing" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-digital-marketing">
-                        Digital Marketing
-                      </a>
+                      <Link href="/digital-marketing">
+                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-digital-marketing">
+                          Digital Marketing
+                        </a>
+                      </Link>
                       <a href="#graphic-design" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-graphic-design">
                         Graphic Design
                       </a>
