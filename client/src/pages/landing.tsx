@@ -2,9 +2,11 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap } from "lucide-react";
 import mtaLogo from "@assets/mta-logo.png";
 import heroImage from "@assets/stock_images/marketing_analytics__1be1259a.jpg";
+import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 
 export default function LandingPage() {
   return (
@@ -250,30 +252,102 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Why Choose Us */}
-      <section className="py-20 px-4 bg-muted/50">
+      {/* Getting Real Results */}
+      <section className="py-20 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="relative">
+              <img 
+                src={resultsImage} 
+                alt="Remote Team Digital Marketing" 
+                className="w-full h-auto rounded-lg shadow-xl"
+                data-testid="img-results-illustration"
+              />
+            </div>
+            <div className="space-y-6">
+              <h2 className="text-3xl md:text-4xl font-bold">Getting you those real results</h2>
+              <p className="text-muted-foreground">
+                Skyrocketing your results through expert Digital Marketing, cutting-edge Web Development, 
+                innovative Mobile Apps, and striking Graphics Design. Let's bring your vision to life!
+              </p>
+              <div className="space-y-4">
+                {[
+                  { icon: Lightbulb, title: "Proven Expertise", desc: "Choose Marketing Team App for seasoned professionals delivering tangible results in digital marketing, showcasing a commitment to excellence and navigating diverse trends." },
+                  { icon: Users, title: "Comprehensive Services", desc: "Opt for Marketing Team App's one-stop solution, providing Digital Marketing, Web Development, Mobile App, and Graphic Design services for a cohesive and impactful brand identity." },
+                  { icon: Target, title: "Client-Centric Approach", desc: "Partner with Marketing Team App for a client-centric philosophy, tailoring strategies to align with your specific business objectives and fostering long-term partnerships built on trust and transparency." },
+                  { icon: Zap, title: "Innovation and Adaptability", desc: "Select Marketing Team App for a commitment to innovation and adaptability in the ever-evolving digital landscape, ensuring your business stays ahead in the competitive online environment." },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Getting you those real results</h2>
-            <p className="text-lg text-muted-foreground">
-              Delivering real results through expert services. Let's bring your vision to life!
-            </p>
+            <p className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-2">Testimonial</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">What our customers say about us</h2>
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-lg font-semibold">4.7 (Client Reviews)</span>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-6">
             {[
-              { title: "Proven Expertise", desc: "Seasoned professionals delivering tangible results in digital marketing." },
-              { title: "Comprehensive Services", desc: "One-stop solution for all your digital needs." },
-              { title: "Client-Centric Approach", desc: "Strategies tailored to align with your specific business objectives." },
-              { title: "Innovation and Adaptability", desc: "Staying ahead in the competitive online environment." },
-            ].map((item, idx) => (
-              <div key={idx} className="flex gap-4 p-6 rounded-lg bg-white hover-elevate transition-all">
-                <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+              {
+                quote: "Marketing Team App turned my small business into an online sensation! Their digital marketing strategies were spot-on, and the website they developed perfectly encapsulated our brand. Grateful for their expertise!",
+                name: "John D.",
+                role: "Small Business Owner",
+                initial: "JD"
+              },
+              {
+                quote: "Choosing Marketing Team App for my startup's digital needs was a game-changer. The personalized support and user-friendly mobile app they crafted exceeded my expectations. Highly recommended!",
+                name: "Emily M.",
+                role: "Startup Enthusiast",
+                initial: "EM"
+              },
+              {
+                quote: "Marketing Team App took my e-commerce venture to new heights! Their comprehensive digital marketing strategies significantly boosted sales, and the sleek web development work transformed our online store. Truly impressed!",
+                name: "Sarah L.",
+                role: "E-commerce Entrepreneur",
+                initial: "SL"
+              },
+              {
+                quote: "Impressed by Marketing Team App's professionalism! Their personalized approach to digital marketing significantly boosted our online visibility. The mobile app they developed is user-friendly and innovative. Highly satisfied!",
+                name: "Michael R.",
+                role: "Tech Startup Founder",
+                initial: "MR"
+              },
+            ].map((testimonial, idx) => (
+              <Card key={idx} className="p-6 hover-elevate transition-all">
+                <p className="text-muted-foreground mb-6 italic">"{testimonial.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="font-semibold text-blue-600">{testimonial.initial}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">{testimonial.name}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                  </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -293,6 +367,34 @@ export default function LandingPage() {
               <ArrowRight className="w-5 h-5" />
             </Button>
           </Link>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-16 px-4 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">
+              Subscribe to our newsletter to get latest news on your inbox.
+            </h2>
+          </div>
+          <div className="flex gap-4 max-w-md mx-auto">
+            <Input 
+              type="text" 
+              placeholder="Name" 
+              className="bg-white text-foreground"
+              data-testid="input-newsletter-name"
+            />
+            <Input 
+              type="email" 
+              placeholder="Email" 
+              className="bg-white text-foreground"
+              data-testid="input-newsletter-email"
+            />
+            <Button className="bg-orange-500 hover:bg-orange-600 text-white border-0 whitespace-nowrap" data-testid="button-newsletter-submit">
+              Submit
+            </Button>
+          </div>
         </div>
       </section>
 
