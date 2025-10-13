@@ -37,14 +37,15 @@ export default function Content() {
       setDialogOpen(false);
       toast({ title: "Content post created successfully" });
     },
-    onError: () => {
-      toast({ title: "Failed to create post", variant: "destructive" });
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to create post";
+      toast({ title: errorMessage, variant: "destructive" });
     },
   });
 
   const updateApprovalMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return await apiRequest("PATCH", `/api/content-posts/${id}/approval`, { status });
+      return await apiRequest("PATCH", `/api/content-posts/${id}/approval`, { approvalStatus: status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
