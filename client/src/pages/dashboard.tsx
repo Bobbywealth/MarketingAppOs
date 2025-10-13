@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard } from "lucide-react";
+import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
@@ -130,6 +131,97 @@ export default function Dashboard() {
             </Card>
           ))}
         </div>
+
+        {/* Task Progress Section */}
+        {stats?.taskMetrics && (
+          <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-blue-500/5 via-transparent to-transparent">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+                    <ListTodo className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-semibold">Task Progress</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">Daily work completion tracking</p>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-sm">
+                  {stats.taskMetrics.completionPercentage}% Complete
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                {/* Progress Bar */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Overall Progress</span>
+                    <span className="font-semibold">
+                      {stats.taskMetrics.completed} / {stats.taskMetrics.total} Tasks
+                    </span>
+                  </div>
+                  <Progress 
+                    value={stats.taskMetrics.completionPercentage} 
+                    className="h-3"
+                    data-testid="progress-task-completion"
+                  />
+                </div>
+
+                {/* Task Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-completed-tasks">
+                        {stats.taskMetrics.completed}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Completed</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="metric-inprogress-tasks">
+                        {stats.taskMetrics.inProgress}
+                      </p>
+                      <p className="text-xs text-muted-foreground">In Progress</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                      <Eye className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-violet-600 dark:text-violet-400" data-testid="metric-review-tasks">
+                        {stats.taskMetrics.review}
+                      </p>
+                      <p className="text-xs text-muted-foreground">In Review</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                      <ListTodo className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400" data-testid="metric-pending-tasks">
+                        {stats.taskMetrics.pending}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Pending</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stripe Subscription Metrics */}
         {stripeData && (

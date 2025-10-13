@@ -62,6 +62,7 @@ export function registerRoutes(app: Express) {
       const completedTasks = tasks.filter((t) => t.status === "completed").length;
       const pendingTasks = tasks.filter((t) => t.status === "todo").length;
       const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length;
+      const reviewTasks = tasks.filter((t) => t.status === "review").length;
       const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
       res.json({
@@ -76,6 +77,7 @@ export function registerRoutes(app: Express) {
           completed: completedTasks,
           pending: pendingTasks,
           inProgress: inProgressTasks,
+          review: reviewTasks,
           completionPercentage,
         },
       });
