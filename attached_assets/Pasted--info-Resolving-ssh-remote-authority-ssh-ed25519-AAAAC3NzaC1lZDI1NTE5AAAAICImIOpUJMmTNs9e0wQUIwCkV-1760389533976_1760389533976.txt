@@ -1,0 +1,33 @@
+[info] Resolving ssh remote authority 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local' (Unparsed 'ssh-remote+7b22686f73744e616d65223a227373682d65643235353139204141414143334e7a6143316c5a4449314e544535414141414943496d494f70554a4d6d544e733965307751554977436b566f334d3675526a746a6261767470764c51514e20626f6262796340426f626279732d4d6163426f6f6b2d50726f2e6c6f63616c227d') (attempt #1)
+[info] SSH askpass server listening on /var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor-ssh-wlo1f0/socket.sock
+[debug] hostname: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local, remote platform map: {}
+[debug] hostname: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local, remote server install map: {}
+[debug] hostname: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local, server port range map: {}
+[info] Using askpass script: /Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/scripts/launchSSHAskpass.sh with javascript file /Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/scripts/sshAskClient.js. Askpass handle: /var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor-ssh-wlo1f0/socket.sock
+[info] Launching SSH server via shell with command: cat "/var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor_remote_install_9a0b851e-ae4e-47cf-a90e-d2ad288a340b.sh" | ssh -T -D 57153 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local bash --login -c bash
+[info] Establishing SSH connection: cat "/var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor_remote_install_9a0b851e-ae4e-47cf-a90e-d2ad288a340b.sh" | ssh -T -D 57153 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local bash --login -c bash
+[info] Started installation script. Waiting for it to finish...
+[info] Waiting for server to install. Timeout: 30000ms
+[info] (ssh_tunnel) stderr: ssh: Could not resolve hostname ssh-ed25519: nodename nor servname provided, or not known
+
+[error] Error installing server: [Error: Failed to connect to the remote SSH host. Please check the logs for more details.
+	at t.installCodeServer (/Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/main.js:2:950553)
+	at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+	at async /Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/main.js:2:402731]
+[debug] hostname: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local, remote platform map: {}
+[info] Selected platform linux for remote host ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local
+[info] Deleting local script /var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor_remote_install_9a0b851e-ae4e-47cf-a90e-d2ad288a340b.sh
+[info] Using askpass script: /Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/scripts/launchSSHAskpass.sh with javascript file /Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/scripts/sshAskClient.js. Askpass handle: /var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor-ssh-wlo1f0/socket.sock
+[info] Launching SSH server via shell with command: cat "/var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor_remote_install_1bb1245c-8260-4ad0-a70a-fff3d3c252e0.sh" | ssh -T -D 57206 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local bash --login -c bash
+[info] Establishing SSH connection: cat "/var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor_remote_install_1bb1245c-8260-4ad0-a70a-fff3d3c252e0.sh" | ssh -T -D 57206 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICImIOpUJMmTNs9e0wQUIwCkVo3M6uRjtjbavtpvLQQN bobbyc@Bobbys-MacBook-Pro.local bash --login -c bash
+[info] Started installation script. Waiting for it to finish...
+[info] Waiting for server to install. Timeout: 30000ms
+[info] (ssh_tunnel) stderr: ssh: Could not resolve hostname ssh-ed25519: nodename nor servname provided, or not known
+
+[error] Error installing server: [Error: Failed to connect to the remote SSH host. Please check the logs for more details.
+	at t.installCodeServer (/Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/main.js:2:950553)
+	at async /Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/main.js:2:402731]
+[info] Deleting local script /var/folders/zx/3jtv1bj17yb7c5hr_5xlgk7r0000gn/T/cursor_remote_install_1bb1245c-8260-4ad0-a70a-fff3d3c252e0.sh
+[error] Error resolving SSH authority [Error: Failed to connect to the remote SSH host. Please check the logs for more details.
+	at t.installCodeServer (/Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/main.js:2:950553)
+	at async /Users/bobbyc/.cursor/extensions/anysphere.remote-ssh-1.0.33/dist/main.js:2:402731]
