@@ -368,6 +368,83 @@ export const clientDocumentsRelations = relations(clientDocuments, ({ one }) => 
   }),
 }));
 
+// Website Projects table (Development Tracker)
+export const websiteProjects = pgTable("website_projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  name: varchar("name").notNull(),
+  stage: varchar("stage").notNull().default("design"), // design, dev, qa, launch
+  url: varchar("url"),
+  domain: varchar("domain"),
+  hostingProvider: varchar("hosting_provider"),
+  hostingExpiry: timestamp("hosting_expiry"),
+  sslStatus: varchar("ssl_status").default("active"), // active, expiring_soon, expired
+  sslExpiry: timestamp("ssl_expiry"),
+  dnsStatus: varchar("dns_status").default("verified"), // verified, pending, failed
+  dnsLastChecked: timestamp("dns_last_checked"),
+  progress: integer("progress").default(0), // 0-100
+  launchDate: timestamp("launch_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const websiteProjectsRelations = relations(websiteProjects, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [websiteProjects.clientId],
+    references: [clients.id],
+  }),
+  feedback: many(projectFeedback),
+}));
+
+// Project Feedback table (Client Feedback Log)
+export const projectFeedback = pgTable("project_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").references(() => websiteProjects.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  type: varchar("type").notNull().default("comment"), // comment, revision, approval, deadline
+  subject: varchar("subject"),
+  message: text("message").notNull(),
+  priority: varchar("priority").default("normal"), // low, normal, high, urgent
+  status: varchar("status").default("open"), // open, in_progress, completed
+  deadline: timestamp("deadline"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const projectFeedbackRelations = relations(projectFeedback, ({ one }) => ({
+  project: one(websiteProjects, {
+    fields: [projectFeedback.projectId],
+    references: [websiteProjects.id],
+  }),
+  user: one(users, {
+    fields: [projectFeedback.userId],
+    references: [users.id],
+  }),
+}));
+
+// Analytics Metrics table (Social, Ads, Website Analytics)
+export const analyticsMetrics = pgTable("analytics_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  campaignId: varchar("campaign_id").references(() => campaigns.id),
+  metricType: varchar("metric_type").notNull(), // social, ads, website
+  platform: varchar("platform"), // facebook, instagram, google_ads, google_analytics
+  date: timestamp("date").notNull(),
+  metrics: jsonb("metrics").notNull(), // {followers, engagement_rate, reach, clicks, ctr, spend, roas, conversions, page_views, bounce_rate, etc}
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const analyticsMetricsRelations = relations(analyticsMetrics, ({ one }) => ({
+  client: one(clients, {
+    fields: [analyticsMetrics.clientId],
+    references: [clients.id],
+  }),
+  campaign: one(campaigns, {
+    fields: [analyticsMetrics.campaignId],
+    references: [campaigns.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const upsertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, updatedAt: true });
@@ -383,6 +460,9 @@ export const insertClientDocumentSchema = createInsertSchema(clientDocuments).om
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, createdAt: true });
 export const insertLeadActivitySchema = createInsertSchema(leadActivities).omit({ id: true, createdAt: true });
 export const insertLeadAutomationSchema = createInsertSchema(leadAutomations).omit({ id: true, createdAt: true });
+export const insertWebsiteProjectSchema = createInsertSchema(websiteProjects).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertProjectFeedbackSchema = createInsertSchema(projectFeedback).omit({ id: true, createdAt: true });
+export const insertAnalyticsMetricSchema = createInsertSchema(analyticsMetrics).omit({ id: true, createdAt: true });
 
 // TypeScript types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -426,3 +506,12 @@ export type LeadActivity = typeof leadActivities.$inferSelect;
 
 export type InsertLeadAutomation = z.infer<typeof insertLeadAutomationSchema>;
 export type LeadAutomation = typeof leadAutomations.$inferSelect;
+
+export type InsertWebsiteProject = z.infer<typeof insertWebsiteProjectSchema>;
+export type WebsiteProject = typeof websiteProjects.$inferSelect;
+
+export type InsertProjectFeedback = z.infer<typeof insertProjectFeedbackSchema>;
+export type ProjectFeedback = typeof projectFeedback.$inferSelect;
+
+export type InsertAnalyticsMetric = z.infer<typeof insertAnalyticsMetricSchema>;
+export type AnalyticsMetric = typeof analyticsMetrics.$inferSelect;

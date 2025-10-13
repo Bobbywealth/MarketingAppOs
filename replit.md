@@ -67,11 +67,14 @@ Preferred communication style: Simple, everyday language.
 
 **Primary Database (PostgreSQL):**
 - **Schema Design:** Normalized relational model with foreign key relationships
-- **Key Tables:** users, clients (with Stripe integration fields: stripeCustomerId, stripeSubscriptionId), campaigns, tasks, taskComments, leads, contentPosts, invoices, tickets, messages, onboardingTasks, clientDocuments, sessions
+- **Key Tables:** users, clients (with Stripe integration), campaigns, tasks, taskComments, leads, leadActivities, leadAutomations, contentPosts, invoices, tickets, messages, onboardingTasks, clientDocuments, websiteProjects, projectFeedback, analyticsMetrics, sessions
 - **Relationships:** One-to-many (client→campaigns, client→leads, task→taskComments) and many-to-many via junction patterns
 - **Timestamps:** Automatic created_at/updated_at tracking on all entities
 - **Data Types:** Extensive use of JSONB for flexible metadata and arrays for tags/categories
 - **Stripe Integration:** Client records link to Stripe customers and subscriptions for billing automation
+- **Lead Management:** Enhanced pipeline with stages (Prospect→Qualified→Proposal→Closed), source tracking, activities log, and automation workflows
+- **Website Projects:** Development tracker with stages (Design→Dev→QA→Launch), SSL/DNS monitoring, and client feedback system
+- **Analytics:** Comprehensive metrics storage for social media, ads, and website analytics across multiple platforms
 
 **File Storage (Google Cloud Storage):**
 - **Object Storage Service** abstraction layer for file uploads
