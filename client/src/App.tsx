@@ -20,6 +20,8 @@ import Invoices from "@/pages/invoices";
 import Tickets from "@/pages/tickets";
 import Onboarding from "@/pages/onboarding";
 import Messages from "@/pages/messages";
+import WebsiteProjects from "@/pages/website-projects";
+import Analytics from "@/pages/analytics";
 import NotFound from "@/pages/not-found";
 
 function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
@@ -39,6 +41,8 @@ function Router({ isAuthenticated }: { isAuthenticated: boolean }) {
           <Route path="/tickets" component={Tickets} />
           <Route path="/onboarding" component={Onboarding} />
           <Route path="/messages" component={Messages} />
+          <Route path="/website-projects" component={WebsiteProjects} />
+          <Route path="/analytics" component={Analytics} />
         </>
       )}
       <Route component={NotFound} />

@@ -9,6 +9,8 @@ import {
   Ticket, 
   ClipboardCheck,
   MessageSquare,
+  Globe,
+  BarChart3,
   LogOut
 } from "lucide-react";
 import mtaLogo from "@assets/mta-logo.png";
@@ -89,6 +91,18 @@ const menuItems = [
     url: "/messages",
     icon: MessageSquare,
     permission: null, // Everyone can access messages
+  },
+  {
+    title: "Website Projects",
+    url: "/website-projects",
+    icon: Globe,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
+    permission: "canManageClients" as const,
   },
 ];
 
