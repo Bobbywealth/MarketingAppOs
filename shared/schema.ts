@@ -156,24 +156,77 @@ export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id),
+  assignedToId: varchar("assigned_to_id").references(() => users.id),
   name: varchar("name").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
   company: varchar("company"),
-  stage: varchar("stage").notNull().default("lead"), // lead, contacted, proposal, closed_won, closed_lost
+  stage: varchar("stage").notNull().default("prospect"), // prospect, qualified, proposal, closed_won, closed_lost
   score: varchar("score").notNull().default("warm"), // hot, warm, cold
-  value: integer("value"), // potential deal value
-  source: varchar("source"), // website, referral, social, etc.
+  value: integer("value"), // potential deal value in cents
+  source: varchar("source").notNull().default("website"), // website, ads, form, call, referral, social
+  sourceMetadata: jsonb("source_metadata"), // {campaign_id, ad_id, form_name, etc.}
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const leadsRelations = relations(leads, ({ one }) => ({
+export const leadsRelations = relations(leads, ({ one, many }) => ({
   client: one(clients, {
     fields: [leads.clientId],
     references: [clients.id],
+  }),
+  assignedTo: one(users, {
+    fields: [leads.assignedToId],
+    references: [users.id],
+  }),
+  activities: many(leadActivities),
+  automations: many(leadAutomations),
+}));
+
+// Lead Activities table (Interaction History)
+export const leadActivities = pgTable("lead_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").references(() => leads.id).notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  type: varchar("type").notNull(), // note, call, email, sms, meeting, stage_change
+  subject: varchar("subject"),
+  description: text("description"),
+  metadata: jsonb("metadata"), // {duration, email_id, sms_id, previous_stage, new_stage}
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const leadActivitiesRelations = relations(leadActivities, ({ one }) => ({
+  lead: one(leads, {
+    fields: [leadActivities.leadId],
+    references: [leads.id],
+  }),
+  user: one(users, {
+    fields: [leadActivities.userId],
+    references: [users.id],
+  }),
+}));
+
+// Lead Automation Workflows table
+export const leadAutomations = pgTable("lead_automations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").references(() => leads.id).notNull(),
+  type: varchar("type").notNull(), // email, sms
+  trigger: varchar("trigger").notNull(), // stage_change, time_delay, manual
+  triggerConditions: jsonb("trigger_conditions"), // {stage: 'qualified', delay_days: 2}
+  actionType: varchar("action_type").notNull(), // send_email, send_sms
+  actionData: jsonb("action_data"), // {template_id, message, subject}
+  status: varchar("status").notNull().default("pending"), // pending, sent, failed
+  scheduledFor: timestamp("scheduled_for"),
+  executedAt: timestamp("executed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const leadAutomationsRelations = relations(leadAutomations, ({ one }) => ({
+  lead: one(leads, {
+    fields: [leadAutomations.leadId],
+    references: [leads.id],
   }),
 }));
 
@@ -328,6 +381,8 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({ id: true, createdAt: true });
 export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({ id: true, createdAt: true });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, createdAt: true });
+export const insertLeadActivitySchema = createInsertSchema(leadActivities).omit({ id: true, createdAt: true });
+export const insertLeadAutomationSchema = createInsertSchema(leadAutomations).omit({ id: true, createdAt: true });
 
 // TypeScript types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
@@ -365,3 +420,9 @@ export type ClientDocument = typeof clientDocuments.$inferSelect;
 
 export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type TaskComment = typeof taskComments.$inferSelect;
+
+export type InsertLeadActivity = z.infer<typeof insertLeadActivitySchema>;
+export type LeadActivity = typeof leadActivities.$inferSelect;
+
+export type InsertLeadAutomation = z.infer<typeof insertLeadAutomationSchema>;
+export type LeadAutomation = typeof leadAutomations.$inferSelect;
