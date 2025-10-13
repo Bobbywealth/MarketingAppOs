@@ -49,12 +49,20 @@ export function registerRoutes(app: Express) {
       const campaigns = await storage.getCampaigns();
       const leads = await storage.getLeads();
       const invoices = await storage.getInvoices();
+      const tasks = await storage.getTasks();
 
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
       const monthlyRevenue = invoices
         .filter((inv) => inv.status === "paid")
         .reduce((sum, inv) => sum + inv.amount, 0);
+
+      // Task metrics
+      const totalTasks = tasks.length;
+      const completedTasks = tasks.filter((t) => t.status === "completed").length;
+      const pendingTasks = tasks.filter((t) => t.status === "todo").length;
+      const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length;
+      const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
       res.json({
         totalClients: clients.length,
@@ -63,6 +71,13 @@ export function registerRoutes(app: Express) {
         monthlyRevenue,
         recentActivity: [],
         upcomingDeadlines: [],
+        taskMetrics: {
+          total: totalTasks,
+          completed: completedTasks,
+          pending: pendingTasks,
+          inProgress: inProgressTasks,
+          completionPercentage,
+        },
       });
     } catch (error) {
       console.error(error);

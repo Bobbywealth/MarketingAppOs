@@ -7,6 +7,7 @@ Marketing Team App CRM (MTA CRM) is a comprehensive customer relationship manage
 The system is built as a modern full-stack web application with a React-based frontend and Express.js backend, featuring real-time data synchronization, role-based access control, and a premium glass morphism design system.
 
 **Recent Updates (October 2025):**
+- **Authentication Migration:** Migrated from Replit Auth (OIDC) to username/password authentication using Passport Local Strategy for universal deployment compatibility (works on Render, AWS, Azure, etc.)
 - Enhanced landing page with clear role-based access information for Admins, Staff, and Clients
 - Website development tracker with automated SSL certificate and hosting expiry alerts
 - Comprehensive analytics dashboard with platform filtering and client-specific metrics
