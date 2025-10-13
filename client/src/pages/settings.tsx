@@ -96,10 +96,7 @@ export default function SettingsPage() {
 
   const saveGeneralSettings = useMutation({
     mutationFn: async (data: GeneralSettings) => {
-      const response = await apiRequest("/api/settings/general", {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("PUT", "/api/settings/general", data);
       return response;
     },
     onSuccess: () => {
@@ -119,10 +116,7 @@ export default function SettingsPage() {
 
   const saveNotificationSettings = useMutation({
     mutationFn: async (data: NotificationSettings) => {
-      const response = await apiRequest("/api/settings/notifications", {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("PUT", "/api/settings/notifications", data);
       return response;
     },
     onSuccess: () => {
