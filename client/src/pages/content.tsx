@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X, Calendar, Image } from "lucide-react";
+import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ContentPost, Client } from "@shared/schema";
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks, subWeeks, startOfDay } from "date-fns";
 
 export default function Content() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
+  const [selectedClient, setSelectedClient] = useState<string>("all");
   const { toast } = useToast();
 
   const { data: posts, isLoading } = useQuery<ContentPost[]>({
@@ -82,6 +85,41 @@ export default function Content() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved": return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+      case "pending": return "bg-amber-500/10 text-amber-700 dark:text-amber-400";
+      case "rejected": return "bg-red-500/10 text-red-700 dark:text-red-400";
+      case "published": return "bg-purple-500/10 text-purple-700 dark:text-purple-400";
+      case "draft": return "bg-slate-500/10 text-slate-700 dark:text-slate-400";
+      default: return "bg-slate-500/10 text-slate-700 dark:text-slate-400";
+    }
+  };
+
+  // Get week days for calendar
+  const weekDays = useMemo(() => {
+    const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 0 });
+    return eachDayOfInterval({ start: currentWeekStart, end: weekEnd });
+  }, [currentWeekStart]);
+
+  // Filter and organize posts by day
+  const filteredPosts = useMemo(() => {
+    if (!posts) return [];
+    if (selectedClient === "all") return posts;
+    return posts.filter(post => post.clientId === selectedClient);
+  }, [posts, selectedClient]);
+
+  const getPostsForDay = (day: Date) => {
+    return filteredPosts.filter(post => {
+      if (!post.scheduledFor) return false;
+      return isSameDay(new Date(post.scheduledFor), day);
+    });
+  };
+
+  const getClientName = (clientId: string) => {
+    return clients?.find(c => c.id === clientId)?.name || "Unknown Client";
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-full gradient-mesh">
@@ -108,127 +146,195 @@ export default function Content() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Content Calendar</h1>
-            <p className="text-lg text-muted-foreground">Schedule and manage social media content</p>
+            <p className="text-lg text-muted-foreground">Schedule and manage social media content for all clients</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-post">
-              <Plus className="w-4 h-4 mr-2" />
-              New Post
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl glass-strong">
-            <DialogHeader>
-              <DialogTitle className="text-2xl">Create Content Post</DialogTitle>
-              <DialogDescription>Schedule a new social media post for your client</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreatePost} className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clientId">Client *</Label>
-                  <Select name="clientId" required>
-                    <SelectTrigger data-testid="select-post-client">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients?.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="platform">Platform *</Label>
-                  <Select name="platform" required>
-                    <SelectTrigger data-testid="select-platform">
-                      <SelectValue placeholder="Select platform" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="facebook">Facebook</SelectItem>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="twitter">Twitter</SelectItem>
-                      <SelectItem value="linkedin">LinkedIn</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="caption">Caption *</Label>
-                  <Textarea id="caption" name="caption" rows={4} required data-testid="input-caption" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="scheduledFor">Schedule For</Label>
-                  <Input id="scheduledFor" name="scheduledFor" type="datetime-local" data-testid="input-scheduled-for" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+          <div className="flex items-center gap-3 flex-wrap">
+            <Select value={selectedClient} onValueChange={setSelectedClient}>
+              <SelectTrigger className="w-[200px]" data-testid="select-filter-client">
+                <SelectValue placeholder="Filter by client" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {clients?.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-post">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Post
                 </Button>
-                <Button type="submit" disabled={createPostMutation.isPending} data-testid="button-submit-post">
-                  {createPostMutation.isPending ? "Creating..." : "Create Post"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts?.map((post) => (
-          <Card key={post.id} className="hover-elevate transition-shadow" data-testid={`card-post-${post.id}`}>
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex items-start justify-between gap-2">
-                <Badge className={`${getPlatformColor(post.platform)} border`} variant="outline">
-                  {post.platform}
-                </Badge>
-                <Badge className={getStatusColor(post.approvalStatus)} variant="secondary">
-                  {post.approvalStatus}
-                </Badge>
-              </div>
-
-              <p className="text-sm line-clamp-4">{post.caption}</p>
-
-              {post.scheduledFor && (
-                <p className="text-xs text-muted-foreground">
-                  Scheduled: {new Date(post.scheduledFor).toLocaleString()}
-                </p>
-              )}
-
-              {post.approvalStatus === "pending" && (
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "approved" })}
-                    data-testid={`button-approve-${post.id}`}
-                  >
-                    <Check className="w-4 h-4 mr-1" />
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "rejected" })}
-                    data-testid={`button-reject-${post.id}`}
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    Reject
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {posts?.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No content posts yet</p>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl glass-strong">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl">Create Content Post</DialogTitle>
+                  <DialogDescription>Schedule a new social media post for your client</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreatePost} className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="clientId">Client *</Label>
+                      <Select name="clientId" required>
+                        <SelectTrigger data-testid="select-post-client">
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clients?.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="platform">Platform *</Label>
+                      <Select name="platform" required>
+                        <SelectTrigger data-testid="select-platform">
+                          <SelectValue placeholder="Select platform" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="twitter">Twitter</SelectItem>
+                          <SelectItem value="linkedin">LinkedIn</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="caption">Caption *</Label>
+                      <Textarea id="caption" name="caption" rows={4} required data-testid="input-caption" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="scheduledFor">Schedule For</Label>
+                      <Input id="scheduledFor" name="scheduledFor" type="datetime-local" data-testid="input-scheduled-for" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createPostMutation.isPending} data-testid="button-submit-post">
+                      {createPostMutation.isPending ? "Creating..." : "Create Post"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-      )}
+
+        {/* Week Navigation */}
+        <div className="flex items-center justify-between gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}
+            data-testid="button-previous-week"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Previous Week
+          </Button>
+          <h2 className="text-lg font-semibold" data-testid="text-week-range">
+            {format(currentWeekStart, 'MMM d')} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 0 }), 'MMM d, yyyy')}
+          </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
+            data-testid="button-next-week"
+          >
+            Next Week
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          {weekDays.map((day) => {
+            const dayPosts = getPostsForDay(day);
+            const isToday = isSameDay(day, new Date());
+
+            return (
+              <Card key={day.toISOString()} className={`${isToday ? 'ring-2 ring-primary' : ''}`} data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}>
+                <CardHeader className="p-3 pb-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">{format(day, 'EEE')}</p>
+                      <p className={`text-lg font-semibold ${isToday ? 'text-primary' : ''}`}>{format(day, 'd')}</p>
+                    </div>
+                    {dayPosts.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {dayPosts.length}
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 pt-0 space-y-2">
+                  {dayPosts.map((post) => (
+                    <Card key={post.id} className="hover-elevate border-0 bg-card/50" data-testid={`card-post-${post.id}`}>
+                      <CardContent className="p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-1">
+                          <Badge className={`${getPlatformColor(post.platform)} border text-[10px] px-1`} variant="outline">
+                            {post.platform}
+                          </Badge>
+                          <Badge className={`${getStatusColor(post.approvalStatus)} text-[10px] px-1`} variant="secondary">
+                            {post.approvalStatus}
+                          </Badge>
+                        </div>
+                        
+                        <p className="text-xs font-medium text-muted-foreground">{getClientName(post.clientId)}</p>
+                        <p className="text-xs line-clamp-2">{post.caption}</p>
+                        
+                        {post.scheduledFor && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {format(new Date(post.scheduledFor), 'h:mm a')}
+                          </p>
+                        )}
+
+                        {post.approvalStatus === "pending" && (
+                          <div className="flex gap-1 pt-1">
+                            <Button
+                              size="sm"
+                              className="flex-1 h-6 text-xs"
+                              onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "approved" })}
+                              data-testid={`button-approve-${post.id}`}
+                            >
+                              <Check className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="flex-1 h-6 text-xs"
+                              onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "rejected" })}
+                              data-testid={`button-reject-${post.id}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {dayPosts.length === 0 && (
+                    <p className="text-xs text-center text-muted-foreground py-4">No posts</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {filteredPosts.length === 0 && (
+          <div className="text-center py-12">
+            <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">No content posts scheduled yet</p>
+          </div>
+        )}
       </div>
     </div>
   );
