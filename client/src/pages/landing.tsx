@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap } from "lucide-react";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
-import heroImage from "@assets/stock_images/marketing_analytics__1be1259a.jpg";
+import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 
 export default function LandingPage() {
