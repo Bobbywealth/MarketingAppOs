@@ -50,6 +50,10 @@ export function registerRoutes(app: Express) {
       const leads = await storage.getLeads();
       const invoices = await storage.getInvoices();
       const tasks = await storage.getTasks();
+      const tickets = await storage.getTickets();
+      const contentPosts = await storage.getContentPosts();
+      const websiteProjects = await storage.getWebsiteProjects();
+      const users = await storage.getUsers();
 
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
@@ -65,13 +69,129 @@ export function registerRoutes(app: Express) {
       const reviewTasks = tasks.filter((t) => t.status === "review").length;
       const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+      // Recent Activity Feed - collect activities from all sources
+      const recentActivity: any[] = [];
+
+      // Client activities
+      clients.slice(-5).forEach(client => {
+        recentActivity.push({
+          type: 'success',
+          title: `New client added: ${client.name}`,
+          time: formatActivityTime(client.createdAt),
+          timestamp: client.createdAt,
+        });
+      });
+
+      // Campaign activities
+      campaigns.slice(-5).forEach(campaign => {
+        const client = clients.find(c => c.id === campaign.clientId);
+        recentActivity.push({
+          type: 'info',
+          title: `Campaign ${campaign.status}: ${campaign.name}${client ? ` for ${client.name}` : ''}`,
+          time: formatActivityTime(campaign.updatedAt || campaign.createdAt),
+          timestamp: campaign.updatedAt || campaign.createdAt,
+        });
+      });
+
+      // Task activities (completed tasks)
+      tasks.filter(t => t.status === 'completed').slice(-5).forEach(task => {
+        const assignee = users.find(u => u.id === task.assignedToId);
+        recentActivity.push({
+          type: 'success',
+          title: `Task completed: ${task.title}${assignee ? ` by ${assignee.firstName} ${assignee.lastName}` : ''}`,
+          time: formatActivityTime(task.completedAt || task.updatedAt),
+          timestamp: task.completedAt || task.updatedAt,
+        });
+      });
+
+      // Lead activities
+      leads.slice(-5).forEach(lead => {
+        const statusColors: any = { 'prospect': 'info', 'qualified': 'warning', 'proposal': 'warning', 'closed': 'success', 'lost': 'error' };
+        recentActivity.push({
+          type: statusColors[lead.stage] || 'info',
+          title: `Lead ${lead.stage}: ${lead.name} - $${lead.value || 0}`,
+          time: formatActivityTime(lead.updatedAt || lead.createdAt),
+          timestamp: lead.updatedAt || lead.createdAt,
+        });
+      });
+
+      // Invoice activities
+      invoices.filter(inv => inv.status === 'paid').slice(-3).forEach(invoice => {
+        const client = clients.find(c => c.id === invoice.clientId);
+        recentActivity.push({
+          type: 'success',
+          title: `Invoice paid: $${invoice.amount}${client ? ` from ${client.name}` : ''}`,
+          time: formatActivityTime(invoice.updatedAt || invoice.createdAt),
+          timestamp: invoice.updatedAt || invoice.createdAt,
+        });
+      });
+
+      // Ticket activities
+      tickets.slice(-5).forEach(ticket => {
+        const statusColors: any = { 'open': 'warning', 'in_progress': 'info', 'resolved': 'success', 'closed': 'info' };
+        recentActivity.push({
+          type: statusColors[ticket.status] || 'info',
+          title: `Support ticket ${ticket.status}: ${ticket.subject}`,
+          time: formatActivityTime(ticket.updatedAt || ticket.createdAt),
+          timestamp: ticket.updatedAt || ticket.createdAt,
+        });
+      });
+
+      // Content activities
+      contentPosts.slice(-3).forEach(post => {
+        const statusColors: any = { 'draft': 'info', 'pending': 'warning', 'approved': 'success', 'published': 'success', 'rejected': 'error' };
+        recentActivity.push({
+          type: statusColors[post.status] || 'info',
+          title: `Content ${post.status}: ${post.title}`,
+          time: formatActivityTime(post.updatedAt || post.createdAt),
+          timestamp: post.updatedAt || post.createdAt,
+        });
+      });
+
+      // Website project activities
+      websiteProjects.slice(-3).forEach(project => {
+        const client = clients.find(c => c.id === project.clientId);
+        recentActivity.push({
+          type: 'info',
+          title: `Website project ${project.stage}: ${project.projectName}${client ? ` for ${client.name}` : ''}`,
+          time: formatActivityTime(project.updatedAt || project.createdAt),
+          timestamp: project.updatedAt || project.createdAt,
+        });
+      });
+
+      // Sort by timestamp (most recent first) and limit to 10
+      const sortedActivity = recentActivity
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 10);
+
+      // Upcoming Deadlines
+      const upcomingDeadlines: any[] = [];
+      
+      // Tasks with due dates
+      tasks
+        .filter(t => t.dueDate && t.status !== 'completed')
+        .forEach(task => {
+          const daysUntil = Math.floor((new Date(task.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          upcomingDeadlines.push({
+            title: task.title,
+            date: formatDeadlineDate(task.dueDate),
+            urgent: daysUntil <= 3,
+            timestamp: task.dueDate,
+          });
+        });
+
+      // Sort deadlines by date and limit to 5
+      const sortedDeadlines = upcomingDeadlines
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .slice(0, 5);
+
       res.json({
         totalClients: clients.length,
         activeCampaigns,
         pipelineValue,
         monthlyRevenue,
-        recentActivity: [],
-        upcomingDeadlines: [],
+        recentActivity: sortedActivity,
+        upcomingDeadlines: sortedDeadlines,
         taskMetrics: {
           total: totalTasks,
           completed: completedTasks,
@@ -86,6 +206,36 @@ export function registerRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
+
+  // Helper functions for formatting
+  function formatActivityTime(date: Date | null | undefined): string {
+    if (!date) return 'Just now';
+    const now = new Date();
+    const activityDate = new Date(date);
+    const diffMs = now.getTime() - activityDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    return activityDate.toLocaleDateString();
+  }
+
+  function formatDeadlineDate(date: Date | null | undefined): string {
+    if (!date) return '';
+    const deadline = new Date(date);
+    const now = new Date();
+    const diffDays = Math.floor((deadline.getTime() - now.getTime()) / 86400000);
+
+    if (diffDays < 0) return `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''}`;
+    if (diffDays === 0) return 'Due today';
+    if (diffDays === 1) return 'Due tomorrow';
+    if (diffDays < 7) return `Due in ${diffDays} days`;
+    return `Due ${deadline.toLocaleDateString()}`;
+  }
 
   // Stripe subscription stats
   app.get("/api/stripe/subscriptions", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
