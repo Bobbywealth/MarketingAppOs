@@ -8,6 +8,7 @@ The system is built as a modern full-stack web application with a React-based fr
 
 **Recent Updates (October 2025):**
 - **Authentication Migration:** Migrated from Replit Auth (OIDC) to username/password authentication using Passport Local Strategy for universal deployment compatibility (works on Render, AWS, Azure, etc.)
+- **Task Progress Dashboard:** Added comprehensive task tracking with visual progress bar showing completion percentage and breakdown by status (Completed, In Progress, In Review, Pending)
 - Enhanced landing page with clear role-based access information for Admins, Staff, and Clients
 - Website development tracker with automated SSL certificate and hosting expiry alerts
 - Comprehensive analytics dashboard with platform filtering and client-specific metrics
