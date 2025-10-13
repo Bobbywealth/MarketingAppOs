@@ -39,51 +39,33 @@ export default function LandingPage() {
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <div className="w-64 p-2">
-                      <Link href="/digital-marketing">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-digital-marketing">
-                          Digital Marketing
-                        </a>
-                      </Link>
-                      <Link href="/graphic-design">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-graphic-design">
-                          Graphic Design
-                        </a>
-                      </Link>
-                      <Link href="/web-design">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-web-design">
-                          Web Design & Development
-                        </a>
-                      </Link>
-                      <Link href="/mobile-app">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-mobile-app">
-                          Mobile App
-                        </a>
-                      </Link>
-                      <Link href="/seo">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-seo">
-                          SEO
-                        </a>
-                      </Link>
-                      <Link href="/crm">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-crm">
-                          CRM
-                        </a>
-                      </Link>
-                      <Link href="/ai-automation">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-ai-automation">
-                          AI Automation Prices
-                        </a>
-                      </Link>
-                      <Link href="/payment-solutions">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-payment-solutions">
-                          Payment Solutions
-                        </a>
-                      </Link>
-                      <Link href="/funding">
-                        <a className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-funding">
-                          Funding
-                        </a>
-                      </Link>
+                      <a href="#digital-marketing" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-digital-marketing">
+                        Digital Marketing
+                      </a>
+                      <a href="#graphic-design" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-graphic-design">
+                        Graphic Design
+                      </a>
+                      <a href="#web-design" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-web-design">
+                        Web Design & Development
+                      </a>
+                      <a href="#mobile-app" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-mobile-app">
+                        Mobile App
+                      </a>
+                      <a href="#seo" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-seo">
+                        SEO
+                      </a>
+                      <a href="#crm" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-crm">
+                        CRM
+                      </a>
+                      <a href="#ai-automation" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-ai-automation">
+                        AI Automation Prices
+                      </a>
+                      <a href="#payment-solutions" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-payment-solutions">
+                        Payment Solutions
+                      </a>
+                      <a href="#funding" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-funding">
+                        Funding
+                      </a>
                     </div>
                   </NavigationMenuContent>
                 </NavigationMenuItem>

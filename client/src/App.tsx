@@ -13,15 +13,6 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
-import DigitalMarketing from "@/pages/digital-marketing";
-import GraphicDesign from "@/pages/graphic-design";
-import WebDesign from "@/pages/web-design";
-import MobileApp from "@/pages/mobile-app";
-import SEO from "@/pages/seo";
-import CRM from "@/pages/crm";
-import AIAutomation from "@/pages/ai-automation";
-import PaymentSolutions from "@/pages/payment-solutions";
-import Funding from "@/pages/funding";
 import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
@@ -34,7 +25,6 @@ import Onboarding from "@/pages/onboarding";
 import Messages from "@/pages/messages";
 import WebsiteProjects from "@/pages/website-projects";
 import Analytics from "@/pages/analytics";
-import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -45,15 +35,6 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/signup" component={SignupPage} />
-      <Route path="/digital-marketing" component={DigitalMarketing} />
-      <Route path="/graphic-design" component={GraphicDesign} />
-      <Route path="/web-design" component={WebDesign} />
-      <Route path="/mobile-app" component={MobileApp} />
-      <Route path="/seo" component={SEO} />
-      <Route path="/crm" component={CRM} />
-      <Route path="/ai-automation" component={AIAutomation} />
-      <Route path="/payment-solutions" component={PaymentSolutions} />
-      <Route path="/funding" component={Funding} />
       {!user && <Route path="/" component={Landing} />}
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/clients" component={Clients} />
@@ -67,7 +48,6 @@ function Router() {
       <ProtectedRoute path="/messages" component={Messages} />
       <ProtectedRoute path="/website-projects" component={WebsiteProjects} />
       <ProtectedRoute path="/analytics" component={Analytics} />
-      <ProtectedRoute path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
