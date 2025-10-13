@@ -13,7 +13,8 @@ import {
   BarChart3,
   LogOut
 } from "lucide-react";
-import mtaLogo from "@assets/mta-logo.png";
+import mtaLogoWhite from "@assets/mta-logo.png";
+import mtaLogoBlue from "@assets/mta-logo-blue.png";
 import {
   Sidebar,
   SidebarContent,
@@ -127,10 +128,16 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="flex items-center justify-center py-3">
         <img 
-          src={mtaLogo} 
+          src={mtaLogoBlue} 
           alt="Marketing Team App" 
-          className="h-24 w-auto"
+          className="h-24 w-auto dark:hidden"
           data-testid="img-logo"
+        />
+        <img 
+          src={mtaLogoWhite} 
+          alt="Marketing Team App" 
+          className="h-24 w-auto hidden dark:block"
+          data-testid="img-logo-dark"
         />
       </SidebarHeader>
       <SidebarContent>
