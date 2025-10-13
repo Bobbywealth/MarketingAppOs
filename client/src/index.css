@@ -588,4 +588,23 @@
   .animate-delay-2 { animation-delay: 0.2s; }
   .animate-delay-3 { animation-delay: 0.3s; }
   .animate-delay-4 { animation-delay: 0.4s; }
+
+  /* Animated gradient header */
+  .gradient-animate {
+    background: linear-gradient(-45deg, #ffffff, #dbeafe, #ede9fe, #fae8ff, #ffffff);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+  }
+
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
 }
