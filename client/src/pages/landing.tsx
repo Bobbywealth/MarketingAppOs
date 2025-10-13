@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard } from "lucide-react";
 import mtaLogo from "@assets/mta-logo.png";
+import heroImage from "@assets/stock_images/marketing_analytics__1be1259a.jpg";
 
 export default function LandingPage() {
   return (
@@ -60,10 +61,16 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div>
-            <div className="hidden lg:block">
+            <div className="hidden lg:block relative">
               <div className="relative animate-float">
                 <div className="absolute top-10 right-10 w-48 h-48 bg-blue-400/20 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-10 left-10 w-64 h-64 bg-purple-400/20 rounded-full blur-3xl"></div>
+                <img 
+                  src={heroImage} 
+                  alt="Marketing Dashboard Analytics" 
+                  className="relative z-10 w-full h-auto rounded-lg shadow-2xl transform hover:scale-105 transition-transform duration-500"
+                  data-testid="img-hero-dashboard"
+                />
               </div>
             </div>
           </div>
