@@ -9,16 +9,43 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { ContentPost, Client } from "@shared/schema";
+import type { ContentPost, Client, InsertContentPost } from "@shared/schema";
+import { insertContentPostSchema } from "@shared/schema";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks, subWeeks, startOfDay } from "date-fns";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// Form schema extending the insert schema
+const formSchema = insertContentPostSchema.extend({
+  scheduledFor: z.string().optional(),
+}).omit({
+  approvalStatus: true,
+  approvedBy: true,
+  publishedAt: true,
+  mediaUrl: true,
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function Content() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const { toast } = useToast();
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      clientId: "",
+      platform: "",
+      caption: "",
+      scheduledFor: "",
+    },
+  });
 
   const { data: posts, isLoading } = useQuery<ContentPost[]>({
     queryKey: ["/api/content-posts"],
@@ -29,12 +56,13 @@ export default function Content() {
   });
 
   const createPostMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: InsertContentPost) => {
       return await apiRequest("POST", "/api/content-posts", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
       setDialogOpen(false);
+      form.reset();
       toast({ title: "Content post created successfully" });
     },
     onError: (error: any) => {
@@ -53,16 +81,15 @@ export default function Content() {
     },
   });
 
-  const handleCreatePost = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  const handleCreatePost = (values: FormValues) => {
+    const postData: InsertContentPost = {
+      clientId: values.clientId,
+      platform: values.platform,
+      caption: values.caption || "",
+      scheduledFor: values.scheduledFor ? new Date(values.scheduledFor) : null,
+    };
 
-    createPostMutation.mutate({
-      clientId: formData.get("clientId"),
-      platform: formData.get("platform"),
-      caption: formData.get("caption"),
-      scheduledFor: formData.get("scheduledFor") ? new Date(formData.get("scheduledFor") as string) : null,
-    });
+    createPostMutation.mutate(postData);
   };
 
   const getStatusGradient = (status: string) => {
@@ -163,7 +190,10 @@ export default function Content() {
                 ))}
               </SelectContent>
             </Select>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) form.reset();
+            }}>
               <DialogTrigger asChild>
                 <Button data-testid="button-add-post">
                   <Plus className="w-4 h-4 mr-2" />
@@ -175,55 +205,95 @@ export default function Content() {
                   <DialogTitle className="text-2xl">Create Content Post</DialogTitle>
                   <DialogDescription>Schedule a new social media post for your client</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleCreatePost} className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="clientId">Client *</Label>
-                      <Select name="clientId" required>
-                        <SelectTrigger data-testid="select-post-client">
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {clients?.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {client.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleCreatePost)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="clientId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Client *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-post-client">
+                                <SelectValue placeholder="Select client" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {clients?.map((client) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="platform"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Platform *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-platform">
+                                <SelectValue placeholder="Select platform" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="facebook">Facebook</SelectItem>
+                              <SelectItem value="instagram">Instagram</SelectItem>
+                              <SelectItem value="twitter">Twitter</SelectItem>
+                              <SelectItem value="linkedin">LinkedIn</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="caption"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Caption *</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} rows={4} data-testid="input-caption" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="scheduledFor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Schedule For</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="datetime-local" data-testid="input-scheduled-for" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={createPostMutation.isPending} data-testid="button-submit-post">
+                        {createPostMutation.isPending ? "Creating..." : "Create Post"}
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="platform">Platform *</Label>
-                      <Select name="platform" required>
-                        <SelectTrigger data-testid="select-platform">
-                          <SelectValue placeholder="Select platform" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="facebook">Facebook</SelectItem>
-                          <SelectItem value="instagram">Instagram</SelectItem>
-                          <SelectItem value="twitter">Twitter</SelectItem>
-                          <SelectItem value="linkedin">LinkedIn</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="caption">Caption *</Label>
-                      <Textarea id="caption" name="caption" rows={4} required data-testid="input-caption" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduledFor">Schedule For</Label>
-                      <Input id="scheduledFor" name="scheduledFor" type="datetime-local" data-testid="input-scheduled-for" />
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createPostMutation.isPending} data-testid="button-submit-post">
-                      {createPostMutation.isPending ? "Creating..." : "Create Post"}
-                    </Button>
-                  </div>
-                </form>
+                  </form>
+                </Form>
               </DialogContent>
             </Dialog>
           </div>
