@@ -198,7 +198,7 @@ export default function Pipeline() {
                       <FormItem>
                         <FormLabel>Company</FormLabel>
                         <FormControl>
-                          <Input {...field} data-testid="input-company" />
+                          <Input {...field} value={field.value ?? ""} data-testid="input-company" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -212,7 +212,7 @@ export default function Pipeline() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input {...field} type="email" data-testid="input-email" />
+                          <Input {...field} value={field.value ?? ""} type="email" data-testid="input-email" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -226,7 +226,7 @@ export default function Pipeline() {
                       <FormItem>
                         <FormLabel>Phone</FormLabel>
                         <FormControl>
-                          <Input {...field} data-testid="input-phone" />
+                          <Input {...field} value={field.value ?? ""} data-testid="input-phone" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -323,7 +323,7 @@ export default function Pipeline() {
                       <FormItem className="col-span-2">
                         <FormLabel>Notes</FormLabel>
                         <FormControl>
-                          <Textarea {...field} data-testid="input-notes" />
+                          <Textarea {...field} value={field.value ?? ""} data-testid="input-notes" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
