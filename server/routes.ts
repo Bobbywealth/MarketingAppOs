@@ -413,6 +413,84 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Lead activity routes
+  app.get("/api/leads/:leadId/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const activities = await storage.getLeadActivities(req.params.leadId);
+      res.json(activities);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch lead activities" });
+    }
+  });
+
+  app.post("/api/leads/:leadId/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const { insertLeadActivitySchema } = await import("@shared/schema");
+      const validatedData = insertLeadActivitySchema.parse({
+        ...req.body,
+        leadId: req.params.leadId,
+      });
+      const activity = await storage.createLeadActivity(validatedData);
+      res.status(201).json(activity);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  // Lead automation routes
+  app.get("/api/leads/:leadId/automations", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const automations = await storage.getLeadAutomations(req.params.leadId);
+      res.json(automations);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch lead automations" });
+    }
+  });
+
+  app.post("/api/leads/:leadId/automations", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const { insertLeadAutomationSchema } = await import("@shared/schema");
+      const validatedData = insertLeadAutomationSchema.parse({
+        ...req.body,
+        leadId: req.params.leadId,
+      });
+      const automation = await storage.createLeadAutomation(validatedData);
+      res.status(201).json(automation);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/automations/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const { insertLeadAutomationSchema } = await import("@shared/schema");
+      const validatedData = insertLeadAutomationSchema.partial().strip().parse(req.body);
+      const automation = await storage.updateLeadAutomation(req.params.id, validatedData);
+      res.json(automation);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      if (error.message?.includes("not found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      console.error(error);
+      res.status(500).json({ message: "Failed to update automation" });
+    }
+  });
+
+  app.delete("/api/automations/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteLeadAutomation(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete automation" });
+    }
+  });
+
   // Content post routes
   app.get("/api/content-posts", isAuthenticated, requirePermission("canManageContent"), async (_req: Request, res: Response) => {
     try {

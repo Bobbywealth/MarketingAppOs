@@ -5,6 +5,8 @@ import {
   tasks,
   taskComments,
   leads,
+  leadActivities,
+  leadAutomations,
   contentPosts,
   invoices,
   tickets,
@@ -23,6 +25,10 @@ import {
   type InsertTaskComment,
   type Lead,
   type InsertLead,
+  type LeadActivity,
+  type InsertLeadActivity,
+  type LeadAutomation,
+  type InsertLeadAutomation,
   type ContentPost,
   type InsertContentPost,
   type Invoice,
@@ -75,6 +81,16 @@ export interface IStorage {
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, data: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
+
+  // Lead activity operations
+  getLeadActivities(leadId: string): Promise<LeadActivity[]>;
+  createLeadActivity(activity: InsertLeadActivity): Promise<LeadActivity>;
+
+  // Lead automation operations
+  getLeadAutomations(leadId: string): Promise<LeadAutomation[]>;
+  createLeadAutomation(automation: InsertLeadAutomation): Promise<LeadAutomation>;
+  updateLeadAutomation(id: string, data: Partial<InsertLeadAutomation>): Promise<LeadAutomation>;
+  deleteLeadAutomation(id: string): Promise<void>;
 
   // Content post operations
   getContentPosts(): Promise<ContentPost[]>;
@@ -283,6 +299,50 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLead(id: string): Promise<void> {
     await db.delete(leads).where(eq(leads.id, id));
+  }
+
+  // Lead activity operations
+  async getLeadActivities(leadId: string): Promise<LeadActivity[]> {
+    return await db
+      .select()
+      .from(leadActivities)
+      .where(eq(leadActivities.leadId, leadId))
+      .orderBy(desc(leadActivities.createdAt));
+  }
+
+  async createLeadActivity(activityData: InsertLeadActivity): Promise<LeadActivity> {
+    const [activity] = await db.insert(leadActivities).values(activityData).returning();
+    return activity;
+  }
+
+  // Lead automation operations
+  async getLeadAutomations(leadId: string): Promise<LeadAutomation[]> {
+    return await db
+      .select()
+      .from(leadAutomations)
+      .where(eq(leadAutomations.leadId, leadId))
+      .orderBy(desc(leadAutomations.createdAt));
+  }
+
+  async createLeadAutomation(automationData: InsertLeadAutomation): Promise<LeadAutomation> {
+    const [automation] = await db.insert(leadAutomations).values(automationData).returning();
+    return automation;
+  }
+
+  async updateLeadAutomation(id: string, data: Partial<InsertLeadAutomation>): Promise<LeadAutomation> {
+    const [automation] = await db
+      .update(leadAutomations)
+      .set(data)
+      .where(eq(leadAutomations.id, id))
+      .returning();
+    if (!automation) {
+      throw new Error("Lead automation not found");
+    }
+    return automation;
+  }
+
+  async deleteLeadAutomation(id: string): Promise<void> {
+    await db.delete(leadAutomations).where(eq(leadAutomations.id, id));
   }
 
   // Content post operations
