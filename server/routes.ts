@@ -53,7 +53,6 @@ export function registerRoutes(app: Express) {
       const tickets = await storage.getTickets();
       const contentPosts = await storage.getContentPosts();
       const websiteProjects = await storage.getWebsiteProjects();
-      const users = await storage.getUsers();
 
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
@@ -95,10 +94,9 @@ export function registerRoutes(app: Express) {
 
       // Task activities (completed tasks)
       tasks.filter(t => t.status === 'completed').slice(-5).forEach(task => {
-        const assignee = users.find(u => u.id === task.assignedToId);
         recentActivity.push({
           type: 'success',
-          title: `Task completed: ${task.title}${assignee ? ` by ${assignee.firstName} ${assignee.lastName}` : ''}`,
+          title: `Task completed: ${task.title}`,
           time: formatActivityTime(task.completedAt || task.updatedAt),
           timestamp: task.completedAt || task.updatedAt,
         });
