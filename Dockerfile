@@ -21,8 +21,8 @@ ENV DATABASE_URL=${DATABASE_URL:-postgresql://dummy:dummy@localhost/dummy}
 RUN echo "Building client with Vite..." && npx vite build
 RUN echo "Building server with esbuild..." && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
 
-# Remove dev dependencies after build
-RUN npm prune --production
+# Keep all dependencies (including dev) since server imports from vite module
+# Alternative would be to use dynamic imports, but this is simpler
 
 # Expose port
 EXPOSE 5000
