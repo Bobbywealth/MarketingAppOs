@@ -101,31 +101,44 @@ export default function LandingPage() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
         <div className="container mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-white space-y-4 md:space-y-8 slide-in-left text-center lg:text-left">
-              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
+            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center lg:text-left">
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-lg shadow-green-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
                 <span className="animate-pulse">● </span>
-                Wolfpaq Marketing
+                The #1 CRM for Marketing Agencies
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft">
-                Your Remote <br />
-                Digital Marketing <br />
-                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
+                Manage Your Agency <br />
+                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">All In One Place</span>
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                The best solution for your business and scale up to success in digital business.
+                The complete CRM platform built for marketing agencies. Manage clients, campaigns, content, and analytics seamlessly.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
                 <Link href="/signup">
-                  <Button size="lg" className="gap-2 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all px-6 md:px-8" data-testid="button-get-started-hero">
-                    Discover more
+                  <Button size="lg" className="gap-2 w-full sm:w-auto bg-white hover:bg-gray-100 text-blue-700 border-0 shadow-xl hover:shadow-2xl transition-all px-6 md:px-8 font-semibold" data-testid="button-get-started-hero">
+                    Start Free Trial
                     <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                   </Button>
                 </Link>
                 <Link href="/login">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8" data-testid="button-login-hero">
-                    Client Login
+                    Watch Demo
                   </Button>
                 </Link>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-blue-100 pt-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>Free 14-day trial</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>Cancel anytime</span>
+                </div>
               </div>
             </div>
             <div className="hidden lg:block relative slide-in-right">
@@ -146,44 +159,53 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Services Grid */}
+      {/* Platform Features */}
       <section className="py-12 md:py-16 px-4 -mt-12 md:-mt-20 relative z-20">
         <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Platform Features</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Everything You Need to Run Your Agency
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Powerful tools designed specifically for marketing agencies to streamline operations and grow faster.
+            </p>
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-red-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-red-600" />
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+                <Users className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Digital Marketing</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Client Management</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Ignite your brand's digital presence with our savvy digital marketing strategies.
-              </p>
-            </Card>
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <Globe className="w-8 h-8 md:w-10 md:h-10 text-orange-600" />
-              </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Web Development</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Custom websites, mobile apps, and CRM solutions crafted to elevate your digital presence.
+                Centralize all client information, communications, and project history in one place.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500">
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <Pencil className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
+                <Target className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Content Creation</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Campaign Tracking</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Engaging content that tells your story and connects with your audience across all platforms.
+                Monitor campaign performance, deadlines, and deliverables with visual pipelines.
               </p>
             </Card>
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-indigo-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <Bot className="w-8 h-8 md:w-10 md:h-10 text-indigo-600" />
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-emerald-500">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+                <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
+              </div>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Analytics Dashboard</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Real-time insights and reporting to measure ROI and agency performance.
+              </p>
+            </Card>
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+                <Bot className="w-8 h-8 md:w-10 md:h-10 text-orange-600" />
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">AI Automation</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Leverage cutting-edge AI to automate workflows and supercharge your marketing efficiency.
+                Automate repetitive tasks and workflows to focus on what matters most.
               </p>
             </Card>
           </div>
