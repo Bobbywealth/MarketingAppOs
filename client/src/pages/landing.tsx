@@ -101,7 +101,7 @@ export default function LandingPage() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
         <div className="container mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center lg:text-left">
+            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center">
               <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
                 <span className="animate-pulse">🔥 </span>
                 Limited Spots Available - Book This Month
@@ -114,11 +114,11 @@ export default function LandingPage() {
               <p className="text-xl sm:text-2xl font-semibold text-white mb-2">
                 Stop Wasting Money on Marketing That Doesn't Work
               </p>
-              <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
+              <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto px-4">
                 Join 500+ businesses, influencers, and entrepreneurs who've 3X'd their results with our proven marketing system. 
                 <span className="font-semibold text-white">Guaranteed results or your money back.</span>
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center items-center">
                 <Link href="/signup">
                   <Button size="lg" className="gap-2 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all px-8 md:px-10 font-bold text-lg animate-pulse" data-testid="button-get-started-hero">
                     🚀 Get Started Free (Only 3 Spots Left)
@@ -131,21 +131,21 @@ export default function LandingPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-blue-100 pt-4">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-blue-100 pt-4 px-4">
+                <div className="flex items-center gap-2 justify-center">
                   <CheckCircle className="w-4 h-4 text-green-400" />
                   <span className="font-semibold">30-day money-back guarantee</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-center">
                   <CheckCircle className="w-4 h-4 text-green-400" />
                   <span className="font-semibold">No credit card required</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-center">
                   <CheckCircle className="w-4 h-4 text-green-400" />
                   <span className="font-semibold">Cancel anytime</span>
                 </div>
               </div>
-              <div className="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+              <div className="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 mx-4">
                 <p className="text-sm text-blue-100 text-center">
                   <span className="font-semibold text-white">⚡ Join 500+ successful clients</span> • Average 310% ROI increase • 98% satisfaction rate
                 </p>
@@ -253,91 +253,91 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 items-center justify-items-center">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-4 sm:gap-6 md:gap-8 items-center justify-items-center">
             {/* Social Media */}
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">FB</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">FB</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">Facebook</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Facebook</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">IG</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">IG</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">Instagram</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Instagram</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">TW</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">TW</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">Twitter/X</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Twitter/X</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">YT</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">YT</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">YouTube</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">YouTube</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">LI</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">LI</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">LinkedIn</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">LinkedIn</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">TT</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">TT</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">TikTok</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">TikTok</p>
             </div>
 
             {/* Search & Ads */}
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">GO</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">GO</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">Google Ads</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Google Ads</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">SEO</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">SEO</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">SEO</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">SEO</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">EM</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">EM</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">Email</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Email</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">GA</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">GA</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">Analytics</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Analytics</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">CR</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">CR</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">Conversion</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Conversion</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-20 h-20 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-2xl font-bold">+</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">+</span>
               </div>
-              <p className="text-sm font-semibold text-gray-700">More</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">More</p>
             </div>
           </div>
 
@@ -813,6 +813,23 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* Mobile CTA Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 shadow-2xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">🚀 Limited Spots Available</p>
+              <p className="text-xs opacity-90">Only 3 spots left this month</p>
+            </div>
+            <Link href="/signup">
+              <Button size="sm" className="bg-white text-orange-600 hover:bg-gray-100 font-bold border-0">
+                Get Started
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Live Chat Indicator */}
       <div className="fixed bottom-6 left-6 z-50 hidden md:block">
         <div className="bg-green-500 text-white px-4 py-3 rounded-full shadow-xl flex items-center gap-2 animate-pulse">
@@ -822,7 +839,7 @@ export default function LandingPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t py-12 px-4 bg-background">
+      <footer className="border-t py-12 px-4 bg-background pb-20 md:pb-12">
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
