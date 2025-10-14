@@ -102,17 +102,17 @@ export default function LandingPage() {
         <div className="container mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center lg:text-left">
-              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-lg shadow-green-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
+              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
                 <span className="animate-pulse">● </span>
-                Complete Marketing Operations Platform
+                Wolfpaq Marketing
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft">
-                Your Marketing <br />
-                Command Center <br />
-                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">All In One Place</span>
+                Your Remote <br />
+                Digital Marketing <br />
+                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                The complete platform for marketing teams. Manage clients, deliver campaigns, track projects, and measure results seamlessly.
+                The best solution for your business and scale up to success in digital business.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
                 <Link href="/signup">
