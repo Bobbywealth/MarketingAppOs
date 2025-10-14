@@ -23,7 +23,7 @@ export default function LandingPage() {
       <header className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={mtaLogoBlue} alt="Marketing Team App" className="h-10 md:h-14 w-auto" data-testid="img-logo" />
+            <img src={mtaLogoBlue} alt="Marketing Team App" className="h-14 md:h-20 w-auto" data-testid="img-logo" />
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -82,7 +82,7 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-2 md:gap-4">
             <Link href="/login">
-              <Button variant="ghost" className="hidden md:inline-flex" data-testid="button-login-header">Login</Button>
+              <Button className="hidden md:inline-flex bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-login-header">Login</Button>
             </Link>
             <Link href="/signup">
               <Button size="sm" className="gap-1 md:gap-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30" data-testid="button-get-started-header">
@@ -107,12 +107,14 @@ export default function LandingPage() {
                 Wolfpaq Marketing
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft">
-                Your Remote <br />
-                Digital Marketing <br />
-                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
+                Your Dedicated Remote <br />
+                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Marketing Team</span>
               </h1>
+              <p className="text-xl sm:text-2xl font-semibold text-white mb-2">
+                Get Results Without the Overhead
+              </p>
               <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                The best solution for your business and scale up to success in digital business.
+                Access a full-stack marketing team for less than the cost of one employee. From strategy to execution, we handle everything.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
                 <Link href="/signup">
