@@ -208,40 +208,6 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mt-16 stagger-fade-in">
-            <Card className="p-10 text-center hover-lift shadow-lg hover:shadow-2xl transition-all bg-gradient-to-br from-white to-blue-50/30">
-              <div className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-3">4.9+</div>
-              <div className="flex justify-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
-                ))}
-              </div>
-              <p className="text-base font-bold mb-2">Customer Review</p>
-              <p className="text-sm text-muted-foreground">Trusted by over 1000 clients</p>
-            </Card>
-
-            <Card className="p-10 text-center hover-lift shadow-lg hover:shadow-2xl transition-all bg-gradient-to-br from-white to-green-50/30">
-              <div className="text-6xl font-bold bg-gradient-to-r from-green-600 to-emerald-800 bg-clip-text text-transparent mb-3">A+</div>
-              <div className="flex justify-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
-                ))}
-              </div>
-              <p className="text-base font-bold mb-2">Business Class</p>
-              <p className="text-sm text-muted-foreground">Partnering with over 1,000 enterprises</p>
-            </Card>
-
-            <Card className="p-10 text-center hover-lift shadow-lg hover:shadow-2xl transition-all bg-gradient-to-br from-white to-purple-50/30">
-              <div className="text-6xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent mb-3">15+</div>
-              <div className="flex justify-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
-                ))}
-              </div>
-              <p className="text-base font-bold mb-2">Years Experience</p>
-              <p className="text-sm text-muted-foreground">Industry expertise</p>
-            </Card>
-          </div>
         </div>
       </section>
 
