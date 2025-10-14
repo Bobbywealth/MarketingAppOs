@@ -240,8 +240,117 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Marketing Channels */}
+      <section className="py-16 px-4 bg-gradient-to-b from-white to-gray-50">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">We're Everywhere You Need to Be</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Marketing Channels We Master
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              From social media to search engines, we dominate every platform where your audience lives.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 items-center justify-items-center">
+            {/* Social Media */}
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">FB</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Facebook</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">IG</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Instagram</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">TW</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Twitter/X</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">YT</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">YouTube</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">LI</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">LinkedIn</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">TT</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">TikTok</p>
+            </div>
+
+            {/* Search & Ads */}
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">GO</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Google Ads</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">SEO</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">SEO</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">EM</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Email</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">GA</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Analytics</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">CR</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">Conversion</p>
+            </div>
+
+            <div className="text-center group">
+              <div className="w-20 h-20 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-2xl font-bold">+</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">More</p>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Don't see your preferred channel? <span className="text-blue-600 font-semibold">We can work on any platform!</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works Section */}
-      <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
+      <section className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">How It Works</p>
