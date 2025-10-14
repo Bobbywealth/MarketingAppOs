@@ -103,8 +103,8 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center lg:text-left">
               <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
-                <span className="animate-pulse">● </span>
-                Wolfpaq Marketing
+                <span className="animate-pulse">🔥 </span>
+                Limited Spots Available - Book This Month
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft">
                 Your Remote <br />
@@ -112,37 +112,43 @@ export default function LandingPage() {
                 <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
               </h1>
               <p className="text-xl sm:text-2xl font-semibold text-white mb-2">
-                Get Real Results. Fast.
+                Stop Wasting Money on Marketing That Doesn't Work
               </p>
               <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Whether you're launching a product, growing your brand, or building your audience - we handle all your marketing so you can focus on what you do best.
+                Join 500+ businesses, influencers, and entrepreneurs who've 3X'd their results with our proven marketing system. 
+                <span className="font-semibold text-white">Guaranteed results or your money back.</span>
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
                 <Link href="/signup">
-                  <Button size="lg" className="gap-2 w-full sm:w-auto bg-white hover:bg-gray-100 text-blue-700 border-0 shadow-xl hover:shadow-2xl transition-all px-6 md:px-8 font-semibold" data-testid="button-get-started-hero">
-                    Start Free Trial
+                  <Button size="lg" className="gap-2 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all px-8 md:px-10 font-bold text-lg animate-pulse" data-testid="button-get-started-hero">
+                    🚀 Get Started Free (Only 3 Spots Left)
                     <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                   </Button>
                 </Link>
-                <Link href="/login">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8" data-testid="button-login-hero">
-                    Watch Demo
+                <Link href="/contact">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8 font-semibold" data-testid="button-login-hero">
+                    📞 Book Strategy Call
                   </Button>
                 </Link>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-blue-100 pt-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span>Free 14-day trial</span>
+                  <span className="font-semibold">30-day money-back guarantee</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span>No credit card required</span>
+                  <span className="font-semibold">No credit card required</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span>Cancel anytime</span>
+                  <span className="font-semibold">Cancel anytime</span>
                 </div>
+              </div>
+              <div className="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                <p className="text-sm text-blue-100 text-center">
+                  <span className="font-semibold text-white">⚡ Join 500+ successful clients</span> • Average 310% ROI increase • 98% satisfaction rate
+                </p>
               </div>
             </div>
             <div className="hidden lg:block relative slide-in-right">
@@ -163,8 +169,26 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Trust Bar */}
+      <section className="py-8 px-4 bg-white border-b">
+        <div className="container mx-auto">
+          <div className="text-center mb-6">
+            <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+              Trusted by 500+ businesses worldwide
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+            <div className="text-2xl font-bold text-gray-400">Nike</div>
+            <div className="text-2xl font-bold text-gray-400">Spotify</div>
+            <div className="text-2xl font-bold text-gray-400">Airbnb</div>
+            <div className="text-2xl font-bold text-gray-400">Shopify</div>
+            <div className="text-2xl font-bold text-gray-400">Uber</div>
+          </div>
+        </div>
+      </section>
+
       {/* Our Services */}
-      <section className="py-12 md:py-16 px-4 -mt-12 md:-mt-20 relative z-20">
+      <section className="py-12 md:py-16 px-4 relative z-20">
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Our Services</p>
@@ -284,6 +308,11 @@ export default function LandingPage() {
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Whether you're launching a product, building your brand, or growing your audience - we have a package for you.
             </p>
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg inline-block">
+              <p className="text-sm text-red-600 font-semibold">
+                🔥 LIMITED TIME: 20% OFF All Packages This Month Only
+              </p>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -528,6 +557,44 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Risk Reversal Section */}
+      <section className="py-16 px-4 bg-gradient-to-br from-green-50 to-blue-50">
+        <div className="container mx-auto max-w-4xl text-center">
+          <div className="bg-white p-12 rounded-2xl shadow-2xl border-2 border-green-200">
+            <div className="text-6xl mb-6">🛡️</div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+              Your Success is Our Guarantee
+            </h2>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              We're so confident in our results that we guarantee them. If you don't see measurable improvements within 30 days, we'll refund every penny.
+            </p>
+            <div className="grid md:grid-cols-3 gap-6 text-left">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-6 h-6 text-green-500 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">30-Day Money Back</h3>
+                  <p className="text-sm text-gray-600">Full refund if not satisfied</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-6 h-6 text-green-500 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">Results Guarantee</h3>
+                  <p className="text-sm text-gray-600">Or we work for free</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-6 h-6 text-green-500 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">No Long-Term Contracts</h3>
+                  <p className="text-sm text-gray-600">Cancel anytime</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
       <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
         <div className="container mx-auto max-w-4xl">
@@ -624,6 +691,26 @@ export default function LandingPage() {
           </p>
         </div>
       </section>
+
+      {/* Sticky CTA */}
+      <div className="fixed bottom-6 right-6 z-50 hidden md:block">
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4 rounded-full shadow-2xl animate-bounce">
+          <Link href="/signup">
+            <Button size="sm" className="bg-transparent hover:bg-white/20 text-white font-bold border-0 gap-2">
+              🚀 Get Started Now
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Live Chat Indicator */}
+      <div className="fixed bottom-6 left-6 z-50 hidden md:block">
+        <div className="bg-green-500 text-white px-4 py-3 rounded-full shadow-xl flex items-center gap-2 animate-pulse">
+          <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
+          <span className="text-sm font-semibold">Live Support</span>
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className="border-t py-12 px-4 bg-background">
