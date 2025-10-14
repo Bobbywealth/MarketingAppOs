@@ -213,21 +213,218 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* About Section */}
-      <section className="py-20 px-4">
+      {/* Pricing Section */}
+      <section className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-2">About Us</p>
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Pricing</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Navigate the digital landscape with Marketing Team App,<br />
-              the epitome of sophistication in digital marketing services.
+              Simple, Transparent Pricing
             </h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              At Marketing Team App, we orchestrate strategies that seamlessly integrate innovation and financial impact, 
-              ensuring your business stands at the forefront of digital success.
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Choose the perfect plan for your business. All plans include 14-day free trial.
             </p>
           </div>
 
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Starter Plan */}
+            <Card className="p-8 hover-lift transition-all duration-300">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold mb-2">Starter</h3>
+                <p className="text-muted-foreground text-sm">Perfect for small teams</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">$49</span>
+                <span className="text-muted-foreground">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Up to 50 clients</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>5 team members</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Basic analytics</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Email support</span>
+                </li>
+              </ul>
+              <Link href="/signup">
+                <Button className="w-full" variant="outline">Start Free Trial</Button>
+              </Link>
+            </Card>
+
+            {/* Professional Plan */}
+            <Card className="p-8 border-2 border-blue-500 relative hover-lift transition-all duration-300 shadow-xl">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <Badge className="bg-blue-600 text-white">Most Popular</Badge>
+              </div>
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold mb-2">Professional</h3>
+                <p className="text-muted-foreground text-sm">For growing businesses</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">$149</span>
+                <span className="text-muted-foreground">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Unlimited clients</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>15 team members</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Advanced analytics</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Priority support</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>API access</span>
+                </li>
+              </ul>
+              <Link href="/signup">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">Start Free Trial</Button>
+              </Link>
+            </Card>
+
+            {/* Enterprise Plan */}
+            <Card className="p-8 hover-lift transition-all duration-300">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
+                <p className="text-muted-foreground text-sm">For large organizations</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">Custom</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Unlimited everything</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Custom integrations</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Dedicated support</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Custom training</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>SLA guarantee</span>
+                </li>
+              </ul>
+              <Link href="/contact">
+                <Button className="w-full" variant="outline">Contact Sales</Button>
+              </Link>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof / Testimonials */}
+      <section className="py-20 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Testimonials</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Loved by Marketing Teams Worldwide
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              See what our customers have to say about their experience with our platform.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="p-8 hover-lift">
+              <div className="flex gap-1 mb-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <p className="text-muted-foreground mb-6 italic">
+                "This platform transformed how we manage our clients. We've increased productivity by 40% and our clients love the transparency."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                  SM
+                </div>
+                <div>
+                  <p className="font-semibold">Sarah Miller</p>
+                  <p className="text-sm text-muted-foreground">Marketing Director</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-8 hover-lift">
+              <div className="flex gap-1 mb-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <p className="text-muted-foreground mb-6 italic">
+                "Finally, a CRM that actually makes sense for marketing teams. The campaign tracking features alone are worth the price."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">
+                  JD
+                </div>
+                <div>
+                  <p className="font-semibold">John Davis</p>
+                  <p className="text-sm text-muted-foreground">Agency Owner</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-8 hover-lift">
+              <div className="flex gap-1 mb-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <p className="text-muted-foreground mb-6 italic">
+                "The best investment we've made. Our team collaboration has improved dramatically and clients are happier than ever."
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">
+                  EC
+                </div>
+                <div>
+                  <p className="font-semibold">Emily Chen</p>
+                  <p className="text-sm text-muted-foreground">Operations Manager</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="mt-16 pt-12 border-t">
+            <p className="text-center text-muted-foreground mb-8 text-sm uppercase tracking-wider">Trusted By Leading Brands</p>
+            <div className="flex flex-wrap justify-center items-center gap-12 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+              <div className="text-2xl font-bold">Company A</div>
+              <div className="text-2xl font-bold">Company B</div>
+              <div className="text-2xl font-bold">Company C</div>
+              <div className="text-2xl font-bold">Company D</div>
+              <div className="text-2xl font-bold">Company E</div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -456,6 +653,100 @@ export default function LandingPage() {
               Submit
             </Button>
           </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">FAQ</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-muted-foreground">
+              Everything you need to know about our platform
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <Card className="p-6 hover-lift">
+              <h3 className="font-bold text-lg mb-2">How does the free trial work?</h3>
+              <p className="text-muted-foreground">
+                Start your 14-day free trial with full access to all features. No credit card required. You can cancel anytime during the trial period with no charges.
+              </p>
+            </Card>
+
+            <Card className="p-6 hover-lift">
+              <h3 className="font-bold text-lg mb-2">Can I change plans later?</h3>
+              <p className="text-muted-foreground">
+                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and we'll prorate any charges.
+              </p>
+            </Card>
+
+            <Card className="p-6 hover-lift">
+              <h3 className="font-bold text-lg mb-2">What payment methods do you accept?</h3>
+              <p className="text-muted-foreground">
+                We accept all major credit cards (Visa, MasterCard, American Express) and PayPal. Enterprise customers can also pay via invoice.
+              </p>
+            </Card>
+
+            <Card className="p-6 hover-lift">
+              <h3 className="font-bold text-lg mb-2">Is my data secure?</h3>
+              <p className="text-muted-foreground">
+                Absolutely. We use bank-level 256-bit SSL encryption and your data is backed up daily. We're GDPR and SOC 2 compliant.
+              </p>
+            </Card>
+
+            <Card className="p-6 hover-lift">
+              <h3 className="font-bold text-lg mb-2">Do you offer training and support?</h3>
+              <p className="text-muted-foreground">
+                Yes! All plans include email support. Professional and Enterprise plans get priority support, and Enterprise includes dedicated onboarding and training sessions.
+              </p>
+            </Card>
+
+            <Card className="p-6 hover-lift">
+              <h3 className="font-bold text-lg mb-2">Can I import my existing client data?</h3>
+              <p className="text-muted-foreground">
+                Yes, we offer data import tools and can help you migrate from your current system. Enterprise customers get white-glove migration support.
+              </p>
+            </Card>
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-muted-foreground mb-4">Still have questions?</p>
+            <Link href="/contact">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">Contact Our Team</Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
+        <div className="container mx-auto max-w-4xl text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Ready to Transform Your Marketing Operations?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join thousands of marketing teams who have streamlined their workflows and grown their business with our platform.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link href="/signup">
+              <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 text-lg px-8 py-6">
+                Start Your Free Trial
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 text-lg px-8 py-6">
+                Schedule a Demo
+              </Button>
+            </Link>
+          </div>
+          <p className="text-sm text-blue-200 mt-6">
+            ✓ 14-day free trial  ✓ No credit card required  ✓ Cancel anytime
+          </p>
         </div>
       </section>
 
