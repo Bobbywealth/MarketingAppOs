@@ -200,41 +200,72 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
                 <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Digital Marketing</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                 Social media, ads, email campaigns, and SEO that actually convert and grow your audience.
               </p>
+              <div className="text-xs text-green-600 font-semibold mb-2">🔥 850+ Campaigns Launched</div>
+              <Link href="/contact">
+                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                  Get Started →
+                </Button>
+              </Link>
             </Card>
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+            
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
                 <Pencil className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Content Creation</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                 Compelling copy, stunning graphics, and engaging videos that tell your story and sell.
               </p>
+              <div className="text-xs text-green-600 font-semibold mb-2">⚡ 50K+ Content Pieces</div>
+              <Link href="/contact">
+                <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                  Get Started →
+                </Button>
+              </Link>
             </Card>
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-emerald-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+            
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-emerald-500 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
                 <Globe className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Web & App Development</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                 Beautiful websites, mobile apps, and custom CRMs that convert visitors into customers.
               </p>
+              <div className="text-xs text-green-600 font-semibold mb-2">🚀 200+ Apps Built</div>
+              <Link href="/contact">
+                <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
+                  Get Started →
+                </Button>
+              </Link>
             </Card>
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+            
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
                 <Bot className="w-8 h-8 md:w-10 md:h-10 text-orange-600" />
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">AI Automation</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                 Smart automation that saves time, cuts costs, and scales your marketing effortlessly.
               </p>
+              <div className="text-xs text-green-600 font-semibold mb-2">🤖 95% Time Saved</div>
+              <Link href="/contact">
+                <Button size="sm" className="w-full bg-orange-600 hover:bg-orange-700 text-white text-xs">
+                  Get Started →
+                </Button>
+              </Link>
             </Card>
           </div>
         </div>
