@@ -11,7 +11,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText } from "lucide-react";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
 import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
@@ -48,14 +48,14 @@ export default function LandingPage() {
                       <a href="#web-design" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-web-design">
                         Web Design & Development
                       </a>
-                      <a href="#mobile-app" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-mobile-app">
-                        Mobile App
+                      <a href="#content-creation" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-content-creation">
+                        Content Creation
                       </a>
                       <a href="#seo" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-seo">
                         SEO
                       </a>
                       <a href="#crm" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-crm">
-                        CRM
+                        CRM & Mobile Apps
                       </a>
                       <a href="#ai-automation" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-ai-automation">
                         AI Automation Prices
@@ -168,16 +168,16 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Web Development</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Embark on a digital journey with our web wizards, crafting visually stunning websites.
+                Custom websites, mobile apps, and CRM solutions crafted to elevate your digital presence.
               </p>
             </Card>
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <Smartphone className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+                <Pencil className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Mobile App</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Content Creation</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Transform your dreams into app reality with sleek, user-friendly mobile applications.
+                Engaging content that tells your story and connects with your audience across all platforms.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-green-500">
@@ -217,7 +217,7 @@ export default function LandingPage() {
           <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center">Amplify Your Brand's Impact</h2>
           <p className="text-lg text-blue-100 text-center max-w-3xl mx-auto mb-12">
             Let's give your brand a digital makeover! At Marketing Team App, we use smart strategies in Digital Marketing, 
-            cool designs in Web Development and Graphics, and user-friendly Mobile Apps to make your brand shine online.
+            powerful Web Development (including mobile apps & CRMs), compelling Content Creation, and stunning Graphics Design to make your brand shine online.
           </p>
 
           <div className="grid md:grid-cols-4 gap-8 mb-16">
@@ -308,13 +308,13 @@ export default function LandingPage() {
             <div className="space-y-6">
               <h2 className="text-3xl md:text-4xl font-bold">Getting you those real results</h2>
               <p className="text-muted-foreground">
-                Skyrocketing your results through expert Digital Marketing, cutting-edge Web Development, 
-                innovative Mobile Apps, and striking Graphics Design. Let's bring your vision to life!
+                Skyrocketing your results through expert Digital Marketing, cutting-edge Web Development (with mobile apps & CRMs), 
+                compelling Content Creation, and striking Graphics Design. Let's bring your vision to life!
               </p>
               <div className="space-y-4">
                 {[
                   { icon: Lightbulb, title: "Proven Expertise", desc: "Choose Marketing Team App for seasoned professionals delivering tangible results in digital marketing, showcasing a commitment to excellence and navigating diverse trends." },
-                  { icon: Users, title: "Comprehensive Services", desc: "Opt for Marketing Team App's one-stop solution, providing Digital Marketing, Web Development, Mobile App, and Graphic Design services for a cohesive and impactful brand identity." },
+                  { icon: Users, title: "Comprehensive Services", desc: "Opt for Marketing Team App's one-stop solution, providing Digital Marketing, Web Development (including mobile apps & CRMs), Content Creation, and Graphic Design services for a cohesive and impactful brand identity." },
                   { icon: Target, title: "Client-Centric Approach", desc: "Partner with Marketing Team App for a client-centric philosophy, tailoring strategies to align with your specific business objectives and fostering long-term partnerships built on trust and transparency." },
                   { icon: Zap, title: "Innovation and Adaptability", desc: "Select Marketing Team App for a commitment to innovation and adaptability in the ever-evolving digital landscape, ensuring your business stays ahead in the competitive online environment." },
                 ].map((item, idx) => (
@@ -453,8 +453,8 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">Services</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="hover:text-primary transition-colors cursor-pointer">Digital Marketing</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Web Development</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Mobile App Development</li>
+                <li className="hover:text-primary transition-colors cursor-pointer">Web Development & CRMs</li>
+                <li className="hover:text-primary transition-colors cursor-pointer">Content Creation</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">Graphic Design</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">AI Automation</li>
               </ul>
