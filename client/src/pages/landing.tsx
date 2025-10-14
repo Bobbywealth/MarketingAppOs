@@ -95,7 +95,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-12 md:py-24 px-4 overflow-hidden gradient-animate-hero hero-glow">
+      <section className="relative py-12 md:py-24 px-4 overflow-hidden gradient-animate-hero hero-glow flex items-center">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.3),transparent_50%)]"></div>
         <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
@@ -118,14 +118,14 @@ export default function LandingPage() {
                 Join 500+ businesses, influencers, and entrepreneurs who've 3X'd their results with our proven marketing system. 
                 <span className="font-semibold text-white">Guaranteed results or your money back.</span>
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center items-center">
-                <Link href="/signup">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center items-center w-full px-4">
+                <Link href="/signup" className="w-full sm:w-auto">
                   <Button size="lg" className="gap-2 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all px-8 md:px-10 font-bold text-lg animate-pulse" data-testid="button-get-started-hero">
                     🚀 Get Started Free (Only 3 Spots Left)
                     <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                   </Button>
                 </Link>
-                <Link href="/contact">
+                <Link href="/contact" className="w-full sm:w-auto">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8 font-semibold" data-testid="button-login-hero">
                     📞 Book Strategy Call
                   </Button>
