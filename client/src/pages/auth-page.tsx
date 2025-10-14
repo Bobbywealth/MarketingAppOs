@@ -190,13 +190,13 @@ export default function AuthPage() {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
               <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium">Trusted by 1000+ Marketing Agencies</span>
+              <span className="text-sm font-medium">Trusted by Marketing Teams Worldwide</span>
             </div>
             <h2 className="text-4xl font-bold leading-tight">
-              Elevate Your Marketing Agency
+              Grow Your Marketing Business
             </h2>
             <p className="text-blue-100 text-lg">
-              Streamline client relationships, campaigns, and analytics with the most intuitive CRM built specifically for marketing professionals.
+              Streamline client relationships, project delivery, and campaign management with the complete CRM built for marketing service providers.
             </p>
           </div>
 

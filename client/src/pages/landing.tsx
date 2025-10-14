@@ -104,14 +104,15 @@ export default function LandingPage() {
             <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center lg:text-left">
               <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-lg shadow-green-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
                 <span className="animate-pulse">● </span>
-                The #1 CRM for Marketing Agencies
+                Complete Marketing Operations Platform
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft">
-                Manage Your Agency <br />
+                Your Marketing <br />
+                Command Center <br />
                 <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">All In One Place</span>
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                The complete CRM platform built for marketing agencies. Manage clients, campaigns, content, and analytics seamlessly.
+                The complete platform for marketing teams. Manage clients, deliver campaigns, track projects, and measure results seamlessly.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
                 <Link href="/signup">
@@ -165,10 +166,10 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Platform Features</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Everything You Need to Run Your Agency
+              Everything You Need to Manage Your Marketing Business
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Powerful tools designed specifically for marketing agencies to streamline operations and grow faster.
+              Powerful tools designed for marketing teams to deliver exceptional client service and grow your business.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
@@ -196,7 +197,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Analytics Dashboard</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Real-time insights and reporting to measure ROI and agency performance.
+                Real-time insights and reporting to measure campaign performance and client ROI.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500">
