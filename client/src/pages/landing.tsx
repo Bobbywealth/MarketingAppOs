@@ -11,7 +11,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot } from "lucide-react";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
 import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
@@ -42,8 +42,8 @@ export default function LandingPage() {
                       <a href="#digital-marketing" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-digital-marketing">
                         Digital Marketing
                       </a>
-                      <a href="#graphic-design" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-graphic-design">
-                        Graphic Design
+                      <a href="#ai-automation" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-ai-automation">
+                        AI Automation
                       </a>
                       <a href="#web-design" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-web-design">
                         Web Design & Development
@@ -56,9 +56,6 @@ export default function LandingPage() {
                       </a>
                       <a href="#crm" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-crm">
                         CRM & Mobile Apps
-                      </a>
-                      <a href="#ai-automation" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-ai-automation">
-                        AI Automation Prices
                       </a>
                       <a href="#payment-solutions" className="block px-4 py-3 text-sm font-medium hover:bg-accent rounded-md transition-colors" data-testid="nav-payment-solutions">
                         Payment Solutions
@@ -180,13 +177,13 @@ export default function LandingPage() {
                 Engaging content that tells your story and connects with your audience across all platforms.
               </p>
             </Card>
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-green-500">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <Palette className="w-8 h-8 md:w-10 md:h-10 text-green-600" />
+            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-indigo-500">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
+                <Bot className="w-8 h-8 md:w-10 md:h-10 text-indigo-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Graphics Design</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">AI Automation</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Unleash the power of visual storytelling with eye-catching designs.
+                Leverage cutting-edge AI to automate workflows and supercharge your marketing efficiency.
               </p>
             </Card>
           </div>
@@ -217,7 +214,7 @@ export default function LandingPage() {
           <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center">Amplify Your Brand's Impact</h2>
           <p className="text-lg text-blue-100 text-center max-w-3xl mx-auto mb-12">
             Let's give your brand a digital makeover! At Marketing Team App, we use smart strategies in Digital Marketing, 
-            powerful Web Development (including mobile apps & CRMs), compelling Content Creation, and stunning Graphics Design to make your brand shine online.
+            powerful Web Development (including mobile apps & CRMs), compelling Content Creation, and cutting-edge AI Automation to make your brand shine online.
           </p>
 
           <div className="grid md:grid-cols-4 gap-8 mb-16">
@@ -309,12 +306,12 @@ export default function LandingPage() {
               <h2 className="text-3xl md:text-4xl font-bold">Getting you those real results</h2>
               <p className="text-muted-foreground">
                 Skyrocketing your results through expert Digital Marketing, cutting-edge Web Development (with mobile apps & CRMs), 
-                compelling Content Creation, and striking Graphics Design. Let's bring your vision to life!
+                compelling Content Creation, and powerful AI Automation. Let's bring your vision to life!
               </p>
               <div className="space-y-4">
                 {[
                   { icon: Lightbulb, title: "Proven Expertise", desc: "Choose Marketing Team App for seasoned professionals delivering tangible results in digital marketing, showcasing a commitment to excellence and navigating diverse trends." },
-                  { icon: Users, title: "Comprehensive Services", desc: "Opt for Marketing Team App's one-stop solution, providing Digital Marketing, Web Development (including mobile apps & CRMs), Content Creation, and Graphic Design services for a cohesive and impactful brand identity." },
+                  { icon: Users, title: "Comprehensive Services", desc: "Opt for Marketing Team App's one-stop solution, providing Digital Marketing, Web Development (including mobile apps & CRMs), Content Creation, and AI Automation services for a cohesive and impactful brand identity." },
                   { icon: Target, title: "Client-Centric Approach", desc: "Partner with Marketing Team App for a client-centric philosophy, tailoring strategies to align with your specific business objectives and fostering long-term partnerships built on trust and transparency." },
                   { icon: Zap, title: "Innovation and Adaptability", desc: "Select Marketing Team App for a commitment to innovation and adaptability in the ever-evolving digital landscape, ensuring your business stays ahead in the competitive online environment." },
                 ].map((item, idx) => (
@@ -455,7 +452,6 @@ export default function LandingPage() {
                 <li className="hover:text-primary transition-colors cursor-pointer">Digital Marketing</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">Web Development & CRMs</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">Content Creation</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Graphic Design</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">AI Automation</li>
               </ul>
             </div>
