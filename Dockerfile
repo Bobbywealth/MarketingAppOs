@@ -16,7 +16,10 @@ COPY . .
 # Build the application
 # Set a dummy DATABASE_URL for build time if not provided
 ENV DATABASE_URL=${DATABASE_URL:-postgresql://dummy:dummy@localhost/dummy}
-RUN npm run build
+
+# Run build steps separately to see which fails
+RUN echo "Building client with Vite..." && npx vite build
+RUN echo "Building server with esbuild..." && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
 
 # Remove dev dependencies after build
 RUN npm prune --production
