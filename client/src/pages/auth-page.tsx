@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutDashboard, Users, TrendingUp, Calendar } from "lucide-react";
+import { LayoutDashboard, Users, TrendingUp, Calendar, Sparkles, BarChart3, Target } from "lucide-react";
+import mtaLogo from "@assets/mta-logo-blue.png";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -35,14 +36,17 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-orange bg-clip-text text-transparent">
-              MTA CRM
+            <div className="flex justify-center mb-4">
+              <img src={mtaLogo} alt="MTA Logo" className="h-16 w-auto" />
+            </div>
+            <h1 className="text-3xl font-bold mb-2 text-gray-900">
+              Marketing Team App
             </h1>
-            <p className="text-muted-foreground">
-              Marketing Team App - Client Relationship Management
+            <p className="text-muted-foreground text-sm">
+              Your Complete Marketing Agency CRM Solution
             </p>
           </div>
 
@@ -181,57 +185,76 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="hidden lg:flex flex-1 bg-primary/5 items-center justify-center p-8">
-        <div className="max-w-md space-y-8">
-          <div>
-            <h2 className="text-3xl font-bold mb-4">
-              Complete CRM for Marketing Agencies
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 items-center justify-center p-12">
+        <div className="max-w-lg space-y-8 text-white">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium">Trusted by 1000+ Marketing Agencies</span>
+            </div>
+            <h2 className="text-4xl font-bold leading-tight">
+              Elevate Your Marketing Agency
             </h2>
-            <p className="text-muted-foreground">
-              Manage clients, campaigns, leads, and analytics all in one place
+            <p className="text-blue-100 text-lg">
+              Streamline client relationships, campaigns, and analytics with the most intuitive CRM built specifically for marketing professionals.
             </p>
           </div>
 
-          <div className="grid gap-4">
-            <div className="flex gap-3">
-              <LayoutDashboard className="w-6 h-6 text-primary shrink-0" />
+          <div className="grid gap-5">
+            <div className="flex gap-4 items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <LayoutDashboard className="w-6 h-6" />
+              </div>
               <div>
-                <h3 className="font-semibold">Unified Dashboard</h3>
-                <p className="text-sm text-muted-foreground">
-                  Monitor all your metrics in one place
+                <h3 className="font-semibold text-lg mb-1">Unified Dashboard</h3>
+                <p className="text-sm text-blue-100">
+                  Real-time insights into campaigns, revenue, and client performance
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Users className="w-6 h-6 text-primary shrink-0" />
+            <div className="flex gap-4 items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Target className="w-6 h-6" />
+              </div>
               <div>
-                <h3 className="font-semibold">Client Management</h3>
-                <p className="text-sm text-muted-foreground">
-                  Track client information and communication
+                <h3 className="font-semibold text-lg mb-1">Campaign Management</h3>
+                <p className="text-sm text-blue-100">
+                  Plan, execute, and track marketing campaigns from start to finish
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <TrendingUp className="w-6 h-6 text-primary shrink-0" />
+            <div className="flex gap-4 items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <BarChart3 className="w-6 h-6" />
+              </div>
               <div>
-                <h3 className="font-semibold">Sales Pipeline</h3>
-                <p className="text-sm text-muted-foreground">
-                  Manage leads from prospect to close
+                <h3 className="font-semibold text-lg mb-1">Analytics & Reporting</h3>
+                <p className="text-sm text-blue-100">
+                  Data-driven insights to optimize your agency's performance
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Calendar className="w-6 h-6 text-primary shrink-0" />
+            <div className="flex gap-4 items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Users className="w-6 h-6" />
+              </div>
               <div>
-                <h3 className="font-semibold">Content Calendar</h3>
-                <p className="text-sm text-muted-foreground">
-                  Schedule and manage client approvals
+                <h3 className="font-semibold text-lg mb-1">Client Portal</h3>
+                <p className="text-sm text-blue-100">
+                  Give clients visibility and collaboration on their projects
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="pt-4 border-t border-white/20">
+            <p className="text-sm text-blue-100 italic">
+              "This CRM transformed how we manage our agency. Game changer!"
+            </p>
+            <p className="text-xs text-blue-200 mt-2">— Sarah M., Agency Director</p>
           </div>
         </div>
       </div>
