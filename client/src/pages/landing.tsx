@@ -215,98 +215,172 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* How It Works Section */}
+      <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">How It Works</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Get Started in 4 Simple Steps
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              From consultation to campaign launch, we make it easy to get professional marketing support.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
+                1
+              </div>
+              <h3 className="text-xl font-bold mb-3">Book a Call</h3>
+              <p className="text-muted-foreground">
+                Schedule a free 15-min strategy session with our team
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
+                2
+              </div>
+              <h3 className="text-xl font-bold mb-3">Get Your Team</h3>
+              <p className="text-muted-foreground">
+                We match you with specialists perfect for your industry
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
+                3
+              </div>
+              <h3 className="text-xl font-bold mb-3">Launch Campaigns</h3>
+              <p className="text-muted-foreground">
+                Your campaigns go live in as little as 7 days
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
+                4
+              </div>
+              <h3 className="text-xl font-bold mb-3">Track Results</h3>
+              <p className="text-muted-foreground">
+                Monitor performance with your real-time dashboard
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <Link href="/signup">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
+                Schedule Your Free Strategy Call
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Service Packages Section */}
       <section className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Pricing</p>
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Service Packages</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Simple, Transparent Pricing
+              Flexible Marketing Solutions
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Choose the perfect plan for your business. All plans include 14-day free trial.
+              Choose the package that fits your needs. No long-term contracts, cancel anytime.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Starter Plan */}
-            <Card className="p-8 hover-lift transition-all duration-300">
+            {/* Essential Package */}
+            <Card className="p-8 hover-lift transition-all duration-300 border-2 border-gray-200">
               <div className="mb-6">
-                <h3 className="text-2xl font-bold mb-2">Starter</h3>
-                <p className="text-muted-foreground text-sm">Perfect for small teams</p>
+                <h3 className="text-2xl font-bold mb-2">Essential</h3>
+                <p className="text-muted-foreground text-sm">Perfect for startups & small businesses</p>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold">$49</span>
+                <span className="text-4xl font-bold">$1,995</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Up to 50 clients</span>
+                  <span>1 marketing channel</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>5 team members</span>
+                  <span>20 hours per month</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Basic analytics</span>
+                  <span>Monthly reporting</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Email support</span>
+                  <span>Email & chat support</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Basic analytics dashboard</span>
                 </li>
               </ul>
-              <Link href="/signup">
-                <Button className="w-full" variant="outline">Start Free Trial</Button>
+              <Link href="/contact">
+                <Button className="w-full" variant="outline">Get Started</Button>
               </Link>
             </Card>
 
-            {/* Professional Plan */}
+            {/* Growth Package - Most Popular */}
             <Card className="p-8 border-2 border-blue-500 relative hover-lift transition-all duration-300 shadow-xl">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                 <Badge className="bg-blue-600 text-white">Most Popular</Badge>
               </div>
               <div className="mb-6">
-                <h3 className="text-2xl font-bold mb-2">Professional</h3>
-                <p className="text-muted-foreground text-sm">For growing businesses</p>
+                <h3 className="text-2xl font-bold mb-2">Growth</h3>
+                <p className="text-muted-foreground text-sm">For scaling businesses</p>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold">$149</span>
+                <span className="text-4xl font-bold">$4,995</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Unlimited clients</span>
+                  <span>Multi-channel campaigns</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>15 team members</span>
+                  <span>60 hours per month</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Advanced analytics</span>
+                  <span>Dedicated account manager</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Weekly strategy calls</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>Advanced analytics & reporting</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
                   <span>Priority support</span>
                 </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>API access</span>
-                </li>
               </ul>
-              <Link href="/signup">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">Start Free Trial</Button>
+              <Link href="/contact">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">Get Started</Button>
               </Link>
             </Card>
 
-            {/* Enterprise Plan */}
-            <Card className="p-8 hover-lift transition-all duration-300">
+            {/* Enterprise Package */}
+            <Card className="p-8 hover-lift transition-all duration-300 border-2 border-purple-200 bg-gradient-to-br from-white to-purple-50/30">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
-                <p className="text-muted-foreground text-sm">For large organizations</p>
+                <p className="text-muted-foreground text-sm">Your full marketing department</p>
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold">Custom</span>
@@ -314,29 +388,42 @@ export default function LandingPage() {
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Unlimited everything</span>
+                  <span>Unlimited marketing channels</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Custom integrations</span>
+                  <span>Unlimited hours</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Dedicated support</span>
+                  <span>Dedicated team of specialists</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Custom training</span>
+                  <span>Custom strategy & execution</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>SLA guarantee</span>
+                  <span>White-label reporting</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span>24/7 support</span>
                 </li>
               </ul>
               <Link href="/contact">
-                <Button className="w-full" variant="outline">Contact Sales</Button>
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white">Contact Sales</Button>
               </Link>
             </Card>
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-sm text-muted-foreground mb-4">
+              All packages include: Strategy development, campaign execution, performance tracking, and monthly reporting
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Need something custom? <Link href="/contact" className="text-blue-600 hover:underline font-semibold">Let's talk</Link>
+            </p>
           </div>
         </div>
       </section>
