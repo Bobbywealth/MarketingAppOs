@@ -112,10 +112,10 @@ export default function LandingPage() {
                 <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
               </h1>
               <p className="text-xl sm:text-2xl font-semibold text-white mb-2">
-                Marketing Help for Everyone
+                Get Real Results. Fast.
               </p>
               <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Whether you're a business, influencer, musician, or entrepreneur - we're your go-to marketing partner. Whatever you need to market, we've got you covered.
+                Whether you're launching a product, growing your brand, or building your audience - we handle all your marketing so you can focus on what you do best.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
                 <Link href="/signup">
@@ -163,44 +163,44 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Platform Features */}
+      {/* Our Services */}
       <section className="py-12 md:py-16 px-4 -mt-12 md:-mt-20 relative z-20">
         <div className="container mx-auto">
           <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">What We Do</p>
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Our Services</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Marketing Solutions for Everyone
+              Everything You Need to Win Online
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              From businesses to influencers, musicians to entrepreneurs - we provide comprehensive marketing support for all your needs.
+              From strategy to execution, we deliver results-driven marketing that grows your business, brand, or career.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500">
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <Users className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
+                <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Project Management</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Digital Marketing</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Track all your marketing projects, deliverables, and communications in one place.
+                Social media, ads, email campaigns, and SEO that actually convert and grow your audience.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500">
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <Target className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
+                <Pencil className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Campaign Tracking</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Content Creation</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Monitor campaign performance, deadlines, and deliverables with visual pipelines.
+                Compelling copy, stunning graphics, and engaging videos that tell your story and sell.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-emerald-500">
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
-                <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
+                <Globe className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Analytics & Results</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Web & App Development</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Real-time insights and reporting to measure your campaign performance and ROI.
+                Beautiful websites, mobile apps, and custom CRMs that convert visitors into customers.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500">
@@ -209,7 +209,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">AI Automation</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Automate repetitive tasks and workflows to focus on what matters most.
+                Smart automation that saves time, cuts costs, and scales your marketing effortlessly.
               </p>
             </Card>
           </div>
@@ -222,62 +222,53 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">How It Works</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Get Started in 4 Simple Steps
+              From Idea to Impact in 3 Simple Steps
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              From consultation to campaign launch, we make it easy to get professional marketing support.
+              No fluff, no complicated process. Just results-driven marketing that works.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-12 max-w-4xl mx-auto">
             <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-6 shadow-xl">
                 1
               </div>
-              <h3 className="text-xl font-bold mb-3">Book a Call</h3>
-              <p className="text-muted-foreground">
-                Schedule a free 15-min strategy session with our team
+              <h3 className="text-2xl font-bold mb-3">Tell Us Your Goals</h3>
+              <p className="text-muted-foreground text-base">
+                Book a quick call or fill out our form. We'll understand what you need and create a custom plan.
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-6 shadow-xl">
                 2
               </div>
-              <h3 className="text-xl font-bold mb-3">Get Your Team</h3>
-              <p className="text-muted-foreground">
-                We match you with specialists perfect for your industry
+              <h3 className="text-2xl font-bold mb-3">We Execute</h3>
+              <p className="text-muted-foreground text-base">
+                Our team gets to work immediately. Campaigns launch fast, content goes live, results start rolling in.
               </p>
             </div>
 
             <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-6 shadow-xl">
                 3
               </div>
-              <h3 className="text-xl font-bold mb-3">Launch Campaigns</h3>
-              <p className="text-muted-foreground">
-                Your campaigns go live in as little as 7 days
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-6 shadow-lg">
-                4
-              </div>
-              <h3 className="text-xl font-bold mb-3">Track Results</h3>
-              <p className="text-muted-foreground">
-                Monitor performance with your real-time dashboard
+              <h3 className="text-2xl font-bold mb-3">You Grow</h3>
+              <p className="text-muted-foreground text-base">
+                Track results in real-time, watch your audience grow, and scale what works.
               </p>
             </div>
           </div>
 
-          <div className="mt-12 text-center">
+          <div className="mt-16 text-center">
             <Link href="/signup">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">
-                Schedule Your Free Strategy Call
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg px-10 py-6 shadow-xl">
+                Get Started Now
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
+            <p className="text-sm text-muted-foreground mt-4">No credit card required • 14-day free trial</p>
           </div>
         </div>
       </section>
@@ -429,16 +420,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Social Proof / Testimonials */}
-      <section className="py-20 px-4">
+      {/* Client Success Stories */}
+      <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Testimonials</p>
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Client Success</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Loved by Marketing Teams Worldwide
+              Real Results. Real People.
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              See what our customers have to say about their experience with our platform.
+              See how we've helped businesses, influencers, and entrepreneurs grow.
             </p>
           </div>
 
@@ -450,35 +441,35 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-muted-foreground mb-6 italic">
-                "This platform transformed how we manage our clients. We've increased productivity by 40% and our clients love the transparency."
+                "Wolfpaq took my Instagram from 5K to 50K followers in 6 months. Their content strategy and ad campaigns were game-changers. My music career has never been better!"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                  SM
+                  MJ
                 </div>
                 <div>
-                  <p className="font-semibold">Sarah Miller</p>
-                  <p className="text-sm text-muted-foreground">Marketing Director</p>
+                  <p className="font-semibold">Marcus Johnson</p>
+                  <p className="text-sm text-muted-foreground">Independent Musician</p>
                 </div>
               </div>
             </Card>
 
-            <Card className="p-8 hover-lift">
+            <Card className="p-8 hover-lift border-2 border-blue-500 shadow-xl">
               <div className="flex gap-1 mb-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                 ))}
               </div>
               <p className="text-muted-foreground mb-6 italic">
-                "Finally, a CRM that actually makes sense for marketing teams. The campaign tracking features alone are worth the price."
+                "Our e-commerce sales tripled after Wolfpaq revamped our website and ran our ad campaigns. The ROI has been insane. Best marketing investment we've ever made!"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">
-                  JD
+                  TC
                 </div>
                 <div>
-                  <p className="font-semibold">John Davis</p>
-                  <p className="text-sm text-muted-foreground">Agency Owner</p>
+                  <p className="font-semibold">Tanya Chen</p>
+                  <p className="text-sm text-muted-foreground">E-commerce Business Owner</p>
                 </div>
               </div>
             </Card>
@@ -490,217 +481,49 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-muted-foreground mb-6 italic">
-                "The best investment we've made. Our team collaboration has improved dramatically and clients are happier than ever."
+                "As a fitness coach, I needed help building my personal brand. Wolfpaq handled everything - content, ads, website. Now I'm booked out 3 months in advance!"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">
-                  EC
+                  DR
                 </div>
                 <div>
-                  <p className="font-semibold">Emily Chen</p>
-                  <p className="text-sm text-muted-foreground">Operations Manager</p>
+                  <p className="font-semibold">David Rodriguez</p>
+                  <p className="text-sm text-muted-foreground">Fitness Coach & Influencer</p>
                 </div>
               </div>
             </Card>
           </div>
-
-          {/* Trust Badges */}
-          <div className="mt-16 pt-12 border-t">
-            <p className="text-center text-muted-foreground mb-8 text-sm uppercase tracking-wider">Trusted By Leading Brands</p>
-            <div className="flex flex-wrap justify-center items-center gap-12 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-              <div className="text-2xl font-bold">Company A</div>
-              <div className="text-2xl font-bold">Company B</div>
-              <div className="text-2xl font-bold">Company C</div>
-              <div className="text-2xl font-bold">Company D</div>
-              <div className="text-2xl font-bold">Company E</div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Amplify Section - Blue Background */}
-      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+      {/* Results Section */}
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
         <div className="container mx-auto max-w-6xl">
-          <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center">Amplify Your Brand's Impact</h2>
-          <p className="text-lg text-blue-100 text-center max-w-3xl mx-auto mb-12">
-            Let's give your brand a digital makeover! At Marketing Team App, we use smart strategies in Digital Marketing, 
-            powerful Web Development (including mobile apps & CRMs), compelling Content Creation, and cutting-edge AI Automation to make your brand shine online.
-          </p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">The Numbers Don't Lie</h2>
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto">
+              We're obsessed with results. Here's what we've delivered for our clients.
+            </p>
+          </div>
 
-          <div className="grid md:grid-cols-4 gap-8 mb-16">
+          <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div className="text-center">
-              <div className="text-5xl font-bold mb-2">60%+</div>
-              <p className="text-blue-100">Hours of Expertise</p>
-            </div>
-            <div className="text-center">
-              <div className="text-5xl font-bold mb-2">90%+</div>
-              <p className="text-blue-100">Retention Rate</p>
+              <div className="text-5xl md:text-6xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">850+</div>
+              <p className="text-blue-100 text-lg">Successful Campaigns</p>
             </div>
             <div className="text-center">
-              <div className="text-5xl font-bold mb-2">31%+</div>
-              <p className="text-blue-100">Average Traffic Increase</p>
+              <div className="text-5xl md:text-6xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">4.2M+</div>
+              <p className="text-blue-100 text-lg">Leads Generated</p>
             </div>
             <div className="text-center">
-              <div className="text-5xl font-bold mb-2">7M+</div>
-              <p className="text-blue-100">Calls Generated</p>
+              <div className="text-5xl md:text-6xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">310%</div>
+              <p className="text-blue-100 text-lg">Avg ROI Increase</p>
             </div>
-          </div>
-
-          <Card className="p-12 bg-white text-foreground">
             <div className="text-center">
-              <h3 className="text-3xl font-bold mb-4">Your vision, our platform</h3>
-              <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Join us in transforming ideas into digital excellence, and together, we'll rock the online world.
-              </p>
-              <Link href="/signup">
-                <Button size="lg" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                  Get Started
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
+              <div className="text-5xl md:text-6xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">98%</div>
+              <p className="text-blue-100 text-lg">Client Satisfaction</p>
             </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* Services Detailed */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-2">What We Offer</p>
-            <h2 className="text-3xl md:text-4xl font-bold">
-              Helping you deliver a better customer experience
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: TrendingUp, title: "Digital Marketing", desc: "Elevate your online presence with strategic and result-driven solutions.", color: "red" },
-              { icon: Globe, title: "Web Design & Development", desc: "Craft visually appealing and functional websites that resonate with your brand.", color: "orange" },
-              { icon: Smartphone, title: "Mobile App Development", desc: "Transform ideas into reality with user-friendly and innovative mobile apps.", color: "blue" },
-              { icon: Palette, title: "Graphic Design", desc: "Bring your brand to life with captivating visual elements and designs.", color: "green" },
-              { icon: Brain, title: "AI Automation", desc: "Harness AI to streamline processes and enhance efficiency.", color: "purple" },
-              { icon: CreditCard, title: "Payment Solution", desc: "Comprehensive payment solutions tailored to your business needs.", color: "indigo" },
-            ].map((service, idx) => (
-              <Card key={idx} className="p-6 hover-elevate transition-all duration-300 transform hover:-translate-y-1">
-                <div className={`w-12 h-12 rounded-full bg-${service.color}-100 flex items-center justify-center mb-4`}>
-                  <service.icon className={`w-6 h-6 text-${service.color}-600`} />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">{service.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{service.desc}</p>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="gap-2 text-blue-600" data-testid={`button-learn-more-${idx}`}>
-                    Learn more
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-20 px-4 bg-muted/30">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-2">Testimonial</p>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">What our customers say about us</h2>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-lg font-semibold">4.7 (Client Reviews)</span>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              {
-                quote: "Marketing Team App turned my small business into an online sensation! Their digital marketing strategies were spot-on, and the website they developed perfectly encapsulated our brand. Grateful for their expertise!",
-                name: "John D.",
-                role: "Small Business Owner",
-                initial: "JD"
-              },
-              {
-                quote: "Choosing Marketing Team App for my startup's digital needs was a game-changer. The personalized support and user-friendly mobile app they crafted exceeded my expectations. Highly recommended!",
-                name: "Emily M.",
-                role: "Startup Enthusiast",
-                initial: "EM"
-              },
-              {
-                quote: "Marketing Team App took my e-commerce venture to new heights! Their comprehensive digital marketing strategies significantly boosted sales, and the sleek web development work transformed our online store. Truly impressed!",
-                name: "Sarah L.",
-                role: "E-commerce Entrepreneur",
-                initial: "SL"
-              },
-              {
-                quote: "Impressed by Marketing Team App's professionalism! Their personalized approach to digital marketing significantly boosted our online visibility. The mobile app they developed is user-friendly and innovative. Highly satisfied!",
-                name: "Michael R.",
-                role: "Tech Startup Founder",
-                initial: "MR"
-              },
-            ].map((testimonial, idx) => (
-              <Card key={idx} className="p-6 hover-elevate transition-all">
-                <p className="text-muted-foreground mb-6 italic">"{testimonial.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="font-semibold text-blue-600">{testimonial.initial}</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold">{testimonial.name}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
-        <div className="container mx-auto text-center max-w-3xl">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Share Your Project Details!</h2>
-          <p className="text-lg mb-8 text-blue-100">
-            Initiate a conversation about your vision and goals with Marketing Team App, where our experts 
-            are eager to discuss your project and tailor a strategy that aligns with your business objectives.
-          </p>
-          <Link href="/signup">
-            <Button size="lg" className="gap-2 bg-orange-500 hover:bg-orange-600 text-white border-0" data-testid="button-cta-get-started">
-              Get Started
-              <ArrowRight className="w-5 h-5" />
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
-      <section className="py-16 px-4 bg-gradient-to-br from-blue-600 to-blue-800 text-white">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              Subscribe to our newsletter to get latest news on your inbox.
-            </h2>
-          </div>
-          <div className="flex gap-4 max-w-md mx-auto">
-            <Input 
-              type="text" 
-              placeholder="Name" 
-              className="bg-white text-foreground"
-              data-testid="input-newsletter-name"
-            />
-            <Input 
-              type="email" 
-              placeholder="Email" 
-              className="bg-white text-foreground"
-              data-testid="input-newsletter-email"
-            />
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white border-0 whitespace-nowrap" data-testid="button-newsletter-submit">
-              Submit
-            </Button>
           </div>
         </div>
       </section>
@@ -711,53 +534,53 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">FAQ</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Frequently Asked Questions
+              Got Questions? We've Got Answers.
             </h2>
             <p className="text-muted-foreground">
-              Everything you need to know about our platform
+              Everything you need to know about working with us
             </p>
           </div>
 
           <div className="space-y-4">
             <Card className="p-6 hover-lift">
-              <h3 className="font-bold text-lg mb-2">How does the free trial work?</h3>
+              <h3 className="font-bold text-lg mb-2">What kind of businesses do you work with?</h3>
               <p className="text-muted-foreground">
-                Start your 14-day free trial with full access to all features. No credit card required. You can cancel anytime during the trial period with no charges.
+                All kinds! We work with e-commerce stores, service businesses, influencers, musicians, coaches, startups - anyone who needs marketing. If you need to grow online, we can help.
               </p>
             </Card>
 
             <Card className="p-6 hover-lift">
-              <h3 className="font-bold text-lg mb-2">Can I change plans later?</h3>
+              <h3 className="font-bold text-lg mb-2">How fast can you get started?</h3>
               <p className="text-muted-foreground">
-                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and we'll prorate any charges.
+                Most campaigns launch within 7-10 days of our kickoff call. Need it faster? Let us know - we can move quicker for urgent projects.
               </p>
             </Card>
 
             <Card className="p-6 hover-lift">
-              <h3 className="font-bold text-lg mb-2">What payment methods do you accept?</h3>
+              <h3 className="font-bold text-lg mb-2">What's included in a package?</h3>
               <p className="text-muted-foreground">
-                We accept all major credit cards (Visa, MasterCard, American Express) and PayPal. Enterprise customers can also pay via invoice.
+                It depends on your needs! Every package includes strategy, execution, monthly reporting, and dedicated support. We customize based on what will actually move the needle for you.
               </p>
             </Card>
 
             <Card className="p-6 hover-lift">
-              <h3 className="font-bold text-lg mb-2">Is my data secure?</h3>
+              <h3 className="font-bold text-lg mb-2">Do I need a long-term contract?</h3>
               <p className="text-muted-foreground">
-                Absolutely. We use bank-level 256-bit SSL encryption and your data is backed up daily. We're GDPR and SOC 2 compliant.
+                Nope! We offer month-to-month services. We earn your business every single month by delivering results. No lock-ins, no BS.
               </p>
             </Card>
 
             <Card className="p-6 hover-lift">
-              <h3 className="font-bold text-lg mb-2">Do you offer training and support?</h3>
+              <h3 className="font-bold text-lg mb-2">How do I track results?</h3>
               <p className="text-muted-foreground">
-                Yes! All plans include email support. Professional and Enterprise plans get priority support, and Enterprise includes dedicated onboarding and training sessions.
+                You'll get access to a real-time dashboard showing all your campaign metrics, plus monthly reports. We believe in full transparency - you'll always know exactly what's working.
               </p>
             </Card>
 
             <Card className="p-6 hover-lift">
-              <h3 className="font-bold text-lg mb-2">Can I import my existing client data?</h3>
+              <h3 className="font-bold text-lg mb-2">What if I'm not happy with the results?</h3>
               <p className="text-muted-foreground">
-                Yes, we offer data import tools and can help you migrate from your current system. Enterprise customers get white-glove migration support.
+                We stand behind our work. If something's not working, we pivot fast. And since there are no contracts, you're never stuck. But honestly? Our 98% client retention rate speaks for itself.
               </p>
             </Card>
           </div>
@@ -772,29 +595,32 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Ready to Take Your Marketing to the Next Level?
+      <section className="py-24 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
+        <div className="container mx-auto max-w-4xl text-center relative z-10">
+          <h2 className="text-4xl md:text-6xl font-bold mb-6">
+            Let's Grow Together 🚀
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of businesses, influencers, and entrepreneurs who trust us with their marketing needs.
+          <p className="text-xl md:text-2xl text-blue-100 mb-10 max-w-2xl mx-auto font-medium">
+            Stop wasting money on marketing that doesn't work. Let's build something that actually drives results.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
             <Link href="/signup">
-              <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 text-lg px-8 py-6">
-                Start Your Free Trial
-                <ArrowRight className="w-5 h-5 ml-2" />
+              <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 text-xl px-12 py-7 shadow-2xl font-bold">
+                Get Started Free
+                <ArrowRight className="w-6 h-6 ml-2" />
               </Button>
             </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 text-lg px-8 py-6">
-                Schedule a Demo
+            <Link href="/contact">
+              <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 text-xl px-12 py-7 font-bold">
+                Book a Call
               </Button>
             </Link>
           </div>
-          <p className="text-sm text-blue-200 mt-6">
-            ✓ 14-day free trial  ✓ No credit card required  ✓ Cancel anytime
+          <p className="text-base text-blue-100 flex flex-wrap justify-center gap-6">
+            <span>✓ No long-term contracts</span>
+            <span>✓ 14-day free trial</span>
+            <span>✓ Cancel anytime</span>
           </p>
         </div>
       </section>
@@ -804,9 +630,9 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto mb-4" />
+              <img src={mtaLogoBlue} alt="Wolfpaq Marketing" className="h-12 w-auto mb-4" />
               <p className="text-sm text-muted-foreground">
-                Navigate the digital landscape with Marketing Team App, the epitome of sophistication in digital marketing services.
+                Your go-to remote marketing team. We help businesses, influencers, and entrepreneurs grow with results-driven digital marketing.
               </p>
             </div>
             <div>
