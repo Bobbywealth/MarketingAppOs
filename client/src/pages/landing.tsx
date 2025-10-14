@@ -600,47 +600,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Getting Real Results */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="relative">
-              <img 
-                src={resultsImage} 
-                alt="Remote Team Digital Marketing" 
-                className="w-full h-auto rounded-lg shadow-xl"
-                data-testid="img-results-illustration"
-              />
-            </div>
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold">Getting you those real results</h2>
-              <p className="text-muted-foreground">
-                Skyrocketing your results through expert Digital Marketing, cutting-edge Web Development (with mobile apps & CRMs), 
-                compelling Content Creation, and powerful AI Automation. Let's bring your vision to life!
-              </p>
-              <div className="space-y-4">
-                {[
-                  { icon: Lightbulb, title: "Proven Expertise", desc: "Choose Marketing Team App for seasoned professionals delivering tangible results in digital marketing, showcasing a commitment to excellence and navigating diverse trends." },
-                  { icon: Users, title: "Comprehensive Services", desc: "Opt for Marketing Team App's one-stop solution, providing Digital Marketing, Web Development (including mobile apps & CRMs), Content Creation, and AI Automation services for a cohesive and impactful brand identity." },
-                  { icon: Target, title: "Client-Centric Approach", desc: "Partner with Marketing Team App for a client-centric philosophy, tailoring strategies to align with your specific business objectives and fostering long-term partnerships built on trust and transparency." },
-                  { icon: Zap, title: "Innovation and Adaptability", desc: "Select Marketing Team App for a commitment to innovation and adaptability in the ever-evolving digital landscape, ensuring your business stays ahead in the competitive online environment." },
-                ].map((item, idx) => (
-                  <div key={idx} className="flex gap-4">
-                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <item.icon className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Testimonials */}
       <section className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto max-w-6xl">
