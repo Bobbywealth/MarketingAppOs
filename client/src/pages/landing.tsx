@@ -107,14 +107,15 @@ export default function LandingPage() {
                 Wolfpaq Marketing
               </Badge>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft">
-                Your Dedicated Remote <br />
-                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Marketing Team</span>
+                Your Remote <br />
+                Digital Marketing <br />
+                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
               </h1>
               <p className="text-xl sm:text-2xl font-semibold text-white mb-2">
-                Get Results Without the Overhead
+                Marketing Help for Everyone
               </p>
               <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Access a full-stack marketing team for less than the cost of one employee. From strategy to execution, we handle everything.
+                Whether you're a business, influencer, musician, or entrepreneur - we're your go-to marketing partner. Whatever you need to market, we've got you covered.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-center lg:items-start">
                 <Link href="/signup">
@@ -166,12 +167,12 @@ export default function LandingPage() {
       <section className="py-12 md:py-16 px-4 -mt-12 md:-mt-20 relative z-20">
         <div className="container mx-auto">
           <div className="text-center mb-12">
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Platform Features</p>
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">What We Do</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Everything You Need to Manage Your Marketing Business
+              Marketing Solutions for Everyone
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Powerful tools designed for marketing teams to deliver exceptional client service and grow your business.
+              From businesses to influencers, musicians to entrepreneurs - we provide comprehensive marketing support for all your needs.
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
@@ -179,9 +180,9 @@ export default function LandingPage() {
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
                 <Users className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Client Management</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Project Management</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Centralize all client information, communications, and project history in one place.
+                Track all your marketing projects, deliverables, and communications in one place.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500">
@@ -197,9 +198,9 @@ export default function LandingPage() {
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md">
                 <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Analytics Dashboard</h3>
+              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Analytics & Results</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Real-time insights and reporting to measure campaign performance and client ROI.
+                Real-time insights and reporting to measure your campaign performance and ROI.
               </p>
             </Card>
             <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500">
@@ -287,10 +288,10 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Service Packages</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Flexible Marketing Solutions
+              Marketing Packages for Every Need
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Choose the package that fits your needs. No long-term contracts, cancel anytime.
+              Whether you're launching a product, building your brand, or growing your audience - we have a package for you.
             </p>
           </div>
 
@@ -299,7 +300,7 @@ export default function LandingPage() {
             <Card className="p-8 hover-lift transition-all duration-300 border-2 border-gray-200">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold mb-2">Essential</h3>
-                <p className="text-muted-foreground text-sm">Perfect for startups & small businesses</p>
+                <p className="text-muted-foreground text-sm">Perfect for getting started</p>
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold">$1,995</span>
@@ -339,7 +340,7 @@ export default function LandingPage() {
               </div>
               <div className="mb-6">
                 <h3 className="text-2xl font-bold mb-2">Growth</h3>
-                <p className="text-muted-foreground text-sm">For scaling businesses</p>
+                <p className="text-muted-foreground text-sm">For serious growth</p>
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold">$4,995</span>
@@ -380,7 +381,7 @@ export default function LandingPage() {
             <Card className="p-8 hover-lift transition-all duration-300 border-2 border-purple-200 bg-gradient-to-br from-white to-purple-50/30">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
-                <p className="text-muted-foreground text-sm">Your full marketing department</p>
+                <p className="text-muted-foreground text-sm">Complete marketing solution</p>
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold">Custom</span>
@@ -815,10 +816,10 @@ export default function LandingPage() {
       <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
         <div className="container mx-auto max-w-4xl text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Ready to Transform Your Marketing Operations?
+            Ready to Take Your Marketing to the Next Level?
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of marketing teams who have streamlined their workflows and grown their business with our platform.
+            Join thousands of businesses, influencers, and entrepreneurs who trust us with their marketing needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/signup">
