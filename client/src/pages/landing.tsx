@@ -861,13 +861,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Live Chat Indicator */}
-      <div className="fixed bottom-6 left-6 z-50 hidden md:block">
-        <div className="bg-green-500 text-white px-4 py-3 rounded-full shadow-xl flex items-center gap-2 animate-pulse">
-          <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
-          <span className="text-sm font-semibold">Live Support</span>
-        </div>
-      </div>
 
       {/* Footer */}
       <footer className="border-t py-12 px-4 bg-background pb-20 md:pb-12">
