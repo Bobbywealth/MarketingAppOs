@@ -1,9 +1,8 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+const { Pool } = pg;
 
 // Get DATABASE_URL, but allow build to proceed without it (runtime check will catch missing value)
 const DATABASE_URL = process.env.DATABASE_URL || "";
@@ -14,5 +13,8 @@ if (!DATABASE_URL && process.env.NODE_ENV === "production") {
   );
 }
 
-export const pool = new Pool({ connectionString: DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+export const pool = new Pool({ 
+  connectionString: DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined
+});
+export const db = drizzle(pool, { schema });
