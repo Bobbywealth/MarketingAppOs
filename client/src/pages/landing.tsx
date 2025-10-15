@@ -101,20 +101,20 @@ export default function LandingPage() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
         <div className="container mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center">
+            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center max-w-full">
               <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
                 <span className="animate-pulse">🔥 </span>
                 Limited Spots Available - Book This Month
               </Badge>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft px-2">
                 Your Remote <br />
                 Digital Marketing <br />
                 <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
               </h1>
-              <p className="text-xl sm:text-2xl font-semibold text-white mb-2">
+              <p className="text-xl sm:text-2xl font-semibold text-white mb-2 px-4">
                 Stop Wasting Money on Marketing That Doesn't Work
               </p>
-              <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto px-4">
+              <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto px-6">
                 Join 500+ businesses, influencers, and entrepreneurs who've 3X'd their results with our proven marketing system. 
                 <span className="font-semibold text-white">Guaranteed results or your money back.</span>
               </p>
