@@ -86,9 +86,12 @@ export default function TasksPage() {
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormData) => {
-      const taskData: Partial<InsertTask> = {
-        ...data,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+      const taskData: any = {
+        title: data.title,
+        description: data.description || undefined,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
         campaignId: data.campaignId || undefined,
         clientId: data.clientId || undefined,
         assignedToId: data.assignedToId || undefined,
