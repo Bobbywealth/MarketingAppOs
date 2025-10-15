@@ -46,7 +46,7 @@ export default function AuthPage() {
               Marketing Team App
             </h1>
             <p className="text-muted-foreground text-sm">
-              Your Complete Marketing Agency CRM Solution
+              Your Complete Marketing & CRM Solution
             </p>
           </div>
 
@@ -193,10 +193,10 @@ export default function AuthPage() {
               <span className="text-sm font-medium">Trusted by Marketing Teams Worldwide</span>
             </div>
             <h2 className="text-4xl font-bold leading-tight">
-              Grow Your Marketing Business
+              Grow Your Business
             </h2>
             <p className="text-blue-100 text-lg">
-              Streamline client relationships, project delivery, and campaign management with the complete CRM built for marketing service providers.
+              Streamline client relationships, project delivery, and campaign management with the complete CRM built for businesses, influencers, and entrepreneurs.
             </p>
           </div>
 
@@ -232,7 +232,7 @@ export default function AuthPage() {
               <div>
                 <h3 className="font-semibold text-lg mb-1">Analytics & Reporting</h3>
                 <p className="text-sm text-blue-100">
-                  Data-driven insights to optimize your agency's performance
+                  Data-driven insights to optimize your business performance
                 </p>
               </div>
             </div>
@@ -252,9 +252,9 @@ export default function AuthPage() {
 
           <div className="pt-4 border-t border-white/20">
             <p className="text-sm text-blue-100 italic">
-              "This CRM transformed how we manage our agency. Game changer!"
+              "This CRM transformed how we manage our business. Game changer!"
             </p>
-            <p className="text-xs text-blue-200 mt-2">— Sarah M., Agency Director</p>
+            <p className="text-xs text-blue-200 mt-2">— Sarah M., Marketing Director</p>
           </div>
         </div>
       </div>
