@@ -28,6 +28,7 @@ import WebsiteProjects from "@/pages/website-projects";
 import Analytics from "@/pages/analytics";
 import Team from "@/pages/team";
 import Emails from "@/pages/emails";
+import Phone from "@/pages/phone";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -53,6 +54,7 @@ function Router() {
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/team" component={Team} />
       <ProtectedRoute path="/emails" component={Emails} />
+      <ProtectedRoute path="/phone" component={Phone} />
       <Route component={NotFound} />
     </Switch>
   );

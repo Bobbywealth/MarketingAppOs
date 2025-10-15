@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   MessageSquare,
   Mail,
+  Phone,
   Globe,
   BarChart3,
   UsersRound,
@@ -100,6 +101,12 @@ const menuItems = [
     url: "/emails",
     icon: Mail,
     permission: null, // Everyone can access emails
+  },
+  {
+    title: "Phone",
+    url: "/phone",
+    icon: Phone,
+    permission: null, // Everyone can access phone
   },
   {
     title: "Website Projects",
