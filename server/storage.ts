@@ -18,6 +18,8 @@ import {
   analyticsMetrics,
   notifications,
   activityLogs,
+  emails,
+  emailAccounts,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -57,6 +59,10 @@ import {
   type InsertNotification,
   type ActivityLog,
   type InsertActivityLog,
+  type Email,
+  type InsertEmail,
+  type EmailAccount,
+  type InsertEmailAccount,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -697,6 +703,84 @@ export class DatabaseStorage implements IStorage {
       .from(activityLogs)
       .orderBy(desc(activityLogs.createdAt))
       .limit(limit);
+  }
+
+  // Email operations
+  async getEmails(userId?: number, folder?: string) {
+    let query = db.select().from(emails);
+    
+    if (userId) {
+      query = query.where(eq(emails.userId, userId)) as any;
+    }
+    
+    if (folder) {
+      query = query.where(eq(emails.folder, folder)) as any;
+    }
+    
+    return await query.orderBy(desc(emails.receivedAt));
+  }
+
+  async getEmail(id: string) {
+    const [email] = await db.select().from(emails).where(eq(emails.id, id));
+    return email;
+  }
+
+  async createEmail(emailData: InsertEmail) {
+    const [email] = await db.insert(emails).values(emailData).returning();
+    return email;
+  }
+
+  async updateEmail(id: string, updates: Partial<InsertEmail>) {
+    const [email] = await db
+      .update(emails)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(emails.id, id))
+      .returning();
+    return email;
+  }
+
+  async deleteEmail(id: string) {
+    await db.delete(emails).where(eq(emails.id, id));
+  }
+
+  async markEmailAsRead(id: string) {
+    return await this.updateEmail(id, { isRead: true });
+  }
+
+  async moveEmailToFolder(id: string, folder: string) {
+    return await this.updateEmail(id, { folder });
+  }
+
+  async toggleEmailStar(id: string, isStarred: boolean) {
+    return await this.updateEmail(id, { isStarred });
+  }
+
+  // Email account operations (for OAuth tokens)
+  async getEmailAccounts(userId: number) {
+    return await db.select().from(emailAccounts).where(eq(emailAccounts.userId, userId));
+  }
+
+  async getEmailAccount(id: string) {
+    const [account] = await db.select().from(emailAccounts).where(eq(emailAccounts.id, id));
+    return account;
+  }
+
+  async createEmailAccount(accountData: InsertEmailAccount) {
+    const [account] = await db.insert(emailAccounts).values(accountData).returning();
+    return account;
+  }
+
+  async updateEmailAccount(id: string, updates: Partial<InsertEmailAccount>) {
+    const [account] = await db
+      .update(emailAccounts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(emailAccounts.id, id))
+      .returning();
+    return account;
+  }
+
+  async deleteEmailAccount(id: string) {
+    await db.delete(emailAccounts).where(eq(emailAccounts.id, id));
   }
 }
 

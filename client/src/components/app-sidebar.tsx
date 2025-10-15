@@ -9,6 +9,7 @@ import {
   Ticket, 
   ClipboardCheck,
   MessageSquare,
+  Mail,
   Globe,
   BarChart3,
   UsersRound,
@@ -93,6 +94,12 @@ const menuItems = [
     url: "/messages",
     icon: MessageSquare,
     permission: null, // Everyone can access messages
+  },
+  {
+    title: "Emails",
+    url: "/emails",
+    icon: Mail,
+    permission: null, // Everyone can access emails
   },
   {
     title: "Website Projects",

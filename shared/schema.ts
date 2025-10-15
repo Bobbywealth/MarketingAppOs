@@ -485,6 +485,62 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+// Emails table (for tracking company emails via GoDaddy Outlook)
+export const emails = pgTable("emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id"), // External email ID from provider
+  from: varchar("from").notNull(),
+  fromName: varchar("from_name"),
+  to: jsonb("to").notNull(), // Array of email addresses
+  cc: jsonb("cc"), // Array of CC addresses
+  bcc: jsonb("bcc"), // Array of BCC addresses
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  bodyPreview: text("body_preview"), // First 150 chars for listing
+  folder: varchar("folder").notNull().default("inbox"), // inbox, sent, spam, trash, archive
+  isRead: boolean("is_read").default(false),
+  isStarred: boolean("is_starred").default(false),
+  hasAttachments: boolean("has_attachments").default(false),
+  attachments: jsonb("attachments"), // Array of attachment metadata
+  labels: jsonb("labels"), // Array of custom labels
+  inReplyTo: varchar("in_reply_to"), // Message ID this is replying to
+  threadId: varchar("thread_id"), // For grouping conversation threads
+  receivedAt: timestamp("received_at").notNull(),
+  sentAt: timestamp("sent_at"),
+  userId: integer("user_id").references(() => users.id), // Which user this email belongs to
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailsRelations = relations(emails, ({ one }) => ({
+  user: one(users, {
+    fields: [emails.userId],
+    references: [users.id],
+  }),
+}));
+
+// Email OAuth tokens (for Microsoft Graph API integration)
+export const emailAccounts = pgTable("email_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  email: varchar("email").notNull(),
+  provider: varchar("provider").notNull().default("microsoft"), // microsoft, google, etc.
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  isActive: boolean("is_active").default(true),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const emailAccountsRelations = relations(emailAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [emailAccounts.userId],
+    references: [users.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const upsertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true }).extend({
@@ -567,3 +623,11 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+export const insertEmailSchema = createInsertSchema(emails).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertEmail = z.infer<typeof insertEmailSchema>;
+export type Email = typeof emails.$inferSelect;
+
+export const insertEmailAccountSchema = createInsertSchema(emailAccounts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertEmailAccount = z.infer<typeof insertEmailAccountSchema>;
+export type EmailAccount = typeof emailAccounts.$inferSelect;
