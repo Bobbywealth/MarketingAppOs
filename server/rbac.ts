@@ -63,11 +63,14 @@ export function requireRole(...allowedRoles: UserRole[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user as any;
     
-    if (!user?.claims?.sub) {
+    // Support both Passport (user.id) and Replit Auth (user.claims.sub)
+    const userId = user?.id || user?.claims?.sub;
+    
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const dbUser = await storage.getUser(user.claims.sub);
+    const dbUser = await storage.getUser(userId.toString());
     
     if (!dbUser) {
       return res.status(401).json({ message: "User not found" });
@@ -93,11 +96,14 @@ export function requirePermission(permission: keyof RolePermissions) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user as any;
     
-    if (!user?.claims?.sub) {
+    // Support both Passport (user.id) and Replit Auth (user.claims.sub)
+    const userId = user?.id || user?.claims?.sub;
+    
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const dbUser = await storage.getUser(user.claims.sub);
+    const dbUser = await storage.getUser(userId.toString());
     
     if (!dbUser) {
       return res.status(401).json({ message: "User not found" });
