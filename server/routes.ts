@@ -614,8 +614,15 @@ Examples:
 
       const parsed = JSON.parse(completion.choices[0].message.content || '{}');
       
-      // Validate the parsed data
-      const taskData = insertTaskSchema.parse(parsed);
+      // Transform the parsed data - convert date string to Date object if present
+      const transformedData = {
+        ...parsed,
+        dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
+        assignedToId: parsed.assignedToId ? parseInt(parsed.assignedToId) : undefined,
+      };
+      
+      // Validate the transformed data
+      const taskData = insertTaskSchema.parse(transformedData);
       
       res.json({
         success: true,
