@@ -139,7 +139,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
 export const taskComments = pgTable("task_comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   taskId: varchar("task_id").references(() => tasks.id).notNull(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
   comment: text("comment").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -192,7 +192,7 @@ export const leadsRelations = relations(leads, ({ one, many }) => ({
 export const leadActivities = pgTable("lead_activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   leadId: varchar("lead_id").references(() => leads.id).notNull(),
-  userId: varchar("user_id").references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
   type: varchar("type").notNull(), // note, call, email, sms, meeting, stage_change
   subject: varchar("subject"),
   description: text("description"),
@@ -404,7 +404,7 @@ export const websiteProjectsRelations = relations(websiteProjects, ({ one, many 
 export const projectFeedback = pgTable("project_feedback", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").references(() => websiteProjects.id).notNull(),
-  userId: varchar("user_id").references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
   type: varchar("type").notNull().default("comment"), // comment, revision, approval, deadline
   subject: varchar("subject"),
   message: text("message").notNull(),
