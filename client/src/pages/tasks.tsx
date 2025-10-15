@@ -56,6 +56,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [isAiParsing, setIsAiParsing] = useState(false);
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -163,6 +164,25 @@ export default function TasksPage() {
     setIsEditDialogOpen(true);
   };
 
+  const handleDragStart = (task: Task) => {
+    setDraggedTask(task);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Allow drop
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: string) => {
+    e.preventDefault();
+    if (draggedTask && draggedTask.status !== newStatus) {
+      updateTaskStatusMutation.mutate({ 
+        id: draggedTask.id, 
+        status: newStatus 
+      });
+    }
+    setDraggedTask(null);
+  };
+
   const handleAiQuickAdd = async () => {
     if (!aiInput.trim()) return;
 
@@ -256,7 +276,12 @@ export default function TasksPage() {
           const columnTasks = filteredTasks.filter((task) => task.status === column.id);
           
           return (
-            <div key={column.id} className="flex flex-col">
+            <div 
+              key={column.id} 
+              className="flex flex-col"
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, column.id)}
+            >
               <div className="mb-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <span>{column.icon}</span>
@@ -266,11 +291,20 @@ export default function TasksPage() {
                   </Badge>
                 </h3>
               </div>
-              <div className="space-y-3 flex-1">
+              <div className="space-y-3 flex-1 min-h-[200px] p-2 rounded-lg border-2 border-dashed border-transparent transition-colors"
+                style={{ 
+                  borderColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.3)' : 'transparent',
+                  backgroundColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.05)' : 'transparent'
+                }}
+              >
                 {columnTasks.map((task) => (
                   <Card 
                     key={task.id} 
-                    className="hover-elevate active-elevate-2 transition-all group"
+                    draggable
+                    onDragStart={() => handleDragStart(task)}
+                    className={`hover-elevate active-elevate-2 transition-all group cursor-move ${
+                      draggedTask?.id === task.id ? 'opacity-50' : ''
+                    }`}
                     data-testid={`task-card-${task.id}`}
                   >
                     <CardHeader className="p-4 space-y-2">
