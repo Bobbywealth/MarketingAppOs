@@ -119,6 +119,24 @@ ${data.notes || 'None'}`,
       const reviewTasks = tasks.filter((t) => t.status === "review").length;
       const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+      // Today's task metrics
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const tasksToday = tasks.filter((t) => {
+        if (!t.dueDate) return false;
+        const dueDate = new Date(t.dueDate);
+        return dueDate >= today && dueDate < tomorrow;
+      });
+
+      const totalTasksToday = tasksToday.length;
+      const completedTasksToday = tasksToday.filter((t) => t.status === "completed").length;
+      const todoTasksToday = tasksToday.filter((t) => t.status === "todo").length;
+      const inProgressTasksToday = tasksToday.filter((t) => t.status === "in_progress").length;
+      const reviewTasksToday = tasksToday.filter((t) => t.status === "review").length;
+
       // Recent Activity Feed - collect activities from all sources
       const recentActivity: any[] = [];
 
@@ -292,6 +310,12 @@ ${data.notes || 'None'}`,
           review: reviewTasks,
           completionPercentage,
         },
+        // Today's task metrics
+        totalTasksToday,
+        completedTasksToday,
+        todoTasksToday,
+        inProgressTasksToday,
+        reviewTasksToday,
       });
     } catch (error) {
       console.error(error);
