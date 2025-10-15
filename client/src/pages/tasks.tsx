@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2 } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -52,6 +52,8 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const [isAiParsing, setIsAiParsing] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -103,6 +105,39 @@ export default function TasksPage() {
       toast({ title: "Failed to create task", variant: "destructive" });
     },
   });
+
+  const handleAiQuickAdd = async () => {
+    if (!aiInput.trim()) return;
+
+    setIsAiParsing(true);
+    try {
+      // Parse with AI
+      const parseRes = await apiRequest("POST", "/api/tasks/parse-ai", { input: aiInput });
+      const parseData = await parseRes.json();
+      
+      if (!parseData.success) {
+        throw new Error("Failed to parse task");
+      }
+
+      // Create the task directly
+      await apiRequest("POST", "/api/tasks", parseData.taskData);
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ 
+        title: "✨ Task created with AI!", 
+        description: `Created: "${parseData.taskData.title}"` 
+      });
+      setAiInput("");
+    } catch (error: any) {
+      toast({ 
+        title: "Failed to create task", 
+        description: error.message || "AI parsing failed",
+        variant: "destructive" 
+      });
+    } finally {
+      setIsAiParsing(false);
+    }
+  };
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -520,6 +555,48 @@ export default function TasksPage() {
           </Dialog>
         </div>
       </div>
+
+      {/* AI Quick-Add Bar */}
+      <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-purple-500/5 to-primary/5">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
+            <Input
+              placeholder="✨ Describe your task naturally... e.g., 'Call Bobby tomorrow about website redesign, high priority'"
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleAiQuickAdd();
+                }
+              }}
+              disabled={isAiParsing}
+              className="flex-1 border-0 focus-visible:ring-1"
+            />
+            <Button
+              onClick={handleAiQuickAdd}
+              disabled={isAiParsing || !aiInput.trim()}
+              className="gap-2"
+            >
+              {isAiParsing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Create
+                </>
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 ml-8">
+            Try: "Schedule meeting with John next Friday" or "Urgent: Fix login bug ASAP"
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="flex-1 overflow-auto">
         {viewMode === "kanban" ? renderKanbanView() : renderListView()}

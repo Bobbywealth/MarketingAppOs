@@ -558,6 +558,83 @@ ${data.notes || 'None'}`,
     }
   });
 
+  // AI-powered task parsing from natural language
+  app.post("/api/tasks/parse-ai", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { input } = req.body;
+      
+      if (!input || typeof input !== 'string') {
+        return res.status(400).json({ message: "Input text is required" });
+      }
+
+      // Check if OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({ 
+          message: "AI assistant not configured. Please add OPENAI_API_KEY to environment variables." 
+        });
+      }
+
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      // Get clients and users for context
+      const [clients, users] = await Promise.all([
+        storage.getClients(),
+        storage.getUsers(),
+      ]);
+
+      const systemPrompt = `You are a task parsing assistant. Extract task details from natural language.
+
+Available clients: ${clients.map(c => `${c.name} (ID: ${c.id})`).join(', ')}
+Available users: ${users.map(u => `${u.username} (ID: ${u.id})`).join(', ')}
+
+Return JSON with:
+- title: string (required)
+- description: string (optional)
+- priority: "low" | "normal" | "high" | "urgent" (default: "normal")
+- status: "todo" | "in_progress" | "review" | "completed" (default: "todo")
+- dueDate: ISO date string (optional, parse relative dates like "tomorrow", "next Friday", etc.)
+- clientId: string (optional, match from available clients)
+- assignedToId: string (optional, match from available users)
+
+Examples:
+"Call Bobby tomorrow about website" -> {"title":"Call Bobby about website","dueDate":"2025-10-16","priority":"normal"}
+"High priority: Fix login bug ASAP" -> {"title":"Fix login bug","priority":"urgent","status":"todo"}
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: input }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+
+      const parsed = JSON.parse(completion.choices[0].message.content || '{}');
+      
+      // Validate the parsed data
+      const taskData = insertTaskSchema.parse(parsed);
+      
+      res.json({
+        success: true,
+        taskData,
+        originalInput: input,
+      });
+
+    } catch (error: any) {
+      console.error("AI parsing error:", error);
+      if (error.message?.includes('API key')) {
+        return res.status(503).json({ message: "OpenAI API configuration error" });
+      }
+      res.status(500).json({ 
+        message: "Failed to parse task with AI", 
+        error: error.message 
+      });
+    }
+  });
+
   app.patch("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const validatedData = insertTaskSchema.partial().strip().parse(req.body);
