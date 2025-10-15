@@ -142,8 +142,9 @@ export default function TeamPage() {
   const getRoleBadge = (role: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       admin: "destructive",
-      staff: "default",
-      client: "secondary",
+      manager: "default",
+      staff: "secondary",
+      client: "outline",
     };
     return (
       <Badge variant={variants[role] || "outline"} className="capitalize">
@@ -164,7 +165,7 @@ export default function TeamPage() {
       "View Reports",
       "Manage Settings",
     ],
-    staff: [
+    manager: [
       "Manage Clients",
       "Manage Campaigns",
       "Manage Leads",
@@ -172,6 +173,13 @@ export default function TeamPage() {
       "Manage Invoices",
       "Manage Tickets",
       "View Reports",
+    ],
+    staff: [
+      "Manage Clients",
+      "Manage Campaigns",
+      "Manage Leads",
+      "Manage Content",
+      "Manage Tickets",
     ],
     client: ["Manage Tickets"],
   };
@@ -234,8 +242,8 @@ export default function TeamPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="admin">Admin - Full Access</SelectItem>
+                      <SelectItem value="manager">Manager - Advanced Access</SelectItem>
                       <SelectItem value="staff">Staff - Standard Access</SelectItem>
-                      <SelectItem value="client">Client - Limited Access</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -250,10 +258,10 @@ export default function TeamPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Team Members</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
             <UsersIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -263,7 +271,7 @@ export default function TeamPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Admins</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <Shield className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -273,8 +281,19 @@ export default function TeamPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Managers</CardTitle>
+            <UsersIcon className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.role === "manager").length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Staff</CardTitle>
-            <UsersIcon className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -344,8 +363,8 @@ export default function TeamPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="admin">Admin - Full Access</SelectItem>
+                                  <SelectItem value="manager">Manager - Advanced Access</SelectItem>
                                   <SelectItem value="staff">Staff - Standard Access</SelectItem>
-                                  <SelectItem value="client">Client - Limited Access</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>

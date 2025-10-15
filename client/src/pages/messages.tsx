@@ -25,9 +25,9 @@ export default function Messages() {
     queryKey: ["/api/users"],
   });
 
-  // Filter to only show admin and staff members (exclude clients and current user)
+  // Filter to only show admin, manager, and staff members (exclude clients and current user)
   const teamMembers = allUsers?.filter(u => 
-    (u.role === 'admin' || u.role === 'staff') && 
+    (u.role === 'admin' || u.role === 'manager' || u.role === 'staff') && 
     u.id !== user?.id
   ) || [];
 

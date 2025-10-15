@@ -3,6 +3,7 @@ import { storage } from "./storage";
 
 export enum UserRole {
   ADMIN = "admin",
+  MANAGER = "manager",
   STAFF = "staff",
   CLIENT = "client",
 }
@@ -31,7 +32,7 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canViewReports: true,
     canManageSettings: true,
   },
-  [UserRole.STAFF]: {
+  [UserRole.MANAGER]: {
     canManageUsers: false,
     canManageClients: true,
     canManageCampaigns: true,
@@ -40,6 +41,17 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canManageInvoices: true,
     canManageTickets: true,
     canViewReports: true,
+    canManageSettings: false,
+  },
+  [UserRole.STAFF]: {
+    canManageUsers: false,
+    canManageClients: true,
+    canManageCampaigns: true,
+    canManageLeads: true,
+    canManageContent: true,
+    canManageInvoices: false,
+    canManageTickets: true,
+    canViewReports: false,
     canManageSettings: false,
   },
   [UserRole.CLIENT]: {
