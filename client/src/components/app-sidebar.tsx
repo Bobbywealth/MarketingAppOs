@@ -35,13 +35,46 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 
-const menuItems = [
+const companyTools = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
     permission: null, // Everyone can access dashboard
   },
+  {
+    title: "Company Calendar",
+    url: "/company-calendar",
+    icon: Calendar,
+    permission: null, // Everyone can access company calendar
+  },
+  {
+    title: "Team",
+    url: "/team",
+    icon: UsersRound,
+    permission: "canManageUsers" as const,
+  },
+  {
+    title: "Messages",
+    url: "/messages",
+    icon: MessageSquare,
+    permission: null, // Everyone can access messages
+  },
+  {
+    title: "Emails",
+    url: "/emails",
+    icon: Mail,
+    permission: null, // Everyone can access emails
+  },
+  {
+    title: "Phone",
+    url: "/phone",
+    icon: Phone,
+    permission: null, // Everyone can access phone
+  },
+];
+
+const businessTools = [
   {
     title: "Clients",
     url: "/clients",
@@ -91,24 +124,6 @@ const menuItems = [
     permission: "canManageClients" as const,
   },
   {
-    title: "Messages",
-    url: "/messages",
-    icon: MessageSquare,
-    permission: null, // Everyone can access messages
-  },
-  {
-    title: "Emails",
-    url: "/emails",
-    icon: Mail,
-    permission: null, // Everyone can access emails
-  },
-  {
-    title: "Phone",
-    url: "/phone",
-    icon: Phone,
-    permission: null, // Everyone can access phone
-  },
-  {
     title: "Website Projects",
     url: "/website-projects",
     icon: Globe,
@@ -119,12 +134,6 @@ const menuItems = [
     url: "/analytics",
     icon: BarChart3,
     permission: "canManageClients" as const,
-  },
-  {
-    title: "Team",
-    url: "/team",
-    icon: UsersRound,
-    permission: "canManageUsers" as const,
   },
 ];
 
@@ -140,7 +149,12 @@ export function AppSidebar() {
     return user?.email?.[0]?.toUpperCase() || "U";
   };
 
-  const filteredMenuItems = menuItems.filter(item => {
+  const filteredCompanyTools = companyTools.filter(item => {
+    if (!item.permission) return true; // No permission required
+    return canAccess(item.permission);
+  });
+
+  const filteredBusinessTools = businessTools.filter(item => {
     if (!item.permission) return true; // No permission required
     return canAccess(item.permission);
   });
@@ -162,10 +176,35 @@ export function AppSidebar() {
         />
       </SidebarHeader>
       <SidebarContent>
+        {/* Company Tools Section */}
         <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">
+            Company Tools
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredMenuItems.map((item) => (
+              {filteredCompanyTools.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url} data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}>
+                    <Link href={item.url}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Business/Marketing Tools Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">
+            Business & Marketing
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {filteredBusinessTools.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url} data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}>
                     <Link href={item.url}>
