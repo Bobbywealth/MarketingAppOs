@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2 } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -52,6 +52,8 @@ export default function TasksPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [aiInput, setAiInput] = useState("");
   const [isAiParsing, setIsAiParsing] = useState(false);
 
@@ -104,10 +106,62 @@ export default function TasksPage() {
       setIsCreateDialogOpen(false);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "Failed to create task", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Task creation error:", error);
+      toast({ 
+        title: "Failed to create task", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
     },
   });
+
+  const editTaskMutation = useMutation({
+    mutationFn: async (data: TaskFormData) => {
+      if (!editingTask) return;
+      const taskData: any = {
+        title: data.title,
+        description: data.description || undefined,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        campaignId: data.campaignId || undefined,
+        clientId: data.clientId || undefined,
+        assignedToId: data.assignedToId ? parseInt(data.assignedToId) : undefined,
+      };
+      return apiRequest("PATCH", `/api/tasks/${editingTask.id}`, taskData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Task updated successfully" });
+      setIsEditDialogOpen(false);
+      setEditingTask(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      console.error("Task update error:", error);
+      toast({ 
+        title: "Failed to update task", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    form.reset({
+      title: task.title,
+      description: task.description || "",
+      status: task.status as any,
+      priority: task.priority as any,
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+      campaignId: task.campaignId || "",
+      clientId: task.clientId || "",
+      assignedToId: task.assignedToId?.toString() || "",
+    });
+    setIsEditDialogOpen(true);
+  };
 
   const handleAiQuickAdd = async () => {
     if (!aiInput.trim()) return;
@@ -216,15 +270,25 @@ export default function TasksPage() {
                 {columnTasks.map((task) => (
                   <Card 
                     key={task.id} 
-                    className="hover-elevate active-elevate-2 cursor-pointer transition-all"
+                    className="hover-elevate active-elevate-2 transition-all group"
                     data-testid={`task-card-${task.id}`}
                   >
                     <CardHeader className="p-4 space-y-2">
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-semibold text-sm line-clamp-2">{task.title}</h4>
-                        <Badge className={getPriorityColor(task.priority)} variant="secondary">
-                          {task.priority}
-                        </Badge>
+                        <h4 className="font-semibold text-sm line-clamp-2 flex-1">{task.title}</h4>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleEditTask(task)}
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Badge className={getPriorityColor(task.priority)} variant="secondary">
+                            {task.priority}
+                          </Badge>
+                        </div>
                       </div>
                       {task.description && (
                         <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
@@ -263,7 +327,7 @@ export default function TasksPage() {
     return (
       <div className="space-y-3">
         {filteredTasks.map((task) => (
-          <Card key={task.id} className="hover-elevate active-elevate-2" data-testid={`task-card-${task.id}`}>
+          <Card key={task.id} className="hover-elevate active-elevate-2 group" data-testid={`task-card-${task.id}`}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -275,6 +339,15 @@ export default function TasksPage() {
                     <Badge className={getPriorityColor(task.priority)} variant="secondary">
                       {task.priority}
                     </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleEditTask(task)}
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
                   </div>
                   {task.description && (
                     <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
@@ -509,10 +582,8 @@ export default function TasksPage() {
                           </FormControl>
                           <SelectContent>
                             {users.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.firstName && user.lastName
-                                  ? `${user.firstName} ${user.lastName}`
-                                  : user.email}
+                              <SelectItem key={user.id} value={user.id.toString()}>
+                                {user.username}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -558,6 +629,177 @@ export default function TasksPage() {
                     </Button>
                     <Button type="submit" disabled={createTaskMutation.isPending} data-testid="button-submit-task">
                       {createTaskMutation.isPending ? "Creating..." : "Create Task"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Task Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-2xl glass-strong">
+              <DialogHeader>
+                <DialogTitle>Edit Task</DialogTitle>
+                <DialogDescription>Update task details</DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => editTaskMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title *</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Task title" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Task description" rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="todo">To Do</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="review">Review</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Priority *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="normal">Normal</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                              <SelectItem value="urgent">Urgent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="assignedToId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assign To</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select team member" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {users.map((user) => (
+                              <SelectItem key={user.id} value={user.id.toString()}>
+                                {user.username}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="clientId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Related Client</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select client (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {clients.map((client) => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditDialogOpen(false);
+                        setEditingTask(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={editTaskMutation.isPending}>
+                      {editTaskMutation.isPending ? "Updating..." : "Update Task"}
                     </Button>
                   </div>
                 </form>
