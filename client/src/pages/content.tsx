@@ -14,10 +14,12 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ContentPost, Client, InsertContentPost } from "@shared/schema";
 import { insertContentPostSchema } from "@shared/schema";
-import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks, subWeeks, startOfDay } from "date-fns";
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks, subWeeks, startOfDay, startOfMonth, endOfMonth, addMonths, subMonths, addDays, subDays, isSameMonth } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+
+type ViewType = "day" | "week" | "month";
 
 // Form schema extending the insert schema
 const formSchema = insertContentPostSchema.extend({
@@ -33,6 +35,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function Content() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [view, setView] = useState<ViewType>("week");
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const { toast } = useToast();
@@ -124,7 +128,25 @@ export default function Content() {
     }
   };
 
-  // Get week days for calendar
+  // Get days based on current view
+  const viewDays = useMemo(() => {
+    if (view === "day") {
+      return [startOfDay(currentDate)];
+    } else if (view === "week") {
+      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+      return eachDayOfInterval({ start: startOfWeek(currentDate, { weekStartsOn: 0 }), end: weekEnd });
+    } else {
+      // month view
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      // Include days from previous/next month to fill the grid
+      const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+      const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+      return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    }
+  }, [view, currentDate]);
+
+  // Get week days for calendar (legacy)
   const weekDays = useMemo(() => {
     const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 0 });
     return eachDayOfInterval({ start: currentWeekStart, end: weekEnd });
@@ -136,6 +158,40 @@ export default function Content() {
     if (selectedClient === "all") return posts;
     return posts.filter(post => post.clientId === selectedClient);
   }, [posts, selectedClient]);
+
+  // Navigation functions
+  const handlePrevious = () => {
+    if (view === "day") {
+      setCurrentDate(subDays(currentDate, 1));
+    } else if (view === "week") {
+      setCurrentDate(subWeeks(currentDate, 1));
+      setCurrentWeekStart(subWeeks(currentWeekStart, 1));
+    } else {
+      setCurrentDate(subMonths(currentDate, 1));
+    }
+  };
+
+  const handleNext = () => {
+    if (view === "day") {
+      setCurrentDate(addDays(currentDate, 1));
+    } else if (view === "week") {
+      setCurrentDate(addWeeks(currentDate, 1));
+      setCurrentWeekStart(addWeeks(currentWeekStart, 1));
+    } else {
+      setCurrentDate(addMonths(currentDate, 1));
+    }
+  };
+
+  const getViewTitle = () => {
+    if (view === "day") {
+      return format(currentDate, 'MMMM d, yyyy');
+    } else if (view === "week") {
+      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
+      return `${format(currentDate, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+    } else {
+      return format(currentDate, 'MMMM yyyy');
+    }
+  };
 
   const getPostsForDay = (day: Date) => {
     return filteredPosts.filter(post => {
@@ -299,39 +355,92 @@ export default function Content() {
           </div>
         </div>
 
-        {/* Week Navigation */}
-        <div className="flex items-center justify-between gap-4">
+        {/* View Switcher & Navigation */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {/* View Switcher */}
+          <div className="flex items-center gap-2 border rounded-lg p-1">
+            <Button
+              size="sm"
+              variant={view === "day" ? "default" : "ghost"}
+              onClick={() => setView("day")}
+              className="h-8"
+            >
+              Day
+            </Button>
+            <Button
+              size="sm"
+              variant={view === "week" ? "default" : "ghost"}
+              onClick={() => setView("week")}
+              className="h-8"
+            >
+              Week
+            </Button>
+            <Button
+              size="sm"
+              variant={view === "month" ? "default" : "ghost"}
+              onClick={() => setView("month")}
+              className="h-8"
+            >
+              Month
+            </Button>
+          </div>
+
+          {/* Date Navigation */}
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrevious}
+              data-testid="button-previous"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </Button>
+            <h2 className="text-lg font-semibold min-w-[200px] text-center" data-testid="text-date-range">
+              {getViewTitle()}
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNext}
+              data-testid="button-next"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+
+          {/* Today Button */}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}
-            data-testid="button-previous-week"
+            onClick={() => {
+              const today = new Date();
+              setCurrentDate(today);
+              setCurrentWeekStart(startOfWeek(today, { weekStartsOn: 0 }));
+            }}
           >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Previous Week
-          </Button>
-          <h2 className="text-lg font-semibold" data-testid="text-week-range">
-            {format(currentWeekStart, 'MMM d')} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 0 }), 'MMM d, yyyy')}
-          </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
-            data-testid="button-next-week"
-          >
-            Next Week
-            <ChevronRight className="w-4 h-4 ml-1" />
+            Today
           </Button>
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-          {weekDays.map((day) => {
+        <div className={`grid gap-4 ${
+          view === "day" ? "grid-cols-1" : 
+          view === "week" ? "grid-cols-1 md:grid-cols-7" : 
+          "grid-cols-7"
+        }`}>
+          {viewDays.map((day) => {
             const dayPosts = getPostsForDay(day);
             const isToday = isSameDay(day, new Date());
+            const isCurrentMonth = view === "month" ? isSameMonth(day, currentDate) : true;
 
             return (
-              <Card key={day.toISOString()} className={`${isToday ? 'ring-2 ring-primary' : ''}`} data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}>
+              <Card 
+                key={day.toISOString()} 
+                className={`${isToday ? 'ring-2 ring-primary' : ''} ${!isCurrentMonth && view === "month" ? 'opacity-40' : ''}`} 
+                data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
+              >
                 <CardHeader className="p-3 pb-2">
                   <div className="flex items-center justify-between">
                     <div>
