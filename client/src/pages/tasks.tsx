@@ -122,13 +122,21 @@ export default function TasksPage() {
         throw new Error("Failed to parse task");
       }
 
+      // Format the task data - convert date to ISO string if present
+      const taskData = {
+        ...parseData.taskData,
+        dueDate: parseData.taskData.dueDate 
+          ? new Date(parseData.taskData.dueDate).toISOString() 
+          : undefined,
+      };
+
       // Create the task directly
-      await apiRequest("POST", "/api/tasks", parseData.taskData);
+      await apiRequest("POST", "/api/tasks", taskData);
       
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ 
         title: "✨ Task created with AI!", 
-        description: `Created: "${parseData.taskData.title}"` 
+        description: `Created: "${taskData.title}"` 
       });
       setAiInput("");
     } catch (error: any) {
