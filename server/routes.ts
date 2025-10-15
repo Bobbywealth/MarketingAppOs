@@ -451,10 +451,13 @@ ${data.notes || 'None'}`,
 
   app.post("/api/clients", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      console.log("Received client data:", JSON.stringify(req.body, null, 2));
       const validatedData = insertClientSchema.parse(req.body);
+      console.log("Validated client data:", JSON.stringify(validatedData, null, 2));
       const client = await storage.createClient(validatedData);
       res.status(201).json(client);
     } catch (error) {
+      console.error("Error creating client:", error);
       handleValidationError(error, res);
     }
   });
