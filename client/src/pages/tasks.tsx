@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2 } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -57,6 +57,7 @@ export default function TasksPage() {
   const [aiInput, setAiInput] = useState("");
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [isListening, setIsListening] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -97,9 +98,9 @@ export default function TasksPage() {
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
         campaignId: data.campaignId || undefined,
         clientId: data.clientId || undefined,
-        assignedToId: data.assignedToId || undefined,
+        assignedToId: data.assignedToId ? parseInt(data.assignedToId) : undefined,
       };
-      return apiRequest("/api/tasks", "POST", taskData);
+      return apiRequest("POST", "/api/tasks", taskData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -222,6 +223,58 @@ export default function TasksPage() {
     } finally {
       setIsAiParsing(false);
     }
+  };
+
+  const handleVoiceInput = () => {
+    // Check if browser supports speech recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      toast({
+        title: "Voice input not supported",
+        description: "Please use Chrome or Edge browser for voice input",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      toast({
+        title: "🎤 Listening...",
+        description: "Speak your task naturally"
+      });
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setAiInput(transcript);
+      toast({
+        title: "✓ Captured",
+        description: `"${transcript}"`
+      });
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      toast({
+        title: "Voice input error",
+        description: event.error === 'no-speech' ? "No speech detected. Please try again." : "Failed to capture voice input",
+        variant: "destructive"
+      });
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
   };
 
   const updateTaskStatusMutation = useMutation({
@@ -858,9 +911,23 @@ export default function TasksPage() {
                   handleAiQuickAdd();
                 }
               }}
-              disabled={isAiParsing}
+              disabled={isAiParsing || isListening}
               className="flex-1 border-0 focus-visible:ring-1"
             />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleVoiceInput}
+              disabled={isAiParsing || isListening}
+              className={`${isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : ''}`}
+              title="Voice input"
+            >
+              {isListening ? (
+                <MicOff className="w-4 h-4" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </Button>
             <Button
               onClick={handleAiQuickAdd}
               disabled={isAiParsing || !aiInput.trim()}
@@ -880,7 +947,7 @@ export default function TasksPage() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2 ml-8">
-            Try: "Schedule meeting with John next Friday" or "Urgent: Fix login bug ASAP"
+            💬 Type or 🎤 speak your task naturally • Try: "Schedule meeting with John next Friday" or "Urgent: Fix login bug ASAP"
           </p>
         </CardContent>
       </Card>
