@@ -84,12 +84,16 @@ function AppContent() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between gap-4 px-4 py-3 border-b bg-background">
+            <header className="flex items-center gap-4 px-4 py-3 border-b bg-background">
               <div className="flex items-center gap-2 flex-1">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
+              </div>
+              <div className="flex items-center justify-center flex-1">
                 <GlobalSearch />
               </div>
-              <ThemeToggle />
+              <div className="flex items-center justify-end flex-1">
+                <ThemeToggle />
+              </div>
             </header>
             <main className="flex-1 overflow-auto">
               <Router />
