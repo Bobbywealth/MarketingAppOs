@@ -18,6 +18,7 @@ import Dashboard from "@/pages/dashboard";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
+import Leads from "@/pages/leads";
 import Pipeline from "@/pages/pipeline";
 import Content from "@/pages/content";
 import Invoices from "@/pages/invoices";
@@ -45,6 +46,7 @@ function Router() {
       <ProtectedRoute path="/clients" component={Clients} />
       <ProtectedRoute path="/campaigns" component={Campaigns} />
       <ProtectedRoute path="/tasks" component={Tasks} />
+      <ProtectedRoute path="/leads" component={Leads} />
       <ProtectedRoute path="/pipeline" component={Pipeline} />
       <ProtectedRoute path="/content" component={Content} />
       <ProtectedRoute path="/invoices" component={Invoices} />

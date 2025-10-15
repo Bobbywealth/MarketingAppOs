@@ -1,0 +1,517 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  UserPlus, 
+  Search,
+  Filter,
+  MoreVertical,
+  Mail,
+  Phone,
+  MapPin,
+  Building2,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  Star,
+  Edit,
+  Trash2,
+  Send,
+  MessageSquare,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Target,
+  Zap
+} from "lucide-react";
+import { format } from "date-fns";
+import type { Lead, InsertLead } from "@shared/schema";
+
+export default function LeadsPage() {
+  const { toast } = useToast();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
+  const { data: leads = [], isLoading } = useQuery<Lead[]>({
+    queryKey: ["/api/leads"],
+  });
+
+  const createLeadMutation = useMutation({
+    mutationFn: async (data: InsertLead) => {
+      return apiRequest("POST", "/api/leads", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ title: "✅ Lead created successfully!" });
+      setIsCreateDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to create lead", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertLead> }) => {
+      return apiRequest("PATCH", `/api/leads/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ title: "Lead updated successfully" });
+    },
+  });
+
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = !searchQuery || 
+      lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = filterStatus === "all" || lead.status === filterStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const leadStats = {
+    total: leads.length,
+    new: leads.filter(l => l.status === "new").length,
+    contacted: leads.filter(l => l.status === "contacted").length,
+    qualified: leads.filter(l => l.status === "qualified").length,
+    converted: leads.filter(l => l.status === "converted").length,
+    lost: leads.filter(l => l.status === "lost").length,
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors = {
+      new: "bg-blue-500",
+      contacted: "bg-purple-500",
+      qualified: "bg-green-500",
+      proposal: "bg-orange-500",
+      negotiation: "bg-yellow-500",
+      converted: "bg-emerald-500",
+      lost: "bg-red-500",
+    };
+    return colors[status as keyof typeof colors] || "bg-gray-500";
+  };
+
+  const getStatusBadge = (status: string) => {
+    const colors = {
+      new: "default",
+      contacted: "secondary",
+      qualified: "default",
+      proposal: "secondary",
+      negotiation: "default",
+      converted: "default",
+      lost: "destructive",
+    };
+    return colors[status as keyof typeof colors] || "default";
+  };
+
+  const getLeadScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-500";
+    if (score >= 50) return "text-yellow-500";
+    return "text-red-500";
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Leads Management</h1>
+          <p className="text-muted-foreground">Track and manage your sales leads</p>
+        </div>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <UserPlus className="w-4 h-4" />
+              Add Lead
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add New Lead</DialogTitle>
+              <DialogDescription>Create a new lead in your pipeline</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const data: InsertLead = {
+                name: formData.get("name") as string,
+                email: formData.get("email") as string || undefined,
+                phone: formData.get("phone") as string || undefined,
+                company: formData.get("company") as string || undefined,
+                position: formData.get("position") as string || undefined,
+                status: formData.get("status") as string,
+                source: formData.get("source") as string || undefined,
+                value: formData.get("value") ? parseFloat(formData.get("value") as string) : undefined,
+                notes: formData.get("notes") as string || undefined,
+              };
+              createLeadMutation.mutate(data);
+            }} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Name *</Label>
+                  <Input name="name" placeholder="John Doe" required />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input name="email" type="email" placeholder="john@example.com" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Phone</Label>
+                  <Input name="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                </div>
+                <div>
+                  <Label>Company</Label>
+                  <Input name="company" placeholder="Acme Inc" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Position</Label>
+                  <Input name="position" placeholder="CEO, Marketing Manager" />
+                </div>
+                <div>
+                  <Label>Lead Value</Label>
+                  <Input name="value" type="number" placeholder="5000" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Status *</Label>
+                  <Select name="status" defaultValue="new" required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="qualified">Qualified</SelectItem>
+                      <SelectItem value="proposal">Proposal Sent</SelectItem>
+                      <SelectItem value="negotiation">Negotiation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Lead Source</Label>
+                  <Select name="source">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="website">Website</SelectItem>
+                      <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="social_media">Social Media</SelectItem>
+                      <SelectItem value="cold_call">Cold Call</SelectItem>
+                      <SelectItem value="event">Event</SelectItem>
+                      <SelectItem value="advertising">Advertising</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Notes</Label>
+                <Textarea name="notes" placeholder="Additional information about this lead..." rows={3} />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createLeadMutation.isPending}>
+                  {createLeadMutation.isPending ? "Creating..." : "Create Lead"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <Card className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Leads</p>
+                <p className="text-2xl font-bold">{leadStats.total}</p>
+              </div>
+              <div className="p-3 bg-blue-500/10 rounded-lg">
+                <Target className="w-6 h-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">New</p>
+                <p className="text-2xl font-bold">{leadStats.new}</p>
+              </div>
+              <div className="p-3 bg-purple-500/10 rounded-lg">
+                <Zap className="w-6 h-6 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Contacted</p>
+                <p className="text-2xl font-bold">{leadStats.contacted}</p>
+              </div>
+              <div className="p-3 bg-indigo-500/10 rounded-lg">
+                <MessageSquare className="w-6 h-6 text-indigo-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Qualified</p>
+                <p className="text-2xl font-bold">{leadStats.qualified}</p>
+              </div>
+              <div className="p-3 bg-green-500/10 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Converted</p>
+                <p className="text-2xl font-bold">{leadStats.converted}</p>
+              </div>
+              <div className="p-3 bg-emerald-500/10 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-emerald-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Lost</p>
+                <p className="text-2xl font-bold">{leadStats.lost}</p>
+              </div>
+              <div className="p-3 bg-red-500/10 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters & Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search leads by name, email, or company..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="contacted">Contacted</SelectItem>
+                <SelectItem value="qualified">Qualified</SelectItem>
+                <SelectItem value="proposal">Proposal</SelectItem>
+                <SelectItem value="negotiation">Negotiation</SelectItem>
+                <SelectItem value="converted">Converted</SelectItem>
+                <SelectItem value="lost">Lost</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon">
+              <Filter className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Leads List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Leads ({filteredLeads.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Loading leads...
+            </div>
+          ) : filteredLeads.length === 0 ? (
+            <div className="text-center py-12">
+              <Target className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+              <p className="text-muted-foreground mb-2">No leads found</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchQuery || filterStatus !== "all" 
+                  ? "Try adjusting your filters"
+                  : "Start by adding your first lead"}
+              </p>
+              {!searchQuery && filterStatus === "all" && (
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Your First Lead
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredLeads.map((lead) => (
+                <Card key={lead.id} className="hover-elevate group cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <Avatar className="w-12 h-12">
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {lead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-lg">{lead.name}</h3>
+                            <Badge variant={getStatusBadge(lead.status) as any}>
+                              {lead.status.replace('_', ' ')}
+                            </Badge>
+                            {lead.score && lead.score > 70 && (
+                              <Badge variant="outline" className="gap-1">
+                                <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                                Hot Lead
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            {lead.email && (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Mail className="w-3 h-3" />
+                                <span className="truncate">{lead.email}</span>
+                              </div>
+                            )}
+                            {lead.phone && (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Phone className="w-3 h-3" />
+                                <span>{lead.phone}</span>
+                              </div>
+                            )}
+                            {lead.company && (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Building2 className="w-3 h-3" />
+                                <span>{lead.company}</span>
+                              </div>
+                            )}
+                            {lead.value && (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <DollarSign className="w-3 h-3" />
+                                <span>${lead.value.toLocaleString()}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {lead.score && (
+                            <div className="mt-2">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-muted rounded-full h-2">
+                                  <div 
+                                    className={`h-2 rounded-full transition-all ${
+                                      lead.score >= 80 ? 'bg-green-500' :
+                                      lead.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${lead.score}%` }}
+                                  />
+                                </div>
+                                <span className={`text-xs font-semibold ${getLeadScoreColor(lead.score)}`}>
+                                  {lead.score}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                          <Phone className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {lead.source && (
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>Source: {lead.source.replace('_', ' ')}</span>
+                          {lead.createdAt && (
+                            <>
+                              <span>•</span>
+                              <span>Added {format(new Date(lead.createdAt), 'MMM d, yyyy')}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+

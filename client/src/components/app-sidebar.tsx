@@ -3,6 +3,7 @@ import {
   Users, 
   Megaphone,
   ListTodo,
+  UserPlus,
   TrendingUp, 
   Calendar, 
   DollarSign, 
@@ -92,6 +93,12 @@ const businessTools = [
     url: "/tasks",
     icon: ListTodo,
     permission: null, // Everyone can access tasks
+  },
+  {
+    title: "Leads",
+    url: "/leads",
+    icon: UserPlus,
+    permission: "canManageLeads" as const,
   },
   {
     title: "Sales Pipeline",
