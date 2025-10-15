@@ -110,6 +110,11 @@ export const tasks = pgTable("tasks", {
   priority: varchar("priority").notNull().default("normal"), // low, normal, high, urgent
   dueDate: timestamp("due_date"),
   completedAt: timestamp("completed_at"),
+  // Recurring task fields
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, yearly
+  recurringInterval: integer("recurring_interval").default(1), // e.g., every 2 weeks
+  recurringEndDate: timestamp("recurring_end_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -443,6 +448,43 @@ export const analyticsMetricsRelations = relations(analyticsMetrics, ({ one }) =
   }),
 }));
 
+// Activity Logs table (for tracking logins, payments, important events)
+export const activityLogs = pgTable("activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").references(() => users.id),
+  activityType: varchar("activity_type").notNull(), // login, logout, payment, task_completed, client_added, etc
+  description: text("description").notNull(),
+  metadata: jsonb("metadata"), // Additional data like IP address, payment amount, etc
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [activityLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  type: varchar("type").notNull(), // info, success, warning, error
+  category: varchar("category").notNull(), // task, payment, deadline, login, general
+  isRead: boolean("is_read").default(false),
+  actionUrl: varchar("action_url"), // Optional link to relevant page
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const upsertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true }).extend({
@@ -517,3 +559,11 @@ export type ProjectFeedback = typeof projectFeedback.$inferSelect;
 
 export type InsertAnalyticsMetric = z.infer<typeof insertAnalyticsMetricSchema>;
 export type AnalyticsMetric = typeof analyticsMetrics.$inferSelect;
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({ id: true, createdAt: true });
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+export type ActivityLog = typeof activityLogs.$inferSelect;
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;

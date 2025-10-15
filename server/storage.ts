@@ -16,6 +16,8 @@ import {
   websiteProjects,
   projectFeedback,
   analyticsMetrics,
+  notifications,
+  activityLogs,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -51,6 +53,10 @@ import {
   type InsertProjectFeedback,
   type AnalyticsMetric,
   type InsertAnalyticsMetric,
+  type Notification,
+  type InsertNotification,
+  type ActivityLog,
+  type InsertActivityLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -641,6 +647,56 @@ export class DatabaseStorage implements IStorage {
       invoices: invoiceResults,
       tickets: ticketResults,
     };
+  }
+
+  // Notifications operations
+  async getNotifications(userId: number) {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+  }
+
+  async createNotification(notificationData: InsertNotification) {
+    const [notification] = await db
+      .insert(notifications)
+      .values(notificationData)
+      .returning();
+    return notification;
+  }
+
+  async markNotificationAsRead(notificationId: string) {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, notificationId));
+  }
+
+  async markAllNotificationsAsRead(userId: number) {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
+  }
+
+  async deleteNotification(notificationId: string) {
+    await db.delete(notifications).where(eq(notifications.id, notificationId));
+  }
+
+  // Activity logs operations
+  async createActivityLog(logData: InsertActivityLog) {
+    const [log] = await db.insert(activityLogs).values(logData).returning();
+    return log;
+  }
+
+  async getActivityLogs(limit: number = 50) {
+    return await db
+      .select()
+      .from(activityLogs)
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(limit);
   }
 }
 

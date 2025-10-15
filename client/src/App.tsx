@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { NotificationsCenter } from "@/components/NotificationsCenter";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -93,7 +94,8 @@ function AppContent() {
               <div className="flex items-center justify-center flex-1">
                 <GlobalSearch />
               </div>
-              <div className="flex items-center justify-end flex-1">
+              <div className="flex items-center justify-end gap-2 flex-1">
+                <NotificationsCenter />
                 <ThemeToggle />
               </div>
             </header>

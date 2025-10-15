@@ -118,13 +118,29 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: SelectUser | false, info: any) => {
+    passport.authenticate("local", async (err: any, user: SelectUser | false, info: any) => {
       if (err) return next(err);
       if (!user) {
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      req.login(user, (err) => {
+      req.login(user, async (err) => {
         if (err) return next(err);
+        
+        // Log the login activity
+        try {
+          await storage.createActivityLog({
+            userId: user.id,
+            activityType: "login",
+            description: `${user.username} logged in`,
+            metadata: {
+              ip: req.ip,
+              userAgent: req.get('user-agent'),
+            },
+          });
+        } catch (error) {
+          console.error("Failed to log activity:", error);
+        }
+        
         res.status(200).json({
           id: user.id,
           username: user.username,
@@ -141,7 +157,25 @@ export function setupAuth(app: Express) {
   });
 
   // Support both GET and POST for logout
-  const handleLogout = (req: any, res: any, next: any) => {
+  const handleLogout = async (req: any, res: any, next: any) => {
+    const user = req.user as SelectUser;
+    
+    // Log the logout activity before destroying session
+    if (user) {
+      try {
+        await storage.createActivityLog({
+          userId: user.id,
+          activityType: "logout",
+          description: `${user.username} logged out`,
+          metadata: {
+            ip: req.ip,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log logout activity:", error);
+      }
+    }
+    
     req.logout((err: any) => {
       if (err) return next(err);
       req.session.destroy((err: any) => {

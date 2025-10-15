@@ -93,7 +93,7 @@ ${data.notes || 'None'}`,
   app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
     try {
       // Batch all data fetches in parallel for performance
-      const [clients, campaigns, leads, invoices, tasks, tickets, contentPosts, websiteProjects] = await Promise.all([
+      const [clients, campaigns, leads, invoices, tasks, tickets, contentPosts, websiteProjects, activityLogs] = await Promise.all([
         storage.getClients(),
         storage.getCampaigns(),
         storage.getLeads(),
@@ -102,6 +102,7 @@ ${data.notes || 'None'}`,
         storage.getTickets(),
         storage.getContentPosts(),
         storage.getWebsiteProjects(),
+        storage.getActivityLogs(20), // Get recent 20 activity logs
       ]);
 
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
@@ -232,6 +233,23 @@ ${data.notes || 'None'}`,
             timestamp: project.updatedAt || project.createdAt,
           });
         });
+
+      // Activity logs (logins, payments, etc.)
+      activityLogs.forEach(log => {
+        const typeMap: any = {
+          'login': 'success',
+          'logout': 'info',
+          'payment': 'success',
+          'client_added': 'success',
+          'task_completed': 'success',
+        };
+        recentActivity.push({
+          type: typeMap[log.activityType] || 'info',
+          title: log.description,
+          time: formatActivityTime(log.createdAt),
+          timestamp: log.createdAt,
+        });
+      });
 
       // Sort by timestamp (most recent first) and limit to 10
       const sortedActivity = recentActivity
@@ -1370,6 +1388,61 @@ ${data.notes || 'None'}`,
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Notifications routes
+  app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      const notifications = await storage.getNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      await storage.markNotificationAsRead(req.params.id);
+      res.json({ message: "Notification marked as read" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.patch("/api/notifications/read-all", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.delete("/api/notifications/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteNotification(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
+  // Activity logs routes (Admin only)
+  app.get("/api/activity-logs", isAuthenticated, requirePermission("canViewReports"), async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const activityLogs = await storage.getActivityLogs(limit);
+      res.json(activityLogs);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
     }
   });
 

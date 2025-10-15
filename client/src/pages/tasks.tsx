@@ -38,6 +38,10 @@ const taskFormSchema = z.object({
   campaignId: z.string().optional(),
   clientId: z.string().optional(),
   assignedToId: z.string().optional(),
+  isRecurring: z.boolean().optional(),
+  recurringPattern: z.enum(["daily", "weekly", "monthly", "yearly"]).optional(),
+  recurringInterval: z.number().optional(),
+  recurringEndDate: z.string().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
