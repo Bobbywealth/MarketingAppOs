@@ -307,7 +307,8 @@ export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(), // Sender
+  recipientId: integer("recipient_id").references(() => users.id), // For direct user messages
   content: text("content").notNull(),
   isInternal: boolean("is_internal").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),

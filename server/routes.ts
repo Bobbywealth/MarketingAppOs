@@ -1066,9 +1066,31 @@ Examples:
     }
   });
 
+  // Get conversation between two users (for internal team messaging)
+  app.get("/api/messages/conversation/:userId", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const currentUserId = (req.user as any).id;
+      const otherUserId = parseInt(req.params.userId);
+      
+      if (!otherUserId || isNaN(otherUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const messages = await storage.getConversation(currentUserId, otherUserId);
+      res.json(messages);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch conversation" });
+    }
+  });
+
   app.post("/api/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
-      const validatedData = insertMessageSchema.parse(req.body);
+      const currentUserId = (req.user as any).id;
+      const validatedData = insertMessageSchema.parse({
+        ...req.body,
+        userId: currentUserId, // Set sender as current user
+      });
       const message = await storage.createMessage(validatedData);
       res.status(201).json(message);
     } catch (error) {

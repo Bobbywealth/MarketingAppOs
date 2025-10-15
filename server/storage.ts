@@ -506,6 +506,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(messages).orderBy(messages.createdAt);
   }
 
+  // Get conversation between two users (for internal team messaging)
+  async getConversation(userId1: number, userId2: number): Promise<Message[]> {
+    const conversation = await db
+      .select()
+      .from(messages)
+      .where(
+        or(
+          and(eq(messages.userId, userId1), eq(messages.recipientId, userId2)),
+          and(eq(messages.userId, userId2), eq(messages.recipientId, userId1))
+        )
+      )
+      .orderBy(messages.createdAt);
+    return conversation;
+  }
+
   async createMessage(messageData: InsertMessage): Promise<Message> {
     const [message] = await db.insert(messages).values(messageData).returning();
     return message;
