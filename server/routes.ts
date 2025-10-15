@@ -1308,6 +1308,71 @@ ${data.notes || 'None'}`,
     }
   });
 
+  // User management routes (Admin only)
+  app.get("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (_req: Request, res: Response) => {
+    try {
+      const users = await storage.getUsers();
+      // Don't send password hashes to frontend
+      const sanitizedUsers = users.map(({ id, username, role, createdAt }) => ({
+        id,
+        username,
+        role,
+        createdAt,
+      }));
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
+    try {
+      const { hashPassword } = await import("./auth.js");
+      const userData = {
+        username: req.body.username,
+        password: await hashPassword(req.body.password),
+        role: req.body.role || "staff",
+      };
+      
+      const user = await storage.createUser(userData);
+      // Don't send password hash
+      const { password, ...sanitizedUser } = user;
+      res.status(201).json(sanitizedUser);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.patch("/api/users/:id", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
+    try {
+      const { role } = req.body;
+      const userId = parseInt(req.params.id);
+      
+      if (!role) {
+        return res.status(400).json({ message: "Role is required" });
+      }
+
+      await storage.updateUser(userId, { role });
+      res.json({ message: "User updated successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      await storage.deleteUser(userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Object storage routes
   app.get("/api/upload-url", isAuthenticated, async (_req: Request, res: Response) => {
     try {

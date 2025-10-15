@@ -216,6 +216,26 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUser(userId: number, updates: Partial<InsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user;
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
   // Client operations
   async getClients(): Promise<Client[]> {
     return await db.select().from(clients).orderBy(desc(clients.createdAt));
