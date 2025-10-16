@@ -90,7 +90,7 @@ export default function Content() {
       clientId: values.clientId,
       platform: values.platform,
       caption: values.caption || "",
-      scheduledFor: values.scheduledFor ? new Date(values.scheduledFor) : null,
+      scheduledFor: values.scheduledFor || null,
     };
 
     createPostMutation.mutate(postData);
