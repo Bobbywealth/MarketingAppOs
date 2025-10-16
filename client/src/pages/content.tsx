@@ -39,6 +39,8 @@ export default function Content() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [selectedClient, setSelectedClient] = useState<string>("all");
+  const [draggedPost, setDraggedPost] = useState<ContentPost | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<Date | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -84,6 +86,57 @@ export default function Content() {
       toast({ title: "Approval status updated" });
     },
   });
+
+  const updatePostDateMutation = useMutation({
+    mutationFn: async ({ id, scheduledFor }: { id: string; scheduledFor: Date }) => {
+      return await apiRequest("PATCH", `/api/content-posts/${id}`, { scheduledFor: scheduledFor.toISOString() });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
+      setDraggedPost(null);
+      toast({ title: "Post rescheduled successfully" });
+    },
+    onError: () => {
+      setDraggedPost(null);
+      toast({ title: "Failed to reschedule post", variant: "destructive" });
+    },
+  });
+
+  // Drag and drop handlers
+  const handleDragStart = (post: ContentPost) => {
+    setDraggedPost(post);
+  };
+
+  const handleDragOver = (e: React.DragEvent, day: Date) => {
+    e.preventDefault();
+    setDragOverDay(day);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverDay(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, day: Date) => {
+    e.preventDefault();
+    setDragOverDay(null);
+    
+    if (!draggedPost) return;
+    
+    // Set the time to the same time as the original post, just change the date
+    const newDate = new Date(day);
+    if (draggedPost.scheduledFor) {
+      const originalDate = new Date(draggedPost.scheduledFor);
+      newDate.setHours(originalDate.getHours());
+      newDate.setMinutes(originalDate.getMinutes());
+    } else {
+      newDate.setHours(9, 0, 0, 0); // Default to 9 AM if no time set
+    }
+    
+    updatePostDateMutation.mutate({
+      id: draggedPost.id,
+      scheduledFor: newDate,
+    });
+  };
 
   const handleCreatePost = (values: FormValues) => {
     const postData: InsertContentPost = {
@@ -435,11 +488,16 @@ export default function Content() {
             const isToday = isSameDay(day, new Date());
             const isCurrentMonth = view === "month" ? isSameMonth(day, currentDate) : true;
 
+            const isDragOver = dragOverDay && isSameDay(dragOverDay, day);
+
             return (
               <Card 
                 key={day.toISOString()} 
-                className={`${isToday ? 'ring-2 ring-primary' : ''} ${!isCurrentMonth && view === "month" ? 'opacity-40' : ''}`} 
+                className={`${isToday ? 'ring-2 ring-primary' : ''} ${!isCurrentMonth && view === "month" ? 'opacity-40' : ''} ${isDragOver ? 'ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-900/20' : ''} transition-all`} 
                 data-testid={`calendar-day-${format(day, 'yyyy-MM-dd')}`}
+                onDragOver={(e) => handleDragOver(e, day)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, day)}
               >
                 <CardHeader className="p-3 pb-2">
                   <div className="flex items-center justify-between">
@@ -454,9 +512,15 @@ export default function Content() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="p-3 pt-0 space-y-2">
+                <CardContent className="p-3 pt-0 space-y-2 min-h-[100px]">
                   {dayPosts.map((post) => (
-                    <Card key={post.id} className="hover-elevate border-0 bg-card/50" data-testid={`card-post-${post.id}`}>
+                    <Card 
+                      key={post.id} 
+                      className={`hover-elevate border-0 bg-card/50 cursor-move ${draggedPost?.id === post.id ? 'opacity-50' : ''}`} 
+                      data-testid={`card-post-${post.id}`}
+                      draggable
+                      onDragStart={() => handleDragStart(post)}
+                    >
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-start justify-between gap-1">
                           <Badge className={`${getPlatformColor(post.platform)} border text-[10px] px-1`} variant="outline">
