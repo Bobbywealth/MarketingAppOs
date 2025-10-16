@@ -110,7 +110,14 @@ export default function EmailsPage() {
   const syncEmailsMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/emails/sync", {});
-      return await response.json();
+      const data = await response.json();
+      
+      // If response is not ok, throw error with message
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Sync failed');
+      }
+      
+      return data;
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
@@ -124,11 +131,23 @@ export default function EmailsPage() {
     },
     onError: (error: any) => {
       console.error("❌ Email sync failed:", error);
-      toast({ 
-        title: "Failed to sync emails", 
-        description: error?.message || "Please check your connection and try again",
-        variant: "destructive" 
-      });
+      
+      // Check if it's an OAuth token error
+      const errorMessage = error?.message || '';
+      if (errorMessage.includes('invalid_grant') || errorMessage.includes('AADSTS')) {
+        toast({ 
+          title: "Email connection expired", 
+          description: "Your Outlook connection needs to be refreshed. Please reconnect your account.",
+          variant: "destructive",
+          duration: 10000,
+        });
+      } else {
+        toast({ 
+          title: "Failed to sync emails", 
+          description: error?.message || "Please check your connection and try again",
+          variant: "destructive" 
+        });
+      }
     },
   });
 
@@ -199,6 +218,20 @@ export default function EmailsPage() {
       toast({ title: "Email moved successfully" });
     },
   });
+
+  const handleReconnect = async () => {
+    if (emailAccounts.length > 0) {
+      try {
+        // Delete old email account
+        await apiRequest("DELETE", `/api/email-accounts/${emailAccounts[0].id}`, {});
+        console.log("Old email account deleted");
+      } catch (error) {
+        console.error("Failed to delete old account:", error);
+      }
+    }
+    // Redirect to Microsoft OAuth
+    window.location.href = '/api/auth/microsoft';
+  };
 
   const [loadingEmailBody, setLoadingEmailBody] = useState(false);
 
@@ -292,6 +325,15 @@ export default function EmailsPage() {
             </Button>
           ) : (
             <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleReconnect}
+                className="gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Reconnect
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
