@@ -99,6 +99,10 @@ export default function EmailsPage() {
   // Fetch emails from database
   const { data: emails = [], isLoading } = useQuery<Email[]>({
     queryKey: ["/api/emails", selectedFolder],
+    queryFn: async () => {
+      const url = selectedFolder ? `/api/emails?folder=${selectedFolder}` : '/api/emails';
+      return await apiRequest("GET", url);
+    },
     enabled: isConnected,
   });
 
