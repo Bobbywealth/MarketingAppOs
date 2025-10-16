@@ -177,8 +177,29 @@ export default function EmailsPage() {
       markAsReadMutation.mutate(email.id);
     }
     
-    // If body is empty, fetch it from Microsoft (for now, we'll just show the preview)
-    // TODO: Add endpoint to fetch full body from Microsoft Graph API
+    // Fetch full body if not already loaded
+    if (!email.body || email.body.length === 0) {
+      setLoadingEmailBody(true);
+      try {
+        const response = await apiRequest("GET", `/api/emails/${email.id}/body`);
+        const data = await response.json();
+        
+        // Update the email in the local state
+        setSelectedEmail({ ...email, body: data.body });
+        
+        // Invalidate query to refresh the list
+        queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      } catch (error) {
+        console.error('Failed to fetch email body:', error);
+        toast({
+          title: "Failed to load full email",
+          description: "Showing preview only",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingEmailBody(false);
+      }
+    }
   };
 
   const handleSendEmail = () => {
@@ -596,18 +617,27 @@ export default function EmailsPage() {
                 </div>
               </CardHeader>
               <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-background to-accent/5">
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  {selectedEmail.body ? (
-                    selectedEmail.body.split('\n').map((paragraph, idx) => (
-                      <p key={idx} className="mb-2 text-foreground leading-relaxed">{paragraph || '\u00A0'}</p>
-                    ))
-                  ) : (
-                    <div className="p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
-                      <p className="text-muted-foreground">{selectedEmail.bodyPreview}</p>
-                      <p className="text-xs text-muted-foreground mt-4 italic">Full email content not available. Showing preview only.</p>
+                {loadingEmailBody ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+                      <p className="text-sm text-muted-foreground">Loading full email...</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    {selectedEmail.body ? (
+                      selectedEmail.body.split('\n').map((paragraph, idx) => (
+                        <p key={idx} className="mb-2 text-foreground leading-relaxed">{paragraph || '\u00A0'}</p>
+                      ))
+                    ) : (
+                      <div className="p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
+                        <p className="text-muted-foreground">{selectedEmail.bodyPreview}</p>
+                        <p className="text-xs text-muted-foreground mt-4 italic">Full email content not available. Showing preview only.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </ScrollArea>
               <div className="border-t p-4">
                 <div className="flex gap-2">

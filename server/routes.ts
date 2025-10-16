@@ -273,6 +273,61 @@ ${data.notes || 'None'}`,
     }
   });
 
+  // Fetch full email body from Microsoft
+  app.get("/api/emails/:id/body", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const emailId = req.params.id;
+      
+      // Get the email from database
+      const email = await storage.getEmail(emailId);
+      
+      if (!email || email.userId !== userId) {
+        return res.status(404).json({ message: "Email not found" });
+      }
+      
+      // If body already exists, return it
+      if (email.body && email.body.length > 0) {
+        return res.json({ body: email.body });
+      }
+      
+      // Fetch from Microsoft Graph API
+      const account = await storage.getEmailAccountByUserId(userId);
+      
+      if (!account || !account.isActive || !email.messageId) {
+        return res.status(404).json({ message: "Cannot fetch email body" });
+      }
+      
+      // Check token expiry
+      let accessToken = account.accessToken;
+      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+        accessToken = refreshed.accessToken;
+        
+        await storage.updateEmailAccount(account.id, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          tokenExpiresAt: refreshed.expiresOn,
+        });
+      }
+      
+      // Fetch full email from Microsoft
+      const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
+      const bodyContent = fullEmail.body?.content || email.bodyPreview || '';
+      
+      // Store the body in database
+      await storage.updateEmail(emailId, {
+        body: bodyContent,
+      });
+      
+      res.json({ body: bodyContent });
+    } catch (error) {
+      console.error('Error fetching email body:', error);
+      res.status(500).json({ message: "Failed to fetch email body" });
+    }
+  });
+
   // Send email via Microsoft
   app.post("/api/emails/send", isAuthenticated, async (req: Request, res: Response) => {
     try {
