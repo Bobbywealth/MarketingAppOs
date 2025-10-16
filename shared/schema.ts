@@ -554,7 +554,15 @@ export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, creat
 export const insertContentPostSchema = createInsertSchema(contentPosts)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
-    scheduledFor: z.union([z.date(), z.string().transform((val) => val ? new Date(val) : null)]).nullable().optional(),
+    scheduledFor: z.preprocess(
+      (val) => {
+        if (val === null || val === undefined || val === '') return null;
+        if (val instanceof Date) return val;
+        if (typeof val === 'string') return new Date(val);
+        return val;
+      },
+      z.date().nullable().optional()
+    ),
   });
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, createdAt: true, updatedAt: true });

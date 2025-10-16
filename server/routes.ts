@@ -858,11 +858,14 @@ Examples:
 
   app.post("/api/content-posts", isAuthenticated, requirePermission("canManageContent"), async (req: Request, res: Response) => {
     try {
+      console.log("Creating content post with data:", req.body);
       const validatedData = insertContentPostSchema.parse(req.body);
+      console.log("Validated data:", validatedData);
       const post = await storage.createContentPost(validatedData);
       res.status(201).json(post);
     } catch (error) {
-      handleValidationError(error, res);
+      console.error("Content post creation error:", error);
+      return handleValidationError(error, res);
     }
   });
 
