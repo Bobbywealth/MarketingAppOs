@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Mail, 
   Send, 
@@ -29,7 +30,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  Filter
+  Filter,
+  Link as LinkIcon,
+  Loader2
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -64,18 +67,68 @@ export default function EmailsPage() {
     body: "",
   });
 
-  // Mock data - will be replaced with real API
+  // Check URL params for OAuth callback messages
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'true') {
+      toast({ 
+        title: "Email Connected!", 
+        description: "Your Outlook email is now connected. Syncing emails..."
+      });
+      // Trigger sync
+      syncEmailsMutation.mutate();
+      // Clean up URL
+      window.history.replaceState({}, '', '/emails');
+    } else if (params.get('error')) {
+      toast({ 
+        title: "Connection Failed", 
+        description: "Failed to connect your email account. Please try again.",
+        variant: "destructive"
+      });
+      window.history.replaceState({}, '', '/emails');
+    }
+  }, []);
+
+  // Check if email account is connected
+  const { data: emailAccounts = [], isLoading: accountsLoading } = useQuery({
+    queryKey: ["/api/email-accounts"],
+  });
+
+  const isConnected = emailAccounts.length > 0 && emailAccounts[0].isActive;
+
+  // Fetch emails from database
   const { data: emails = [], isLoading } = useQuery<Email[]>({
     queryKey: ["/api/emails", selectedFolder],
-    queryFn: async () => {
-      // TODO: Replace with real API call
-      return [];
+    enabled: isConnected,
+  });
+
+  const syncEmailsMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/emails/sync", {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      toast({ 
+        title: "✅ Emails synced!", 
+        description: `Synced ${data.syncedCount} new emails`
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to sync emails", variant: "destructive" });
     },
   });
 
   const sendEmailMutation = useMutation({
     mutationFn: async (emailData: typeof composeForm) => {
-      return apiRequest("POST", "/api/emails/send", emailData);
+      const to = emailData.to.split(',').map(e => e.trim()).filter(Boolean);
+      const cc = emailData.cc ? emailData.cc.split(',').map(e => e.trim()).filter(Boolean) : [];
+      return apiRequest("POST", "/api/emails/send", {
+        to,
+        cc,
+        subject: emailData.subject,
+        body: emailData.body,
+        isHtml: false,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
@@ -167,11 +220,30 @@ export default function EmailsPage() {
           <p className="text-muted-foreground">Manage your company emails and communications</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/emails"] })}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-          <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
+          {!isConnected ? (
+            <Button 
+              className="gap-2" 
+              onClick={() => window.location.href = '/api/auth/microsoft'}
+            >
+              <LinkIcon className="w-4 h-4" />
+              Connect Outlook Email
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => syncEmailsMutation.mutate()}
+                disabled={syncEmailsMutation.isPending}
+              >
+                {syncEmailsMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Sync Emails
+              </Button>
+              <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Send className="w-4 h-4" />
@@ -234,8 +306,21 @@ export default function EmailsPage() {
               </div>
             </DialogContent>
           </Dialog>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Connection Alert */}
+      {!isConnected && !accountsLoading && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Connect your Outlook email account to start managing emails from the CRM. 
+            Click the "Connect Outlook Email" button above to get started.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -22,6 +22,7 @@ import {
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import Stripe from "stripe";
+import * as microsoftAuth from "./microsoftAuth";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -86,6 +87,241 @@ ${data.notes || 'None'}`,
       res.json({ success: true, clientId: client.id });
     } catch (error) {
       return handleValidationError(error, res);
+    }
+  });
+
+  // Microsoft OAuth routes for email integration
+  app.get("/api/auth/microsoft", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      // Generate auth URL with state containing user ID
+      const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+      const authUrl = await microsoftAuth.getAuthUrl(state);
+      
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error('Error initiating Microsoft auth:', error);
+      res.status(500).json({ message: "Failed to initiate Microsoft authentication" });
+    }
+  });
+
+  app.get("/api/auth/microsoft/callback", async (req: Request, res: Response) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code || typeof code !== 'string') {
+        return res.status(400).send('Missing authorization code');
+      }
+
+      // Get tokens from Microsoft
+      const tokenData = await microsoftAuth.getTokenFromCode(code);
+      
+      // Get user profile
+      const profile = await microsoftAuth.getUserProfile(tokenData.accessToken);
+      
+      // Decode state to get user ID
+      const stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
+      const userId = stateData.userId;
+
+      // Save or update email account in database
+      const existingAccount = await storage.getEmailAccountByUserId(userId);
+      
+      if (existingAccount) {
+        await storage.updateEmailAccount(existingAccount.id, {
+          accessToken: tokenData.accessToken,
+          refreshToken: tokenData.refreshToken,
+          tokenExpiresAt: tokenData.expiresOn,
+          lastSyncedAt: new Date(),
+          isActive: true,
+        });
+      } else {
+        await storage.createEmailAccount({
+          userId,
+          email: profile.mail || profile.userPrincipalName,
+          provider: 'microsoft',
+          accessToken: tokenData.accessToken,
+          refreshToken: tokenData.refreshToken,
+          tokenExpiresAt: tokenData.expiresOn,
+          isActive: true,
+          lastSyncedAt: new Date(),
+        });
+      }
+
+      // Redirect back to emails page with success message
+      res.redirect('/emails?connected=true');
+    } catch (error) {
+      console.error('Error in Microsoft callback:', error);
+      res.redirect('/emails?error=auth_failed');
+    }
+  });
+
+  // Email account routes
+  app.get("/api/email-accounts", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      const accounts = await storage.getEmailAccounts(userId);
+      // Don't send tokens to frontend
+      const safeAccounts = accounts.map(acc => ({
+        id: acc.id,
+        email: acc.email,
+        provider: acc.provider,
+        isActive: acc.isActive,
+        lastSyncedAt: acc.lastSyncedAt,
+      }));
+      
+      res.json(safeAccounts);
+    } catch (error) {
+      console.error('Error fetching email accounts:', error);
+      res.status(500).json({ message: "Failed to fetch email accounts" });
+    }
+  });
+
+  app.delete("/api/email-accounts/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteEmailAccount(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting email account:', error);
+      res.status(500).json({ message: "Failed to delete email account" });
+    }
+  });
+
+  // Sync emails from Microsoft
+  app.post("/api/emails/sync", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      const account = await storage.getEmailAccountByUserId(userId);
+      
+      if (!account || !account.isActive) {
+        return res.status(404).json({ message: "No active email account found" });
+      }
+
+      // Check if token is expired and refresh if needed
+      let accessToken = account.accessToken;
+      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+        accessToken = refreshed.accessToken;
+        
+        await storage.updateEmailAccount(account.id, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          tokenExpiresAt: refreshed.expiresOn,
+        });
+      }
+
+      // Fetch emails from Microsoft
+      const folders = ['inbox', 'sent', 'spam'];
+      let syncedCount = 0;
+
+      for (const folder of folders) {
+        const messages = await microsoftAuth.getEmails(accessToken!, folder, 50);
+        
+        for (const msg of messages) {
+          // Check if email already exists
+          const existing = await storage.getEmailByMessageId(msg.id);
+          
+          if (!existing) {
+            await storage.createEmail({
+              messageId: msg.id,
+              from: msg.from?.emailAddress?.address || '',
+              fromName: msg.from?.emailAddress?.name || '',
+              to: msg.toRecipients?.map((r: any) => r.emailAddress.address) || [],
+              cc: msg.ccRecipients?.map((r: any) => r.emailAddress.address) || [],
+              subject: msg.subject || '(No Subject)',
+              body: '', // We don't store full body on initial sync
+              bodyPreview: msg.bodyPreview || '',
+              folder,
+              isRead: msg.isRead || false,
+              hasAttachments: msg.hasAttachments || false,
+              receivedAt: new Date(msg.receivedDateTime),
+              userId,
+            });
+            syncedCount++;
+          }
+        }
+      }
+
+      await storage.updateEmailAccount(account.id, {
+        lastSyncedAt: new Date(),
+      });
+
+      res.json({ success: true, syncedCount });
+    } catch (error) {
+      console.error('Error syncing emails:', error);
+      res.status(500).json({ message: "Failed to sync emails" });
+    }
+  });
+
+  // Get emails from database
+  app.get("/api/emails", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const { folder } = req.query;
+      
+      const emails = await storage.getEmails(userId, folder as string);
+      res.json(emails);
+    } catch (error) {
+      console.error('Error fetching emails:', error);
+      res.status(500).json({ message: "Failed to fetch emails" });
+    }
+  });
+
+  // Send email via Microsoft
+  app.post("/api/emails/send", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      const account = await storage.getEmailAccountByUserId(userId);
+      
+      if (!account || !account.isActive) {
+        return res.status(404).json({ message: "No active email account found" });
+      }
+
+      // Check token expiry
+      let accessToken = account.accessToken;
+      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+        accessToken = refreshed.accessToken;
+        
+        await storage.updateEmailAccount(account.id, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          tokenExpiresAt: refreshed.expiresOn,
+        });
+      }
+
+      const emailData = req.body;
+      await microsoftAuth.sendEmail(accessToken!, emailData);
+
+      // Store sent email in database
+      await storage.createEmail({
+        from: account.email,
+        fromName: account.email,
+        to: emailData.to,
+        cc: emailData.cc || [],
+        bcc: emailData.bcc || [],
+        subject: emailData.subject,
+        body: emailData.body,
+        bodyPreview: emailData.body.substring(0, 150),
+        folder: 'sent',
+        isRead: true,
+        hasAttachments: false,
+        sentAt: new Date(),
+        userId,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error sending email:', error);
+      res.status(500).json({ message: "Failed to send email" });
     }
   });
 

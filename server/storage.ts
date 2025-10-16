@@ -65,7 +65,7 @@ import {
   type InsertEmailAccount,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -745,6 +745,11 @@ export class DatabaseStorage implements IStorage {
     return email;
   }
 
+  async getEmailByMessageId(messageId: string) {
+    const [email] = await db.select().from(emails).where(eq(emails.messageId, messageId)).limit(1);
+    return email;
+  }
+
   async updateEmail(id: string, updates: Partial<InsertEmail>) {
     const [email] = await db
       .update(emails)
@@ -773,6 +778,11 @@ export class DatabaseStorage implements IStorage {
   // Email account operations (for OAuth tokens)
   async getEmailAccounts(userId: number) {
     return await db.select().from(emailAccounts).where(eq(emailAccounts.userId, userId));
+  }
+
+  async getEmailAccountByUserId(userId: number) {
+    const [account] = await db.select().from(emailAccounts).where(eq(emailAccounts.userId, userId)).limit(1);
+    return account;
   }
 
   async getEmailAccount(id: string) {
