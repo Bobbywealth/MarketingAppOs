@@ -101,7 +101,8 @@ export default function EmailsPage() {
     queryKey: ["/api/emails", selectedFolder],
     queryFn: async () => {
       const url = selectedFolder ? `/api/emails?folder=${selectedFolder}` : '/api/emails';
-      return await apiRequest("GET", url);
+      const response = await apiRequest("GET", url);
+      return await response.json();
     },
     enabled: isConnected,
   });
