@@ -169,11 +169,16 @@ export default function EmailsPage() {
     },
   });
 
-  const handleEmailClick = (email: Email) => {
+  const [loadingEmailBody, setLoadingEmailBody] = useState(false);
+
+  const handleEmailClick = async (email: Email) => {
     setSelectedEmail(email);
     if (!email.isRead) {
       markAsReadMutation.mutate(email.id);
     }
+    
+    // If body is empty, fetch it from Microsoft (for now, we'll just show the preview)
+    // TODO: Add endpoint to fetch full body from Microsoft Graph API
   };
 
   const handleSendEmail = () => {
@@ -505,27 +510,33 @@ export default function EmailsPage() {
                 {filteredEmails.map((email) => (
                   <div
                     key={email.id}
-                    className={`p-4 hover:bg-accent cursor-pointer transition-colors ${
-                      !email.isRead ? "bg-accent/50" : ""
-                    } ${selectedEmail?.id === email.id ? "bg-accent" : ""}`}
+                    className={`p-4 hover:bg-accent/80 cursor-pointer transition-all border-l-4 ${
+                      !email.isRead 
+                        ? "bg-blue-50 dark:bg-blue-950/20 border-l-blue-500" 
+                        : "border-l-transparent"
+                    } ${
+                      selectedEmail?.id === email.id 
+                        ? "bg-accent border-l-primary" 
+                        : ""
+                    }`}
                     onClick={() => handleEmailClick(email)}
                   >
                     <div className="flex items-start gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback>
+                      <Avatar className={`w-10 h-10 ${!email.isRead ? "ring-2 ring-blue-500" : ""}`}>
+                        <AvatarFallback className={!email.isRead ? "bg-blue-500 text-white" : ""}>
                           {getInitials(email.fromName || email.from)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <p className={`font-medium truncate ${!email.isRead ? "font-bold" : ""}`}>
+                          <p className={`font-medium truncate ${!email.isRead ? "font-bold text-foreground" : "text-muted-foreground"}`}>
                             {email.fromName || email.from}
                           </p>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                          <span className={`text-xs whitespace-nowrap ml-2 ${!email.isRead ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                             {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}
                           </span>
                         </div>
-                        <p className={`text-sm truncate mb-1 ${!email.isRead ? "font-semibold" : ""}`}>
+                        <p className={`text-sm truncate mb-1 ${!email.isRead ? "font-bold text-foreground" : "text-foreground/80"}`}>
                           {email.subject}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
@@ -534,7 +545,7 @@ export default function EmailsPage() {
                         <div className="flex items-center gap-2 mt-2">
                           {email.isStarred && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
                           {email.hasAttachments && <Paperclip className="w-3 h-3 text-muted-foreground" />}
-                          {!email.isRead && <Badge variant="secondary" className="text-xs">New</Badge>}
+                          {!email.isRead && <Badge className="text-xs bg-blue-500 hover:bg-blue-600">New</Badge>}
                         </div>
                       </div>
                     </div>
@@ -549,18 +560,18 @@ export default function EmailsPage() {
         <Card className="lg:col-span-4">
           {selectedEmail ? (
             <div className="h-full flex flex-col">
-              <CardHeader className="border-b">
+              <CardHeader className="border-b bg-gradient-to-r from-background to-accent/20">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-2">{selectedEmail.subject}</h3>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback className="text-xs">
+                    <h3 className="font-bold text-xl mb-3 text-foreground">{selectedEmail.subject}</h3>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Avatar className="w-10 h-10 ring-2 ring-primary/20">
+                        <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-primary/80 to-primary text-white">
                           {getInitials(selectedEmail.fromName || selectedEmail.from)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-bold text-foreground">
                           {selectedEmail.fromName || selectedEmail.from}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -568,9 +579,15 @@ export default function EmailsPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      {new Date(selectedEmail.receivedAt).toLocaleString()}
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {new Date(selectedEmail.receivedAt).toLocaleString()}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">To:</span>
+                        <span className="font-medium">{selectedEmail.to.join(', ')}</span>
+                      </div>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon">
@@ -578,11 +595,18 @@ export default function EmailsPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <ScrollArea className="flex-1 p-6">
-                <div className="prose prose-sm max-w-none">
-                  {selectedEmail.body.split('\n').map((paragraph, idx) => (
-                    <p key={idx}>{paragraph}</p>
-                  ))}
+              <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-background to-accent/5">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  {selectedEmail.body ? (
+                    selectedEmail.body.split('\n').map((paragraph, idx) => (
+                      <p key={idx} className="mb-2 text-foreground leading-relaxed">{paragraph || '\u00A0'}</p>
+                    ))
+                  ) : (
+                    <div className="p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
+                      <p className="text-muted-foreground">{selectedEmail.bodyPreview}</p>
+                      <p className="text-xs text-muted-foreground mt-4 italic">Full email content not available. Showing preview only.</p>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
               <div className="border-t p-4">
