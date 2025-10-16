@@ -89,27 +89,6 @@ export default function EmailsPage() {
     }
   }, []);
 
-  // Auto-sync emails every 30 seconds
-  useEffect(() => {
-    if (!isConnected) return;
-
-    // Initial sync when page loads
-    console.log("Starting auto-sync for emails...");
-    syncEmailsMutation.mutate();
-
-    // Set up interval for auto-sync every 30 seconds
-    const syncInterval = setInterval(() => {
-      console.log("Auto-syncing emails...");
-      syncEmailsMutation.mutate();
-    }, 30000); // 30 seconds
-
-    // Cleanup interval on unmount
-    return () => {
-      console.log("Stopping email auto-sync");
-      clearInterval(syncInterval);
-    };
-  }, [isConnected]);
-
   // Check if email account is connected
   const { data: emailAccounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ["/api/email-accounts"],
@@ -152,6 +131,28 @@ export default function EmailsPage() {
       });
     },
   });
+
+  // Auto-sync emails every 30 seconds
+  useEffect(() => {
+    if (!isConnected) return;
+
+    // Initial sync when page loads
+    console.log("Starting auto-sync for emails...");
+    syncEmailsMutation.mutate();
+
+    // Set up interval for auto-sync every 30 seconds
+    const syncInterval = setInterval(() => {
+      console.log("Auto-syncing emails...");
+      syncEmailsMutation.mutate();
+    }, 30000); // 30 seconds
+
+    // Cleanup interval on unmount
+    return () => {
+      console.log("Stopping email auto-sync");
+      clearInterval(syncInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected]);
 
   const sendEmailMutation = useMutation({
     mutationFn: async (emailData: typeof composeForm) => {
