@@ -32,7 +32,12 @@ import {
   Clock,
   Filter,
   Link as LinkIcon,
-  Loader2
+  Loader2,
+  Sparkles,
+  TrendingUp,
+  Tag,
+  ListChecks,
+  Lightbulb
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -234,9 +239,13 @@ export default function EmailsPage() {
   };
 
   const [loadingEmailBody, setLoadingEmailBody] = useState(false);
+  const [analyzingEmail, setAnalyzingEmail] = useState(false);
+  const [emailAnalysis, setEmailAnalysis] = useState<any>(null);
 
   const handleEmailClick = async (email: Email) => {
     setSelectedEmail(email);
+    setEmailAnalysis(null); // Reset analysis when switching emails
+    
     if (!email.isRead) {
       markAsReadMutation.mutate(email.id);
     }
@@ -263,6 +272,31 @@ export default function EmailsPage() {
       } finally {
         setLoadingEmailBody(false);
       }
+    }
+  };
+
+  const handleAnalyzeEmail = async (emailId: string) => {
+    setAnalyzingEmail(true);
+    try {
+      const response = await apiRequest("POST", `/api/emails/${emailId}/analyze`, {});
+      const data = await response.json();
+      
+      if (data.success) {
+        setEmailAnalysis(data.analysis);
+        toast({
+          title: "✨ Email analyzed!",
+          description: "AI analysis complete",
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to analyze email:', error);
+      toast({
+        title: "Failed to analyze email",
+        description: error?.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzingEmail(false);
     }
   };
 
@@ -672,6 +706,25 @@ export default function EmailsPage() {
                                 </div>
                               </div>
                               <div className="flex gap-2">
+                                <Button 
+                                  variant="default" 
+                                  size="sm"
+                                  onClick={() => handleAnalyzeEmail(selectedEmail.id)}
+                                  disabled={analyzingEmail}
+                                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                                >
+                                  {analyzingEmail ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      Analyzing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="w-4 h-4 mr-2" />
+                                      Analyze with AI
+                                    </>
+                                  )}
+                                </Button>
                                 <Button variant="outline" size="sm">
                                   <Reply className="w-4 h-4 mr-2" />
                                   Reply
@@ -719,6 +772,134 @@ export default function EmailsPage() {
                                   <p className="text-xs text-muted-foreground mt-4 italic">Full email content not available. Showing preview only.</p>
                                 </div>
                               )}
+                            </div>
+                          )}
+
+                          {/* AI Analysis Results */}
+                          {emailAnalysis && (
+                            <div className="mt-6 space-y-4">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Sparkles className="w-5 h-5 text-purple-500" />
+                                <h4 className="font-bold text-lg">AI Analysis</h4>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Summary Card */}
+                                <Card className="col-span-full bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200">
+                                  <CardContent className="p-4">
+                                    <div className="flex items-start gap-3">
+                                      <Lightbulb className="w-5 h-5 text-purple-600 mt-0.5" />
+                                      <div className="flex-1">
+                                        <h5 className="font-semibold text-sm mb-2">Summary</h5>
+                                        <p className="text-sm text-foreground/80">{emailAnalysis.summary}</p>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                {/* Sentiment */}
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                                      <h5 className="font-semibold text-sm">Sentiment</h5>
+                                    </div>
+                                    <Badge 
+                                      variant={
+                                        emailAnalysis.sentiment === 'positive' ? 'default' : 
+                                        emailAnalysis.sentiment === 'negative' ? 'destructive' : 
+                                        'secondary'
+                                      }
+                                      className="capitalize"
+                                    >
+                                      {emailAnalysis.sentiment === 'positive' && '😊 '}
+                                      {emailAnalysis.sentiment === 'negative' && '😟 '}
+                                      {emailAnalysis.sentiment === 'neutral' && '😐 '}
+                                      {emailAnalysis.sentiment}
+                                    </Badge>
+                                  </CardContent>
+                                </Card>
+
+                                {/* Priority */}
+                                <Card>
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <AlertCircle className="w-4 h-4 text-orange-600" />
+                                      <h5 className="font-semibold text-sm">Priority</h5>
+                                    </div>
+                                    <Badge 
+                                      variant={
+                                        emailAnalysis.priority === 'urgent' || emailAnalysis.priority === 'high' ? 'destructive' : 
+                                        'secondary'
+                                      }
+                                      className="capitalize"
+                                    >
+                                      {emailAnalysis.priority === 'urgent' && '🔥 '}
+                                      {emailAnalysis.priority === 'high' && '⚠️ '}
+                                      {emailAnalysis.priority}
+                                    </Badge>
+                                  </CardContent>
+                                </Card>
+
+                                {/* Categories */}
+                                {emailAnalysis.categories && emailAnalysis.categories.length > 0 && (
+                                  <Card className="col-span-full">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <Tag className="w-4 h-4 text-green-600" />
+                                        <h5 className="font-semibold text-sm">Categories</h5>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {emailAnalysis.categories.map((category: string, idx: number) => (
+                                          <Badge key={idx} variant="outline" className="capitalize">
+                                            {category}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                )}
+
+                                {/* Action Items */}
+                                {emailAnalysis.actionItems && emailAnalysis.actionItems.length > 0 && (
+                                  <Card className="col-span-full">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <ListChecks className="w-4 h-4 text-blue-600" />
+                                        <h5 className="font-semibold text-sm">Action Items</h5>
+                                      </div>
+                                      <ul className="space-y-2">
+                                        {emailAnalysis.actionItems.map((item: string, idx: number) => (
+                                          <li key={idx} className="flex items-start gap-2 text-sm">
+                                            <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+                                            <span>{item}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </CardContent>
+                                  </Card>
+                                )}
+
+                                {/* Key Points */}
+                                {emailAnalysis.keyPoints && emailAnalysis.keyPoints.length > 0 && (
+                                  <Card className="col-span-full">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <Lightbulb className="w-4 h-4 text-yellow-600" />
+                                        <h5 className="font-semibold text-sm">Key Points</h5>
+                                      </div>
+                                      <ul className="space-y-2">
+                                        {emailAnalysis.keyPoints.map((point: string, idx: number) => (
+                                          <li key={idx} className="flex items-start gap-2 text-sm">
+                                            <span className="text-muted-foreground">•</span>
+                                            <span>{point}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </CardContent>
+                                  </Card>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

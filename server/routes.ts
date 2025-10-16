@@ -293,6 +293,98 @@ ${data.notes || 'None'}`,
     }
   });
 
+  // Analyze email with AI
+  app.post("/api/emails/:id/analyze", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const emailId = req.params.id;
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      const email = await storage.getEmail(emailId);
+      
+      if (!email || email.userId !== userId) {
+        return res.status(404).json({ message: "Email not found" });
+      }
+
+      // Get full body if not already loaded
+      let emailBody = email.body;
+      if (!emailBody || emailBody.length === 0) {
+        const account = await storage.getEmailAccountByUserId(userId);
+        if (account && account.isActive && email.messageId) {
+          let accessToken = account.accessToken;
+          if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+            const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+            accessToken = refreshed.accessToken;
+            await storage.updateEmailAccount(account.id, {
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              tokenExpiresAt: refreshed.expiresOn,
+            });
+          }
+          const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
+          emailBody = fullEmail.body?.content || email.bodyPreview || '';
+        } else {
+          emailBody = email.bodyPreview || '';
+        }
+      }
+
+      // Use OpenAI to analyze
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({ message: "AI analysis not configured" });
+      }
+
+      const systemPrompt = `You are an email analysis assistant. Analyze the email and provide:
+1. A brief summary (2-3 sentences)
+2. Sentiment (positive, neutral, or negative)
+3. Action items (if any)
+4. Categories/tags (e.g., finance, support, marketing, sales, urgent)
+5. Priority (low, normal, high, urgent)
+6. Key points (bullet list)
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "summary": "Brief summary here",
+  "sentiment": "positive|neutral|negative",
+  "actionItems": ["action 1", "action 2"],
+  "categories": ["category1", "category2"],
+  "priority": "low|normal|high|urgent",
+  "keyPoints": ["point 1", "point 2"]
+}`;
+
+      const userPrompt = `Subject: ${email.subject}
+From: ${email.from}
+Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+
+      const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+      
+      res.json({
+        success: true,
+        analysis,
+        email: {
+          id: email.id,
+          subject: email.subject,
+          from: email.from,
+        }
+      });
+    } catch (error: any) {
+      console.error('Error analyzing email:', error);
+      res.status(500).json({ 
+        message: "Failed to analyze email",
+        error: error?.message || 'Unknown error'
+      });
+    }
+  });
+
   // Fetch full email body from Microsoft
   app.get("/api/emails/:id/body", isAuthenticated, async (req: Request, res: Response) => {
     try {
