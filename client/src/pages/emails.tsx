@@ -494,8 +494,8 @@ export default function EmailsPage() {
           </CardContent>
         </Card>
 
-        {/* Email List */}
-        <Card className="lg:col-span-5">
+        {/* Email List - Accordion Style */}
+        <Card className="lg:col-span-9">
           <CardHeader>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -513,7 +513,7 @@ export default function EmailsPage() {
             </div>
           </CardHeader>
           <Separator />
-          <ScrollArea className="h-[600px]">
+          <ScrollArea className="h-[700px]">
             {isLoading ? (
               <div className="p-8 text-center text-muted-foreground">
                 Loading emails...
@@ -527,157 +527,137 @@ export default function EmailsPage() {
                 </p>
               </div>
             ) : (
-              <div className="divide-y">
+              <div>
                 {filteredEmails.map((email) => (
-                  <div
-                    key={email.id}
-                    className={`p-4 hover:bg-accent/80 cursor-pointer transition-all border-l-4 ${
-                      !email.isRead 
-                        ? "bg-blue-50 dark:bg-blue-950/20 border-l-blue-500" 
-                        : "border-l-transparent"
-                    } ${
-                      selectedEmail?.id === email.id 
-                        ? "bg-accent border-l-primary" 
-                        : ""
-                    }`}
-                    onClick={() => handleEmailClick(email)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Avatar className={`w-10 h-10 ${!email.isRead ? "ring-2 ring-blue-500" : ""}`}>
-                        <AvatarFallback className={!email.isRead ? "bg-blue-500 text-white" : ""}>
-                          {getInitials(email.fromName || email.from)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className={`font-medium truncate ${!email.isRead ? "font-bold text-foreground" : "text-muted-foreground"}`}>
-                            {email.fromName || email.from}
-                          </p>
-                          <span className={`text-xs whitespace-nowrap ml-2 ${!email.isRead ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
-                            {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}
-                          </span>
-                        </div>
-                        <p className={`text-sm truncate mb-1 ${!email.isRead ? "font-bold text-foreground" : "text-foreground/80"}`}>
-                          {email.subject}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {email.bodyPreview}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          {email.isStarred && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
-                          {email.hasAttachments && <Paperclip className="w-3 h-3 text-muted-foreground" />}
-                          {!email.isRead && <Badge className="text-xs bg-blue-500 hover:bg-blue-600">New</Badge>}
+                  <div key={email.id} className="border-b">
+                    {/* Compact Email Row */}
+                    <div
+                      className={`p-3 hover:bg-accent/60 cursor-pointer transition-all border-l-4 ${
+                        !email.isRead 
+                          ? "bg-blue-50 dark:bg-blue-950/20 border-l-blue-500" 
+                          : "border-l-transparent"
+                      } ${
+                        selectedEmail?.id === email.id 
+                          ? "bg-accent/40 border-l-primary" 
+                          : ""
+                      }`}
+                      onClick={() => handleEmailClick(email)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className={`w-8 h-8 flex-shrink-0 ${!email.isRead ? "ring-2 ring-blue-500" : ""}`}>
+                          <AvatarFallback className={`text-xs ${!email.isRead ? "bg-blue-500 text-white" : ""}`}>
+                            {getInitials(email.fromName || email.from)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0 grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-3">
+                            <p className={`text-sm truncate ${!email.isRead ? "font-bold text-foreground" : "text-muted-foreground"}`}>
+                              {email.fromName || email.from}
+                            </p>
+                          </div>
+                          <div className="col-span-7">
+                            <p className={`text-sm truncate ${!email.isRead ? "font-semibold text-foreground" : "text-foreground/80"}`}>
+                              {email.subject}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {email.bodyPreview}
+                            </p>
+                          </div>
+                          <div className="col-span-2 flex items-center justify-end gap-2">
+                            {email.isStarred && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
+                            {email.hasAttachments && <Paperclip className="w-3 h-3 text-muted-foreground" />}
+                            {!email.isRead && <Badge className="text-xs bg-blue-500 hover:bg-blue-600">New</Badge>}
+                            <span className={`text-xs whitespace-nowrap ${!email.isRead ? "font-semibold" : "text-muted-foreground"}`}>
+                              {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Expanded Email Content */}
+                    {selectedEmail?.id === email.id && (
+                      <div className="bg-background border-t">
+                        <div className="p-6">
+                          {/* Email Header */}
+                          <div className="mb-4 pb-4 border-b">
+                            <h3 className="font-bold text-lg mb-3">{selectedEmail.subject}</h3>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="w-10 h-10">
+                                  <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-white font-semibold">
+                                    {getInitials(selectedEmail.fromName || selectedEmail.from)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="text-sm font-bold">{selectedEmail.fromName || selectedEmail.from}</p>
+                                  <p className="text-xs text-muted-foreground">{selectedEmail.from}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    <Clock className="w-3 h-3 inline mr-1" />
+                                    {new Date(selectedEmail.receivedAt).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm">
+                                  <Reply className="w-4 h-4 mr-2" />
+                                  Reply
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  <Forward className="w-4 h-4 mr-2" />
+                                  Forward
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  <Star className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => moveToFolderMutation.mutate({ emailId: selectedEmail.id, folder: "trash" })}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Email Body */}
+                          {loadingEmailBody ? (
+                            <div className="flex items-center justify-center py-12">
+                              <div className="text-center">
+                                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+                                <p className="text-sm text-muted-foreground">Loading full email...</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                              {selectedEmail.body ? (
+                                <div 
+                                  className="email-content"
+                                  dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
+                                  style={{
+                                    maxWidth: '100%',
+                                    overflow: 'auto',
+                                  }}
+                                />
+                              ) : (
+                                <div className="p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
+                                  <p className="text-muted-foreground">{selectedEmail.bodyPreview}</p>
+                                  <p className="text-xs text-muted-foreground mt-4 italic">Full email content not available. Showing preview only.</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </ScrollArea>
         </Card>
-
-        {/* Email Detail View */}
-        <Card className="lg:col-span-4">
-          {selectedEmail ? (
-            <div className="h-full flex flex-col">
-              <CardHeader className="border-b bg-gradient-to-r from-background to-accent/20">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-xl mb-3 text-foreground">{selectedEmail.subject}</h3>
-                    <div className="flex items-center gap-3 mb-3">
-                      <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                        <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-primary/80 to-primary text-white">
-                          {getInitials(selectedEmail.fromName || selectedEmail.from)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">
-                          {selectedEmail.fromName || selectedEmail.from}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedEmail.from}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {new Date(selectedEmail.receivedAt).toLocaleString()}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground">To:</span>
-                        <span className="font-medium">{selectedEmail.to.join(', ')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-background to-accent/5">
-                {loadingEmailBody ? (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
-                      <p className="text-sm text-muted-foreground">Loading full email...</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
-                    {selectedEmail.body ? (
-                      <div 
-                        className="email-content"
-                        dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
-                        style={{
-                          maxWidth: '100%',
-                          overflow: 'auto',
-                        }}
-                      />
-                    ) : (
-                      <div className="p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
-                        <p className="text-muted-foreground">{selectedEmail.bodyPreview}</p>
-                        <p className="text-xs text-muted-foreground mt-4 italic">Full email content not available. Showing preview only.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </ScrollArea>
-              <div className="border-t p-4">
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Reply className="w-4 h-4 mr-2" />
-                    Reply
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Forward className="w-4 h-4 mr-2" />
-                    Forward
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Star className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => moveToFolderMutation.mutate({ emailId: selectedEmail.id, folder: "trash" })}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-[700px] flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <Mail className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>Select an email to view</p>
-              </div>
-            </div>
-          )}
-        </Card>
       </div>
     </div>
   );
 }
-
