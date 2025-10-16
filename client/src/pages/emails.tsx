@@ -89,6 +89,27 @@ export default function EmailsPage() {
     }
   }, []);
 
+  // Auto-sync emails every 30 seconds
+  useEffect(() => {
+    if (!isConnected) return;
+
+    // Initial sync when page loads
+    console.log("Starting auto-sync for emails...");
+    syncEmailsMutation.mutate();
+
+    // Set up interval for auto-sync every 30 seconds
+    const syncInterval = setInterval(() => {
+      console.log("Auto-syncing emails...");
+      syncEmailsMutation.mutate();
+    }, 30000); // 30 seconds
+
+    // Cleanup interval on unmount
+    return () => {
+      console.log("Stopping email auto-sync");
+      clearInterval(syncInterval);
+    };
+  }, [isConnected]);
+
   // Check if email account is connected
   const { data: emailAccounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ["/api/email-accounts"],
@@ -109,17 +130,26 @@ export default function EmailsPage() {
 
   const syncEmailsMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/emails/sync", {});
+      const response = await apiRequest("POST", "/api/emails/sync", {});
+      return await response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
-      toast({ 
-        title: "✅ Emails synced!", 
-        description: `Synced ${data.syncedCount} new emails`
-      });
+      console.log("✅ Email sync successful:", data);
+      if (data.syncedCount > 0) {
+        toast({ 
+          title: "✅ Emails synced!", 
+          description: `Synced ${data.syncedCount} new emails`
+        });
+      }
     },
-    onError: () => {
-      toast({ title: "Failed to sync emails", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("❌ Email sync failed:", error);
+      toast({ 
+        title: "Failed to sync emails", 
+        description: error?.message || "Please check your connection and try again",
+        variant: "destructive" 
+      });
     },
   });
 

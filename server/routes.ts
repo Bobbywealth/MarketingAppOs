@@ -196,15 +196,21 @@ ${data.notes || 'None'}`,
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
       
+      console.log(`📧 Starting email sync for user ${userId}...`);
+      
       const account = await storage.getEmailAccountByUserId(userId);
       
       if (!account || !account.isActive) {
+        console.error(`❌ No active email account found for user ${userId}`);
         return res.status(404).json({ message: "No active email account found" });
       }
+
+      console.log(`✓ Found email account: ${account.email}`);
 
       // Check if token is expired and refresh if needed
       let accessToken = account.accessToken;
       if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+        console.log(`🔄 Token expired, refreshing...`);
         const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
         accessToken = refreshed.accessToken;
         
@@ -213,6 +219,7 @@ ${data.notes || 'None'}`,
           refreshToken: refreshed.refreshToken,
           tokenExpiresAt: refreshed.expiresOn,
         });
+        console.log(`✓ Token refreshed successfully`);
       }
 
       // Fetch emails from Microsoft
@@ -220,7 +227,9 @@ ${data.notes || 'None'}`,
       let syncedCount = 0;
 
       for (const folder of folders) {
+        console.log(`📥 Fetching emails from ${folder}...`);
         const messages = await microsoftAuth.getEmails(accessToken!, folder, 50);
+        console.log(`✓ Fetched ${messages.length} emails from ${folder}`);
         
         for (const msg of messages) {
           // Check if email already exists
@@ -251,10 +260,21 @@ ${data.notes || 'None'}`,
         lastSyncedAt: new Date(),
       });
 
+      console.log(`✅ Email sync completed: ${syncedCount} new emails synced`);
       res.json({ success: true, syncedCount });
-    } catch (error) {
-      console.error('Error syncing emails:', error);
-      res.status(500).json({ message: "Failed to sync emails" });
+    } catch (error: any) {
+      console.error('❌ Error syncing emails:', error);
+      console.error('Error details:', {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        statusCode: error?.statusCode,
+      });
+      res.status(500).json({ 
+        message: "Failed to sync emails", 
+        error: error?.message || 'Unknown error'
+      });
     }
   });
 
