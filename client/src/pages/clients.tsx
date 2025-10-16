@@ -28,6 +28,7 @@ export default function Clients() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       setDialogOpen(false);
       toast({ title: "Client created successfully" });
     },
