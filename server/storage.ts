@@ -722,14 +722,20 @@ export class DatabaseStorage implements IStorage {
 
   // Email operations
   async getEmails(userId?: number, folder?: string) {
-    let query = db.select().from(emails);
+    const conditions = [];
     
     if (userId) {
-      query = query.where(eq(emails.userId, userId)) as any;
+      conditions.push(eq(emails.userId, userId));
     }
     
     if (folder) {
-      query = query.where(eq(emails.folder, folder)) as any;
+      conditions.push(eq(emails.folder, folder));
+    }
+    
+    let query = db.select().from(emails);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
     }
     
     return await query.orderBy(desc(emails.receivedAt));
