@@ -627,9 +627,14 @@ export default function EmailsPage() {
                 ) : (
                   <div className="prose prose-sm max-w-none dark:prose-invert">
                     {selectedEmail.body ? (
-                      selectedEmail.body.split('\n').map((paragraph, idx) => (
-                        <p key={idx} className="mb-2 text-foreground leading-relaxed">{paragraph || '\u00A0'}</p>
-                      ))
+                      <div 
+                        className="email-content"
+                        dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
+                        style={{
+                          maxWidth: '100%',
+                          overflow: 'auto',
+                        }}
+                      />
                     ) : (
                       <div className="p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
                         <p className="text-muted-foreground">{selectedEmail.bodyPreview}</p>
