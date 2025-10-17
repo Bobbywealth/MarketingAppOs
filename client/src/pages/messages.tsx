@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get all users (will be filtered to admin/staff only)
   const { data: allUsers } = useQuery<User[]>({
@@ -38,20 +39,33 @@ export default function Messages() {
 
   // Get messages for selected conversation
   const { data: messages, isLoading: messagesLoading } = useQuery<Message[]>({
-    queryKey: ["/api/messages", selectedUserId],
+    queryKey: ["/api/messages/conversation", selectedUserId],
     enabled: !!selectedUserId,
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/messages/conversation/${selectedUserId}`, undefined);
       return response.json();
     },
+    refetchInterval: selectedUserId ? 3000 : false, // Auto-refresh every 3 seconds when conversation is open
   });
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Reset selected user when navigating away
+  useEffect(() => {
+    return () => {
+      setSelectedUserId(null);
+    };
+  }, []);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/messages", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/conversation", selectedUserId] });
       setMessageText("");
       toast({ title: "✅ Message sent" });
     },
@@ -242,6 +256,7 @@ export default function Messages() {
                         </div>
                       );
                     })}
+                    <div ref={messagesEndRef} />
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-full">
