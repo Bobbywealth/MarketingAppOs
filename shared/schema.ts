@@ -550,7 +550,20 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTaskSchema = createInsertSchema(tasks)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    dueDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
+      if (!val) return null;
+      if (typeof val === 'string') return new Date(val);
+      return val;
+    }),
+    recurringEndDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
+      if (!val) return null;
+      if (typeof val === 'string') return new Date(val);
+      return val;
+    }),
+  });
 export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertContentPostSchema = createInsertSchema(contentPosts)
   .omit({ id: true, createdAt: true, updatedAt: true })

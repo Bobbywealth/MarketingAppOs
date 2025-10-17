@@ -96,18 +96,23 @@ export default function TasksPage() {
     mutationFn: async (data: TaskFormData) => {
       const taskData: any = {
         title: data.title,
-        description: data.description || undefined,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
-        campaignId: data.campaignId || undefined,
-        clientId: data.clientId || undefined,
-        assignedToId: data.assignedToId ? parseInt(data.assignedToId) : undefined,
-        isRecurring: data.isRecurring || false,
-        recurringPattern: data.isRecurring ? data.recurringPattern : undefined,
-        recurringInterval: data.isRecurring ? data.recurringInterval : undefined,
-        recurringEndDate: data.isRecurring && data.recurringEndDate ? new Date(data.recurringEndDate).toISOString() : undefined,
       };
+      
+      // Only add optional fields if they have values
+      if (data.description) taskData.description = data.description;
+      if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
+      if (data.campaignId) taskData.campaignId = data.campaignId;
+      if (data.clientId) taskData.clientId = data.clientId;
+      if (data.assignedToId) taskData.assignedToId = parseInt(data.assignedToId);
+      if (data.isRecurring) {
+        taskData.isRecurring = true;
+        if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
+        if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
+        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate; // Send as string
+      }
+      
       return apiRequest("POST", "/api/tasks", taskData);
     },
     onSuccess: () => {
@@ -131,18 +136,25 @@ export default function TasksPage() {
       if (!editingTask) return;
       const taskData: any = {
         title: data.title,
-        description: data.description || undefined,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
-        campaignId: data.campaignId || undefined,
-        clientId: data.clientId || undefined,
-        assignedToId: data.assignedToId ? parseInt(data.assignedToId) : undefined,
-        isRecurring: data.isRecurring || false,
-        recurringPattern: data.isRecurring ? data.recurringPattern : undefined,
-        recurringInterval: data.isRecurring ? data.recurringInterval : undefined,
-        recurringEndDate: data.isRecurring && data.recurringEndDate ? new Date(data.recurringEndDate).toISOString() : undefined,
       };
+      
+      // Only add optional fields if they have values
+      if (data.description) taskData.description = data.description;
+      if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
+      if (data.campaignId) taskData.campaignId = data.campaignId;
+      if (data.clientId) taskData.clientId = data.clientId;
+      if (data.assignedToId) taskData.assignedToId = parseInt(data.assignedToId);
+      if (data.isRecurring) {
+        taskData.isRecurring = true;
+        if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
+        if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
+        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate; // Send as string
+      } else {
+        taskData.isRecurring = false;
+      }
+      
       return apiRequest("PATCH", `/api/tasks/${editingTask.id}`, taskData);
     },
     onSuccess: () => {
