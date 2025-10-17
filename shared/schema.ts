@@ -52,7 +52,7 @@ export const clients = pgTable("clients", {
   logoUrl: varchar("logo_url"),
   serviceTags: text("service_tags").array(), // social media, lead gen, design, etc.
   status: varchar("status").notNull().default("active"), // active, inactive, onboarding
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
   notes: text("notes"),
   socialLinks: jsonb("social_links"), // {twitter, facebook, instagram, linkedin}
   stripeCustomerId: varchar("stripe_customer_id"),
@@ -129,7 +129,7 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   clientId: varchar("client_id").references(() => clients.id),
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
   spaceId: varchar("space_id").references(() => taskSpaces.id), // NEW: Link to space
   title: varchar("title").notNull(),
   description: text("description"),
@@ -213,7 +213,7 @@ export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id),
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
   name: varchar("name").notNull(),
   email: varchar("email"),
   phone: varchar("phone"),
@@ -336,7 +336,7 @@ export const invoicesRelations = relations(invoices, ({ one }) => ({
 export const tickets = pgTable("tickets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
-  assignedToId: varchar("assigned_to_id").references(() => users.id),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
   subject: varchar("subject").notNull(),
   description: text("description"),
   priority: varchar("priority").notNull().default("normal"), // normal, urgent
