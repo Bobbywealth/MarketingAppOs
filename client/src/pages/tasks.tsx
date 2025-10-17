@@ -279,13 +279,17 @@ export default function TasksPage() {
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return apiRequest(`/api/tasks/${id}`, "PATCH", { 
+      return apiRequest("PATCH", `/api/tasks/${id}`, { 
         status,
         completedAt: status === "completed" ? new Date() : null,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "✅ Task moved successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update task", variant: "destructive" });
     },
   });
 
