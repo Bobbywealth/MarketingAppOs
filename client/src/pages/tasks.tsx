@@ -22,12 +22,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -58,6 +59,8 @@ export default function TasksPage() {
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -335,6 +338,8 @@ export default function TasksPage() {
   const filteredTasks = tasks.filter((task) => {
     if (filterStatus !== "all" && task.status !== filterStatus) return false;
     if (filterPriority !== "all" && task.priority !== filterPriority) return false;
+    // Filter by selected space (null = show all tasks)
+    if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
     return true;
   });
 
@@ -533,14 +538,25 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            Task Management
-          </h1>
-          <p className="text-muted-foreground mt-1">Organize and track your team's tasks</p>
-        </div>
+    <div className="flex h-full overflow-hidden">
+      {/* Left Sidebar - Task Spaces */}
+      <div className="w-64 border-r bg-card/50 p-4 overflow-y-auto">
+        <TaskSpacesSidebar 
+          selectedSpaceId={selectedSpaceId}
+          onSelectSpace={setSelectedSpaceId}
+        />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Task Management
+              </h1>
+              <p className="text-muted-foreground mt-1">Organize and track your team's tasks</p>
+            </div>
         
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 rounded-lg border bg-card p-1">
@@ -1135,64 +1151,103 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* AI Quick-Add Bar */}
-      <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-purple-500/5 to-primary/5">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
-            <Input
-              placeholder="✨ Describe your task naturally... e.g., 'Call Bobby tomorrow about website redesign, high priority'"
-              value={aiInput}
-              onChange={(e) => setAiInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleAiQuickAdd();
-                }
-              }}
-              disabled={isAiParsing || isListening}
-              className="flex-1 border-0 focus-visible:ring-1"
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleVoiceInput}
-              disabled={isAiParsing || isListening}
-              className={`${isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : ''}`}
-              title="Voice input"
-            >
-              {isListening ? (
-                <MicOff className="w-4 h-4" />
-              ) : (
-                <Mic className="w-4 h-4" />
-              )}
-            </Button>
-            <Button
-              onClick={handleAiQuickAdd}
-              disabled={isAiParsing || !aiInput.trim()}
-              className="gap-2"
-            >
-              {isAiParsing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Create
-                </>
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2 ml-8">
-            💬 Type or 🎤 speak your task naturally • Try: "Schedule meeting with John next Friday" or "Urgent: Fix login bug ASAP"
-          </p>
-        </CardContent>
-      </Card>
-
       <div className="flex-1 overflow-auto">
         {viewMode === "kanban" ? renderKanbanView() : renderListView()}
+      </div>
+        </div>
+      </div>
+
+      {/* Floating AI Chat Popup - Bottom Right */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {!isChatOpen ? (
+          <Button
+            size="lg"
+            onClick={() => setIsChatOpen(true)}
+            className="rounded-full w-14 h-14 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
+          >
+            <MessageSquare className="w-6 h-6" />
+          </Button>
+        ) : (
+          <Card className="w-96 shadow-2xl border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+            <CardHeader className="p-4 border-b bg-gradient-to-r from-primary/10 to-purple-500/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold">AI Task Assistant</h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsChatOpen(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                💬 Describe your task naturally and I'll create it for you!
+              </p>
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="e.g., 'Call Bobby tomorrow about website redesign, high priority'"
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.ctrlKey) {
+                      e.preventDefault();
+                      handleAiQuickAdd();
+                    }
+                  }}
+                  disabled={isAiParsing || isListening}
+                  className="min-h-[100px] resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleVoiceInput}
+                    disabled={isAiParsing || isListening}
+                    className={`${isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : ''}`}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="w-4 h-4 mr-2" />
+                        Listening...
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4 mr-2" />
+                        Voice
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleAiQuickAdd}
+                    disabled={isAiParsing || !aiInput.trim()}
+                    className="flex-1 gap-2"
+                  >
+                    {isAiParsing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Create Task
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  💡 Press Ctrl+Enter to create • Try: "Schedule meeting with John next Friday" or "Urgent: Fix login bug ASAP"
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
