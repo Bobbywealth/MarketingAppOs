@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Search, Mail, Phone, Globe, Building2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,8 @@ export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const { toast} = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
@@ -38,6 +40,23 @@ export default function Clients() {
     },
   });
 
+  const updateClientMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest("PATCH", `/api/clients/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      setEditDialogOpen(false);
+      setEditingClient(null);
+      setSelectedClient(null);
+      toast({ title: "✅ Client updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update client", variant: "destructive" });
+    },
+  });
+
   const handleCreateClient = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -54,6 +73,30 @@ export default function Clients() {
       website: formData.get("website"),
       serviceTags,
       notes: formData.get("notes"),
+    });
+  };
+
+  const handleEditClient = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingClient) return;
+
+    const formData = new FormData(e.currentTarget);
+    const serviceTags = (formData.get("serviceTags") as string)
+      .split(",")
+      .map(tag => tag.trim())
+      .filter(Boolean);
+
+    updateClientMutation.mutate({
+      id: editingClient.id,
+      data: {
+        name: formData.get("name"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        company: formData.get("company"),
+        website: formData.get("website"),
+        serviceTags,
+        notes: formData.get("notes"),
+      },
     });
   };
 
@@ -266,22 +309,37 @@ export default function Clients() {
             {selectedClient && (
               <>
                 <DialogHeader>
-                  <div className="flex items-center gap-4 mb-2">
-                    <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-md">
-                      <AvatarImage src={selectedClient.logoUrl || ""} />
-                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-xl font-bold">
-                        {selectedClient.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <DialogTitle className="text-2xl">{selectedClient.name}</DialogTitle>
-                      {selectedClient.company && (
-                        <DialogDescription className="text-base flex items-center gap-2 mt-1">
-                          <Building2 className="w-4 h-4" />
-                          {selectedClient.company}
-                        </DialogDescription>
-                      )}
+                  <div className="flex items-center justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-md">
+                        <AvatarImage src={selectedClient.logoUrl || ""} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-xl font-bold">
+                          {selectedClient.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <DialogTitle className="text-2xl">{selectedClient.name}</DialogTitle>
+                        {selectedClient.company && (
+                          <DialogDescription className="text-base flex items-center gap-2 mt-1">
+                            <Building2 className="w-4 h-4" />
+                            {selectedClient.company}
+                          </DialogDescription>
+                        )}
+                      </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingClient(selectedClient);
+                        setEditDialogOpen(true);
+                        setSelectedClient(null);
+                      }}
+                      className="gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </Button>
                   </div>
                 </DialogHeader>
 
@@ -373,6 +431,106 @@ export default function Clients() {
                   </div>
                 </div>
               </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Client Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-2xl glass-strong">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Edit Client</DialogTitle>
+              <DialogDescription>Update client information</DialogDescription>
+            </DialogHeader>
+            {editingClient && (
+              <form onSubmit={handleEditClient} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-name">Name *</Label>
+                    <Input 
+                      id="edit-name" 
+                      name="name" 
+                      defaultValue={editingClient.name} 
+                      required 
+                      placeholder="Client name" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input 
+                      id="edit-email" 
+                      name="email" 
+                      type="email" 
+                      defaultValue={editingClient.email || ""} 
+                      placeholder="client@example.com" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-phone">Phone</Label>
+                    <Input 
+                      id="edit-phone" 
+                      name="phone" 
+                      type="tel" 
+                      defaultValue={editingClient.phone || ""} 
+                      placeholder="+1 (555) 000-0000" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-company">Company</Label>
+                    <Input 
+                      id="edit-company" 
+                      name="company" 
+                      defaultValue={editingClient.company || ""} 
+                      placeholder="Company name" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-website">Website</Label>
+                  <Input 
+                    id="edit-website" 
+                    name="website" 
+                    type="url" 
+                    defaultValue={editingClient.website || ""} 
+                    placeholder="https://example.com" 
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-serviceTags">Service Tags</Label>
+                  <Input 
+                    id="edit-serviceTags" 
+                    name="serviceTags" 
+                    defaultValue={editingClient.serviceTags?.join(", ") || ""} 
+                    placeholder="SEO, PPC, Social Media (comma separated)" 
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Separate multiple tags with commas</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-notes">Notes</Label>
+                  <Textarea 
+                    id="edit-notes" 
+                    name="notes" 
+                    defaultValue={editingClient.notes || ""} 
+                    placeholder="Add any additional notes about the client..." 
+                    rows={4} 
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end pt-4">
+                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateClientMutation.isPending}>
+                    {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
             )}
           </DialogContent>
         </Dialog>

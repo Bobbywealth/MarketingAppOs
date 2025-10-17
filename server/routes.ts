@@ -508,6 +508,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         storage.getActivityLogs(20), // Get recent 20 activity logs
       ]);
 
+      console.log("📊 Dashboard Stats - Total Clients:", clients.length, "clients:", clients.map(c => c.name));
+
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
       const monthlyRevenue = invoices
@@ -1072,7 +1074,67 @@ Examples:
   app.patch("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const validatedData = insertTaskSchema.partial().strip().parse(req.body);
+      
+      // Check if task is being marked as completed and is recurring
+      const existingTask = await storage.getTask(req.params.id);
+      if (!existingTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
       const task = await storage.updateTask(req.params.id, validatedData);
+
+      // If task is recurring and was just completed, create next instance
+      if (
+        existingTask.isRecurring && 
+        validatedData.status === "completed" && 
+        existingTask.status !== "completed"
+      ) {
+        console.log("🔄 Creating recurring task instance for:", existingTask.title);
+        
+        // Calculate next due date based on recurrence pattern
+        let nextDueDate: Date | null = null;
+        if (existingTask.dueDate && existingTask.recurringPattern && existingTask.recurringInterval) {
+          const currentDueDate = new Date(existingTask.dueDate);
+          nextDueDate = new Date(currentDueDate);
+          
+          switch (existingTask.recurringPattern) {
+            case "daily":
+              nextDueDate.setDate(currentDueDate.getDate() + existingTask.recurringInterval);
+              break;
+            case "weekly":
+              nextDueDate.setDate(currentDueDate.getDate() + (existingTask.recurringInterval * 7));
+              break;
+            case "monthly":
+              nextDueDate.setMonth(currentDueDate.getMonth() + existingTask.recurringInterval);
+              break;
+            case "yearly":
+              nextDueDate.setFullYear(currentDueDate.getFullYear() + existingTask.recurringInterval);
+              break;
+          }
+
+          // Check if we've exceeded the recurring end date
+          if (existingTask.recurringEndDate && nextDueDate > new Date(existingTask.recurringEndDate)) {
+            console.log("⏸️ Recurring task has reached end date, not creating new instance");
+          } else {
+            // Create new task instance
+            await storage.createTask({
+              title: existingTask.title,
+              description: existingTask.description,
+              status: "todo",
+              priority: existingTask.priority,
+              dueDate: nextDueDate,
+              clientId: existingTask.clientId,
+              assignedToId: existingTask.assignedToId,
+              isRecurring: true,
+              recurringPattern: existingTask.recurringPattern,
+              recurringInterval: existingTask.recurringInterval,
+              recurringEndDate: existingTask.recurringEndDate,
+            });
+            console.log("✅ New recurring task instance created for:", nextDueDate.toDateString());
+          }
+        }
+      }
+
       res.json(task);
     } catch (error: any) {
       if (error instanceof ZodError) {

@@ -9,6 +9,8 @@ export default function Dashboard() {
     queryKey: ["/api/dashboard/stats"],
   });
 
+  console.log("📊 Dashboard Stats Received:", stats);
+
   const { data: stripeData } = useQuery({
     queryKey: ["/api/stripe/subscriptions"],
     retry: false,
