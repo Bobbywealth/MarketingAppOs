@@ -2004,6 +2004,95 @@ Examples:
     }
   });
 
+  // Check and create notifications for due/overdue tasks
+  app.post("/api/notifications/check-tasks", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      const tasks = await storage.getTasks();
+      
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      let notificationsCreated = 0;
+
+      for (const task of tasks) {
+        // Skip completed tasks
+        if (task.status === 'completed') continue;
+        
+        // Skip if no due date
+        if (!task.dueDate) continue;
+
+        const dueDate = new Date(task.dueDate);
+        const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+        
+        // Check if task is overdue
+        if (dueDateOnly < today) {
+          const existingNotifications = await storage.getNotifications(task.assignedToId || userId);
+          const alreadyNotified = existingNotifications.some(
+            n => n.title.includes('Overdue') && n.message.includes(task.title)
+          );
+          
+          if (!alreadyNotified) {
+            await storage.createNotification({
+              userId: task.assignedToId || userId,
+              type: 'alert',
+              title: '🚨 Task Overdue',
+              message: `Task "${task.title}" is overdue!`,
+              link: '/tasks',
+            });
+            notificationsCreated++;
+          }
+        }
+        // Check if task is due today
+        else if (dueDateOnly.getTime() === today.getTime()) {
+          const existingNotifications = await storage.getNotifications(task.assignedToId || userId);
+          const alreadyNotified = existingNotifications.some(
+            n => n.title.includes('Due Today') && n.message.includes(task.title)
+          );
+          
+          if (!alreadyNotified) {
+            await storage.createNotification({
+              userId: task.assignedToId || userId,
+              type: 'warning',
+              title: '⏰ Task Due Today',
+              message: `Task "${task.title}" is due today!`,
+              link: '/tasks',
+            });
+            notificationsCreated++;
+          }
+        }
+        // Check if task is due tomorrow
+        else if (dueDateOnly.getTime() === tomorrow.getTime()) {
+          const existingNotifications = await storage.getNotifications(task.assignedToId || userId);
+          const alreadyNotified = existingNotifications.some(
+            n => n.title.includes('Due Tomorrow') && n.message.includes(task.title)
+          );
+          
+          if (!alreadyNotified) {
+            await storage.createNotification({
+              userId: task.assignedToId || userId,
+              type: 'info',
+              title: '📅 Task Due Tomorrow',
+              message: `Task "${task.title}" is due tomorrow.`,
+              link: '/tasks',
+            });
+            notificationsCreated++;
+          }
+        }
+      }
+
+      res.json({ 
+        message: "Task notifications checked", 
+        notificationsCreated 
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to check task notifications" });
+    }
+  });
+
   app.patch("/api/notifications/:id/read", isAuthenticated, async (req: Request, res: Response) => {
     try {
       await storage.markNotificationAsRead(req.params.id);

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, CheckCheck, Trash2, X, AlertCircle, CheckCircle2, Info, AlertTriangle } from "lucide-react";
+import { Bell, Check, CheckCheck, Trash2, X, AlertCircle, CheckCircle2, Info, AlertTriangle, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,11 +26,56 @@ interface Notification {
 
 export function NotificationsCenter() {
   const [isOpen, setIsOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('notificationSoundEnabled');
+    return saved !== 'false'; // default to true
+  });
   const queryClient = useQueryClient();
+  const previousCountRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
+    refetchInterval: 30000, // Check every 30 seconds
   });
+
+  // Create notification sound using Web Audio API
+  const playNotificationSound = () => {
+    if (!soundEnabled) return;
+    
+    try {
+      // Create a simple beep sound
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800; // Frequency in Hz
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.error('Failed to play notification sound:', error);
+    }
+  };
+
+  // Toggle sound preference
+  const toggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem('notificationSoundEnabled', String(newValue));
+    
+    // Play test sound when enabling
+    if (newValue) {
+      playNotificationSound();
+    }
+  };
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
@@ -59,7 +104,60 @@ export function NotificationsCenter() {
     },
   });
 
+  const checkTasksMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/notifications/check-tasks", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  // Check for new notifications and play sound
+  useEffect(() => {
+    const currentUnreadCount = unreadCount;
+    
+    // Only play sound if count increased (new notification arrived)
+    if (previousCountRef.current > 0 && currentUnreadCount > previousCountRef.current) {
+      playNotificationSound();
+      
+      // Show browser notification if permission granted
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const latestNotification = notifications.find(n => !n.isRead);
+        if (latestNotification) {
+          new Notification(latestNotification.title, {
+            body: latestNotification.message,
+            icon: '/favicon.ico',
+            tag: latestNotification.id,
+          });
+        }
+      }
+    }
+    
+    previousCountRef.current = currentUnreadCount;
+  }, [unreadCount, notifications]);
+
+  // Periodically check for due/overdue tasks
+  useEffect(() => {
+    // Check immediately on mount
+    checkTasksMutation.mutate();
+    
+    // Then check every 5 minutes
+    const interval = setInterval(() => {
+      checkTasksMutation.mutate();
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -109,6 +207,15 @@ export function NotificationsCenter() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSound}
+              title={soundEnabled ? "Mute notifications" : "Enable notification sounds"}
+              className={soundEnabled ? "text-primary" : "text-muted-foreground"}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </Button>
             {unreadCount > 0 && (
               <Button
                 variant="ghost"
