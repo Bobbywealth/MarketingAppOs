@@ -98,12 +98,39 @@ export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   tasks: many(tasks),
 }));
 
+// Task Spaces table (for organizing tasks into groups/projects)
+export const taskSpaces = pgTable("task_spaces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  icon: varchar("icon").default("📁"), // Emoji or icon name
+  color: varchar("color").default("#3B82F6"), // Hex color
+  parentSpaceId: varchar("parent_space_id"), // For nested spaces
+  order: integer("order").default(0), // Display order
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const taskSpacesRelations = relations(taskSpaces, ({ one, many }) => ({
+  createdByUser: one(users, {
+    fields: [taskSpaces.createdBy],
+    references: [users.id],
+  }),
+  parentSpace: one(taskSpaces, {
+    fields: [taskSpaces.parentSpaceId],
+    references: [taskSpaces.id],
+  }),
+  tasks: many(tasks),
+  subSpaces: many(taskSpaces),
+}));
+
 // Tasks table
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   clientId: varchar("client_id").references(() => clients.id),
   assignedToId: varchar("assigned_to_id").references(() => users.id),
+  spaceId: varchar("space_id").references(() => taskSpaces.id), // NEW: Link to space
   title: varchar("title").notNull(),
   description: text("description"),
   status: varchar("status").notNull().default("todo"), // todo, in_progress, review, completed
@@ -132,7 +159,34 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.assignedToId],
     references: [users.id],
   }),
+  space: one(taskSpaces, {
+    fields: [tasks.spaceId],
+    references: [taskSpaces.id],
+  }),
   comments: many(taskComments),
+}));
+
+// User View Preferences table (for customizing task views)
+export const userViewPreferences = pgTable("user_view_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").notNull().references(() => users.id),
+  viewType: varchar("view_type").notNull().default("list"), // list, board, calendar
+  cardSize: varchar("card_size").notNull().default("compact"), // compact, medium, large
+  showEmptyFields: boolean("show_empty_fields").default(false),
+  groupBy: varchar("group_by").default("status"), // status, priority, assignee, space, client
+  sortBy: varchar("sort_by").default("dueDate"), // dueDate, priority, createdAt, title
+  sortDirection: varchar("sort_direction").default("asc"), // asc, desc
+  filters: jsonb("filters"), // { status: ['todo', 'in_progress'], priority: ['high', 'urgent'] }
+  hiddenFields: jsonb("hidden_fields"), // ['description', 'client']
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userViewPreferencesRelations = relations(userViewPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userViewPreferences.userId],
+    references: [users.id],
+  }),
 }));
 
 // Task Comments table (for collaboration)
@@ -564,6 +618,9 @@ export const insertTaskSchema = createInsertSchema(tasks)
       return val;
     }),
   });
+export const insertTaskSpaceSchema = createInsertSchema(taskSpaces).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertUserViewPreferencesSchema = createInsertSchema(userViewPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, createdAt: true });
 export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertContentPostSchema = createInsertSchema(contentPosts)
   .omit({ id: true, createdAt: true, updatedAt: true })
@@ -584,7 +641,6 @@ export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, c
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({ id: true, createdAt: true });
 export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({ id: true, createdAt: true });
-export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, createdAt: true });
 export const insertLeadActivitySchema = createInsertSchema(leadActivities).omit({ id: true, createdAt: true });
 export const insertLeadAutomationSchema = createInsertSchema(leadAutomations).omit({ id: true, createdAt: true });
 export const insertWebsiteProjectSchema = createInsertSchema(websiteProjects).omit({ id: true, createdAt: true, updatedAt: true });
@@ -604,6 +660,12 @@ export type Campaign = typeof campaigns.$inferSelect;
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
+
+export type InsertTaskSpace = z.infer<typeof insertTaskSpaceSchema>;
+export type TaskSpace = typeof taskSpaces.$inferSelect;
+
+export type InsertUserViewPreferences = z.infer<typeof insertUserViewPreferencesSchema>;
+export type UserViewPreferences = typeof userViewPreferences.$inferSelect;
 
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
