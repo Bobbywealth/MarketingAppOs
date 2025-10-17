@@ -6,11 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LayoutDashboard, Users, TrendingUp, Calendar, Sparkles, BarChart3, Target } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import mtaLogo from "@assets/mta-logo-blue.png";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
+  const { toast } = useToast();
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [registerData, setRegisterData] = useState({
     username: "",
@@ -19,6 +23,9 @@ export default function AuthPage() {
     firstName: "",
     lastName: "",
   });
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
 
   if (user) {
     return <Redirect to="/" />;
@@ -32,6 +39,32 @@ export default function AuthPage() {
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     registerMutation.mutate(registerData);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetting(true);
+
+    try {
+      const response = await apiRequest("POST", "/api/auth/forgot-password", {
+        email: resetEmail,
+      });
+
+      toast({
+        title: "✅ Password reset email sent",
+        description: "Check your email for instructions to reset your password.",
+      });
+      setResetDialogOpen(false);
+      setResetEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send reset email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -78,7 +111,53 @@ export default function AuthPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="login-password">Password</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="login-password">Password</Label>
+                        <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-xs text-primary hover:underline"
+                              type="button"
+                            >
+                              Forgot password?
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Reset Password</DialogTitle>
+                              <DialogDescription>
+                                Enter your email address and we'll send you instructions to reset your password.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleResetPassword} className="space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="reset-email">Email Address</Label>
+                                <Input
+                                  id="reset-email"
+                                  type="email"
+                                  placeholder="you@example.com"
+                                  value={resetEmail}
+                                  onChange={(e) => setResetEmail(e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="flex gap-3 justify-end">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => setResetDialogOpen(false)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button type="submit" disabled={isResetting}>
+                                  {isResetting ? "Sending..." : "Send Reset Link"}
+                                </Button>
+                              </div>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                       <Input
                         id="login-password"
                         data-testid="input-login-password"

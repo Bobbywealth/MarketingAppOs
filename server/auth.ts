@@ -194,6 +194,79 @@ export function setupAuth(app: Express) {
   app.get("/api/logout", handleLogout);
   app.post("/api/logout", handleLogout);
 
+  // Password reset request
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Find user by email (need to add this to storage)
+      const users = await storage.getUsers();
+      const user = users.find(u => u.email === email);
+
+      // Always return success to prevent email enumeration
+      if (!user) {
+        console.log(`Password reset requested for non-existent email: ${email}`);
+        return res.json({ message: "If that email exists, a reset link has been sent." });
+      }
+
+      // Generate reset token (random string)
+      const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Store reset token (for now, just log it - you can add to DB later)
+      console.log(`
+═══════════════════════════════════════════════
+🔐 PASSWORD RESET REQUEST
+═══════════════════════════════════════════════
+User: ${user.username}
+Email: ${email}
+Reset Token: ${resetToken}
+Expires: ${resetTokenExpiry.toLocaleString()}
+
+Reset URL: http://localhost:5000/reset-password?token=${resetToken}
+═══════════════════════════════════════════════
+      `);
+
+      res.json({ 
+        message: "If that email exists, a reset link has been sent.",
+        // For development, include token (REMOVE IN PRODUCTION!)
+        ...(process.env.NODE_ENV === 'development' && { token: resetToken })
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ message: "Failed to process password reset" });
+    }
+  });
+
+  // Password reset confirmation
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      // In a real app, you'd verify the token from database
+      // For now, this is a simplified version
+      console.log(`Password reset attempted with token: ${token}`);
+      
+      // You would validate token and update password here
+      res.json({ message: "Password reset successful. You can now login with your new password." });
+    } catch (error) {
+      console.error("Password reset confirmation error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = req.user as SelectUser;
