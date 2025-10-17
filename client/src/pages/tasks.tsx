@@ -463,8 +463,8 @@ export default function TasksPage() {
   const renderCompactView = () => {
     return (
       <div className="border rounded-lg overflow-hidden bg-card">
-        {/* Header */}
-        <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground">
+        {/* Header - Hidden on mobile, shown on desktop */}
+        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground">
           <div className="col-span-5">TASK NAME</div>
           <div className="col-span-2">STATUS</div>
           <div className="col-span-2">PRIORITY</div>
@@ -476,43 +476,67 @@ export default function TasksPage() {
         <div className="divide-y">
           {filteredTasks.map((task) => (
             <div key={task.id} className="group">
-              {/* Compact Row */}
+              {/* Compact Row - Responsive layout */}
               <div 
-                className={`grid grid-cols-12 gap-4 px-4 py-2.5 items-center cursor-pointer hover:bg-muted/30 transition-colors ${
+                className={`px-3 md:px-4 py-3 md:py-2.5 cursor-pointer hover:bg-muted/30 transition-colors ${
                   expandedTaskId === task.id ? "bg-muted/50" : ""
                 }`}
                 onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
                 data-testid={`task-row-${task.id}`}
               >
-                <div className="col-span-5 flex items-center gap-2 min-w-0">
-                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
-                  <span className="truncate text-sm font-medium">{task.title}</span>
+                {/* Mobile Layout - Stacked */}
+                <div className="md:hidden space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
+                    <span className="font-medium text-sm flex-1">{task.title}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={getStatusColor(task.status)} variant="secondary" className="text-xs">
+                      {task.status.replace("_", " ")}
+                    </Badge>
+                    <Badge className={getPriorityColor(task.priority)} variant="secondary" className="text-xs">
+                      {task.priority}
+                    </Badge>
+                    {task.dueDate && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="col-span-2">
-                  <Badge className={getStatusColor(task.status)} variant="secondary" className="text-xs">
-                    {task.status.replace("_", " ")}
-                  </Badge>
-                </div>
-                
-                <div className="col-span-2">
-                  <Badge className={getPriorityColor(task.priority)} variant="secondary" className="text-xs">
-                    {task.priority}
-                  </Badge>
-                </div>
-                
-                <div className="col-span-2 text-sm text-muted-foreground">
-                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "-"}
-                </div>
-                
-                <div className="col-span-1 flex items-center justify-center">
-                  {task.assignedToId ? (
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                      A
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">-</span>
-                  )}
+
+                {/* Desktop Layout - Grid */}
+                <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                  <div className="col-span-5 flex items-center gap-2 min-w-0">
+                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
+                    <span className="truncate text-sm font-medium">{task.title}</span>
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <Badge className={getStatusColor(task.status)} variant="secondary" className="text-xs">
+                      {task.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <Badge className={getPriorityColor(task.priority)} variant="secondary" className="text-xs">
+                      {task.priority}
+                    </Badge>
+                  </div>
+                  
+                  <div className="col-span-2 text-sm text-muted-foreground">
+                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "-"}
+                  </div>
+                  
+                  <div className="col-span-1 flex items-center justify-center">
+                    {task.assignedToId ? (
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                        A
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -691,8 +715,8 @@ export default function TasksPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* Left Sidebar - Task Spaces */}
-      <div className="w-64 border-r bg-card/50 overflow-y-auto">
+      {/* Left Sidebar - Task Spaces - Hidden on mobile */}
+      <div className="hidden md:block w-64 border-r bg-card/50 overflow-y-auto">
         <TaskSpacesSidebar 
           selectedSpaceId={selectedSpaceId}
           onSpaceSelect={setSelectedSpaceId}
@@ -701,13 +725,13 @@ export default function TasksPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+        <div className="p-3 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 Task Management
               </h1>
-              <p className="text-muted-foreground mt-1">Organize and track your team's tasks</p>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">Organize and track your team's tasks</p>
             </div>
         
         <div className="flex flex-wrap items-center gap-3">
@@ -1318,14 +1342,14 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Conversational AI Task Assistant */}
+      {/* Conversational AI Task Assistant - Always Bottom Right */}
       {!isChatOpen ? (
         <Button
           size="lg"
           onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-6 right-6 z-50 rounded-full w-16 h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
+          className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[9999] rounded-full w-14 h-14 md:w-16 md:h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
         >
-          <Sparkles className="w-7 h-7" />
+          <Sparkles className="w-6 h-6 md:w-7 md:h-7" />
         </Button>
       ) : (
         <ConversationalTaskChat

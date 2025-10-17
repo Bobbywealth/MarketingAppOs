@@ -260,7 +260,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   if (!isOpen) return null;
 
   return (
-    <Card className="fixed bottom-6 right-6 w-[420px] h-[600px] shadow-2xl border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5 flex flex-col z-50">
+    <Card className="fixed bottom-4 right-4 left-4 md:left-auto md:bottom-6 md:right-6 md:w-[420px] h-[600px] max-h-[80vh] shadow-2xl border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5 flex flex-col z-[9999]">
       <CardHeader className="p-4 border-b bg-gradient-to-r from-primary/10 to-purple-500/10 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
