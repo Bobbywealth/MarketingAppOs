@@ -319,6 +319,16 @@ export default function EmailsPage() {
     sendEmailMutation.mutate(composeForm);
   };
 
+  const handleReply = (email: Email) => {
+    setComposeForm({
+      to: email.from,
+      cc: "",
+      subject: email.subject.startsWith('Re: ') ? email.subject : `Re: ${email.subject}`,
+      body: `\n\n---\nOn ${new Date(email.receivedAt).toLocaleString()}, ${email.fromName || email.from} wrote:\n${email.bodyPreview}`,
+    });
+    setIsComposeOpen(true); // Use the existing compose dialog
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -397,7 +407,9 @@ export default function EmailsPage() {
             </DialogTrigger>
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Compose New Email</DialogTitle>
+                <DialogTitle>
+                  {composeForm.subject.startsWith('Re: ') ? 'Reply to Email' : 'Compose New Email'}
+                </DialogTitle>
                 <DialogDescription>Send an email from your company account</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -732,7 +744,11 @@ export default function EmailsPage() {
                                     </>
                                   )}
                                 </Button>
-                                <Button variant="outline" size="sm">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleReply(selectedEmail)}
+                                >
                                   <Reply className="w-4 h-4 mr-2" />
                                   Reply
                                 </Button>
