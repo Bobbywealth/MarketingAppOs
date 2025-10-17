@@ -2038,6 +2038,8 @@ Examples:
 
   app.post("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
+      console.log("Creating user with data:", { username: req.body.username, role: req.body.role });
+      
       const { hashPassword } = await import("./auth.js");
       const userData = {
         username: req.body.username,
@@ -2045,13 +2047,17 @@ Examples:
         role: req.body.role || "staff",
       };
       
+      console.log("Hashed password, calling storage.createUser...");
       const user = await storage.createUser(userData);
+      console.log("User created successfully:", user.id);
+      
       // Don't send password hash
       const { password, ...sanitizedUser } = user;
       res.status(201).json(sanitizedUser);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to create user" });
+    } catch (error: any) {
+      console.error("User creation error:", error);
+      console.error("Error details:", error?.message, error?.code);
+      res.status(500).json({ message: error?.message || "Failed to create user" });
     }
   });
 
