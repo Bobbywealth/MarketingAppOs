@@ -194,6 +194,13 @@ export default function LeadsPage() {
                   <Input name="position" placeholder="CEO, Marketing Manager" />
                 </div>
                 <div>
+                  <Label>Website</Label>
+                  <Input name="website" type="url" placeholder="https://example.com" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <Label>Lead Value</Label>
                   <Input name="value" type="number" placeholder="5000" />
                 </div>

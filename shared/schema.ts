@@ -164,6 +164,7 @@ export const leads = pgTable("leads", {
   email: varchar("email"),
   phone: varchar("phone"),
   company: varchar("company"),
+  website: varchar("website"),
   stage: varchar("stage").notNull().default("prospect"), // prospect, qualified, proposal, closed_won, closed_lost
   score: varchar("score").notNull().default("warm"), // hot, warm, cold
   value: integer("value"), // potential deal value in cents
