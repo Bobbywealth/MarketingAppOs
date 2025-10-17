@@ -243,6 +243,13 @@ export default function EmailsPage() {
   const [emailAnalysis, setEmailAnalysis] = useState<any>(null);
 
   const handleEmailClick = async (email: Email) => {
+    // Toggle: if clicking the same email, collapse it
+    if (selectedEmail?.id === email.id) {
+      setSelectedEmail(null);
+      setEmailAnalysis(null);
+      return;
+    }
+
     setSelectedEmail(email);
     setEmailAnalysis(null); // Reset analysis when switching emails
     
