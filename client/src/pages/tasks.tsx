@@ -49,7 +49,7 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 
 export default function TasksPage() {
   const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
+  const [viewMode, setViewMode] = useState<"list" | "kanban" | "compact">("compact");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -61,6 +61,7 @@ export default function TasksPage() {
   const [isListening, setIsListening] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -458,6 +459,156 @@ export default function TasksPage() {
     );
   };
 
+  const renderCompactView = () => {
+    return (
+      <div className="border rounded-lg overflow-hidden bg-card">
+        {/* Header */}
+        <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground">
+          <div className="col-span-5">TASK NAME</div>
+          <div className="col-span-2">STATUS</div>
+          <div className="col-span-2">PRIORITY</div>
+          <div className="col-span-2">DUE DATE</div>
+          <div className="col-span-1">ASSIGNEE</div>
+        </div>
+        
+        {/* Task Rows */}
+        <div className="divide-y">
+          {filteredTasks.map((task) => (
+            <div key={task.id} className="group">
+              {/* Compact Row */}
+              <div 
+                className={`grid grid-cols-12 gap-4 px-4 py-2.5 items-center cursor-pointer hover:bg-muted/30 transition-colors ${
+                  expandedTaskId === task.id ? "bg-muted/50" : ""
+                }`}
+                onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+                data-testid={`task-row-${task.id}`}
+              >
+                <div className="col-span-5 flex items-center gap-2 min-w-0">
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
+                  <span className="truncate text-sm font-medium">{task.title}</span>
+                </div>
+                
+                <div className="col-span-2">
+                  <Badge className={getStatusColor(task.status)} variant="secondary" className="text-xs">
+                    {task.status.replace("_", " ")}
+                  </Badge>
+                </div>
+                
+                <div className="col-span-2">
+                  <Badge className={getPriorityColor(task.priority)} variant="secondary" className="text-xs">
+                    {task.priority}
+                  </Badge>
+                </div>
+                
+                <div className="col-span-2 text-sm text-muted-foreground">
+                  {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "-"}
+                </div>
+                
+                <div className="col-span-1 flex items-center justify-center">
+                  {task.assignedToId ? (
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                      A
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">-</span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Expanded Details */}
+              {expandedTaskId === task.id && (
+                <div className="px-4 py-4 bg-muted/20 border-t">
+                  <div className="space-y-3">
+                    {task.description && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">DESCRIPTION</p>
+                        <p className="text-sm">{task.description}</p>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">STATUS</p>
+                        <Select
+                          value={task.status}
+                          onValueChange={(status) => updateTaskStatusMutation.mutate({ id: task.id, status })}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todo">To Do</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="review">Review</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {task.dueDate && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">DUE DATE</p>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            {new Date(task.dueDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {task.assignedToId && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">ASSIGNED TO</p>
+                          <div className="flex items-center gap-2 text-sm">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                            <span>User #{task.assignedToId}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTask(task);
+                        }}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Delete this task?")) {
+                            deleteTaskMutation.mutate(task.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {filteredTasks.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No tasks match the current filters</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderListView = () => {
     return (
       <div className="space-y-3">
@@ -560,6 +711,15 @@ export default function TasksPage() {
         
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 rounded-lg border bg-card p-1">
+            <Button
+              variant={viewMode === "compact" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("compact")}
+              data-testid="button-view-compact"
+            >
+              <ListTodo className="w-4 h-4 mr-2" />
+              Compact
+            </Button>
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"
@@ -1152,7 +1312,7 @@ export default function TasksPage() {
       </div>
 
       <div className="flex-1 overflow-auto">
-        {viewMode === "kanban" ? renderKanbanView() : renderListView()}
+        {viewMode === "kanban" ? renderKanbanView() : viewMode === "compact" ? renderCompactView() : renderListView()}
       </div>
         </div>
       </div>
