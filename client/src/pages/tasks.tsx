@@ -94,6 +94,8 @@ export default function TasksPage() {
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormData) => {
+      console.log("📝 Form data received:", data);
+      
       const taskData: any = {
         title: data.title,
         status: data.status,
@@ -105,7 +107,15 @@ export default function TasksPage() {
       if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
       if (data.campaignId) taskData.campaignId = data.campaignId;
       if (data.clientId) taskData.clientId = data.clientId;
-      if (data.assignedToId) taskData.assignedToId = parseInt(data.assignedToId);
+      if (data.assignedToId && data.assignedToId !== "") {
+        const parsedId = parseInt(data.assignedToId);
+        if (!isNaN(parsedId)) {
+          taskData.assignedToId = parsedId;
+          console.log("✅ Parsed assignedToId:", parsedId);
+        } else {
+          console.error("❌ Failed to parse assignedToId:", data.assignedToId);
+        }
+      }
       if (data.isRecurring) {
         taskData.isRecurring = true;
         if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
@@ -113,6 +123,7 @@ export default function TasksPage() {
         if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate; // Send as string
       }
       
+      console.log("📤 Sending taskData:", taskData);
       return apiRequest("POST", "/api/tasks", taskData);
     },
     onSuccess: () => {

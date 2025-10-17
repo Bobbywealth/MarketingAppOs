@@ -979,10 +979,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
+      console.log("📥 Backend received task data:", JSON.stringify(req.body, null, 2));
       const validatedData = insertTaskSchema.parse(req.body);
+      console.log("✅ Validation passed, creating task:", validatedData);
       const task = await storage.createTask(validatedData);
       res.status(201).json(task);
     } catch (error) {
+      console.error("❌ Task creation error:", error);
       handleValidationError(error, res);
     }
   });
