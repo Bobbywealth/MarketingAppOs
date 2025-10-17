@@ -29,6 +29,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
+import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -1317,98 +1318,24 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Floating AI Chat Popup - Bottom Right */}
-      <div className="fixed bottom-6 right-6 z-50">
-        {!isChatOpen ? (
-          <Button
-            size="lg"
-            onClick={() => setIsChatOpen(true)}
-            className="rounded-full w-14 h-14 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
-          >
-            <MessageSquare className="w-6 h-6" />
-          </Button>
-        ) : (
-          <Card className="w-96 shadow-2xl border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-            <CardHeader className="p-4 border-b bg-gradient-to-r from-primary/10 to-purple-500/10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold">AI Task Assistant</h3>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsChatOpen(false)}
-                  className="h-8 w-8"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3">
-              <p className="text-xs text-muted-foreground">
-                💬 Describe your task naturally and I'll create it for you!
-              </p>
-              <div className="space-y-2">
-                <Textarea
-                  placeholder="e.g., 'Call Bobby tomorrow about website redesign, high priority'"
-                  value={aiInput}
-                  onChange={(e) => setAiInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && e.ctrlKey) {
-                      e.preventDefault();
-                      handleAiQuickAdd();
-                    }
-                  }}
-                  disabled={isAiParsing || isListening}
-                  className="min-h-[100px] resize-none"
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleVoiceInput}
-                    disabled={isAiParsing || isListening}
-                    className={`${isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : ''}`}
-                  >
-                    {isListening ? (
-                      <>
-                        <MicOff className="w-4 h-4 mr-2" />
-                        Listening...
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="w-4 h-4 mr-2" />
-                        Voice
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={handleAiQuickAdd}
-                    disabled={isAiParsing || !aiInput.trim()}
-                    className="flex-1 gap-2"
-                  >
-                    {isAiParsing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        Create Task
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  💡 Press Ctrl+Enter to create • Try: "Schedule meeting with John next Friday" or "Urgent: Fix login bug ASAP"
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      {/* Conversational AI Task Assistant */}
+      {!isChatOpen ? (
+        <Button
+          size="lg"
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-6 right-6 z-50 rounded-full w-16 h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
+        >
+          <Sparkles className="w-7 h-7" />
+        </Button>
+      ) : (
+        <ConversationalTaskChat
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          onTaskCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+          }}
+        />
+      )}
     </div>
   );
 }
