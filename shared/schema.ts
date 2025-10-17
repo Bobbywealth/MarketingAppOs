@@ -238,7 +238,7 @@ export const leadAutomationsRelations = relations(leadAutomations, ({ one }) => 
 export const contentPosts = pgTable("content_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
-  platform: varchar("platform").notNull(), // facebook, instagram, twitter, linkedin
+  platforms: jsonb("platforms").notNull(), // Array of: facebook, instagram, twitter, linkedin, tiktok, youtube
   caption: text("caption"),
   mediaUrl: varchar("media_url"),
   scheduledFor: timestamp("scheduled_for"),
@@ -555,6 +555,7 @@ export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, creat
 export const insertContentPostSchema = createInsertSchema(contentPosts)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
+    platforms: z.array(z.enum(['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube'])).min(1, "Select at least one platform"),
     scheduledFor: z.preprocess(
       (val) => {
         if (val === null || val === undefined || val === '') return null;

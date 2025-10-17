@@ -47,7 +47,7 @@ export default function Content() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       clientId: "",
-      platform: "",
+      platforms: [],
       caption: "",
       scheduledFor: "",
     },
@@ -166,6 +166,8 @@ export default function Content() {
       case "instagram": return "bg-[#E4405F]/10 text-[#E4405F] border-[#E4405F]/20";
       case "twitter": return "bg-[#1DA1F2]/10 text-[#1DA1F2] border-[#1DA1F2]/20";
       case "linkedin": return "bg-[#0A66C2]/10 text-[#0A66C2] border-[#0A66C2]/20";
+      case "tiktok": return "bg-black/10 text-black dark:text-white border-black/20";
+      case "youtube": return "bg-[#FF0000]/10 text-[#FF0000] border-[#FF0000]/20";
       default: return "bg-secondary text-secondary-foreground";
     }
   };
@@ -343,23 +345,57 @@ export default function Content() {
 
                     <FormField
                       control={form.control}
-                      name="platform"
-                      render={({ field }) => (
+                      name="platforms"
+                      render={() => (
                         <FormItem>
-                          <FormLabel>Platform *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-platform">
-                                <SelectValue placeholder="Select platform" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="facebook">Facebook</SelectItem>
-                              <SelectItem value="instagram">Instagram</SelectItem>
-                              <SelectItem value="twitter">Twitter</SelectItem>
-                              <SelectItem value="linkedin">LinkedIn</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="mb-4">
+                            <FormLabel className="text-base">Platforms *</FormLabel>
+                            <p className="text-sm text-muted-foreground">Select platforms to post to</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            {[
+                              { id: 'facebook', label: 'Facebook', icon: '📘' },
+                              { id: 'instagram', label: 'Instagram', icon: '📷' },
+                              { id: 'twitter', label: 'Twitter/X', icon: '🐦' },
+                              { id: 'linkedin', label: 'LinkedIn', icon: '💼' },
+                              { id: 'tiktok', label: 'TikTok', icon: '🎵' },
+                              { id: 'youtube', label: 'YouTube', icon: '▶️' },
+                            ].map((platform) => (
+                              <FormField
+                                key={platform.id}
+                                control={form.control}
+                                name="platforms"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={platform.id}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <input
+                                          type="checkbox"
+                                          checked={field.value?.includes(platform.id)}
+                                          onChange={(e) => {
+                                            return e.target.checked
+                                              ? field.onChange([...(field.value || []), platform.id])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value: string) => value !== platform.id
+                                                  )
+                                                )
+                                          }}
+                                          className="h-4 w-4 rounded border-gray-300"
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="text-sm font-normal cursor-pointer">
+                                        {platform.icon} {platform.label}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )
+                                }}
+                              />
+                            ))}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -523,9 +559,13 @@ export default function Content() {
                     >
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-start justify-between gap-1">
-                          <Badge className={`${getPlatformColor(post.platform)} border text-[10px] px-1`} variant="outline">
-                            {post.platform}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {(Array.isArray(post.platforms) ? post.platforms : [post.platforms]).map((platform: string, idx: number) => (
+                              <Badge key={idx} className={`${getPlatformColor(platform)} border text-[10px] px-1`} variant="outline">
+                                {platform}
+                              </Badge>
+                            ))}
+                          </div>
                           <Badge className={`${getStatusColor(post.approvalStatus)} text-[10px] px-1`} variant="secondary">
                             {post.approvalStatus}
                           </Badge>
