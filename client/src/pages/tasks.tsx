@@ -85,6 +85,10 @@ export default function TasksPage() {
       campaignId: "",
       clientId: "",
       assignedToId: "",
+      isRecurring: false,
+      recurringPattern: undefined,
+      recurringInterval: 1,
+      recurringEndDate: "",
     },
   });
 
@@ -99,6 +103,10 @@ export default function TasksPage() {
         campaignId: data.campaignId || undefined,
         clientId: data.clientId || undefined,
         assignedToId: data.assignedToId ? parseInt(data.assignedToId) : undefined,
+        isRecurring: data.isRecurring || false,
+        recurringPattern: data.isRecurring ? data.recurringPattern : undefined,
+        recurringInterval: data.isRecurring ? data.recurringInterval : undefined,
+        recurringEndDate: data.isRecurring && data.recurringEndDate ? new Date(data.recurringEndDate).toISOString() : undefined,
       };
       return apiRequest("POST", "/api/tasks", taskData);
     },
@@ -130,6 +138,10 @@ export default function TasksPage() {
         campaignId: data.campaignId || undefined,
         clientId: data.clientId || undefined,
         assignedToId: data.assignedToId ? parseInt(data.assignedToId) : undefined,
+        isRecurring: data.isRecurring || false,
+        recurringPattern: data.isRecurring ? data.recurringPattern : undefined,
+        recurringInterval: data.isRecurring ? data.recurringInterval : undefined,
+        recurringEndDate: data.isRecurring && data.recurringEndDate ? new Date(data.recurringEndDate).toISOString() : undefined,
       };
       return apiRequest("PATCH", `/api/tasks/${editingTask.id}`, taskData);
     },
@@ -161,6 +173,10 @@ export default function TasksPage() {
       campaignId: task.campaignId || "",
       clientId: task.clientId || "",
       assignedToId: task.assignedToId?.toString() || "",
+      isRecurring: task.isRecurring || false,
+      recurringPattern: task.recurringPattern as any,
+      recurringInterval: task.recurringInterval || 1,
+      recurringEndDate: task.recurringEndDate ? new Date(task.recurringEndDate).toISOString().split('T')[0] : "",
     });
     setIsEditDialogOpen(true);
   };
@@ -709,6 +725,104 @@ export default function TasksPage() {
                     )}
                   />
 
+                  {/* Recurring Task Settings */}
+                  <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                    <FormField
+                      control={form.control}
+                      name="isRecurring"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <input
+                              type="checkbox"
+                              checked={field.value || false}
+                              onChange={(e) => field.onChange(e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 mt-1"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="cursor-pointer">
+                              🔄 Make this a recurring task
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Automatically create a new task when this one is completed
+                            </p>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {form.watch("isRecurring") && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="recurringPattern"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Repeat Pattern</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select pattern" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="daily">Daily</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="recurringInterval"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Every</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                    placeholder="1"
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-muted-foreground">
+                                  Repeat every X {form.watch("recurringPattern") || "period"}(s)
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="recurringEndDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>End Date (Optional)</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <p className="text-xs text-muted-foreground">
+                                Leave empty to repeat indefinitely
+                              </p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                  </div>
+
                   <div className="flex justify-end gap-3 pt-4">
                     <Button
                       type="button"
@@ -877,6 +991,104 @@ export default function TasksPage() {
                       </FormItem>
                     )}
                   />
+
+                  {/* Recurring Task Settings */}
+                  <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                    <FormField
+                      control={form.control}
+                      name="isRecurring"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <input
+                              type="checkbox"
+                              checked={field.value || false}
+                              onChange={(e) => field.onChange(e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 mt-1"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="cursor-pointer">
+                              🔄 Make this a recurring task
+                            </FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Automatically create a new task when this one is completed
+                            </p>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {form.watch("isRecurring") && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="recurringPattern"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Repeat Pattern</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select pattern" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="daily">Daily</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="recurringInterval"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Every</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                    placeholder="1"
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-muted-foreground">
+                                  Repeat every X {form.watch("recurringPattern") || "period"}(s)
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="recurringEndDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>End Date (Optional)</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <p className="text-xs text-muted-foreground">
+                                Leave empty to repeat indefinitely
+                              </p>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                  </div>
 
                   <div className="flex justify-end gap-3 pt-4">
                     <Button
