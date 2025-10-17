@@ -30,42 +30,48 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
 
   const createSpaceMutation = useMutation({
     mutationFn: async (data: { name: string; icon: string; color: string }) => {
-      return apiRequest("POST", "/api/task-spaces", data);
+      const response = await apiRequest("POST", "/api/task-spaces", data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-spaces"] });
       setIsCreateDialogOpen(false);
       toast({ title: "✅ Space created successfully" });
     },
-    onError: () => {
-      toast({ title: "Failed to create space", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Create space error:", error);
+      toast({ title: "Failed to create space", description: error?.message || "Unknown error", variant: "destructive" });
     },
   });
 
   const updateSpaceMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<TaskSpace> }) => {
-      return apiRequest("PATCH", `/api/task-spaces/${id}`, data);
+      const response = await apiRequest("PATCH", `/api/task-spaces/${id}`, data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-spaces"] });
       setEditingSpace(null);
       toast({ title: "✅ Space updated successfully" });
     },
-    onError: () => {
-      toast({ title: "Failed to update space", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Update space error:", error);
+      toast({ title: "Failed to update space", description: error?.message || "Unknown error", variant: "destructive" });
     },
   });
 
   const deleteSpaceMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/task-spaces/${id}`, {});
+      const response = await apiRequest("DELETE", `/api/task-spaces/${id}`, {});
+      return response.ok;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/task-spaces"] });
       toast({ title: "✅ Space deleted successfully" });
     },
-    onError: () => {
-      toast({ title: "Failed to delete space", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Delete space error:", error);
+      toast({ title: "Failed to delete space", description: error?.message || "Unknown error", variant: "destructive" });
     },
   });
 

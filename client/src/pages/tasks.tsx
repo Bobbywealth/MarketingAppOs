@@ -540,10 +540,10 @@ export default function TasksPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left Sidebar - Task Spaces */}
-      <div className="w-64 border-r bg-card/50 p-4 overflow-y-auto">
+      <div className="w-64 border-r bg-card/50 overflow-y-auto">
         <TaskSpacesSidebar 
           selectedSpaceId={selectedSpaceId}
-          onSelectSpace={setSelectedSpaceId}
+          onSpaceSelect={setSelectedSpaceId}
         />
       </div>
 

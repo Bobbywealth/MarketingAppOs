@@ -981,11 +981,19 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     try {
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
-      const spaceData = { ...req.body, createdBy: userId };
+      
+      // Ensure userId is a valid integer
+      const parsedUserId = typeof userId === 'number' ? userId : parseInt(userId);
+      if (isNaN(parsedUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const spaceData = { ...req.body, createdBy: parsedUserId };
+      console.log("Creating task space:", spaceData);
       const space = await storage.createTaskSpace(spaceData);
       res.status(201).json(space);
     } catch (error) {
-      console.error(error);
+      console.error("Task space creation error:", error);
       res.status(500).json({ message: "Failed to create task space" });
     }
   });
