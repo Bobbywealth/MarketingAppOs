@@ -3,6 +3,8 @@ import {
   clients,
   campaigns,
   tasks,
+  taskSpaces,
+  userViewPreferences,
   taskComments,
   leads,
   leadActivities,
@@ -29,6 +31,10 @@ import {
   type InsertCampaign,
   type Task,
   type InsertTask,
+  type TaskSpace,
+  type InsertTaskSpace,
+  type UserViewPreferences,
+  type InsertUserViewPreferences,
   type TaskComment,
   type InsertTaskComment,
   type Lead,
@@ -90,9 +96,17 @@ export interface IStorage {
   updateCampaign(id: string, data: Partial<InsertCampaign>): Promise<Campaign>;
   deleteCampaign(id: string): Promise<void>;
 
+  // Task Spaces operations
+  getTaskSpaces(): Promise<TaskSpace[]>;
+  getTaskSpace(id: string): Promise<TaskSpace | undefined>;
+  createTaskSpace(space: InsertTaskSpace): Promise<TaskSpace>;
+  updateTaskSpace(id: string, data: Partial<InsertTaskSpace>): Promise<TaskSpace>;
+  deleteTaskSpace(id: string): Promise<void>;
+  
   // Task operations
   getTasks(): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
+  getTasksBySpace(spaceId: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
@@ -100,6 +114,10 @@ export interface IStorage {
   // Task comment operations
   getTaskComments(taskId: string): Promise<TaskComment[]>;
   createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+  
+  // User View Preferences operations
+  getUserViewPreferences(userId: number): Promise<UserViewPreferences | undefined>;
+  upsertUserViewPreferences(userId: number, preferences: Partial<InsertUserViewPreferences>): Promise<UserViewPreferences>;
 
   // Lead operations
   getLeads(): Promise<Lead[]>;
@@ -311,6 +329,36 @@ export class DatabaseStorage implements IStorage {
     await db.delete(campaigns).where(eq(campaigns.id, id));
   }
 
+  // Task Spaces operations
+  async getTaskSpaces(): Promise<TaskSpace[]> {
+    return await db.select().from(taskSpaces).orderBy(taskSpaces.order, taskSpaces.name);
+  }
+
+  async getTaskSpace(id: string): Promise<TaskSpace | undefined> {
+    const [space] = await db.select().from(taskSpaces).where(eq(taskSpaces.id, id));
+    return space;
+  }
+
+  async createTaskSpace(spaceData: InsertTaskSpace): Promise<TaskSpace> {
+    const [space] = await db.insert(taskSpaces).values(spaceData).returning();
+    return space;
+  }
+
+  async updateTaskSpace(id: string, data: Partial<InsertTaskSpace>): Promise<TaskSpace> {
+    const [space] = await db
+      .update(taskSpaces)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(taskSpaces.id, id))
+      .returning();
+    if (!space) throw new Error("Task space not found");
+    return space;
+  }
+
+  async deleteTaskSpace(id: string): Promise<void> {
+    // Note: This will cascade delete or set null on tasks depending on your FK constraint
+    await db.delete(taskSpaces).where(eq(taskSpaces.id, id));
+  }
+
   // Task operations
   async getTasks(): Promise<Task[]> {
     return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
@@ -319,6 +367,10 @@ export class DatabaseStorage implements IStorage {
   async getTask(id: string): Promise<Task | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     return task;
+  }
+
+  async getTasksBySpace(spaceId: string): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.spaceId, spaceId)).orderBy(desc(tasks.createdAt));
   }
 
   async createTask(taskData: InsertTask): Promise<Task> {
@@ -818,6 +870,37 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEmailAccount(id: string) {
     await db.delete(emailAccounts).where(eq(emailAccounts.id, id));
+  }
+
+  // User View Preferences operations
+  async getUserViewPreferences(userId: number): Promise<UserViewPreferences | undefined> {
+    const [preferences] = await db
+      .select()
+      .from(userViewPreferences)
+      .where(eq(userViewPreferences.userId, userId));
+    return preferences;
+  }
+
+  async upsertUserViewPreferences(userId: number, prefsData: Partial<InsertUserViewPreferences>): Promise<UserViewPreferences> {
+    // Check if preferences exist
+    const existing = await this.getUserViewPreferences(userId);
+    
+    if (existing) {
+      // Update existing
+      const [updated] = await db
+        .update(userViewPreferences)
+        .set({ ...prefsData, updatedAt: new Date() })
+        .where(eq(userViewPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      // Create new
+      const [created] = await db
+        .insert(userViewPreferences)
+        .values({ userId, ...prefsData } as InsertUserViewPreferences)
+        .returning();
+      return created;
+    }
   }
 }
 

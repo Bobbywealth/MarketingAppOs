@@ -966,6 +966,86 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
+  // Task Spaces routes
+  app.get("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+    try {
+      const spaces = await storage.getTaskSpaces();
+      res.json(spaces);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch task spaces" });
+    }
+  });
+
+  app.post("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const spaceData = { ...req.body, createdBy: userId };
+      const space = await storage.createTaskSpace(spaceData);
+      res.status(201).json(space);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to create task space" });
+    }
+  });
+
+  app.patch("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const space = await storage.updateTaskSpace(req.params.id, req.body);
+      res.json(space);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update task space" });
+    }
+  });
+
+  app.delete("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteTaskSpace(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete task space" });
+    }
+  });
+
+  // Get tasks by space
+  app.get("/api/task-spaces/:id/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const tasks = await storage.getTasksBySpace(req.params.id);
+      res.json(tasks);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch tasks for space" });
+    }
+  });
+
+  // User View Preferences routes
+  app.get("/api/user-preferences", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const preferences = await storage.getUserViewPreferences(userId);
+      res.json(preferences || null);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch user preferences" });
+    }
+  });
+
+  app.put("/api/user-preferences", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const preferences = await storage.upsertUserViewPreferences(userId, req.body);
+      res.json(preferences);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to save user preferences" });
+    }
+  });
+
   // Task routes (admin and staff only)
   app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
