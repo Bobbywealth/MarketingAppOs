@@ -16,7 +16,8 @@ import type { Client } from "@shared/schema";
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { toast } = useToast();
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const { toast} = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
@@ -162,8 +163,9 @@ export default function Clients() {
           {filteredClients?.map((client) => (
             <Card 
               key={client.id} 
-              className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border"
+              className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer"
               data-testid={`card-client-${client.id}`}
+              onClick={() => setSelectedClient(client)}
             >
               {/* Gradient Overlay on Hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -257,6 +259,123 @@ export default function Clients() {
             </CardContent>
           </Card>
         )}
+
+        {/* Client Details Dialog */}
+        <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto glass-strong">
+            {selectedClient && (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-4 mb-2">
+                    <Avatar className="h-16 w-16 border-2 border-primary/20 shadow-md">
+                      <AvatarImage src={selectedClient.logoUrl || ""} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-xl font-bold">
+                        {selectedClient.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <DialogTitle className="text-2xl">{selectedClient.name}</DialogTitle>
+                      {selectedClient.company && (
+                        <DialogDescription className="text-base flex items-center gap-2 mt-1">
+                          <Building2 className="w-4 h-4" />
+                          {selectedClient.company}
+                        </DialogDescription>
+                      )}
+                    </div>
+                  </div>
+                </DialogHeader>
+
+                <div className="space-y-6 mt-4">
+                  {/* Contact Information */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-primary" />
+                      Contact Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedClient.email && (
+                        <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Mail className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-muted-foreground">Email</span>
+                          </div>
+                          <a href={`mailto:${selectedClient.email}`} className="text-foreground hover:text-primary transition-colors">
+                            {selectedClient.email}
+                          </a>
+                        </div>
+                      )}
+                      {selectedClient.phone && (
+                        <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Phone className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm font-medium text-muted-foreground">Phone</span>
+                          </div>
+                          <a href={`tel:${selectedClient.phone}`} className="text-foreground hover:text-primary transition-colors">
+                            {selectedClient.phone}
+                          </a>
+                        </div>
+                      )}
+                      {selectedClient.website && (
+                        <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/20 col-span-full">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Globe className="w-4 h-4 text-purple-600" />
+                            <span className="text-sm font-medium text-muted-foreground">Website</span>
+                          </div>
+                          <a 
+                            href={selectedClient.website.startsWith('http') ? selectedClient.website : `https://${selectedClient.website}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                          >
+                            {selectedClient.website}
+                            <Globe className="w-3 h-3" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Service Tags */}
+                  {selectedClient.serviceTags && selectedClient.serviceTags.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Services</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedClient.serviceTags.map((tag, idx) => (
+                          <Badge 
+                            key={idx} 
+                            variant="secondary" 
+                            className="text-sm px-3 py-1 bg-gradient-to-r from-primary/10 to-purple-500/10"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {selectedClient.notes && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Notes</h3>
+                      <div className="p-4 rounded-lg bg-muted/50 border">
+                        <p className="text-sm whitespace-pre-wrap">{selectedClient.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Created Date */}
+                  <div className="text-sm text-muted-foreground pt-4 border-t">
+                    Added on {new Date(selectedClient.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
