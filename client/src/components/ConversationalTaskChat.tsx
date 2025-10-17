@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Sparkles, Loader2, Send, X, Check } from "lucide-react";
+import { Sparkles, Loader2, Send, X, Check, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -45,6 +45,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const [taskData, setTaskData] = useState<TaskData>({});
   const [currentStep, setCurrentStep] = useState<"title" | "details" | "priority" | "dueDate" | "assignee" | "confirm">("title");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: users = [] } = useQuery<UserType[]>({
@@ -202,6 +203,54 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     setCurrentStep("title");
   };
 
+  const handleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      toast({
+        title: "Voice input not supported",
+        description: "Your browser doesn't support voice input.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+      setIsListening(false);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+      toast({
+        title: "Voice input failed",
+        description: "Could not capture your voice. Please try again.",
+        variant: "destructive",
+      });
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isProcessing) return;
@@ -301,24 +350,34 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
 
       <CardContent className="p-4 border-t flex-shrink-0">
         <form onSubmit={handleSubmit} className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={handleVoiceInput}
+            disabled={isProcessing}
+            className={`flex-shrink-0 ${isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : ''}`}
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </Button>
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your answer..."
-            disabled={isProcessing}
+            placeholder={isListening ? "Listening..." : "Type your answer..."}
+            disabled={isProcessing || isListening}
             className="flex-1"
             autoFocus
           />
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isProcessing}
+            disabled={!input.trim() || isProcessing || isListening}
           >
             <Send className="w-4 h-4" />
           </Button>
         </form>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          💡 Just chat naturally - I'll ask questions to get all the details!
+          🎤 Voice input or type naturally - I'll guide you through!
         </p>
       </CardContent>
     </Card>
