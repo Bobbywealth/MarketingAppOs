@@ -43,6 +43,28 @@ export default function SettingsPage() {
     },
   });
 
+  const runMigrationMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/run-migration", {});
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "✅ Migration Complete!",
+        description: data.message || "Database columns added successfully. Please refresh the page.",
+      });
+      // Refresh after 2 seconds
+      setTimeout(() => window.location.reload(), 2000);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Migration Failed",
+        description: error?.message || "Failed to run database migration.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfileMutation.mutate(profileData);
@@ -287,6 +309,35 @@ export default function SettingsPage() {
                     ● Connected
                   </Badge>
                 </div>
+                
+                <Separator />
+                
+                {/* Database Migration Section */}
+                <div className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-lg space-y-3">
+                  <div>
+                    <p className="font-medium text-orange-600 dark:text-orange-400">⚠️ Database Migration Required</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Click below to add missing database columns (email, name fields, client ordering). This only needs to be run once.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => runMigrationMutation.mutate()}
+                    disabled={runMigrationMutation.isPending}
+                    className="bg-orange-600 hover:bg-orange-700"
+                  >
+                    {runMigrationMutation.isPending ? (
+                      <>Running Migration...</>
+                    ) : (
+                      <>
+                        <Database className="w-4 h-4 mr-2" />
+                        Run Database Migration
+                      </>
+                    )}
+                  </Button>
+                </div>
+                
+                <Separator />
+                
                 <Button variant="outline">
                   <Database className="w-4 h-4 mr-2" />
                   Export Data
