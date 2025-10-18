@@ -2089,6 +2089,30 @@ Examples:
     }
   });
 
+  // Update own profile (any authenticated user can update their own profile)
+  app.patch("/api/user/profile", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const currentUserId = (req.user as any).id;
+      const { firstName, lastName, email } = req.body;
+      
+      const updateData: any = {};
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (email !== undefined) updateData.email = email;
+
+      await storage.updateUser(currentUserId, updateData);
+      
+      // Fetch updated user
+      const updatedUser = await storage.getUsers();
+      const user = updatedUser.find(u => u.id === currentUserId);
+      
+      res.json({ message: "Profile updated successfully", user });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // Notifications routes
   app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
     try {
