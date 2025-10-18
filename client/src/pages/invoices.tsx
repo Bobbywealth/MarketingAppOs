@@ -199,7 +199,70 @@ export default function Invoices() {
             Real-time Stripe analytics and payment management
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <Select
+            value={dateRange.start ? 'custom' : 'all'}
+            onValueChange={(value) => {
+              const now = new Date();
+              let start: Date | undefined;
+              let end: Date | undefined = new Date();
+
+              switch (value) {
+                case 'today':
+                  start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  break;
+                case '7d':
+                  start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                  break;
+                case '14d':
+                  start = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+                  break;
+                case '30d':
+                  start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                  break;
+                case '60d':
+                  start = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+                  break;
+                case '90d':
+                  start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                  break;
+                case '6m':
+                  start = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+                  break;
+                case 'ytd':
+                  start = new Date(now.getFullYear(), 0, 1);
+                  break;
+                case 'lastyear':
+                  start = new Date(now.getFullYear() - 1, 0, 1);
+                  end = new Date(now.getFullYear() - 1, 11, 31);
+                  break;
+                case 'all':
+                default:
+                  start = undefined;
+                  end = undefined;
+                  break;
+              }
+              
+              setDateRange({ start, end });
+            }}
+          >
+            <SelectTrigger className="w-[180px]">
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Date Range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="7d">Last 7 Days</SelectItem>
+              <SelectItem value="14d">Last 2 Weeks</SelectItem>
+              <SelectItem value="30d">Last 30 Days</SelectItem>
+              <SelectItem value="60d">Last 60 Days</SelectItem>
+              <SelectItem value="90d">Last 90 Days</SelectItem>
+              <SelectItem value="6m">Last 6 Months</SelectItem>
+              <SelectItem value="ytd">Year to Date</SelectItem>
+              <SelectItem value="lastyear">Last Year</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCcw className="w-4 h-4 mr-2" />
             Refresh
