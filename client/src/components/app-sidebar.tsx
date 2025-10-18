@@ -15,7 +15,8 @@ import {
   Globe,
   BarChart3,
   UsersRound,
-  LogOut
+  LogOut,
+  Settings
 } from "lucide-react";
 import mtaLogoWhite from "@assets/mta-logo.png";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
@@ -242,14 +243,22 @@ export function AppSidebar() {
             <p className="text-xs text-muted-foreground capitalize">{user?.role || "staff"}</p>
           </div>
         </div>
-        <a
-          href="/api/logout"
-          className="flex items-center gap-2 text-sm text-muted-foreground hover-elevate rounded-md px-3 py-2 transition-colors"
-          data-testid="button-logout"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Log Out</span>
-        </a>
+        <div className="space-y-1">
+          <Link href="/settings">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground hover-elevate rounded-md px-3 py-2 transition-colors cursor-pointer">
+              <Settings className="w-4 h-4" />
+              <span>Settings</span>
+            </div>
+          </Link>
+          <a
+            href="/api/logout"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover-elevate rounded-md px-3 py-2 transition-colors"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Log Out</span>
+          </a>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit } from "lucide-react";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,8 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [draggedClient, setDraggedClient] = useState<Client | null>(null);
+  const [dragOverClient, setDragOverClient] = useState<Client | null>(null);
   const { toast} = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
@@ -54,6 +56,22 @@ export default function Clients() {
     },
     onError: () => {
       toast({ title: "Failed to update client", variant: "destructive" });
+    },
+  });
+
+  const reorderClientsMutation = useMutation({
+    mutationFn: async (reorderedClients: Client[]) => {
+      // Update displayOrder for each client
+      const promises = reorderedClients.map((client, index) =>
+        apiRequest("PATCH", `/api/clients/${client.id}`, { displayOrder: index })
+      );
+      await Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to reorder clients", variant: "destructive" });
     },
   });
 
@@ -100,11 +118,54 @@ export default function Clients() {
     });
   };
 
-  const filteredClients = clients?.filter((client) =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleDragStart = (client: Client) => {
+    setDraggedClient(client);
+  };
+
+  const handleDragOver = (e: React.DragEvent, client: Client) => {
+    e.preventDefault();
+    setDragOverClient(client);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetClient: Client) => {
+    e.preventDefault();
+    if (!draggedClient || draggedClient.id === targetClient.id) {
+      setDraggedClient(null);
+      setDragOverClient(null);
+      return;
+    }
+
+    const sortedClients = [...(clients || [])].sort((a, b) => 
+      (a.displayOrder || 0) - (b.displayOrder || 0)
+    );
+
+    const draggedIndex = sortedClients.findIndex(c => c.id === draggedClient.id);
+    const targetIndex = sortedClients.findIndex(c => c.id === targetClient.id);
+
+    // Reorder array
+    const newClients = [...sortedClients];
+    const [removed] = newClients.splice(draggedIndex, 1);
+    newClients.splice(targetIndex, 0, removed);
+
+    // Update order and save
+    reorderClientsMutation.mutate(newClients);
+
+    setDraggedClient(null);
+    setDragOverClient(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedClient(null);
+    setDragOverClient(null);
+  };
+
+  const filteredClients = clients
+    ?.filter((client) =>
+      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
   if (isLoading) {
     return (
@@ -205,17 +266,33 @@ export default function Clients() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in">
           {filteredClients?.map((client) => (
             <Card 
-              key={client.id} 
-              className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer"
+              key={client.id}
+              draggable
+              onDragStart={() => handleDragStart(client)}
+              onDragOver={(e) => handleDragOver(e, client)}
+              onDrop={(e) => handleDrop(e, client)}
+              onDragEnd={handleDragEnd}
+              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-move ${
+                draggedClient?.id === client.id ? 'opacity-50 scale-95' : ''
+              } ${
+                dragOverClient?.id === client.id ? 'ring-2 ring-primary ring-offset-2' : ''
+              }`}
               data-testid={`card-client-${client.id}`}
-              onClick={() => setSelectedClient(client)}
             >
               {/* Gradient Overlay on Hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
               <CardContent className="relative p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="relative">
+                  {/* Drag Handle */}
+                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+                    onClick={(e) => e.stopPropagation()}>
+                    <GripVertical className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="relative cursor-pointer" onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedClient(client);
+                  }}>
                     <Avatar className="h-14 w-14 border-2 border-primary/20 shadow-md">
                       <AvatarImage src={client.logoUrl || ""} />
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-lg font-bold">

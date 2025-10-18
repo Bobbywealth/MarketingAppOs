@@ -30,6 +30,7 @@ import Analytics from "@/pages/analytics";
 import Team from "@/pages/team";
 import Emails from "@/pages/emails";
 import Phone from "@/pages/phone";
+import Settings from "@/pages/settings";
 import CompanyCalendar from "@/pages/company-calendar";
 import NotFound from "@/pages/not-found";
 
@@ -58,6 +59,7 @@ function Router() {
       <ProtectedRoute path="/team" component={Team} />
       <ProtectedRoute path="/emails" component={Emails} />
       <ProtectedRoute path="/phone" component={Phone} />
+      <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />
       <Route component={NotFound} />
     </Switch>

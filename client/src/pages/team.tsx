@@ -209,6 +209,39 @@ export default function TeamPage() {
             </DialogHeader>
             <form onSubmit={handleCreateUser}>
               <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      value={newUser.firstName || ""}
+                      onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                      placeholder="John"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      value={newUser.lastName || ""}
+                      onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                      placeholder="Doe"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUser.email || ""}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    placeholder="john@example.com"
+                    required
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="username">Username *</Label>
                   <Input
