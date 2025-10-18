@@ -2363,6 +2363,57 @@ Examples:
     }
   });
 
+  // Subscription Packages routes
+  app.get("/api/subscription-packages", async (_req: Request, res: Response) => {
+    try {
+      const packages = await storage.getActiveSubscriptionPackages();
+      res.json(packages);
+    } catch (error) {
+      console.error("Error fetching packages:", error);
+      res.status(500).json({ message: "Failed to fetch subscription packages" });
+    }
+  });
+
+  app.get("/api/admin/subscription-packages", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+    try {
+      const packages = await storage.getSubscriptionPackages();
+      res.json(packages);
+    } catch (error) {
+      console.error("Error fetching packages:", error);
+      res.status(500).json({ message: "Failed to fetch subscription packages" });
+    }
+  });
+
+  app.post("/api/admin/subscription-packages", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const pkg = await storage.createSubscriptionPackage(req.body);
+      res.status(201).json(pkg);
+    } catch (error) {
+      console.error("Error creating package:", error);
+      res.status(500).json({ message: "Failed to create subscription package" });
+    }
+  });
+
+  app.patch("/api/admin/subscription-packages/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const pkg = await storage.updateSubscriptionPackage(req.params.id, req.body);
+      res.json(pkg);
+    } catch (error) {
+      console.error("Error updating package:", error);
+      res.status(500).json({ message: "Failed to update subscription package" });
+    }
+  });
+
+  app.delete("/api/admin/subscription-packages/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteSubscriptionPackage(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting package:", error);
+      res.status(500).json({ message: "Failed to delete subscription package" });
+    }
+  });
+
   // Object storage routes
   app.get("/api/upload-url", isAuthenticated, async (_req: Request, res: Response) => {
     try {

@@ -610,6 +610,25 @@ export const rolePermissions = pgTable("role_permissions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Subscription Packages table
+export const subscriptionPackages = pgTable("subscription_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // e.g., "Starter", "Professional", "Enterprise"
+  description: text("description"), // Short description
+  price: integer("price").notNull(), // Price in cents
+  billingPeriod: varchar("billing_period").notNull().default("month"), // month, year
+  features: jsonb("features").notNull(), // Array of features
+  stripePriceId: varchar("stripe_price_id"), // Stripe Price ID for integration
+  stripeProductId: varchar("stripe_product_id"), // Stripe Product ID
+  isActive: boolean("is_active").default(true),
+  isFeatured: boolean("is_featured").default(false), // Highlight as "Most Popular"
+  displayOrder: integer("display_order").default(0), // Order on homepage
+  buttonText: varchar("button_text").default("Get Started"), // CTA button text
+  buttonLink: varchar("button_link"), // Where button links to
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Zod schemas for validation
 export const upsertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true }).extend({
@@ -738,3 +757,7 @@ export type EmailAccount = typeof emailAccounts.$inferSelect;
 export const insertRolePermissionsSchema = createInsertSchema(rolePermissions).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertRolePermissions = z.infer<typeof insertRolePermissionsSchema>;
 export type RolePermissions = typeof rolePermissions.$inferSelect;
+
+export const insertSubscriptionPackageSchema = createInsertSchema(subscriptionPackages).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSubscriptionPackage = z.infer<typeof insertSubscriptionPackageSchema>;
+export type SubscriptionPackage = typeof subscriptionPackages.$inferSelect;

@@ -23,6 +23,7 @@ import {
   emails,
   emailAccounts,
   rolePermissions,
+  subscriptionPackages,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -72,6 +73,8 @@ import {
   type InsertEmailAccount,
   type RolePermissions,
   type InsertRolePermissions,
+  type SubscriptionPackage,
+  type InsertSubscriptionPackage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -939,6 +942,53 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // Subscription Package operations
+  async getSubscriptionPackages(): Promise<SubscriptionPackage[]> {
+    return await db
+      .select()
+      .from(subscriptionPackages)
+      .orderBy(subscriptionPackages.displayOrder, subscriptionPackages.createdAt);
+  }
+
+  async getActiveSubscriptionPackages(): Promise<SubscriptionPackage[]> {
+    return await db
+      .select()
+      .from(subscriptionPackages)
+      .where(eq(subscriptionPackages.isActive, true))
+      .orderBy(subscriptionPackages.displayOrder, subscriptionPackages.createdAt);
+  }
+
+  async getSubscriptionPackage(id: string): Promise<SubscriptionPackage | undefined> {
+    const [pkg] = await db
+      .select()
+      .from(subscriptionPackages)
+      .where(eq(subscriptionPackages.id, id));
+    return pkg;
+  }
+
+  async createSubscriptionPackage(data: InsertSubscriptionPackage): Promise<SubscriptionPackage> {
+    const [pkg] = await db
+      .insert(subscriptionPackages)
+      .values(data)
+      .returning();
+    return pkg;
+  }
+
+  async updateSubscriptionPackage(id: string, data: Partial<InsertSubscriptionPackage>): Promise<SubscriptionPackage> {
+    const [pkg] = await db
+      .update(subscriptionPackages)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(subscriptionPackages.id, id))
+      .returning();
+    return pkg;
+  }
+
+  async deleteSubscriptionPackage(id: string): Promise<void> {
+    await db
+      .delete(subscriptionPackages)
+      .where(eq(subscriptionPackages.id, id));
   }
 }
 

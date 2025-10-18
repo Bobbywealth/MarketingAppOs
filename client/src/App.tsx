@@ -32,6 +32,7 @@ import Emails from "@/pages/emails";
 import Phone from "@/pages/phone";
 import Settings from "@/pages/settings";
 import CompanyCalendar from "@/pages/company-calendar";
+import SubscriptionPackages from "@/pages/subscription-packages";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -51,6 +52,7 @@ function Router() {
       <ProtectedRoute path="/pipeline" component={Pipeline} />
       <ProtectedRoute path="/content" component={Content} />
       <ProtectedRoute path="/invoices" component={Invoices} />
+      <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/onboarding" component={Onboarding} />
       <ProtectedRoute path="/messages" component={Messages} />

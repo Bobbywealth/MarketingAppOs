@@ -7,6 +7,7 @@ import {
   TrendingUp, 
   Calendar, 
   DollarSign, 
+  Package,
   Ticket, 
   ClipboardCheck,
   MessageSquare,
@@ -118,6 +119,12 @@ const businessTools = [
     url: "/invoices",
     icon: DollarSign,
     permission: "canManageInvoices" as const,
+  },
+  {
+    title: "Subscription Packages",
+    url: "/subscription-packages",
+    icon: Package,
+    permission: "canManageUsers" as const, // Admin only
   },
   {
     title: "Support Tickets",

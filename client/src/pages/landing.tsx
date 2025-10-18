@@ -1,8 +1,11 @@
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import type { SubscriptionPackage } from "@shared/schema";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -17,6 +20,18 @@ import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 
 export default function LandingPage() {
+  const { data: packages = [], isLoading: packagesLoading } = useQuery<SubscriptionPackage[]>({
+    queryKey: ["/api/subscription-packages"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/subscription-packages");
+      return response.json();
+    },
+    retry: false,
+    meta: { returnNull: true },
+  });
+
+  const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString()}`;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -455,128 +470,65 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Essential Package */}
-            <Card className="p-8 hover-lift transition-all duration-300 border-2 border-gray-200">
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold mb-2">Essential</h3>
-                <p className="text-muted-foreground text-sm">Perfect for getting started</p>
-              </div>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$1,995</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>1 marketing channel</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>20 hours per month</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Monthly reporting</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Email & chat support</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Basic analytics dashboard</span>
-                </li>
-              </ul>
-              <Link href="/contact">
-                <Button className="w-full" variant="outline">Get Started</Button>
-              </Link>
-            </Card>
-
-            {/* Growth Package - Most Popular */}
-            <Card className="p-8 border-2 border-blue-500 relative hover-lift transition-all duration-300 shadow-xl">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <Badge className="bg-blue-600 text-white">Most Popular</Badge>
-              </div>
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold mb-2">Growth</h3>
-                <p className="text-muted-foreground text-sm">For serious growth</p>
-              </div>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$4,995</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Multi-channel campaigns</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>60 hours per month</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Dedicated account manager</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Weekly strategy calls</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Advanced analytics & reporting</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Priority support</span>
-                </li>
-              </ul>
-              <Link href="/contact">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">Get Started</Button>
-              </Link>
-            </Card>
-
-            {/* Enterprise Package */}
-            <Card className="p-8 hover-lift transition-all duration-300 border-2 border-purple-200 bg-gradient-to-br from-white to-purple-50/30">
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
-                <p className="text-muted-foreground text-sm">Complete marketing solution</p>
-              </div>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">Custom</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Unlimited marketing channels</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Unlimited hours</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Dedicated team of specialists</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>Custom strategy & execution</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>White-label reporting</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span>24/7 support</span>
-                </li>
-              </ul>
-              <Link href="/contact">
-                <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white">Contact Sales</Button>
-              </Link>
-            </Card>
-          </div>
+          {packagesLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading packages...</p>
+            </div>
+          ) : packages.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No packages available at this time.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {packages.map((pkg) => (
+                <Card
+                  key={pkg.id}
+                  className={`p-8 hover-lift transition-all duration-300 ${
+                    pkg.isFeatured
+                      ? "border-2 border-blue-500 relative shadow-xl"
+                      : "border-2 border-gray-200"
+                  }`}
+                >
+                  {pkg.isFeatured && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-blue-600 text-white">Most Popular</Badge>
+                    </div>
+                  )}
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-bold mb-2">{pkg.name}</h3>
+                    {pkg.description && (
+                      <p className="text-muted-foreground text-sm">{pkg.description}</p>
+                    )}
+                  </div>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">{formatCurrency(pkg.price)}</span>
+                    <span className="text-muted-foreground">/{pkg.billingPeriod}</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    {(pkg.features as string[]).map((feature, idx) => (
+                      <li key={idx} className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={pkg.buttonLink || "/contact"}>
+                    <Button
+                      className={`w-full ${
+                        pkg.isFeatured
+                          ? "bg-blue-600 hover:bg-blue-700"
+                          : ""
+                      }`}
+                      variant={pkg.isFeatured ? "default" : "outline"}
+                    >
+                      {pkg.buttonText || "Get Started"}
+                    </Button>
+                  </Link>
+                </Card>
+              ))}
+            </div>
+          )}
 
           <div className="mt-12 text-center">
             <p className="text-sm text-muted-foreground mb-4">
