@@ -2258,6 +2258,37 @@ Examples:
     }
   });
 
+  // Role Permissions routes
+  app.get("/api/role-permissions", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+    try {
+      const permissions = await storage.getAllRolePermissions();
+      res.json(permissions);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch role permissions" });
+    }
+  });
+
+  app.get("/api/role-permissions/:role", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const permissions = await storage.getRolePermissions(req.params.role);
+      res.json(permissions);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch role permissions" });
+    }
+  });
+
+  app.put("/api/role-permissions/:role", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const permissions = await storage.updateRolePermissions(req.params.role, req.body.permissions);
+      res.json(permissions);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update role permissions" });
+    }
+  });
+
   // Object storage routes
   app.get("/api/upload-url", isAuthenticated, async (_req: Request, res: Response) => {
     try {

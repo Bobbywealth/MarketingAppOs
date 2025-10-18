@@ -601,6 +601,15 @@ export const emailAccountsRelations = relations(emailAccounts, ({ one }) => ({
   }),
 }));
 
+// Role Permissions table
+export const rolePermissions = pgTable("role_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  role: varchar("role").notNull().unique(), // admin, manager, staff, client
+  permissions: jsonb("permissions").notNull(), // { canManageUsers: true, canManageClients: false, ... }
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Zod schemas for validation
 export const upsertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true }).extend({
@@ -725,3 +734,7 @@ export type Email = typeof emails.$inferSelect;
 export const insertEmailAccountSchema = createInsertSchema(emailAccounts).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertEmailAccount = z.infer<typeof insertEmailAccountSchema>;
 export type EmailAccount = typeof emailAccounts.$inferSelect;
+
+export const insertRolePermissionsSchema = createInsertSchema(rolePermissions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertRolePermissions = z.infer<typeof insertRolePermissionsSchema>;
+export type RolePermissions = typeof rolePermissions.$inferSelect;

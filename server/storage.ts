@@ -22,6 +22,7 @@ import {
   activityLogs,
   emails,
   emailAccounts,
+  rolePermissions,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -69,6 +70,8 @@ import {
   type InsertEmail,
   type EmailAccount,
   type InsertEmailAccount,
+  type RolePermissions,
+  type InsertRolePermissions,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -898,6 +901,41 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db
         .insert(userViewPreferences)
         .values({ userId, ...prefsData } as InsertUserViewPreferences)
+        .returning();
+      return created;
+    }
+  }
+
+  // Role Permissions operations
+  async getAllRolePermissions(): Promise<RolePermissions[]> {
+    return await db.select().from(rolePermissions);
+  }
+
+  async getRolePermissions(role: string): Promise<RolePermissions | undefined> {
+    const [perms] = await db
+      .select()
+      .from(rolePermissions)
+      .where(eq(rolePermissions.role, role));
+    return perms;
+  }
+
+  async updateRolePermissions(role: string, permissions: any): Promise<RolePermissions> {
+    // Check if permissions exist for this role
+    const existing = await this.getRolePermissions(role);
+    
+    if (existing) {
+      // Update existing
+      const [updated] = await db
+        .update(rolePermissions)
+        .set({ permissions, updatedAt: new Date() })
+        .where(eq(rolePermissions.role, role))
+        .returning();
+      return updated;
+    } else {
+      // Create new
+      const [created] = await db
+        .insert(rolePermissions)
+        .values({ role, permissions })
         .returning();
       return created;
     }
