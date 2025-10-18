@@ -491,10 +491,10 @@ export default function TasksPage() {
                     <span className="font-medium text-sm flex-1">{task.title}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge className={getStatusColor(task.status)} variant="secondary" className="text-xs">
+                    <Badge className={`${getStatusColor(task.status)} text-xs`} variant="secondary">
                       {task.status.replace("_", " ")}
                     </Badge>
-                    <Badge className={getPriorityColor(task.priority)} variant="secondary" className="text-xs">
+                    <Badge className={`${getPriorityColor(task.priority)} text-xs`} variant="secondary">
                       {task.priority}
                     </Badge>
                     {task.dueDate && (
@@ -513,13 +513,13 @@ export default function TasksPage() {
                   </div>
                   
                   <div className="col-span-2">
-                    <Badge className={getStatusColor(task.status)} variant="secondary" className="text-xs">
+                    <Badge className={`${getStatusColor(task.status)} text-xs`} variant="secondary">
                       {task.status.replace("_", " ")}
                     </Badge>
                   </div>
                   
                   <div className="col-span-2">
-                    <Badge className={getPriorityColor(task.priority)} variant="secondary" className="text-xs">
+                    <Badge className={`${getPriorityColor(task.priority)} text-xs`} variant="secondary">
                       {task.priority}
                     </Badge>
                   </div>

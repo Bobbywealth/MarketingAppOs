@@ -18,7 +18,7 @@ import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks,
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ObjectUploader } from "@/components/ObjectUploader";
+import { SimpleUploader } from "@/components/SimpleUploader";
 
 type ViewType = "day" | "week" | "month";
 
@@ -408,32 +408,14 @@ export default function Content() {
                     <div className="space-y-2">
                       <Label>Media (Image or Video)</Label>
                       <div className="flex items-center gap-4">
-                        <ObjectUploader
-                          maxNumberOfFiles={1}
-                          maxFileSize={50 * 1024 * 1024} // 50MB
-                          onGetUploadParameters={async () => {
-                            const response = await apiRequest("POST", "/api/objects/upload", {
-                              filename: `content-${Date.now()}`,
-                              contentType: "image/*,video/*",
-                            });
-                            const data = await response.json();
-                            return {
-                              method: "PUT" as const,
-                              url: data.uploadUrl,
-                            };
+                        <SimpleUploader
+                          onUploadComplete={(url) => {
+                            setUploadedMediaUrl(url);
                           }}
-                          onComplete={(result) => {
-                            if (result.successful && result.successful[0]) {
-                              const uploadedUrl = result.successful[0].uploadURL.split('?')[0];
-                              setUploadedMediaUrl(uploadedUrl);
-                              toast({ title: "✅ Media uploaded successfully" });
-                            }
-                          }}
-                          buttonClassName="w-full"
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          {uploadedMediaUrl ? "Change Media" : "Upload Media"}
-                        </ObjectUploader>
+                          accept="image/*,video/*"
+                          maxSizeMB={50}
+                          buttonText={uploadedMediaUrl ? "Change Media" : "Upload Media"}
+                        />
                       </div>
                       {uploadedMediaUrl && (
                         <div className="relative w-full h-32 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
