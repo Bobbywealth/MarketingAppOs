@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks,
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 type ViewType = "day" | "week" | "month";
 
@@ -28,7 +29,6 @@ const formSchema = insertContentPostSchema.extend({
   approvalStatus: true,
   approvedBy: true,
   publishedAt: true,
-  mediaUrl: true,
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -41,6 +41,7 @@ export default function Content() {
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const [draggedPost, setDraggedPost] = useState<ContentPost | null>(null);
   const [dragOverDay, setDragOverDay] = useState<Date | null>(null);
+  const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -69,6 +70,7 @@ export default function Content() {
       queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
       setDialogOpen(false);
       form.reset();
+      setUploadedMediaUrl(null);
       toast({ title: "Content post created successfully" });
     },
     onError: (error: any) => {
@@ -141,9 +143,10 @@ export default function Content() {
   const handleCreatePost = (values: FormValues) => {
     const postData: InsertContentPost = {
       clientId: values.clientId,
-      platform: values.platform,
+      platforms: values.platforms,
       caption: values.caption || "",
       scheduledFor: values.scheduledFor || null,
+      mediaUrl: uploadedMediaUrl || values.mediaUrl || null,
     };
 
     createPostMutation.mutate(postData);
@@ -401,6 +404,63 @@ export default function Content() {
                       )}
                     />
 
+                    {/* Media Upload */}
+                    <div className="space-y-2">
+                      <Label>Media (Image or Video)</Label>
+                      <div className="flex items-center gap-4">
+                        <ObjectUploader
+                          maxNumberOfFiles={1}
+                          maxFileSize={50 * 1024 * 1024} // 50MB
+                          onGetUploadParameters={async () => {
+                            const response = await apiRequest("POST", "/api/objects/upload", {
+                              filename: `content-${Date.now()}`,
+                              contentType: "image/*,video/*",
+                            });
+                            const data = await response.json();
+                            return {
+                              method: "PUT" as const,
+                              url: data.uploadUrl,
+                            };
+                          }}
+                          onComplete={(result) => {
+                            if (result.successful && result.successful[0]) {
+                              const uploadedUrl = result.successful[0].uploadURL.split('?')[0];
+                              setUploadedMediaUrl(uploadedUrl);
+                              toast({ title: "✅ Media uploaded successfully" });
+                            }
+                          }}
+                          buttonClassName="w-full"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {uploadedMediaUrl ? "Change Media" : "Upload Media"}
+                        </ObjectUploader>
+                      </div>
+                      {uploadedMediaUrl && (
+                        <div className="relative w-full h-32 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                          {uploadedMediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                            <img src={uploadedMediaUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                          ) : uploadedMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                            <video src={uploadedMediaUrl} className="max-w-full max-h-full" controls />
+                          ) : (
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <ImageIcon className="w-6 h-6" />
+                              <span className="text-sm">Media uploaded</span>
+                            </div>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="absolute top-2 right-2"
+                            onClick={() => setUploadedMediaUrl(null)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">Upload an image or video for this post (max 50MB)</p>
+                    </div>
+
                     <FormField
                       control={form.control}
                       name="caption"
@@ -570,6 +630,20 @@ export default function Content() {
                             {post.approvalStatus}
                           </Badge>
                         </div>
+                        
+                        {post.mediaUrl && (
+                          <div className="w-full h-20 rounded border overflow-hidden bg-muted">
+                            {post.mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                              <img src={post.mediaUrl} alt="Post media" className="w-full h-full object-cover" />
+                            ) : post.mediaUrl.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                              <video src={post.mediaUrl} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        )}
                         
                         <p className="text-xs font-medium text-muted-foreground">{getClientName(post.clientId)}</p>
                         <p className="text-xs line-clamp-2">{post.caption}</p>
