@@ -30,9 +30,6 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").unique().notNull(),
   password: text("password").notNull(),
-  email: text("email"),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
   role: text("role").notNull().default("staff"), // admin, staff, client
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -60,7 +57,6 @@ export const clients = pgTable("clients", {
   socialLinks: jsonb("social_links"), // {twitter, facebook, instagram, linkedin}
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
-  displayOrder: integer("display_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
