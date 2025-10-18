@@ -3,6 +3,8 @@ import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
+import { initializeStripe } from "./stripeService";
+import { initializeEmailService } from "./emailService";
 
 const app = express();
 app.use(express.json());
@@ -40,6 +42,10 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = createServer(app);
+  
+  // Initialize services
+  initializeStripe();
+  initializeEmailService();
   
   await setupAuth(app);
   registerRoutes(app);

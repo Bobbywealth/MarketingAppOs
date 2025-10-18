@@ -2313,6 +2313,56 @@ Examples:
     }
   });
 
+  // Stripe routes
+  app.get("/api/stripe/dashboard", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      
+      const { getStripeDashboardMetrics } = await import("./stripeService.js");
+      const metrics = await getStripeDashboardMetrics(start, end);
+      res.json(metrics);
+    } catch (error: any) {
+      console.error("Stripe dashboard error:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch Stripe data" });
+    }
+  });
+
+  app.get("/api/stripe/customers", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+    try {
+      const { getStripeCustomers } = await import("./stripeService.js");
+      const customers = await getStripeCustomers();
+      res.json(customers);
+    } catch (error: any) {
+      console.error("Stripe customers error:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch Stripe customers" });
+    }
+  });
+
+  app.post("/api/stripe/invoices", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { customerId, items } = req.body;
+      const { createStripeInvoice } = await import("./stripeService.js");
+      const invoice = await createStripeInvoice(customerId, items);
+      res.json(invoice);
+    } catch (error: any) {
+      console.error("Stripe invoice creation error:", error);
+      res.status(500).json({ message: error.message || "Failed to create invoice" });
+    }
+  });
+
+  app.get("/api/stripe/balance", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+    try {
+      const { getStripeBalance } = await import("./stripeService.js");
+      const balance = await getStripeBalance();
+      res.json(balance);
+    } catch (error: any) {
+      console.error("Stripe balance error:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch Stripe balance" });
+    }
+  });
+
   // Object storage routes
   app.get("/api/upload-url", isAuthenticated, async (_req: Request, res: Response) => {
     try {

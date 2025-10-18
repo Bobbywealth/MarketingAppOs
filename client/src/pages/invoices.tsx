@@ -1,97 +1,180 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign, Calendar, FileText, CreditCard } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, DollarSign, Calendar, TrendingUp, TrendingDown, Users, CreditCard, ExternalLink, RefreshCcw, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Invoice, Client } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
+
+interface StripeDashboardData {
+  activeSubscribers: number;
+  mrr: number;
+  grossVolume: number;
+  totalRevenue: number;
+  refundedAmount: number;
+  newCustomers: number;
+  totalPayouts: number;
+  topCustomers: Array<{ id: string; name: string; email: string; total: number }>;
+  paymentBreakdown: {
+    succeeded: number;
+    pending: number;
+    failed: number;
+    refunded: number;
+  };
+  recentCharges: Array<{
+    id: string;
+    amount: number;
+    currency: string;
+    customerName: string;
+    created: string;
+    description: string;
+  }>;
+  recentPayouts: Array<{
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    arrivalDate: string;
+    created: string;
+  }>;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+}
+
+interface StripeCustomer {
+  id: string;
+  name: string;
+  email: string;
+}
 
 export default function Invoices() {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [invoiceItems, setInvoiceItems] = useState<Array<{ description: string; amount: string }>>([
+    { description: "", amount: "" }
+  ]);
+  const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>({});
+  
   const { toast } = useToast();
 
-  const { data: invoices, isLoading } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices"],
-  });
-
-  const { data: clients } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-  });
-
-  const { data: stripeData } = useQuery({
-    queryKey: ["/api/stripe/subscriptions"],
+  // Fetch Stripe dashboard metrics
+  const { data: stripeData, isLoading, refetch } = useQuery<StripeDashboardData>({
+    queryKey: ["/api/stripe/dashboard", dateRange],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dateRange.start) params.append('startDate', dateRange.start.toISOString());
+      if (dateRange.end) params.append('endDate', dateRange.end.toISOString());
+      
+      const response = await apiRequest("GET", `/api/stripe/dashboard?${params.toString()}`, undefined);
+      return response.json();
+    },
     retry: false,
-    meta: { returnNull: true },
   });
 
-  const createInvoiceMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/invoices", data);
+  // Fetch Stripe customers
+  const { data: stripeCustomers } = useQuery<StripeCustomer[]>({
+    queryKey: ["/api/stripe/customers"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/stripe/customers", undefined);
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      setDialogOpen(false);
-      toast({ title: "Invoice created successfully" });
+    retry: false,
+  });
+
+  // Fetch Stripe balance
+  const { data: stripeBalance } = useQuery({
+    queryKey: ["/api/stripe/balance"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/stripe/balance", undefined);
+      return response.json();
     },
-    onError: () => {
-      toast({ title: "Failed to create invoice", variant: "destructive" });
+    retry: false,
+  });
+
+  const createStripeInvoiceMutation = useMutation({
+    mutationFn: async (data: { customerId: string; items: Array<{ description: string; amount: number }> }) => {
+      const response = await apiRequest("POST", "/api/stripe/invoices", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setInvoiceDialogOpen(false);
+      setInvoiceItems([{ description: "", amount: "" }]);
+      setSelectedCustomerId("");
+      toast({ 
+        title: "✅ Invoice created successfully!",
+        description: "Invoice has been sent to the customer.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/stripe/dashboard"] });
+      
+      // Open invoice URL if available
+      if (data.hostedInvoiceUrl) {
+        window.open(data.hostedInvoiceUrl, '_blank');
+      }
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to create invoice", 
+        description: error?.message || "An error occurred",
+        variant: "destructive" 
+      });
     },
   });
 
-  const handleCreateInvoice = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  const handleCreateInvoice = () => {
+    const validItems = invoiceItems
+      .filter(item => item.description.trim() && item.amount.trim())
+      .map(item => ({
+        description: item.description,
+        amount: parseFloat(item.amount),
+      }));
 
-    createInvoiceMutation.mutate({
-      clientId: formData.get("clientId"),
-      invoiceNumber: formData.get("invoiceNumber"),
-      amount: parseInt(formData.get("amount") as string),
-      dueDate: formData.get("dueDate") ? new Date(formData.get("dueDate") as string) : null,
-      description: formData.get("description"),
+    if (!selectedCustomerId) {
+      toast({ title: "Please select a customer", variant: "destructive" });
+      return;
+    }
+
+    if (validItems.length === 0) {
+      toast({ title: "Please add at least one item", variant: "destructive" });
+      return;
+    }
+
+    createStripeInvoiceMutation.mutate({
+      customerId: selectedCustomerId,
+      items: validItems,
     });
   };
 
-  const getStatusGradient = (status: string) => {
-    switch (status) {
-      case "paid": return "from-emerald-500 to-teal-500";
-      case "sent": return "from-blue-500 to-cyan-500";
-      case "overdue": return "from-red-500 to-orange-500";
-      case "draft": return "from-slate-400 to-slate-500";
-      default: return "from-slate-400 to-slate-500";
-    }
+  const addInvoiceItem = () => {
+    setInvoiceItems([...invoiceItems, { description: "", amount: "" }]);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "paid": return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
-      case "sent": return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
-      case "overdue": return "bg-red-500/10 text-red-700 dark:text-red-400";
-      case "draft": return "bg-slate-500/10 text-slate-700 dark:text-slate-400";
-      default: return "bg-slate-500/10 text-slate-700 dark:text-slate-400";
-    }
+  const removeInvoiceItem = (index: number) => {
+    setInvoiceItems(invoiceItems.filter((_, i) => i !== index));
+  };
+
+  const updateInvoiceItem = (index: number, field: 'description' | 'amount', value: string) => {
+    const updated = [...invoiceItems];
+    updated[index][field] = value;
+    setInvoiceItems(updated);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-full gradient-mesh">
-        <div className="p-6 lg:p-8 xl:p-12">
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <Card key={i} className="p-6 border-0 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="h-5 bg-muted/50 rounded w-32 shimmer"></div>
-                    <div className="h-4 bg-muted/50 rounded w-48 shimmer"></div>
-                  </div>
-                  <div className="h-8 bg-muted/50 rounded w-24 shimmer"></div>
-                </div>
+      <div className="min-h-full gradient-mesh p-6 lg:p-8">
+        <div className="space-y-6">
+          <div className="h-12 bg-muted/50 rounded w-64 shimmer"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Card key={i} className="p-6">
+                <div className="h-24 bg-muted/50 rounded shimmer"></div>
               </Card>
             ))}
           </div>
@@ -100,219 +183,422 @@ export default function Invoices() {
     );
   }
 
-  const totalRevenue = invoices?.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + inv.amount, 0) || 0;
-  const pendingAmount = invoices?.filter(inv => inv.status === "sent").reduce((sum, inv) => sum + inv.amount, 0) || 0;
-
-  // Create a map of Stripe customer IDs to client names
-  const customerIdToClient = new Map();
-  clients?.forEach(client => {
-    if (client.stripeCustomerId) {
-      customerIdToClient.set(client.stripeCustomerId, client.name);
-    }
-  });
+  const totalInvoiceAmount = invoiceItems.reduce((sum, item) => {
+    return sum + (parseFloat(item.amount) || 0);
+  }, 0);
 
   return (
-    <div className="min-h-full gradient-mesh">
-      <div className="p-6 lg:p-8 xl:p-12 space-y-8">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Invoices & Billing</h1>
-            <p className="text-lg text-muted-foreground">Manage invoices and track payments</p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-invoice">
-              <Plus className="w-4 h-4 mr-2" />
-              New Invoice
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl glass-strong">
-            <DialogHeader>
-              <DialogTitle className="text-2xl">Create New Invoice</DialogTitle>
-              <DialogDescription>Generate a new invoice for your client</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateInvoice} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+    <div className="min-h-full gradient-mesh p-6 lg:p-8 space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight text-gradient-purple">
+            Invoices & Billing
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Real-time Stripe analytics and payment management
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+          <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Invoice
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create Stripe Invoice</DialogTitle>
+                <DialogDescription>
+                  Create and send a new invoice to a customer
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="clientId">Client *</Label>
-                  <Select name="clientId" required>
-                    <SelectTrigger data-testid="select-invoice-client">
-                      <SelectValue placeholder="Select client" />
+                  <Label>Customer *</Label>
+                  <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients?.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
+                      {stripeCustomers?.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name || customer.email}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="invoiceNumber">Invoice Number *</Label>
-                  <Input id="invoiceNumber" name="invoiceNumber" placeholder="INV-001" required data-testid="input-invoice-number" />
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Invoice Items</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addInvoiceItem}>
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Item
+                    </Button>
+                  </div>
+                  
+                  {invoiceItems.map((item, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Description"
+                        value={item.description}
+                        onChange={(e) => updateInvoiceItem(index, 'description', e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Amount ($)"
+                        value={item.amount}
+                        onChange={(e) => updateInvoiceItem(index, 'amount', e.target.value)}
+                        className="w-32"
+                      />
+                      {invoiceItems.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeInvoiceItem(index)}
+                        >
+                          ×
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount ($) *</Label>
-                  <Input id="amount" name="amount" type="number" required data-testid="input-amount" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Input id="dueDate" name="dueDate" type="date" data-testid="input-due-date" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" name="description" data-testid="input-description" />
-                </div>
+
+                {totalInvoiceAmount > 0 && (
+                  <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
+                    <span className="font-medium">Total Amount:</span>
+                    <span className="text-2xl font-bold">${totalInvoiceAmount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setInvoiceDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createInvoiceMutation.isPending} data-testid="button-submit-invoice">
-                  {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
+                <Button 
+                  onClick={handleCreateInvoice}
+                  disabled={createStripeInvoiceMutation.isPending}
+                >
+                  {createStripeInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
                 </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="hover-elevate">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-chart-3/10 rounded-lg">
-                <DollarSign className="w-6 h-6 text-chart-3" />
+              <div className="p-3 bg-emerald-500/10 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-emerald-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-semibold">${(totalRevenue / 100).toLocaleString()}</p>
+                <p className="text-2xl font-bold">${stripeData?.totalRevenue?.toLocaleString() || '0'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-chart-1/10 rounded-lg">
-                <DollarSign className="w-6 h-6 text-chart-1" />
+              <div className="p-3 bg-blue-500/10 rounded-lg">
+                <DollarSign className="w-6 h-6 text-blue-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pending Amount</p>
-                <p className="text-2xl font-semibold">${(pendingAmount / 100).toLocaleString()}</p>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">MRR</p>
+                <p className="text-2xl font-bold">${stripeData?.mrr?.toLocaleString() || '0'}</p>
+                <p className="text-xs text-muted-foreground mt-1">Monthly Recurring</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-elevate">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-chart-4/10 rounded-lg">
-                <DollarSign className="w-6 h-6 text-chart-4" />
+              <div className="p-3 bg-purple-500/10 rounded-lg">
+                <Users className="w-6 h-6 text-purple-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Invoices</p>
-                <p className="text-2xl font-semibold">{invoices?.length || 0}</p>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Active Subscribers</p>
+                <p className="text-2xl font-bold">{stripeData?.activeSubscribers || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-orange-500/10 rounded-lg">
+                <CreditCard className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Gross Volume</p>
+                <p className="text-2xl font-bold">${stripeData?.grossVolume?.toLocaleString() || '0'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-cyan-500/10 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-cyan-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">New Customers</p>
+                <p className="text-2xl font-bold">{stripeData?.newCustomers || 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">This period</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-500/10 rounded-lg">
+                <ArrowDownRight className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Total Payouts</p>
+                <p className="text-2xl font-bold">${stripeData?.totalPayouts?.toLocaleString() || '0'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-500/10 rounded-lg">
+                <TrendingDown className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Refunded</p>
+                <p className="text-2xl font-bold">${stripeData?.refundedAmount?.toLocaleString() || '0'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-elevate">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-indigo-500/10 rounded-lg">
+                <DollarSign className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Available Balance</p>
+                <p className="text-2xl font-bold">
+                  ${stripeBalance?.available?.[0]?.amount?.toLocaleString() || '0'}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Active Subscriptions Section */}
-      {stripeData && stripeData.activeSubscriptions > 0 && (
-        <Card className="glass-strong">
-          <CardHeader className="border-b border-border/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold">Active Subscriptions</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-0.5">Recurring revenue from Stripe</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Monthly Recurring Revenue</p>
-                <p className="text-2xl font-bold text-primary" data-testid="metric-subscription-mrr">${stripeData.mrr.toFixed(2)}</p>
-              </div>
-            </div>
+      {/* Top Customers & Payment Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Customers */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Top Customers by Spend
+            </CardTitle>
+            <CardDescription>Highest paying customers this period</CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent>
             <div className="space-y-3">
-              {stripeData.subscriptions
-                .filter((sub: any) => sub.status === 'active')
-                .slice(0, 10)
-                .map((sub: any) => (
-                  <div key={sub.id} className="flex items-center justify-between p-3 rounded-lg hover-elevate transition-all" data-testid={`subscription-${sub.id}`}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {customerIdToClient.get(sub.customerId) || sub.customerId.slice(0, 25) + '...'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {sub.cancelAtPeriodEnd ? 'Canceling' : 'Active'} • Renews {new Date(sub.currentPeriodEnd * 1000).toLocaleDateString()}
-                        </p>
-                      </div>
+              {stripeData?.topCustomers?.slice(0, 10).map((customer, index) => (
+                <div key={customer.id} className="flex items-center justify-between p-3 rounded-lg hover-elevate">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                      #{index + 1}
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">${sub.amount.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">/{sub.interval}</p>
+                    <div>
+                      <p className="font-medium">{customer.name}</p>
+                      <p className="text-xs text-muted-foreground">{customer.email}</p>
                     </div>
                   </div>
-                ))}
+                  <p className="text-lg font-bold">${customer.total.toFixed(2)}</p>
+                </div>
+              ))}
+              {(!stripeData?.topCustomers || stripeData.topCustomers.length === 0) && (
+                <p className="text-center py-8 text-muted-foreground">No customer data yet</p>
+              )}
             </div>
           </CardContent>
         </Card>
-      )}
 
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold">One-Time Invoices</h2>
-        {invoices?.map((invoice) => (
-          <Card key={invoice.id} className="hover-elevate transition-shadow" data-testid={`card-invoice-${invoice.id}`}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold">{invoice.invoiceNumber}</h3>
-                    <Badge className={getStatusColor(invoice.status)} variant="secondary">
-                      {invoice.status}
-                    </Badge>
+        {/* Payment Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Payment Status Breakdown
+            </CardTitle>
+            <CardDescription>Overview of payment statuses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                  <span className="font-medium">Succeeded</span>
+                </div>
+                <span className="text-2xl font-bold">{stripeData?.paymentBreakdown?.succeeded || 0}</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-500/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <span className="font-medium">Pending</span>
+                </div>
+                <span className="text-2xl font-bold">{stripeData?.paymentBreakdown?.pending || 0}</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-lg bg-red-500/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="font-medium">Failed</span>
+                </div>
+                <span className="text-2xl font-bold">{stripeData?.paymentBreakdown?.failed || 0}</span>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-lg bg-orange-500/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                  <span className="font-medium">Refunded</span>
+                </div>
+                <span className="text-2xl font-bold">{stripeData?.paymentBreakdown?.refunded || 0}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Charges */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5" />
+            Recent Charges
+          </CardTitle>
+          <CardDescription>Latest successful payments</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {stripeData?.recentCharges?.map((charge) => (
+              <div key={charge.id} className="flex items-center justify-between p-4 rounded-lg hover-elevate">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <div>
+                      <p className="font-medium">{charge.customerName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {charge.description || 'No description'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(charge.created), { addSuffix: true })}
+                      </p>
+                    </div>
                   </div>
-                  {invoice.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-1">{invoice.description}</p>
-                  )}
-                  {invoice.dueDate && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Due: {new Date(invoice.dueDate).toLocaleDateString()}
-                    </p>
-                  )}
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-semibold">${(invoice.amount / 100).toLocaleString()}</p>
-                  {invoice.paidAt && (
-                    <p className="text-xs text-muted-foreground">
-                      Paid: {new Date(invoice.paidAt).toLocaleDateString()}
-                    </p>
-                  )}
+                  <p className="text-lg font-bold">${charge.amount.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">{charge.currency}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+            {(!stripeData?.recentCharges || stripeData.recentCharges.length === 0) && (
+              <p className="text-center py-8 text-muted-foreground">No recent charges</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-      {invoices?.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No invoices yet</p>
-        </div>
-      )}
-      </div>
+      {/* Recent Payouts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowDownRight className="w-5 h-5" />
+            Recent Payouts
+          </CardTitle>
+          <CardDescription>Money transferred to your bank account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {stripeData?.recentPayouts?.map((payout) => (
+              <div key={payout.id} className="flex items-center justify-between p-4 rounded-lg hover-elevate">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <Badge variant={payout.status === 'paid' ? 'default' : 'secondary'}>
+                      {payout.status}
+                    </Badge>
+                    <div>
+                      <p className="text-sm">
+                        Arrival: {new Date(payout.arrivalDate).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Created {formatDistanceToNow(new Date(payout.created), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold">${payout.amount.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">{payout.currency}</p>
+                </div>
+              </div>
+            ))}
+            {(!stripeData?.recentPayouts || stripeData.recentPayouts.length === 0) && (
+              <p className="text-center py-8 text-muted-foreground">No recent payouts</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stripe Dashboard Link */}
+      <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold mb-1">View Full Stripe Dashboard</h3>
+              <p className="text-sm text-muted-foreground">
+                Access detailed analytics, reports, and settings in your Stripe account
+              </p>
+            </div>
+            <Button asChild>
+              <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer">
+                Open Stripe
+                <ExternalLink className="w-4 h-4 ml-2" />
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
