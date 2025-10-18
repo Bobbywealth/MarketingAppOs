@@ -165,8 +165,31 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
 
   const createTask = async () => {
     try {
-      const response = await apiRequest("POST", "/api/tasks", taskData);
+      console.log("🔄 Attempting to create task with data:", taskData);
+      
+      // Ensure required fields have values
+      const taskPayload = {
+        title: taskData.title || "Untitled Task",
+        status: taskData.status || "todo",
+        priority: taskData.priority || "normal",
+        description: taskData.description || null,
+        dueDate: taskData.dueDate || null,
+        assignedToId: taskData.assignedToId || null,
+        clientId: taskData.clientId || null,
+      };
+      
+      console.log("📤 Sending task payload:", taskPayload);
+      
+      const response = await apiRequest("POST", "/api/tasks", taskPayload);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ Server error:", errorData);
+        throw new Error(errorData.message || "Failed to create task");
+      }
+      
       const task = await response.json();
+      console.log("✅ Task created:", task);
       
       addMessage("ai", `✅ **Task created successfully!** "${task.title}" is now in your task list. Need anything else?`);
       
@@ -185,9 +208,16 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
       setTimeout(() => {
         resetChat();
       }, 2000);
-    } catch (error) {
-      console.error("Task creation error:", error);
-      addMessage("ai", "❌ Oops! Something went wrong creating the task. Want to try again?");
+    } catch (error: any) {
+      console.error("❌ Task creation error:", error);
+      const errorMessage = error?.message || "Unknown error";
+      addMessage("ai", `❌ Oops! Something went wrong: ${errorMessage}. Want to try again?`);
+      
+      toast({
+        title: "Failed to create task",
+        description: errorMessage,
+        variant: "destructive",
+      });
     }
   };
 
