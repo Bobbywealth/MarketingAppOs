@@ -57,6 +57,7 @@ export const clients = pgTable("clients", {
   socialLinks: jsonb("social_links"), // {twitter, facebook, instagram, linkedin}
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
+  displayOrder: integer("display_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
