@@ -265,16 +265,14 @@ export default function Clients() {
           {filteredClients?.map((client) => (
             <Card 
               key={client.id}
-              draggable
-              onDragStart={() => handleDragStart(client)}
               onDragOver={(e) => handleDragOver(e, client)}
               onDrop={(e) => handleDrop(e, client)}
-              onDragEnd={handleDragEnd}
-              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border ${
-                draggedClient?.id === client.id ? 'opacity-50 scale-95 cursor-grabbing' : 'cursor-grab'
+              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer ${
+                draggedClient?.id === client.id ? 'opacity-50 scale-95' : ''
               } ${
                 dragOverClient?.id === client.id ? 'ring-2 ring-primary ring-offset-2' : ''
               }`}
+              onClick={() => setSelectedClient(client)}
               data-testid={`card-client-${client.id}`}
             >
               {/* Gradient Overlay on Hover */}
@@ -282,12 +280,20 @@ export default function Clients() {
               
               <CardContent className="relative p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  {/* Drag Handle */}
-                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-                    onClick={(e) => e.stopPropagation()}>
+                  {/* Drag Handle - Only this triggers dragging */}
+                  <div 
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      handleDragStart(client);
+                    }}
+                    onDragEnd={handleDragEnd}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+                  >
                     <GripVertical className="w-5 h-5 text-muted-foreground" />
                   </div>
-                  <div className="relative cursor-pointer" onClick={() => setSelectedClient(client)}>
+                  <div className="relative">
                     <Avatar className="h-14 w-14 border-2 border-primary/20 shadow-md">
                       <AvatarImage src={client.logoUrl || ""} />
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-lg font-bold">
