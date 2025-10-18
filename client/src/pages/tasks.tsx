@@ -1342,24 +1342,27 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Conversational AI Task Assistant - Always Bottom Right */}
-      {!isChatOpen ? (
-        <Button
-          size="lg"
-          onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[9999] rounded-full w-14 h-14 md:w-16 md:h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
-        >
-          <Sparkles className="w-6 h-6 md:w-7 md:h-7" />
-        </Button>
-      ) : (
-        <ConversationalTaskChat
-          isOpen={isChatOpen}
-          onClose={() => setIsChatOpen(false)}
-          onTaskCreated={() => {
-            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-          }}
-        />
-      )}
+      {/* Conversational AI Task Assistant - Positioned outside flex container */}
+      <>
+        {!isChatOpen ? (
+          <Button
+            size="lg"
+            onClick={() => setIsChatOpen(true)}
+            style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999 }}
+            className="rounded-full w-14 h-14 md:w-16 md:h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
+          >
+            <Sparkles className="w-6 h-6 md:w-7 md:h-7" />
+          </Button>
+        ) : (
+          <ConversationalTaskChat
+            isOpen={isChatOpen}
+            onClose={() => setIsChatOpen(false)}
+            onTaskCreated={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+            }}
+          />
+        )}
+      </>
     </div>
   );
 }
