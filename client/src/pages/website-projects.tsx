@@ -106,10 +106,10 @@ export default function WebsiteProjects() {
       url: values.url || null,
       domain: values.domain || null,
       hostingProvider: values.hostingProvider || null,
-      hostingExpiry: values.hostingExpiry ? new Date(values.hostingExpiry) : null,
-      sslExpiry: values.sslExpiry ? new Date(values.sslExpiry) : null,
+      hostingExpiry: values.hostingExpiry && values.hostingExpiry.trim() ? new Date(values.hostingExpiry) : null,
+      sslExpiry: values.sslExpiry && values.sslExpiry.trim() ? new Date(values.sslExpiry) : null,
       progress: values.progress || 0,
-      launchDate: values.launchDate ? new Date(values.launchDate) : null,
+      launchDate: values.launchDate && values.launchDate.trim() ? new Date(values.launchDate) : null,
     };
 
     if (editingProject) {
