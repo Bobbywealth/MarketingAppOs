@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -156,35 +157,61 @@ export default function TeamPage() {
     );
   };
 
-  const rolePermissions = {
-    admin: [
-      "Manage Users",
-      "Manage Clients",
-      "Manage Campaigns",
-      "Manage Leads",
-      "Manage Content",
-      "Manage Invoices",
-      "Manage Tickets",
-      "View Reports",
-      "Manage Settings",
-    ],
-    manager: [
-      "Manage Clients",
-      "Manage Campaigns",
-      "Manage Leads",
-      "Manage Content",
-      "Manage Invoices",
-      "Manage Tickets",
-      "View Reports",
-    ],
-    staff: [
-      "Manage Clients",
-      "Manage Campaigns",
-      "Manage Leads",
-      "Manage Content",
-      "Manage Tickets",
-    ],
-    client: ["Manage Tickets"],
+  // All available permissions
+  const allPermissions = [
+    { key: "canManageUsers", label: "Manage Users" },
+    { key: "canManageClients", label: "Manage Clients" },
+    { key: "canManageCampaigns", label: "Manage Campaigns" },
+    { key: "canManageLeads", label: "Manage Leads" },
+    { key: "canManageContent", label: "Manage Content" },
+    { key: "canManageInvoices", label: "Manage Invoices" },
+    { key: "canManageTickets", label: "Manage Tickets" },
+    { key: "canViewReports", label: "View Reports" },
+    { key: "canManageSettings", label: "Manage Settings" },
+  ];
+
+  // Fetch role permissions from API
+  const { data: rolePermissions } = useQuery<Record<string, any>>({
+    queryKey: ["/api/role-permissions"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/role-permissions");
+      return response.json();
+    },
+  });
+
+  // Update role permissions
+  const updatePermissionsMutation = useMutation({
+    mutationFn: async ({ role, permissions }: { role: string; permissions: any }) => {
+      const response = await apiRequest("PUT", `/api/role-permissions/${role}`, { permissions });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/role-permissions"] });
+      toast({
+        title: "Permissions updated",
+        description: "Role permissions have been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update permissions",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTogglePermission = (role: string, permissionKey: string, currentValue: boolean) => {
+    const currentPermissions = rolePermissions?.[role]?.permissions || {};
+    const updatedPermissions = {
+      ...currentPermissions,
+      [permissionKey]: !currentValue,
+    };
+    
+    updatePermissionsMutation.mutate({
+      role,
+      permissions: updatedPermissions,
+    });
   };
 
   return (
@@ -426,26 +453,52 @@ export default function TeamPage() {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {Object.entries(rolePermissions).map(([role, permissions]) => (
-          <Card key={role}>
-            <CardHeader>
-              <CardTitle className="capitalize flex items-center gap-2">
-                {role} {getRoleBadge(role)}
-              </CardTitle>
-              <CardDescription>Permissions for this role</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {permissions.map((permission) => (
-                  <li key={permission} className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                    {permission}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ))}
+        {["admin", "manager", "staff"].map((role) => {
+          const roleData = rolePermissions?.[role];
+          const permissions = roleData?.permissions || {};
+          
+          return (
+            <Card key={role}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="capitalize flex items-center gap-2">
+                      {role} {getRoleBadge(role)}
+                    </CardTitle>
+                    <CardDescription>Click checkboxes to edit permissions</CardDescription>
+                  </div>
+                  {updatePermissionsMutation.isPending && (
+                    <div className="text-xs text-muted-foreground">Saving...</div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {allPermissions.map((perm) => {
+                    const isChecked = permissions[perm.key] || false;
+                    
+                    return (
+                      <div key={perm.key} className="flex items-center gap-3">
+                        <Checkbox
+                          id={`${role}-${perm.key}`}
+                          checked={isChecked}
+                          onCheckedChange={() => handleTogglePermission(role, perm.key, isChecked)}
+                          disabled={updatePermissionsMutation.isPending}
+                        />
+                        <label
+                          htmlFor={`${role}-${perm.key}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {perm.label}
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
