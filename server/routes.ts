@@ -1766,13 +1766,88 @@ Examples:
   });
 
   // Onboarding task routes (admin and staff only)
-  app.get("/api/onboarding-tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+  app.get("/api/onboarding-tasks", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
+      const clientId = req.query.clientId as string;
+      
+      // If user is a client, only show their tasks
+      if (user.role === 'client' && user.clientId) {
+        const tasks = await storage.getOnboardingTasksByClient(user.clientId);
+        return res.json(tasks);
+      }
+      
+      // For staff/admin, optionally filter by clientId
+      if (clientId) {
+        const tasks = await storage.getOnboardingTasksByClient(clientId);
+        return res.json(tasks);
+      }
+      
       const tasks = await storage.getOnboardingTasks();
       res.json(tasks);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch onboarding tasks" });
+    }
+  });
+
+  app.post("/api/onboarding-tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+    try {
+      const task = await storage.createOnboardingTask(req.body);
+      res.status(201).json(task);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to create onboarding task" });
+    }
+  });
+
+  app.post("/api/onboarding-tasks/default/:clientId", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+    try {
+      const tasks = await storage.createDefaultOnboardingTasks(req.params.clientId);
+      res.status(201).json(tasks);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to create default onboarding tasks" });
+    }
+  });
+
+  app.patch("/api/onboarding-tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+    try {
+      const task = await storage.updateOnboardingTask(req.params.id, req.body);
+      res.json(task);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update onboarding task" });
+    }
+  });
+
+  app.post("/api/onboarding-tasks/:id/toggle", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const task = await storage.toggleOnboardingTaskCompletion(req.params.id);
+      
+      // Check if all tasks for this client are complete
+      const clientTasks = await storage.getOnboardingTasksByClient(task.clientId);
+      const allComplete = clientTasks.every(t => t.completed);
+      
+      // If all tasks complete, update client status to active
+      if (allComplete) {
+        await storage.updateClient(task.clientId, { status: "active" });
+      }
+      
+      res.json(task);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to toggle task completion" });
+    }
+  });
+
+  app.delete("/api/onboarding-tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteOnboardingTask(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete onboarding task" });
     }
   });
 
