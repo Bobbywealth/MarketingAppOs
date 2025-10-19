@@ -129,6 +129,7 @@ export default function SignupPage() {
     
     const isValid = await form.trigger(fields);
     if (isValid) {
+      // No additional validation needed - social platforms are optional
       setStep(step + 1);
     }
   };
@@ -747,7 +748,7 @@ export default function SignupPage() {
                       name="socialPlatforms"
                       render={() => (
                         <FormItem>
-                          <FormLabel>Social Media Platforms * (Select at least one)</FormLabel>
+                          <FormLabel>Social Media Platforms (Optional - but recommended for best audit results)</FormLabel>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                             {socialPlatforms.map((platform) => (
                               <FormField
@@ -808,6 +809,11 @@ export default function SignupPage() {
                                   placeholder={`https://${platform.value}.com/yourusername`} 
                                   {...field} 
                                   className="w-full"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                    }
+                                  }}
                                 />
                               </FormControl>
                               <FormMessage />
