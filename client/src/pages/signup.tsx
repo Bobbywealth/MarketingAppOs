@@ -65,6 +65,7 @@ export default function SignupPage() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [auditResults, setAuditResults] = useState<any>(null);
+  const [canSubmit, setCanSubmit] = useState(false);
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -127,7 +128,16 @@ export default function SignupPage() {
     
     const isValid = await form.trigger(fields);
     if (isValid) {
-      setStep(step + 1);
+      const nextStepNum = step + 1;
+      setStep(nextStepNum);
+      
+      // Enable submit only when reaching step 4
+      if (nextStepNum === 4) {
+        // Add a small delay to prevent accidental immediate submission
+        setTimeout(() => {
+          setCanSubmit(true);
+        }, 1000);
+      }
     }
   };
 
@@ -495,10 +505,23 @@ export default function SignupPage() {
             
             <Form {...form}>
               <form 
-                onSubmit={form.handleSubmit(onSubmit)} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && step < 4) {
+                onSubmit={(e) => {
+                  if (step !== 4 || !canSubmit) {
                     e.preventDefault();
+                    if (step === 4 && !canSubmit) {
+                      toast({
+                        title: "Please wait...",
+                        description: "Form is loading, try again in a moment",
+                      });
+                    }
+                    return false;
+                  }
+                  form.handleSubmit(onSubmit)(e);
+                }} 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
                   }
                 }}
                 className="space-y-6"
@@ -753,10 +776,10 @@ export default function SignupPage() {
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div>
                       <h2 className="text-2xl font-bold mb-2">🔗 Your Social Media URLs</h2>
-                      <p className="text-sm text-muted-foreground">Provide your current social media profiles so we can analyze them (Optional)</p>
+                      <p className="text-sm text-muted-foreground">Provide your current social media profiles so we can analyze them (Optional - but recommended for complete audit)</p>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
                       <FormField
                         control={form.control}
                         name="instagramUrl"
@@ -959,7 +982,7 @@ export default function SignupPage() {
                       Back
                     </Button>
                   )}
-                  {step < 4 ? (
+                  {step <= 3 ? (
                     <Button
                       type="button"
                       onClick={nextStep}
@@ -969,17 +992,17 @@ export default function SignupPage() {
                       Next
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
-                  ) : (
+                  ) : step === 4 ? (
                     <Button
                       type="submit"
-                      disabled={signupMutation.isPending}
-                      className="ml-auto bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                      disabled={signupMutation.isPending || !canSubmit}
+                      className="ml-auto bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                       data-testid="button-submit"
                     >
-                      {signupMutation.isPending ? "🚀 Creating Your Audit..." : "🎯 GET MY FREE AUDIT NOW"}
+                      {signupMutation.isPending ? "🚀 Creating Your Audit..." : !canSubmit ? "⏳ Loading..." : "🎯 GET MY FREE AUDIT NOW"}
                       <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               </form>
             </Form>
