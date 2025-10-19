@@ -133,10 +133,12 @@ export default function SignupPage() {
       
       // Enable submit only when reaching step 4
       if (nextStepNum === 4) {
-        // Add a small delay to prevent accidental immediate submission
+        // Add a longer delay to give user time to enter URLs
         setTimeout(() => {
           setCanSubmit(true);
-        }, 1000);
+        }, 3000); // 3 seconds should be enough
+      } else {
+        setCanSubmit(false);
       }
     }
   };
@@ -794,7 +796,13 @@ export default function SignupPage() {
                                 type="text"
                                 placeholder="https://instagram.com/yourusername" 
                                 value={field.value || ''} 
-                                onChange={field.onChange}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  // Enable submit when user starts typing
+                                  if (!canSubmit && e.target.value.length > 0) {
+                                    setCanSubmit(true);
+                                  }
+                                }}
                                 onBlur={field.onBlur}
                                 name={field.name}
                                 className="w-full"
@@ -993,15 +1001,25 @@ export default function SignupPage() {
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   ) : step === 4 ? (
-                    <Button
-                      type="submit"
-                      disabled={signupMutation.isPending || !canSubmit}
-                      className="ml-auto bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                      data-testid="button-submit"
-                    >
-                      {signupMutation.isPending ? "🚀 Creating Your Audit..." : !canSubmit ? "⏳ Loading..." : "🎯 GET MY FREE AUDIT NOW"}
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </Button>
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setCanSubmit(true)}
+                        className="ml-auto"
+                      >
+                        Skip Social Media
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={signupMutation.isPending || !canSubmit}
+                        className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-testid="button-submit"
+                      >
+                        {signupMutation.isPending ? "🚀 Creating Your Audit..." : !canSubmit ? "⏳ Enter at least one URL or skip" : "🎯 GET MY FREE AUDIT NOW"}
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               </form>
