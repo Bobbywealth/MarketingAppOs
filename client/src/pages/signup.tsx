@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -806,43 +806,195 @@ export default function SignupPage() {
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div>
                       <h2 className="text-2xl font-bold mb-2">🔗 Your Social Media URLs</h2>
-                      <p className="text-sm text-muted-foreground">Provide your current social media profiles so we can analyze them</p>
+                      <p className="text-sm text-muted-foreground">Provide your current social media profiles so we can analyze them (Optional)</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {socialPlatforms.map((platform) => (
-                        <FormField
-                          key={platform.value}
-                          control={form.control}
-                          name={`${platform.value}Url` as keyof SignupFormData}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2">
-                                <span className="text-xl">{platform.icon}</span>
-                                {platform.name} URL
-                              </FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="text"
-                                  placeholder={`https://${platform.value}.com/yourusername`} 
-                                  {...field} 
-                                  className="w-full"
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                    }
-                                  }}
-                                  onClick={(e) => {
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="instagramUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <span className="text-xl">📸</span>
+                              Instagram URL
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="https://instagram.com/yourusername" 
+                                value={field.value || ''} 
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                className="w-full"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
                                     e.stopPropagation();
-                                  }}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="facebookUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <span className="text-xl">👥</span>
+                              Facebook URL
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="https://facebook.com/yourusername" 
+                                value={field.value || ''} 
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                className="w-full"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="tiktokUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <span className="text-xl">🎵</span>
+                              TikTok URL
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="https://tiktok.com/@yourusername" 
+                                value={field.value || ''} 
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                className="w-full"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="linkedinUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <span className="text-xl">💼</span>
+                              LinkedIn URL
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="https://linkedin.com/company/yourcompany" 
+                                value={field.value || ''} 
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                className="w-full"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="twitterUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <span className="text-xl">🐦</span>
+                              Twitter/X URL
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="https://twitter.com/yourusername" 
+                                value={field.value || ''} 
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                className="w-full"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="youtubeUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              <span className="text-xl">📺</span>
+                              YouTube URL
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="https://youtube.com/c/yourchannel" 
+                                value={field.value || ''} 
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                name={field.name}
+                                className="w-full"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
                 )}
