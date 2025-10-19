@@ -150,48 +150,8 @@ This lead will be updated if they complete the full signup process.`,
         // Continue with signup even if audit fails
       }
 
-      // Collect social media URLs
-      const socialLinks: Record<string, string> = {};
-      if (data.instagramUrl) socialLinks.instagram = data.instagramUrl;
-      if (data.facebookUrl) socialLinks.facebook = data.facebookUrl;
-      if (data.tiktokUrl) socialLinks.tiktok = data.tiktokUrl;
-      if (data.linkedinUrl) socialLinks.linkedin = data.linkedinUrl;
-      if (data.twitterUrl) socialLinks.twitter = data.twitterUrl;
-      if (data.youtubeUrl) socialLinks.youtube = data.youtubeUrl;
-
-      const clientData = {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        company: data.company,
-        website: data.website || null,
-        serviceTags: data.services,
-        status: "onboarding" as const,
-        notes: `Industry: ${data.industry || 'Not specified'}
-Company Size: ${data.companySize || 'Not specified'}
-Budget: ${data.budget || 'Not specified'}
-Social Platforms: ${data.socialPlatforms?.join(', ') || 'Not specified'}
-
-Audit Summary:
-${auditReport ? `
-- Total Issues Found: ${auditReport.summary.totalIssues}
-- Critical Issues: ${auditReport.summary.criticalIssues}
-- Estimated Audit Value: $${auditReport.summary.estimatedValue}
-${auditReport.website ? '\nWebsite Recommendations:\n' + auditReport.website.recommendations.join('\n') : ''}
-` : 'Audit pending...'}
-
-Additional Notes:
-${data.notes || 'None'}`,
-        assignedToId: null,
-        logoUrl: null,
-        socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : null,
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-      };
-
-      const client = await storage.createClient(clientData);
-      
       // Create or update lead for sales follow-up
+      // NOTE: We DO NOT create a client here - they're just a lead until they convert!
       try {
         const leadNotes = `🎯 AUTO-CREATED FROM FREE AUDIT SIGNUP - ✅ COMPLETED
 
@@ -224,6 +184,8 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
         const existingLeads = await storage.getLeads();
         const existingLead = existingLeads.find(l => l.email === data.email);
 
+        let leadId: string;
+        
         if (existingLead) {
           // Update existing lead with complete information
           const leadScore = auditReport ? (auditReport.summary.totalIssues >= 5 ? "hot" : "warm") : "warm";
@@ -239,6 +201,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
               auditIssues: auditReport?.summary.totalIssues || 0,
             },
           });
+          leadId = existingLead.id;
           console.log(`✅ Updated existing lead ${existingLead.id} with complete audit data`);
         } else {
           // Create new lead if somehow early capture didn't work
@@ -263,19 +226,24 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
             },
             nextFollowUp: null,
           };
-          await storage.createLead(leadData);
-          console.log(`✅ Created new lead with complete audit data`);
+          const newLead = await storage.createLead(leadData);
+          leadId = newLead.id;
+          console.log(`✅ Created new lead ${newLead.id} with complete audit data`);
         }
+        
+        res.json({ 
+          success: true, 
+          leadId: leadId,
+          audit: auditReport,
+        });
       } catch (leadError) {
         console.error('Failed to create/update lead:', leadError);
-        // Continue even if lead creation fails
+        // Return error since lead creation is critical now
+        return res.status(500).json({ 
+          success: false, 
+          message: "Failed to create lead. Please try again." 
+        });
       }
-      
-      res.json({ 
-        success: true, 
-        clientId: client.id,
-        audit: auditReport,
-      });
     } catch (error) {
       return handleValidationError(error, res);
     }
