@@ -101,7 +101,7 @@ export default function SignupPage() {
         title: "🎉 Your Free Audit is Ready!",
         description: "Check out your personalized marketing insights below.",
       });
-      setStep(6); // Show results page
+      setStep(5); // Show results page
     },
     onError: (error: Error) => {
       toast({
@@ -123,13 +123,10 @@ export default function SignupPage() {
       ? ["name", "email", "phone"] as const
       : step === 3
       ? ["services"] as const
-      : step === 4
-      ? ["socialPlatforms"] as const
       : [];
     
     const isValid = await form.trigger(fields);
     if (isValid) {
-      // No additional validation needed - social platforms are optional
       setStep(step + 1);
     }
   };
@@ -156,7 +153,7 @@ export default function SignupPage() {
     { name: "YouTube", value: "youtube", icon: "📺", color: "from-red-500 to-red-600" },
   ];
 
-  if (step === 6) {
+  if (step === 5) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
         <div className="max-w-5xl mx-auto py-12">
@@ -456,8 +453,7 @@ export default function SignupPage() {
               { num: 1, label: "Company", icon: Building2 },
               { num: 2, label: "Contact", icon: User },
               { num: 3, label: "Services", icon: Target },
-              { num: 4, label: "Social Media", icon: Users },
-              { num: 5, label: "URLs", icon: Target },
+              { num: 4, label: "Social URLs", icon: Users },
             ].map((s) => (
               <div key={s.num} className="flex items-center flex-1">
                 <div className={`flex items-center gap-2 ${s.num < 3 ? 'flex-1' : ''}`}>
@@ -478,7 +474,7 @@ export default function SignupPage() {
                     {s.label}
                   </span>
                 </div>
-                {s.num < 5 && (
+                {s.num < 4 && (
                   <div className={`h-1 flex-1 mx-2 rounded-full ${step > s.num ? "bg-blue-600" : "bg-muted"}`} />
                 )}
               </div>
@@ -501,7 +497,7 @@ export default function SignupPage() {
               <form 
                 onSubmit={form.handleSubmit(onSubmit)} 
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && step < 5) {
+                  if (e.key === 'Enter' && step < 4) {
                     e.preventDefault();
                   }
                 }}
@@ -752,57 +748,8 @@ export default function SignupPage() {
                   </div>
                 )}
 
-                {/* Step 4: Social Media Platforms */}
+                {/* Step 4: Social Media URLs */}
                 {step === 4 && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">🎯 Which Social Media Platforms?</h2>
-                      <p className="text-sm text-muted-foreground">Select the platforms you want us to manage for you</p>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="socialPlatforms"
-                      render={() => (
-                        <FormItem>
-                          <FormLabel>Social Media Platforms (Optional - but recommended for best audit results)</FormLabel>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                            {socialPlatforms.map((platform) => (
-                              <FormField
-                                key={platform.value}
-                                control={form.control}
-                                name="socialPlatforms"
-                                render={({ field }) => (
-                                  <FormItem className="flex items-center space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(platform.value)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...field.value, platform.value])
-                                            : field.onChange(field.value?.filter((value) => value !== platform.value));
-                                        }}
-                                        className="w-5 h-5"
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="flex items-center gap-2 cursor-pointer font-normal">
-                                      <span className="text-2xl">{platform.icon}</span>
-                                      <span>{platform.name}</span>
-                                    </FormLabel>
-                                  </FormItem>
-                                )}
-                              />
-                            ))}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-
-                {/* Step 5: Social Media URLs */}
-                {step === 5 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div>
                       <h2 className="text-2xl font-bold mb-2">🔗 Your Social Media URLs</h2>
@@ -1012,7 +959,7 @@ export default function SignupPage() {
                       Back
                     </Button>
                   )}
-                  {step < 5 ? (
+                  {step < 4 ? (
                     <Button
                       type="button"
                       onClick={nextStep}
