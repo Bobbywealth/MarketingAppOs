@@ -73,12 +73,14 @@ export function registerRoutes(app: Express) {
         email: data.email,
         phone: data.phone,
         company: data.company,
-        source: "Website Signup - In Progress",
-        status: "new" as const,
-        score: 30, // Lower score since they haven't completed the full form
-        tags: [],
+        website: data.website || null,
+        source: "website",
+        stage: "prospect",
+        score: "warm", // warm lead since they started signup
+        value: null,
         notes: `⏳ EARLY LEAD CAPTURE (Step 2/4)
 
+🎯 Source: Website Signup Form - IN PROGRESS
 Lead started the signup process but hasn't completed yet.
 
 📋 COMPANY INFO:
@@ -90,6 +92,10 @@ Lead started the signup process but hasn't completed yet.
 
 ---
 This lead will be updated if they complete the full signup process.`,
+        clientId: null,
+        assignedToId: null,
+        sourceMetadata: { type: "signup_early_capture", step: 2 },
+        nextFollowUp: null,
       };
 
       const lead = await storage.createLead(leadData);
@@ -220,26 +226,42 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
 
         if (existingLead) {
           // Update existing lead with complete information
+          const leadScore = auditReport ? (auditReport.summary.totalIssues >= 5 ? "hot" : "warm") : "warm";
           await storage.updateLead(existingLead.id, {
-            source: "Website Signup - Free Audit",
-            status: "qualified" as const, // Upgrade status since they completed
-            score: auditReport ? Math.min(100, (auditReport.summary.totalIssues * 10)) : 50,
-            tags: data.services,
+            source: "website",
+            stage: "qualified", // Upgrade stage since they completed
+            score: leadScore,
+            value: auditReport ? auditReport.summary.estimatedValue * 100 : 250000, // Convert to cents
             notes: leadNotes,
+            sourceMetadata: { 
+              type: "signup_completed", 
+              services: data.services,
+              auditIssues: auditReport?.summary.totalIssues || 0,
+            },
           });
           console.log(`✅ Updated existing lead ${existingLead.id} with complete audit data`);
         } else {
           // Create new lead if somehow early capture didn't work
+          const leadScore = auditReport ? (auditReport.summary.totalIssues >= 5 ? "hot" : "warm") : "warm";
           const leadData = {
             name: data.name,
             email: data.email,
             phone: data.phone,
             company: data.company,
-            source: "Website Signup - Free Audit",
-            status: "qualified" as const,
-            score: auditReport ? Math.min(100, (auditReport.summary.totalIssues * 10)) : 50,
-            tags: data.services,
+            website: data.website || null,
+            source: "website",
+            stage: "qualified",
+            score: leadScore,
+            value: auditReport ? auditReport.summary.estimatedValue * 100 : 250000, // Convert to cents
             notes: leadNotes,
+            clientId: null,
+            assignedToId: null,
+            sourceMetadata: { 
+              type: "signup_completed", 
+              services: data.services,
+              auditIssues: auditReport?.summary.totalIssues || 0,
+            },
+            nextFollowUp: null,
           };
           await storage.createLead(leadData);
           console.log(`✅ Created new lead with complete audit data`);
