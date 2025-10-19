@@ -1456,8 +1456,23 @@ Examples:
   });
 
   // Content post routes
-  app.get("/api/content-posts", isAuthenticated, requirePermission("canManageContent"), async (_req: Request, res: Response) => {
+  app.get("/api/content-posts", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
+      const userRole = user?.role || 'staff';
+      const clientId = user?.clientId;
+      
+      // If user is a client, only show their assigned content
+      if (userRole === 'client' && clientId) {
+        const posts = await storage.getContentPostsByClient(clientId);
+        return res.json(posts);
+      }
+      
+      // For non-clients, require permission and show all posts
+      if (!user || !rolePermissions[userRole as UserRole]?.permissions?.canManageContent) {
+        return res.status(403).json({ message: "Permission denied" });
+      }
+      
       const posts = await storage.getContentPosts();
       res.json(posts);
     } catch (error) {

@@ -143,6 +143,7 @@ export interface IStorage {
 
   // Content post operations
   getContentPosts(): Promise<ContentPost[]>;
+  getContentPostsByClient(clientId: string): Promise<ContentPost[]>;
   createContentPost(post: InsertContentPost): Promise<ContentPost>;
   updateContentPost(id: string, data: Partial<InsertContentPost>): Promise<ContentPost>;
   deleteContentPost(id: string): Promise<void>;
@@ -490,6 +491,14 @@ export class DatabaseStorage implements IStorage {
   // Content post operations
   async getContentPosts(): Promise<ContentPost[]> {
     return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
+  }
+
+  async getContentPostsByClient(clientId: string): Promise<ContentPost[]> {
+    return await db
+      .select()
+      .from(contentPosts)
+      .where(eq(contentPosts.clientId, clientId))
+      .orderBy(desc(contentPosts.createdAt));
   }
 
   async createContentPost(postData: InsertContentPost): Promise<ContentPost> {

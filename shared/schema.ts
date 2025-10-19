@@ -34,6 +34,7 @@ export const users = pgTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   role: text("role").notNull().default("staff"), // admin, staff, client
+  clientId: varchar("client_id"), // Links to clients table for client role users
   createdAt: timestamp("created_at").defaultNow(),
 });
 

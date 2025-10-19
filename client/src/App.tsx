@@ -15,6 +15,8 @@ import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
+import ClientDashboard from "@/pages/client-dashboard";
+import ClientContent from "@/pages/client-content";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
@@ -37,6 +39,7 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user } = useAuth();
+  const isClient = user?.role === 'client';
 
   return (
     <Switch>
@@ -44,25 +47,30 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/signup" component={SignupPage} />
       {!user && <Route path="/" component={Landing} />}
-      <ProtectedRoute path="/" component={Dashboard} />
-      <ProtectedRoute path="/clients" component={Clients} />
-      <ProtectedRoute path="/campaigns" component={Campaigns} />
-      <ProtectedRoute path="/tasks" component={Tasks} />
-      <ProtectedRoute path="/leads" component={Leads} />
-      <ProtectedRoute path="/pipeline" component={Pipeline} />
-      <ProtectedRoute path="/content" component={Content} />
-      <ProtectedRoute path="/invoices" component={Invoices} />
-      <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />
+      {/* Client-specific routes */}
+      {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
+      {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
+      {/* Admin/Manager/Staff routes */}
+      {!isClient && <ProtectedRoute path="/" component={Dashboard} />}
+      {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
+      {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
+      {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
+      {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
+      {!isClient && <ProtectedRoute path="/pipeline" component={Pipeline} />}
+      {!isClient && <ProtectedRoute path="/content" component={Content} />}
+      {!isClient && <ProtectedRoute path="/invoices" component={Invoices} />}
+      {!isClient && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
+      {!isClient && <ProtectedRoute path="/onboarding" component={Onboarding} />}
+      {!isClient && <ProtectedRoute path="/messages" component={Messages} />}
+      {!isClient && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}
+      {!isClient && <ProtectedRoute path="/analytics" component={Analytics} />}
+      {!isClient && <ProtectedRoute path="/team" component={Team} />}
+      {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
+      {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
+      {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
+      {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
-      <ProtectedRoute path="/onboarding" component={Onboarding} />
-      <ProtectedRoute path="/messages" component={Messages} />
-      <ProtectedRoute path="/website-projects" component={WebsiteProjects} />
-      <ProtectedRoute path="/analytics" component={Analytics} />
-      <ProtectedRoute path="/team" component={Team} />
-      <ProtectedRoute path="/emails" component={Emails} />
-      <ProtectedRoute path="/phone" component={Phone} />
       <ProtectedRoute path="/settings" component={Settings} />
-      <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />
       <Route component={NotFound} />
     </Switch>
   );
