@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
+import { AuditService } from "./auditService";
 import {
   insertClientSchema,
   insertCampaignSchema,
@@ -56,10 +57,44 @@ export function registerRoutes(app: Express) {
         phone: z.string().min(1),
         services: z.array(z.string()),
         budget: z.string().optional(),
+        socialPlatforms: z.array(z.string()).optional(),
+        instagramUrl: z.string().optional(),
+        facebookUrl: z.string().optional(),
+        tiktokUrl: z.string().optional(),
+        linkedinUrl: z.string().optional(),
+        twitterUrl: z.string().optional(),
+        youtubeUrl: z.string().optional(),
         notes: z.string().optional(),
       });
 
       const data = signupSchema.parse(req.body);
+
+      // Generate automated audit report in background
+      let auditReport: any = null;
+      try {
+        auditReport = await AuditService.generateAuditReport({
+          website: data.website,
+          socialPlatforms: data.socialPlatforms,
+          instagramUrl: data.instagramUrl,
+          facebookUrl: data.facebookUrl,
+          tiktokUrl: data.tiktokUrl,
+          linkedinUrl: data.linkedinUrl,
+          twitterUrl: data.twitterUrl,
+          youtubeUrl: data.youtubeUrl,
+        });
+      } catch (auditError) {
+        console.error('Audit generation failed:', auditError);
+        // Continue with signup even if audit fails
+      }
+
+      // Collect social media URLs
+      const socialLinks: Record<string, string> = {};
+      if (data.instagramUrl) socialLinks.instagram = data.instagramUrl;
+      if (data.facebookUrl) socialLinks.facebook = data.facebookUrl;
+      if (data.tiktokUrl) socialLinks.tiktok = data.tiktokUrl;
+      if (data.linkedinUrl) socialLinks.linkedin = data.linkedinUrl;
+      if (data.twitterUrl) socialLinks.twitter = data.twitterUrl;
+      if (data.youtubeUrl) socialLinks.youtube = data.youtubeUrl;
 
       const clientData = {
         name: data.name,
@@ -72,19 +107,32 @@ export function registerRoutes(app: Express) {
         notes: `Industry: ${data.industry || 'Not specified'}
 Company Size: ${data.companySize || 'Not specified'}
 Budget: ${data.budget || 'Not specified'}
+Social Platforms: ${data.socialPlatforms?.join(', ') || 'Not specified'}
+
+Audit Summary:
+${auditReport ? `
+- Total Issues Found: ${auditReport.summary.totalIssues}
+- Critical Issues: ${auditReport.summary.criticalIssues}
+- Estimated Audit Value: $${auditReport.summary.estimatedValue}
+${auditReport.website ? '\nWebsite Recommendations:\n' + auditReport.website.recommendations.join('\n') : ''}
+` : 'Audit pending...'}
 
 Additional Notes:
 ${data.notes || 'None'}`,
         assignedToId: null,
         logoUrl: null,
-        socialLinks: null,
+        socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : null,
         stripeCustomerId: null,
         stripeSubscriptionId: null,
       };
 
       const client = await storage.createClient(clientData);
       
-      res.json({ success: true, clientId: client.id });
+      res.json({ 
+        success: true, 
+        clientId: client.id,
+        audit: auditReport,
+      });
     } catch (error) {
       return handleValidationError(error, res);
     }
