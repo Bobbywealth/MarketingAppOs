@@ -90,6 +90,19 @@ export default function SignupPage() {
     },
   });
 
+  const earlyLeadCaptureMutation = useMutation({
+    mutationFn: async (data: { name: string; email: string; phone: string; company: string; website?: string; industry?: string }) => {
+      const response = await apiRequest("POST", "/api/early-lead", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      console.log("✅ Early lead captured after step 2");
+    },
+    onError: (error) => {
+      console.error("❌ Failed to capture early lead:", error);
+    },
+  });
+
   const signupMutation = useMutation({
     mutationFn: async (data: SignupFormData) => {
       const response = await apiRequest("POST", "/api/signup", data);
@@ -128,6 +141,19 @@ export default function SignupPage() {
     
     const isValid = await form.trigger(fields);
     if (isValid) {
+      // Capture lead early after step 2 (contact info completed)
+      if (step === 2) {
+        const formData = form.getValues();
+        earlyLeadCaptureMutation.mutate({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          website: formData.website || undefined,
+          industry: formData.industry || undefined,
+        });
+      }
+      
       const nextStepNum = step + 1;
       setStep(nextStepNum);
       
@@ -343,12 +369,12 @@ export default function SignupPage() {
                   <h2 className="text-3xl font-black mb-4">🚀 Ready to Fix These Issues?</h2>
                   <p className="text-xl mb-6">Our team will contact you within 24 hours with a custom strategy</p>
                   <div className="flex gap-4 justify-center">
-                    <Button 
-                      onClick={() => setLocation("/")} 
+          <Button 
+            onClick={() => setLocation("/")} 
                       className="bg-white text-orange-500 hover:bg-gray-100 font-bold text-lg px-8 py-4"
-                    >
-                      Back to Home
-                    </Button>
+          >
+            Back to Home
+          </Button>
                     <Button 
                       onClick={() => window.print()} 
                       variant="outline"
@@ -372,7 +398,7 @@ export default function SignupPage() {
                   Back to Home
                 </Button>
               </CardContent>
-            </Card>
+        </Card>
           )}
         </div>
       </div>
@@ -1020,15 +1046,15 @@ export default function SignupPage() {
                       >
                         Skip Social Media
                       </Button>
-                      <Button
-                        type="submit"
+                    <Button
+                      type="submit"
                         disabled={signupMutation.isPending || !canSubmit}
                         className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                        data-testid="button-submit"
-                      >
+                      data-testid="button-submit"
+                    >
                         {signupMutation.isPending ? "🚀 Creating Your Audit..." : !canSubmit ? "⏳ Enter at least one URL or skip" : "🎯 GET MY FREE AUDIT NOW"}
                         <ArrowRight className="w-5 h-5 ml-2" />
-                      </Button>
+                    </Button>
                     </>
                   ) : null}
                 </div>

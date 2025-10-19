@@ -44,6 +44,63 @@ function handleValidationError(error: unknown, res: Response) {
 }
 
 export function registerRoutes(app: Express) {
+  // Early lead capture endpoint (captures lead after step 2)
+  app.post("/api/early-lead", async (req: Request, res: Response) => {
+    try {
+      const earlyLeadSchema = z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        company: z.string().min(1),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+      });
+
+      const data = earlyLeadSchema.parse(req.body);
+
+      // Check if lead with this email already exists
+      const existingLeads = await storage.getLeads();
+      const existingLead = existingLeads.find(l => l.email === data.email);
+
+      if (existingLead) {
+        // Lead already exists, don't create duplicate
+        return res.json({ success: true, leadId: existingLead.id, duplicate: true });
+      }
+
+      // Create early lead capture
+      const leadData = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        source: "Website Signup - In Progress",
+        status: "new" as const,
+        score: 30, // Lower score since they haven't completed the full form
+        tags: [],
+        notes: `⏳ EARLY LEAD CAPTURE (Step 2/4)
+
+Lead started the signup process but hasn't completed yet.
+
+📋 COMPANY INFO:
+• Website: ${data.website || 'Not provided'}
+• Industry: ${data.industry || 'Not specified'}
+
+⚠️ This lead is in progress - follow up to encourage completion!
+🎯 They're interested in a free marketing audit.
+
+---
+This lead will be updated if they complete the full signup process.`,
+      };
+
+      const lead = await storage.createLead(leadData);
+      
+      res.json({ success: true, leadId: lead.id });
+    } catch (error) {
+      console.error('Early lead capture error:', error);
+      return handleValidationError(error, res);
+    }
+  });
+
   // Public signup endpoint (no authentication required)
   app.post("/api/signup", async (req: Request, res: Response) => {
     try {
@@ -128,18 +185,9 @@ ${data.notes || 'None'}`,
 
       const client = await storage.createClient(clientData);
       
-      // Create a lead automatically for sales follow-up
+      // Create or update lead for sales follow-up
       try {
-        const leadData = {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          company: data.company,
-          source: "Website Signup - Free Audit",
-          status: "new" as const,
-          score: auditReport ? Math.min(100, (auditReport.summary.totalIssues * 10)) : 50,
-          tags: data.services,
-          notes: `🎯 AUTO-CREATED FROM FREE AUDIT SIGNUP
+        const leadNotes = `🎯 AUTO-CREATED FROM FREE AUDIT SIGNUP - ✅ COMPLETED
 
 📋 COMPANY INFO:
 • Website: ${data.website || 'Not provided'}
@@ -164,12 +212,40 @@ ${auditReport?.socialMedia && auditReport.socialMedia.length > 0 ? '\n\n📱 SOC
 
 🔥 This lead is HOT - they completed the full audit process!
 
-${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`,
-        };
+${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
 
-        await storage.createLead(leadData);
+        // Check if early lead capture exists
+        const existingLeads = await storage.getLeads();
+        const existingLead = existingLeads.find(l => l.email === data.email);
+
+        if (existingLead) {
+          // Update existing lead with complete information
+          await storage.updateLead(existingLead.id, {
+            source: "Website Signup - Free Audit",
+            status: "qualified" as const, // Upgrade status since they completed
+            score: auditReport ? Math.min(100, (auditReport.summary.totalIssues * 10)) : 50,
+            tags: data.services,
+            notes: leadNotes,
+          });
+          console.log(`✅ Updated existing lead ${existingLead.id} with complete audit data`);
+        } else {
+          // Create new lead if somehow early capture didn't work
+          const leadData = {
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            company: data.company,
+            source: "Website Signup - Free Audit",
+            status: "qualified" as const,
+            score: auditReport ? Math.min(100, (auditReport.summary.totalIssues * 10)) : 50,
+            tags: data.services,
+            notes: leadNotes,
+          };
+          await storage.createLead(leadData);
+          console.log(`✅ Created new lead with complete audit data`);
+        }
       } catch (leadError) {
-        console.error('Failed to create lead:', leadError);
+        console.error('Failed to create/update lead:', leadError);
         // Continue even if lead creation fails
       }
       
