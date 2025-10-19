@@ -498,7 +498,15 @@ export default function SignupPage() {
             </div>
             
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form 
+                onSubmit={form.handleSubmit(onSubmit)} 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && step < 5) {
+                    e.preventDefault();
+                  }
+                }}
+                className="space-y-6"
+              >
                 {/* Step 1: Company Information */}
                 {step === 1 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -514,7 +522,16 @@ export default function SignupPage() {
                         <FormItem>
                           <FormLabel>Company Name *</FormLabel>
                           <FormControl>
-                            <Input placeholder="Acme Inc." {...field} data-testid="input-company" />
+                            <Input 
+                              placeholder="Acme Inc." 
+                              {...field} 
+                              data-testid="input-company"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                }
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -806,13 +823,18 @@ export default function SignupPage() {
                               </FormLabel>
                               <FormControl>
                                 <Input 
+                                  type="text"
                                   placeholder={`https://${platform.value}.com/yourusername`} 
                                   {...field} 
                                   className="w-full"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                       e.preventDefault();
+                                      e.stopPropagation();
                                     }
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                   }}
                                 />
                               </FormControl>
