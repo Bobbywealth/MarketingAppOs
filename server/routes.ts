@@ -128,6 +128,46 @@ ${data.notes || 'None'}`,
 
       const client = await storage.createClient(clientData);
       
+      // Create a lead automatically for sales follow-up
+      try {
+        const leadData = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          company: data.company,
+          source: "Website Signup - Free Audit",
+          status: "new" as const,
+          score: auditReport ? Math.min(100, (auditReport.summary.totalIssues * 10)) : 50,
+          tags: data.services,
+          notes: `Auto-created from signup form.
+          
+Website: ${data.website || 'Not provided'}
+Industry: ${data.industry || 'Not specified'}
+Company Size: ${data.companySize || 'Not specified'}
+Budget: ${data.budget || 'Not specified'}
+Social Platforms: ${data.socialPlatforms?.join(', ') || 'None selected'}
+
+AUDIT RESULTS:
+- Total Issues: ${auditReport?.summary.totalIssues || 'Pending'}
+- Critical Issues: ${auditReport?.summary.criticalIssues || 'Pending'}
+${auditReport?.website ? '\n\nTop Website Issues:\n' + auditReport.website.recommendations.slice(0, 5).join('\n') : ''}
+
+This lead is HOT - they completed the full audit process!`,
+          customFields: {
+            auditCompleted: true,
+            auditIssues: auditReport?.summary.totalIssues || 0,
+            auditValue: auditReport?.summary.estimatedValue || 2500,
+            socialPlatforms: data.socialPlatforms,
+            services: data.services,
+          },
+        };
+
+        await storage.createLead(leadData);
+      } catch (leadError) {
+        console.error('Failed to create lead:', leadError);
+        // Continue even if lead creation fails
+      }
+      
       res.json({ 
         success: true, 
         clientId: client.id,
