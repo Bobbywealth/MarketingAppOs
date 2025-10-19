@@ -56,6 +56,11 @@ const clientTools = [
     icon: Calendar,
   },
   {
+    title: "Analytics",
+    url: "/client-analytics",
+    icon: BarChart3,
+  },
+  {
     title: "Billing",
     url: "/client-billing",
     icon: DollarSign,
