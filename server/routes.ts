@@ -293,6 +293,55 @@ ${data.notes || 'None'}`,
     }
   });
 
+  // Parse email for structured data extraction
+  app.post("/api/emails/:id/parse", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const emailId = req.params.id;
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      const email = await storage.getEmail(emailId);
+      
+      if (!email || email.userId !== userId) {
+        return res.status(404).json({ message: "Email not found" });
+      }
+
+      // Get full body if not already loaded
+      let emailBody = email.body;
+      if (!emailBody || emailBody.length === 0) {
+        const account = await storage.getEmailAccountByUserId(userId);
+        if (account && account.isActive && email.messageId) {
+          let accessToken = account.accessToken;
+          if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+            const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+            accessToken = refreshed.accessToken;
+            await storage.updateEmailAccount(account.id, {
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              tokenExpiresAt: refreshed.expiresOn,
+            });
+          }
+          const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
+          emailBody = fullEmail.body?.content || email.bodyPreview || '';
+        } else {
+          emailBody = email.bodyPreview || '';
+        }
+      }
+
+      // Use email parser
+      const { parseEmailContent } = await import('./emailParser');
+      const parsedData = await parseEmailContent(email.subject, emailBody);
+
+      res.json(parsedData);
+    } catch (error: any) {
+      console.error('Email parsing error:', error);
+      res.status(500).json({ 
+        message: "Failed to parse email",
+        error: error.message 
+      });
+    }
+  });
+
   // Analyze email with AI
   app.post("/api/emails/:id/analyze", isAuthenticated, async (req: Request, res: Response) => {
     try {

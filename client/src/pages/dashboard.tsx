@@ -3,6 +3,7 @@ import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight,
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { RestaurantStats } from "@/components/RestaurantStats";
 
 export default function Dashboard() {
   const { data: stats, isLoading, refetch } = useQuery({
@@ -442,6 +443,9 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Restaurant Order Stats Section */}
+        <RestaurantStats />
       </div>
     </div>
   );
