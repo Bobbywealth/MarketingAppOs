@@ -62,15 +62,27 @@ export default function Messages() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/messages", data);
+      console.log("📤 Sending message:", data);
+      const response = await apiRequest("POST", "/api/messages", data);
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("❌ Server error:", error);
+        throw new Error(error.message || "Failed to send message");
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/conversation", selectedUserId] });
       setMessageText("");
       toast({ title: "✅ Message sent" });
     },
-    onError: () => {
-      toast({ title: "Failed to send message", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("❌ Message send error:", error);
+      toast({ 
+        title: "Failed to send message", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
     },
   });
 

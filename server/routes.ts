@@ -1646,13 +1646,25 @@ Examples:
   app.post("/api/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const currentUserId = (req.user as any).id;
+      console.log("📨 Creating message:", { 
+        userId: currentUserId, 
+        recipientId: req.body.recipientId,
+        content: req.body.content?.substring(0, 50),
+        isInternal: req.body.isInternal 
+      });
+      
       const validatedData = insertMessageSchema.parse({
         ...req.body,
         userId: currentUserId, // Set sender as current user
       });
+      
       const message = await storage.createMessage(validatedData);
+      console.log("✅ Message created successfully:", message.id);
       res.status(201).json(message);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("❌ Failed to create message:", error);
+      console.error("Request body:", req.body);
+      console.error("User ID:", (req.user as any)?.id);
       handleValidationError(error, res);
     }
   });
