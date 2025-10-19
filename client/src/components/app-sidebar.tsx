@@ -233,7 +233,7 @@ export function AppSidebar() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="p-4 border-t">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 mb-2">
             <Avatar className="h-10 w-10">
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {getUserInitials()}
@@ -243,10 +243,15 @@ export function AppSidebar() {
               <p className="text-sm font-medium truncate">{user?.username || "Client"}</p>
               <p className="text-xs text-muted-foreground truncate capitalize">{user?.role || "client"}</p>
             </div>
-            <Link href="/login" className="p-2 hover:bg-muted rounded-md transition-colors">
-              <LogOut className="w-4 h-4 text-muted-foreground" data-testid="button-logout" />
-            </Link>
           </div>
+          <a
+            href="/api/logout"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Log Out</span>
+          </a>
         </SidebarFooter>
       </Sidebar>
     );
