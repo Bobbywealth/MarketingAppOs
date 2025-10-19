@@ -185,6 +185,16 @@ export default function SignupPage() {
             </Badge>
           </div>
 
+          {/* Debug Info */}
+          {auditResults && (
+            <div className="mb-4 p-4 bg-gray-100 rounded text-xs">
+              <details>
+                <summary className="cursor-pointer font-bold">🔍 Debug: View Raw Audit Data</summary>
+                <pre className="mt-2 overflow-auto">{JSON.stringify(auditResults, null, 2)}</pre>
+              </details>
+            </div>
+          )}
+
           {/* Audit Summary */}
           {auditResults && (
             <div className="space-y-8">
