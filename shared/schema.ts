@@ -398,8 +398,6 @@ export const onboardingTasks = pgTable("onboarding_tasks", {
   dueDay: integer("due_day").notNull(), // day number in the 30-day onboarding
   completed: boolean("completed").notNull().default(false),
   completedAt: timestamp("completed_at"),
-  assignedToId: integer("assigned_to_id").references(() => users.id), // Who's responsible
-  category: varchar("category"), // setup, content, training, review
   createdAt: timestamp("created_at").defaultNow(),
 });
 

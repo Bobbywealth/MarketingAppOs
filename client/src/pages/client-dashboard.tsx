@@ -1,17 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock, Users, Circle } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 
 export default function ClientDashboard() {
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
-  const { toast } = useToast();
   
   // Fetch client-specific data
   const { data: stats } = useQuery({
@@ -27,25 +24,6 @@ export default function ClientDashboard() {
   const { data: tickets = [] } = useQuery({
     queryKey: ["/api/tickets"],
     enabled: !!user,
-  });
-
-  const { data: onboardingTasks = [] } = useQuery({
-    queryKey: ["/api/onboarding-tasks"],
-    enabled: !!user,
-  });
-
-  const toggleTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      const response = await apiRequest("POST", `/api/onboarding-tasks/${taskId}/toggle`, {});
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding-tasks"] });
-      toast({ title: "Task updated!", description: "Your progress has been saved" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update task", variant: "destructive" });
-    },
   });
 
   // Filter for upcoming content
@@ -67,12 +45,6 @@ export default function ClientDashboard() {
   const openTickets = tickets.filter((ticket: any) => 
     ticket.status === 'open' || ticket.status === 'in_progress'
   );
-
-  // Onboarding progress
-  const hasOnboardingTasks = onboardingTasks.length > 0;
-  const onboardingProgress = hasOnboardingTasks 
-    ? Math.round((onboardingTasks.filter((t: any) => t.completed).length / onboardingTasks.length) * 100)
-    : 0;
 
   const metrics = [
     {
@@ -145,71 +117,6 @@ export default function ClientDashboard() {
             </Link>
           ))}
         </div>
-
-        {/* Onboarding Section */}
-        {hasOnboardingTasks && (
-          <Card className="glass-strong border-0 shadow-xl overflow-hidden">
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-purple-500/5 via-transparent to-transparent">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-purple-500" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">Your Onboarding</CardTitle>
-                    <CardDescription>Complete these steps to get started</CardDescription>
-                  </div>
-                </div>
-                <Badge variant="secondary" className="bg-purple-500/10 text-purple-600">
-                  {onboardingProgress}% Complete
-                </Badge>
-              </div>
-              <div className="mt-4">
-                <Progress value={onboardingProgress} className="h-2" />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-2">
-                {onboardingTasks.map((task: any) => (
-                  <div
-                    key={task.id}
-                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors group"
-                  >
-                    <button
-                      onClick={() => toggleTaskMutation.mutate(task.id)}
-                      className="flex-shrink-0 mt-0.5 hover:scale-110 transition-transform"
-                      disabled={toggleTaskMutation.isPending}
-                    >
-                      {task.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-muted-foreground hover:text-primary" />
-                      )}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${task.completed ? "text-muted-foreground line-through" : ""}`}>
-                        {task.title}
-                      </p>
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs px-2 py-0">
-                          Day {task.dueDay}
-                        </Badge>
-                        {task.category && (
-                          <Badge variant="secondary" className="text-xs px-2 py-0 capitalize">
-                            {task.category}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Upcoming Content */}
