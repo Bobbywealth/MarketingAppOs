@@ -401,7 +401,8 @@ export class AuditService {
     ];
 
     for (const { platform, url } of socialUrls) {
-      if (url && data.socialPlatforms?.includes(platform)) {
+      // Audit any URL that's provided, regardless of socialPlatforms array
+      if (url && url.trim().length > 0) {
         const audit = await this.auditSocialMedia(platform, url);
         results.socialMedia.push(audit);
         if (!audit.isValid) {
