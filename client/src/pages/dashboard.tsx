@@ -5,11 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, refetch } = useQuery({
     queryKey: ["/api/dashboard/stats"],
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
-  console.log("📊 Dashboard Stats Received:", stats);
+  console.log("📊 Dashboard Stats Received:");
+  console.log("  - Total Clients:", stats?.totalClients);
+  console.log("  - Active Campaigns:", stats?.activeCampaigns);
+  console.log("  - Full stats object:", stats);
 
   const { data: stripeData } = useQuery({
     queryKey: ["/api/stripe/subscriptions"],

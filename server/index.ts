@@ -5,6 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 import { initializeStripe } from "./stripeService";
 import { initializeEmailService } from "./emailService";
+import { initializeEmailParser } from "./emailParser";
 
 const app = express();
 app.use(express.json());
@@ -46,6 +47,7 @@ app.use((req, res, next) => {
   // Initialize services
   initializeStripe();
   initializeEmailService();
+  initializeEmailParser();
   
   await setupAuth(app);
   registerRoutes(app);

@@ -508,7 +508,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         storage.getActivityLogs(20), // Get recent 20 activity logs
       ]);
 
-      console.log("📊 Dashboard Stats - Total Clients:", clients.length, "clients:", clients.map(c => c.name));
+      console.log("📊 Dashboard Stats:");
+      console.log("  - Total Clients:", clients.length);
+      console.log("  - Client Names:", clients.map(c => c.name).join(", "));
+      console.log("  - Total Campaigns:", campaigns.length);
+      console.log("  - Total Leads:", leads.length);
+      console.log("  - Total Tasks:", tasks.length);
 
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
