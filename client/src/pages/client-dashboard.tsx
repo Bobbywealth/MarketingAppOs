@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock, TrendingUp, Users, Heart, Eye, Share2, ThumbsUp, Video, Image as ImageIcon, DollarSign, Megaphone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -26,6 +26,16 @@ export default function ClientDashboard() {
     enabled: !!user,
   });
 
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ["/api/campaigns"],
+    enabled: !!user,
+  });
+
+  const { data: invoices = [] } = useQuery({
+    queryKey: ["/api/invoices"],
+    enabled: !!user,
+  });
+
   // Filter for upcoming content
   const upcomingContent = contentPosts
     .filter((post: any) => 
@@ -45,6 +55,25 @@ export default function ClientDashboard() {
   const openTickets = tickets.filter((ticket: any) => 
     ticket.status === 'open' || ticket.status === 'in_progress'
   );
+
+  // Filter campaigns for this client
+  const clientCampaigns = campaigns.filter((campaign: any) => 
+    campaign.clientId === user?.clientId
+  );
+
+  // Filter invoices for this client
+  const clientInvoices = invoices.filter((invoice: any) => 
+    invoice.clientId === user?.clientId
+  );
+
+  // Calculate billing stats
+  const totalPaid = clientInvoices
+    .filter((invoice: any) => invoice.status === 'paid')
+    .reduce((sum: number, invoice: any) => sum + invoice.amount, 0);
+
+  const pendingAmount = clientInvoices
+    .filter((invoice: any) => invoice.status === 'sent' || invoice.status === 'overdue')
+    .reduce((sum: number, invoice: any) => sum + invoice.amount, 0);
 
   const metrics = [
     {
@@ -274,6 +303,103 @@ export default function ClientDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Billing Summary */}
+        <Card className="glass-strong border-0 shadow-xl">
+          <CardHeader className="border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-green-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Billing Summary</CardTitle>
+                  <CardDescription>Your payment status and recent activity</CardDescription>
+                </div>
+              </div>
+              <Link href="/client-billing">
+                <Button variant="ghost" size="sm">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">${(totalPaid / 100).toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Paid</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">${(pendingAmount / 100).toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-purple-600">{clientInvoices.length}</p>
+                <p className="text-sm text-muted-foreground">Invoices</p>
+              </div>
+            </div>
+            
+            {pendingAmount > 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-600">
+                    You have ${(pendingAmount / 100).toLocaleString()} in pending payments
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* My Campaigns */}
+        {clientCampaigns.length > 0 && (
+          <Card className="glass-strong border-0 shadow-xl">
+            <CardHeader className="border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                    <Megaphone className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">My Campaigns</CardTitle>
+                    <CardDescription>Your active marketing campaigns</CardDescription>
+                  </div>
+                </div>
+                <Link href="/client-campaigns">
+                  <Button variant="ghost" size="sm">View All</Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {clientCampaigns.slice(0, 3).map((campaign: any) => (
+                  <div key={campaign.id} className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-medium truncate">{campaign.name}</h4>
+                      <Badge className={
+                        campaign.status === 'active' ? 'bg-green-500/10 text-green-600' :
+                        campaign.status === 'planning' ? 'bg-blue-500/10 text-blue-600' :
+                        campaign.status === 'paused' ? 'bg-yellow-500/10 text-yellow-600' :
+                        'bg-gray-500/10 text-gray-600'
+                      }>
+                        {campaign.status}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground capitalize mb-2">{campaign.type} Campaign</p>
+                    {campaign.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{campaign.description}</p>
+                    )}
+                    {campaign.budget && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Budget: ${(campaign.budget / 100).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

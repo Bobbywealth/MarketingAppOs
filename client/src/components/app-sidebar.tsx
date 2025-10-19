@@ -46,9 +46,19 @@ const clientTools = [
     icon: LayoutDashboard,
   },
   {
+    title: "My Campaigns",
+    url: "/client-campaigns",
+    icon: Megaphone,
+  },
+  {
     title: "My Content",
     url: "/client-content",
     icon: Calendar,
+  },
+  {
+    title: "Billing",
+    url: "/client-billing",
+    icon: DollarSign,
   },
   {
     title: "Support Tickets",
