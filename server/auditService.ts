@@ -40,6 +40,20 @@ interface SocialMediaAuditResult {
 
 export class AuditService {
   /**
+   * Parse numbers with K, M, B notation (e.g., "1.2K" -> 1200)
+   */
+  static parseNumber(str: string): number {
+    const cleaned = str.replace(/,/g, '').toUpperCase();
+    const num = parseFloat(cleaned);
+    
+    if (cleaned.includes('K')) return Math.round(num * 1000);
+    if (cleaned.includes('M')) return Math.round(num * 1000000);
+    if (cleaned.includes('B')) return Math.round(num * 1000000000);
+    
+    return Math.round(num);
+  }
+
+  /**
    * Perform comprehensive website audit
    */
   static async auditWebsite(url: string): Promise<WebsiteAuditResult> {
@@ -165,31 +179,41 @@ export class AuditService {
     try {
       const response = await axios.get(`https://www.instagram.com/${username}/`, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Cache-Control': 'max-age=0',
         },
-        timeout: 10000,
+        timeout: 15000,
+        maxRedirects: 5,
       });
 
       const html = response.data;
       
-      // Try to extract data from meta tags first
+      // Try multiple extraction methods
       const $ = cheerio.load(html);
-      const metaDescription = $('meta[property="og:description"]').attr('content') || '';
       
-      // Parse followers from meta description (format: "X Followers, Y Following, Z Posts")
-      const followersMatch = metaDescription.match(/([\d,]+)\s*Followers/i);
-      const followingMatch = metaDescription.match(/([\d,]+)\s*Following/i);
-      const postsMatch = metaDescription.match(/([\d,]+)\s*Posts/i);
+      // Method 1: Meta tags
+      const metaDescription = $('meta[property="og:description"]').attr('content') || '';
+      const followersMatch = metaDescription.match(/([\d,\.KMBkmb]+)\s*Followers/i);
+      const followingMatch = metaDescription.match(/([\d,\.KMBkmb]+)\s*Following/i);
+      const postsMatch = metaDescription.match(/([\d,\.KMBkmb]+)\s*Posts/i);
 
       if (followersMatch) {
         return {
-          followers: parseInt(followersMatch[1].replace(/,/g, '')),
-          following: followingMatch ? parseInt(followingMatch[1].replace(/,/g, '')) : undefined,
-          posts: postsMatch ? parseInt(postsMatch[1].replace(/,/g, '')) : undefined,
+          followers: this.parseNumber(followersMatch[1]),
+          following: followingMatch ? this.parseNumber(followingMatch[1]) : undefined,
+          posts: postsMatch ? this.parseNumber(postsMatch[1]) : undefined,
         };
       }
 
-      // Fallback: try to find JSON data in script tags
+      // Method 2: Embedded JSON in script tags
       const scriptTags = $('script[type="application/ld+json"]');
       for (let i = 0; i < scriptTags.length; i++) {
         try {
@@ -209,6 +233,24 @@ export class AuditService {
           }
         } catch (e) {
           // Continue to next script tag
+        }
+      }
+
+      // Method 3: Look for inline window._sharedData
+      const sharedDataMatch = html.match(/window\._sharedData\s*=\s*({.+?});/);
+      if (sharedDataMatch) {
+        try {
+          const sharedData = JSON.parse(sharedDataMatch[1]);
+          const user = sharedData?.entry_data?.ProfilePage?.[0]?.graphql?.user;
+          if (user) {
+            return {
+              followers: user.edge_followed_by?.count,
+              following: user.edge_follow?.count,
+              posts: user.edge_owner_to_timeline_media?.count,
+            };
+          }
+        } catch (e) {
+          console.error('Failed to parse shared data:', e);
         }
       }
 

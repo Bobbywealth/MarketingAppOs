@@ -139,27 +139,32 @@ ${data.notes || 'None'}`,
           status: "new" as const,
           score: auditReport ? Math.min(100, (auditReport.summary.totalIssues * 10)) : 50,
           tags: data.services,
-          notes: `Auto-created from signup form.
-          
-Website: ${data.website || 'Not provided'}
-Industry: ${data.industry || 'Not specified'}
-Company Size: ${data.companySize || 'Not specified'}
-Budget: ${data.budget || 'Not specified'}
-Social Platforms: ${data.socialPlatforms?.join(', ') || 'None selected'}
+          notes: `🎯 AUTO-CREATED FROM FREE AUDIT SIGNUP
 
-AUDIT RESULTS:
-- Total Issues: ${auditReport?.summary.totalIssues || 'Pending'}
-- Critical Issues: ${auditReport?.summary.criticalIssues || 'Pending'}
-${auditReport?.website ? '\n\nTop Website Issues:\n' + auditReport.website.recommendations.slice(0, 5).join('\n') : ''}
+📋 COMPANY INFO:
+• Website: ${data.website || 'Not provided'}
+• Industry: ${data.industry || 'Not specified'}
+• Company Size: ${data.companySize || 'Not specified'}
+• Budget: ${data.budget || 'Not specified'}
+• Services Interested: ${data.services.join(', ')}
 
-This lead is HOT - they completed the full audit process!`,
-          customFields: {
-            auditCompleted: true,
-            auditIssues: auditReport?.summary.totalIssues || 0,
-            auditValue: auditReport?.summary.estimatedValue || 2500,
-            socialPlatforms: data.socialPlatforms,
-            services: data.services,
-          },
+📱 SOCIAL MEDIA:
+${data.instagramUrl ? `• Instagram: ${data.instagramUrl}` : ''}
+${data.facebookUrl ? `• Facebook: ${data.facebookUrl}` : ''}
+${data.tiktokUrl ? `• TikTok: ${data.tiktokUrl}` : ''}
+${data.linkedinUrl ? `• LinkedIn: ${data.linkedinUrl}` : ''}
+${data.twitterUrl ? `• Twitter: ${data.twitterUrl}` : ''}
+${data.youtubeUrl ? `• YouTube: ${data.youtubeUrl}` : ''}
+
+📊 AUDIT RESULTS ($2,500 VALUE):
+• Total Issues Found: ${auditReport?.summary.totalIssues || 0}
+• Critical Issues: ${auditReport?.summary.criticalIssues || 0}
+${auditReport?.website ? '\n🌐 WEBSITE ISSUES:\n' + auditReport.website.recommendations.slice(0, 5).map(r => `  ${r}`).join('\n') : ''}
+${auditReport?.socialMedia && auditReport.socialMedia.length > 0 ? '\n\n📱 SOCIAL MEDIA AUDIT:\n' + auditReport.socialMedia.map(s => `  ${s.platform}: ${s.isValid ? '✅ Valid' : '❌ Invalid'} ${s.stats?.followers ? `(${s.stats.followers.toLocaleString()} followers)` : ''}`).join('\n') : ''}
+
+🔥 This lead is HOT - they completed the full audit process!
+
+${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`,
         };
 
         await storage.createLead(leadData);
