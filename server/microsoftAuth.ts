@@ -13,7 +13,8 @@ const msalConfig = {
 const pca = new ConfidentialClientApplication(msalConfig);
 
 const REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:5000/api/auth/microsoft/callback';
-const SCOPES = ['User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send'];
+// 'offline_access' is REQUIRED to get refresh tokens for persistent login
+const SCOPES = ['offline_access', 'User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send'];
 
 export function getAuthUrl(state?: string): string {
   const authCodeUrlParameters: AuthorizationUrlRequest = {

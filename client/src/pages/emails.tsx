@@ -80,7 +80,8 @@ export default function EmailsPage() {
         title: "Email Connected!", 
         description: "Your Outlook email is now connected. Syncing emails..."
       });
-      // Trigger sync
+      // Trigger manual sync with toast
+      setIsManualSync(true);
       syncEmailsMutation.mutate();
       // Clean up URL
       window.history.replaceState({}, '', '/emails');
@@ -112,6 +113,8 @@ export default function EmailsPage() {
     enabled: isConnected,
   });
 
+  const [isManualSync, setIsManualSync] = useState(false);
+
   const syncEmailsMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/emails/sync", {});
@@ -126,53 +129,63 @@ export default function EmailsPage() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/email-accounts"] });
       console.log("✅ Email sync successful:", data);
-      if (data.syncedCount > 0) {
+      
+      // Only show toast for manual syncs
+      if (isManualSync && data.syncedCount > 0) {
         toast({ 
           title: "✅ Emails synced!", 
           description: `Synced ${data.syncedCount} new emails`
         });
       }
+      setIsManualSync(false);
     },
     onError: (error: any) => {
       console.error("❌ Email sync failed:", error);
       
-      // Check if it's an OAuth token error
-      const errorMessage = error?.message || '';
-      if (errorMessage.includes('invalid_grant') || errorMessage.includes('AADSTS')) {
-        toast({ 
-          title: "Email connection expired", 
-          description: "Your Outlook connection needs to be refreshed. Please reconnect your account.",
-          variant: "destructive",
-          duration: 10000,
-        });
-      } else {
-        toast({ 
-          title: "Failed to sync emails", 
-          description: error?.message || "Please check your connection and try again",
-          variant: "destructive" 
-        });
+      // Only show error toasts for manual syncs, not background syncs
+      if (isManualSync) {
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('invalid_grant') || errorMessage.includes('AADSTS')) {
+          toast({ 
+            title: "Email connection expired", 
+            description: "Your Outlook connection needs to be refreshed. Please reconnect your account.",
+            variant: "destructive",
+            duration: 10000,
+          });
+        } else {
+          toast({ 
+            title: "Failed to sync emails", 
+            description: error?.message || "Please check your connection and try again",
+            variant: "destructive" 
+          });
+        }
       }
+      setIsManualSync(false);
     },
   });
 
-  // Auto-sync emails every 30 seconds
+  // Auto-sync emails every 5 minutes (silent background sync)
   useEffect(() => {
     if (!isConnected) return;
 
-    // Initial sync when page loads
-    console.log("Starting auto-sync for emails...");
-    syncEmailsMutation.mutate();
+    // Initial sync when page loads (after 2 seconds)
+    const initialTimer = setTimeout(() => {
+      console.log("🔄 Initial email sync...");
+      syncEmailsMutation.mutate(); // isManualSync is false, so no toast
+    }, 2000);
 
-    // Set up interval for auto-sync every 30 seconds
+    // Set up interval for auto-sync every 5 minutes
     const syncInterval = setInterval(() => {
-      console.log("Auto-syncing emails...");
-      syncEmailsMutation.mutate();
-    }, 30000); // 30 seconds
+      console.log("🔄 Background email sync...");
+      syncEmailsMutation.mutate(); // isManualSync is false, so no toast
+    }, 5 * 60 * 1000); // 5 minutes
 
     // Cleanup interval on unmount
     return () => {
-      console.log("Stopping email auto-sync");
+      console.log("⏹️ Stopping email auto-sync");
+      clearTimeout(initialTimer);
       clearInterval(syncInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -388,7 +401,10 @@ export default function EmailsPage() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => syncEmailsMutation.mutate()}
+                onClick={() => {
+                  setIsManualSync(true);
+                  syncEmailsMutation.mutate();
+                }}
                 disabled={syncEmailsMutation.isPending}
               >
                 {syncEmailsMutation.isPending ? (
