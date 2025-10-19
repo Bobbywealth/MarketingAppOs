@@ -84,50 +84,62 @@ export default function LeadsPage() {
       lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = filterStatus === "all" || lead.status === filterStatus;
+    const matchesStatus = filterStatus === "all" || lead.stage === filterStatus;
     
     return matchesSearch && matchesStatus;
   });
 
   const leadStats = {
     total: leads.length,
-    new: leads.filter(l => l.status === "new").length,
-    contacted: leads.filter(l => l.status === "contacted").length,
-    qualified: leads.filter(l => l.status === "qualified").length,
-    converted: leads.filter(l => l.status === "converted").length,
-    lost: leads.filter(l => l.status === "lost").length,
+    prospect: leads.filter(l => l.stage === "prospect").length,
+    qualified: leads.filter(l => l.stage === "qualified").length,
+    proposal: leads.filter(l => l.stage === "proposal").length,
+    closedWon: leads.filter(l => l.stage === "closed_won").length,
+    closedLost: leads.filter(l => l.stage === "closed_lost").length,
+    // Temperature stats
+    hot: leads.filter(l => l.score === "hot").length,
+    warm: leads.filter(l => l.score === "warm").length,
+    cold: leads.filter(l => l.score === "cold").length,
   };
 
-  const getStatusColor = (status: string) => {
+  const getStageColor = (stage: string) => {
     const colors = {
-      new: "bg-blue-500",
-      contacted: "bg-purple-500",
+      prospect: "bg-blue-500",
       qualified: "bg-green-500",
       proposal: "bg-orange-500",
-      negotiation: "bg-yellow-500",
-      converted: "bg-emerald-500",
-      lost: "bg-red-500",
+      closed_won: "bg-emerald-500",
+      closed_lost: "bg-red-500",
     };
-    return colors[status as keyof typeof colors] || "bg-gray-500";
+    return colors[stage as keyof typeof colors] || "bg-gray-500";
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStageBadge = (stage: string) => {
     const colors = {
-      new: "default",
-      contacted: "secondary",
+      prospect: "default",
       qualified: "default",
       proposal: "secondary",
-      negotiation: "default",
-      converted: "default",
-      lost: "destructive",
+      closed_won: "default",
+      closed_lost: "destructive",
     };
-    return colors[status as keyof typeof colors] || "default";
+    return colors[stage as keyof typeof colors] || "default";
   };
 
-  const getLeadScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-500";
-    if (score >= 50) return "text-yellow-500";
-    return "text-red-500";
+  const getScoreColor = (score: string) => {
+    const colors = {
+      hot: "text-red-500",
+      warm: "text-orange-500",
+      cold: "text-blue-500",
+    };
+    return colors[score as keyof typeof colors] || "text-gray-500";
+  };
+
+  const getScoreBadge = (score: string) => {
+    const colors = {
+      hot: "destructive",
+      warm: "default",
+      cold: "secondary",
+    };
+    return colors[score as keyof typeof colors] || "default";
   };
 
   return (
@@ -155,14 +167,19 @@ export default function LeadsPage() {
               const formData = new FormData(e.currentTarget);
               const data: InsertLead = {
                 name: formData.get("name") as string,
-                email: formData.get("email") as string || undefined,
-                phone: formData.get("phone") as string || undefined,
-                company: formData.get("company") as string || undefined,
-                position: formData.get("position") as string || undefined,
-                status: formData.get("status") as string,
-                source: formData.get("source") as string || undefined,
-                value: formData.get("value") ? parseFloat(formData.get("value") as string) : undefined,
-                notes: formData.get("notes") as string || undefined,
+                email: formData.get("email") as string || null,
+                phone: formData.get("phone") as string || null,
+                company: formData.get("company") as string || null,
+                website: formData.get("website") as string || null,
+                stage: formData.get("stage") as string,
+                score: formData.get("score") as string,
+                source: formData.get("source") as string,
+                value: formData.get("value") ? parseInt(formData.get("value") as string) * 100 : null, // Convert to cents
+                notes: formData.get("notes") as string || null,
+                clientId: null,
+                assignedToId: null,
+                sourceMetadata: null,
+                nextFollowUp: null,
               };
               createLeadMutation.mutate(data);
             }} className="space-y-4">
@@ -190,51 +207,57 @@ export default function LeadsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Position</Label>
-                  <Input name="position" placeholder="CEO, Marketing Manager" />
-                </div>
-                <div>
                   <Label>Website</Label>
                   <Input name="website" type="url" placeholder="https://example.com" />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Lead Value</Label>
+                  <Label>Lead Value ($)</Label>
                   <Input name="value" type="number" placeholder="5000" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>Status *</Label>
-                  <Select name="status" defaultValue="new" required>
+                  <Label>Stage *</Label>
+                  <Select name="stage" defaultValue="prospect" required>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="prospect">Prospect</SelectItem>
                       <SelectItem value="qualified">Qualified</SelectItem>
-                      <SelectItem value="proposal">Proposal Sent</SelectItem>
-                      <SelectItem value="negotiation">Negotiation</SelectItem>
+                      <SelectItem value="proposal">Proposal</SelectItem>
+                      <SelectItem value="closed_won">Closed Won</SelectItem>
+                      <SelectItem value="closed_lost">Closed Lost</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Lead Source</Label>
-                  <Select name="source">
+                  <Label>Temperature *</Label>
+                  <Select name="score" defaultValue="warm" required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select source" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hot">🔥 Hot</SelectItem>
+                      <SelectItem value="warm">☀️ Warm</SelectItem>
+                      <SelectItem value="cold">❄️ Cold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Lead Source *</Label>
+                  <Select name="source" defaultValue="website" required>
+                    <SelectTrigger>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="website">Website</SelectItem>
                       <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="social_media">Social Media</SelectItem>
-                      <SelectItem value="cold_call">Cold Call</SelectItem>
-                      <SelectItem value="event">Event</SelectItem>
-                      <SelectItem value="advertising">Advertising</SelectItem>
+                      <SelectItem value="social">Social Media</SelectItem>
+                      <SelectItem value="ads">Advertising</SelectItem>
+                      <SelectItem value="call">Phone Call</SelectItem>
+                      <SelectItem value="form">Lead Form</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
