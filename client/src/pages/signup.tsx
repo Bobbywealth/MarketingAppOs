@@ -90,10 +90,7 @@ export default function SignupPage() {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupFormData) => {
-      const response = await apiRequest("/api/signup", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/signup", data);
       return response;
     },
     onSuccess: () => {
@@ -101,7 +98,7 @@ export default function SignupPage() {
         title: "Welcome to Marketing Team App!",
         description: "We'll be in touch shortly to get you started.",
       });
-      setStep(4);
+      setStep(6); // Changed from 4 to 6
     },
     onError: (error: Error) => {
       toast({
