@@ -6,6 +6,7 @@ import { requireRole, requirePermission, UserRole, rolePermissions } from "./rba
 import { AuditService } from "./auditService";
 import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
+import { dialpadService } from "./dialpadService";
 import {
   insertClientSchema,
   insertCampaignSchema,
@@ -3559,6 +3560,252 @@ Examples:
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch Second Me content" });
+    }
+  });
+
+  // ============================================
+  // DIALPAD API ROUTES
+  // ============================================
+
+  // Get call logs
+  app.get("/api/dialpad/calls", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured. Please add DIALPAD_API_KEY to your environment variables." });
+      }
+
+      const { start_time, end_time, limit, offset } = req.query;
+      const callLogs = await dialpadService.getCallLogs({
+        start_time: start_time as string,
+        end_time: end_time as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
+
+      res.json(callLogs);
+    } catch (error: any) {
+      console.error('Error fetching Dialpad calls:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch call logs" });
+    }
+  });
+
+  // Get specific call details
+  app.get("/api/dialpad/calls/:callId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const callDetails = await dialpadService.getCallDetails(req.params.callId);
+      res.json(callDetails);
+    } catch (error: any) {
+      console.error('Error fetching call details:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch call details" });
+    }
+  });
+
+  // Make an outbound call
+  app.post("/api/dialpad/calls", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { to_number, from_number, from_extension_id } = req.body;
+      
+      if (!to_number) {
+        return res.status(400).json({ message: "to_number is required" });
+      }
+
+      const result = await dialpadService.makeCall({
+        to_number,
+        from_number,
+        from_extension_id,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error making call:', error);
+      res.status(500).json({ message: error.message || "Failed to make call" });
+    }
+  });
+
+  // Get SMS messages
+  app.get("/api/dialpad/sms", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { start_time, end_time, limit, offset } = req.query;
+      const messages = await dialpadService.getSmsMessages({
+        start_time: start_time as string,
+        end_time: end_time as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
+
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching SMS messages:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch SMS messages" });
+    }
+  });
+
+  // Send SMS
+  app.post("/api/dialpad/sms", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { to_numbers, text, from_number } = req.body;
+      
+      if (!to_numbers || !Array.isArray(to_numbers) || to_numbers.length === 0) {
+        return res.status(400).json({ message: "to_numbers array is required" });
+      }
+      
+      if (!text) {
+        return res.status(400).json({ message: "text message is required" });
+      }
+
+      const result = await dialpadService.sendSms({
+        to_numbers,
+        text,
+        from_number,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error sending SMS:', error);
+      res.status(500).json({ message: error.message || "Failed to send SMS" });
+    }
+  });
+
+  // Get contacts
+  app.get("/api/dialpad/contacts", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { limit, offset, search } = req.query;
+      const contacts = await dialpadService.getContacts({
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+        search: search as string,
+      });
+
+      res.json(contacts);
+    } catch (error: any) {
+      console.error('Error fetching contacts:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch contacts" });
+    }
+  });
+
+  // Create contact
+  app.post("/api/dialpad/contacts", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { name, phones, emails, company } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "name is required" });
+      }
+
+      const result = await dialpadService.createContact({
+        name,
+        phones,
+        emails,
+        company,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error('Error creating contact:', error);
+      res.status(500).json({ message: error.message || "Failed to create contact" });
+    }
+  });
+
+  // Get voicemails
+  app.get("/api/dialpad/voicemails", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { start_time, end_time, limit, offset } = req.query;
+      const voicemails = await dialpadService.getVoicemails({
+        start_time: start_time as string,
+        end_time: end_time as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
+
+      res.json(voicemails);
+    } catch (error: any) {
+      console.error('Error fetching voicemails:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch voicemails" });
+    }
+  });
+
+  // Get call recording
+  app.get("/api/dialpad/calls/:callId/recording", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const recording = await dialpadService.getRecordingUrl(req.params.callId);
+      res.json(recording);
+    } catch (error: any) {
+      console.error('Error fetching recording:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch recording" });
+    }
+  });
+
+  // Get call stats
+  app.get("/api/dialpad/stats/calls", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { start_time, end_time, target_type, target_id } = req.query;
+      
+      if (!start_time || !end_time) {
+        return res.status(400).json({ message: "start_time and end_time are required" });
+      }
+
+      const stats = await dialpadService.getCallStats({
+        start_time: start_time as string,
+        end_time: end_time as string,
+        target_type: target_type as any,
+        target_id: target_id as string,
+      });
+
+      res.json(stats);
+    } catch (error: any) {
+      console.error('Error fetching call stats:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch call stats" });
+    }
+  });
+
+  // Get current Dialpad user info
+  app.get("/api/dialpad/user/me", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const userInfo = await dialpadService.getCurrentUser();
+      res.json(userInfo);
+    } catch (error: any) {
+      console.error('Error fetching Dialpad user info:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch user info" });
     }
   });
 }

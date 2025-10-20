@@ -52,19 +52,19 @@ export default function PhonePage() {
   const [activeCall, setActiveCall] = useState<CallLog | null>(null);
   const [isMuted, setIsMuted] = useState(false);
 
-  // Mock data - will be replaced with Dialpad API
+  // Fetch call logs from Dialpad API
   const { data: callLogs = [], isLoading } = useQuery<CallLog[]>({
-    queryKey: ["/api/calls"],
+    queryKey: ["/api/dialpad/calls"],
     queryFn: async () => {
-      // TODO: Replace with Dialpad API integration
-      return [];
+      const response = await apiRequest("GET", "/api/dialpad/calls?limit=100", undefined);
+      return response.json();
     },
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   const makeCallMutation = useMutation({
     mutationFn: async (number: string) => {
-      // TODO: Integrate with Dialpad API
-      return apiRequest("POST", "/api/calls/make", { phoneNumber: number });
+      return apiRequest("POST", "/api/dialpad/calls", { to_number: number });
     },
     onSuccess: () => {
       toast({ title: "📞 Calling...", description: `Dialing ${phoneNumber}` });
