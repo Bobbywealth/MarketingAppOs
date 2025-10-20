@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -614,7 +614,7 @@ export default function Content() {
                         </div>
                         
                         {post.mediaUrl && (
-                          <div className="w-full h-20 rounded border overflow-hidden bg-muted">
+                          <div className="relative w-full h-20 rounded border overflow-hidden bg-muted group">
                             {post.mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                               <img src={post.mediaUrl} alt="Post media" className="w-full h-full object-cover" />
                             ) : post.mediaUrl.match(/\.(mp4|webm|ogg|mov)$/i) ? (
@@ -624,6 +624,18 @@ export default function Content() {
                                 <ImageIcon className="w-6 h-6 text-muted-foreground" />
                               </div>
                             )}
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`${post.mediaUrl}?download=true`, '_blank');
+                              }}
+                              title="Download media"
+                            >
+                              <Download className="w-3 h-3" />
+                            </Button>
                           </div>
                         )}
                         
