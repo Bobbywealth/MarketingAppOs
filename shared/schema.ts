@@ -786,3 +786,41 @@ export const calendarEvents = pgTable("calendar_events", {
 export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+// Second Me (AI Avatar) table
+export const secondMe = pgTable("second_me", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  status: varchar("status").notNull().default("pending"), // pending, processing, ready, active, paused
+  photoUrls: text("photo_urls").array(), // Array of uploaded photo URLs
+  avatarUrl: varchar("avatar_url"), // Final AI avatar/character URL from Higgsfield
+  setupPaid: boolean("setup_paid").default(false),
+  weeklySubscriptionActive: boolean("weekly_subscription_active").default(false),
+  stripeSetupPaymentId: varchar("stripe_setup_payment_id"),
+  stripeWeeklySubscriptionId: varchar("stripe_weekly_subscription_id"),
+  notes: text("notes"), // Admin notes about the avatar
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSecondMeSchema = createInsertSchema(secondMe).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSecondMe = z.infer<typeof insertSecondMeSchema>;
+export type SecondMe = typeof secondMe.$inferSelect;
+
+// Second Me Content (AI-generated weekly content)
+export const secondMeContent = pgTable("second_me_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  secondMeId: varchar("second_me_id").notNull().references(() => secondMe.id),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  contentType: varchar("content_type").notNull(), // video, image
+  mediaUrl: varchar("media_url").notNull(),
+  caption: text("caption"),
+  weekNumber: integer("week_number"), // Track which week this content is for
+  status: varchar("status").notNull().default("pending"), // pending, approved, scheduled, published
+  scheduledFor: timestamp("scheduled_for"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSecondMeContentSchema = createInsertSchema(secondMeContent).omit({ id: true, createdAt: true });
+export type InsertSecondMeContent = z.infer<typeof insertSecondMeContentSchema>;
+export type SecondMeContent = typeof secondMeContent.$inferSelect;

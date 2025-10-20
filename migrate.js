@@ -140,6 +140,49 @@ async function runMigrations() {
         console.log('⚠️ calendar_events table already exists or error:', e.message);
       }
       
+      // Create Second Me tables
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS second_me (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            client_id VARCHAR NOT NULL REFERENCES clients(id),
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            photo_urls TEXT[],
+            avatar_url VARCHAR,
+            setup_paid BOOLEAN DEFAULT false,
+            weekly_subscription_active BOOLEAN DEFAULT false,
+            stripe_setup_payment_id VARCHAR,
+            stripe_weekly_subscription_id VARCHAR,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created second_me table');
+      } catch (e) {
+        console.log('⚠️ second_me table already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS second_me_content (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            second_me_id VARCHAR NOT NULL REFERENCES second_me(id),
+            client_id VARCHAR NOT NULL REFERENCES clients(id),
+            content_type VARCHAR NOT NULL,
+            media_url VARCHAR NOT NULL,
+            caption TEXT,
+            week_number INTEGER,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            scheduled_for TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created second_me_content table');
+      } catch (e) {
+        console.log('⚠️ second_me_content table already exists or error:', e.message);
+      }
+
       // Create task_spaces table first (tasks table references it)
       try {
         await client.query(`

@@ -38,6 +38,8 @@ import Phone from "@/pages/phone";
 import Settings from "@/pages/settings";
 import CompanyCalendar from "@/pages/company-calendar";
 import SubscriptionPackages from "@/pages/subscription-packages";
+import SecondMe from "@/pages/second-me";
+import AdminSecondMe from "@/pages/admin-second-me";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -56,6 +58,7 @@ function Router() {
       {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
       {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
       {isClient && <ProtectedRoute path="/client-billing" component={ClientBilling} />}
+      {isClient && <ProtectedRoute path="/second-me" component={SecondMe} />}
       {/* Admin/Manager/Staff routes */}
       {!isClient && <ProtectedRoute path="/" component={Dashboard} />}
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
@@ -74,6 +77,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
       {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
       {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
+      {!isClient && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/settings" component={Settings} />

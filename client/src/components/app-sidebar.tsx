@@ -17,7 +17,8 @@ import {
   BarChart3,
   UsersRound,
   LogOut,
-  Settings
+  Settings,
+  Sparkles
 } from "lucide-react";
 import mtaLogoWhite from "@assets/mta-logo.png";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
@@ -64,6 +65,11 @@ const clientTools = [
     title: "Billing",
     url: "/client-billing",
     icon: DollarSign,
+  },
+  {
+    title: "Second Me",
+    url: "/second-me",
+    icon: Sparkles,
   },
   {
     title: "Support Tickets",
@@ -164,6 +170,12 @@ const businessTools = [
     url: "/subscription-packages",
     icon: Package,
     permission: "canManageUsers" as const, // Admin only
+  },
+  {
+    title: "Second Me",
+    url: "/admin-second-me",
+    icon: Sparkles,
+    permission: "canManageClients" as const,
   },
   {
     title: "Support Tickets",

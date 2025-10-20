@@ -25,6 +25,8 @@ import {
   rolePermissions,
   subscriptionPackages,
   calendarEvents,
+  secondMe,
+  secondMeContent,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -78,6 +80,10 @@ import {
   type InsertRolePermissions,
   type SubscriptionPackage,
   type InsertSubscriptionPackage,
+  type SecondMe,
+  type InsertSecondMe,
+  type SecondMeContent,
+  type InsertSecondMeContent,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -1043,6 +1049,63 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(subscriptionPackages)
       .where(eq(subscriptionPackages.id, id));
+  }
+
+  // Second Me operations
+  async getSecondMe(clientId: string): Promise<SecondMe | undefined> {
+    const [record] = await db
+      .select()
+      .from(secondMe)
+      .where(eq(secondMe.clientId, clientId))
+      .limit(1);
+    return record;
+  }
+
+  async getAllSecondMeRequests(): Promise<SecondMe[]> {
+    return await db
+      .select()
+      .from(secondMe)
+      .orderBy(desc(secondMe.createdAt));
+  }
+
+  async createSecondMe(data: InsertSecondMe): Promise<SecondMe> {
+    const [record] = await db
+      .insert(secondMe)
+      .values(data)
+      .returning();
+    return record;
+  }
+
+  async updateSecondMe(id: string, data: Partial<InsertSecondMe>): Promise<SecondMe> {
+    const [record] = await db
+      .update(secondMe)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(secondMe.id, id))
+      .returning();
+    return record;
+  }
+
+  async getSecondMeContent(secondMeId: string): Promise<SecondMeContent[]> {
+    return await db
+      .select()
+      .from(secondMeContent)
+      .where(eq(secondMeContent.secondMeId, secondMeId))
+      .orderBy(desc(secondMeContent.createdAt));
+  }
+
+  async createSecondMeContent(data: InsertSecondMeContent): Promise<SecondMeContent> {
+    const [record] = await db
+      .insert(secondMeContent)
+      .values(data)
+      .returning();
+    return record;
+  }
+
+  async createBulkSecondMeContent(content: InsertSecondMeContent[]): Promise<SecondMeContent[]> {
+    return await db
+      .insert(secondMeContent)
+      .values(content)
+      .returning();
   }
 }
 

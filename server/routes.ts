@@ -3326,4 +3326,169 @@ Examples:
       res.status(404).json({ message: "Object not found" });
     }
   });
+
+  // ====================================
+  // Second Me Routes
+  // ====================================
+
+  // Client: Get their Second Me status
+  app.get("/api/second-me", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+
+      // Get user to find clientId
+      const userRecord = await storage.getUser(userId.toString());
+      if (!userRecord || !userRecord.clientId) {
+        return res.status(404).json({ message: "No client record found" });
+      }
+
+      const secondMeRecord = await storage.getSecondMe(userRecord.clientId);
+      res.json(secondMeRecord || null);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch Second Me data" });
+    }
+  });
+
+  // Client: Create Second Me request (upload photos)
+  app.post("/api/second-me", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+
+      // Get user to find clientId
+      const userRecord = await storage.getUser(userId.toString());
+      if (!userRecord || !userRecord.clientId) {
+        return res.status(400).json({ message: "No client record found" });
+      }
+
+      const { photoUrls } = req.body;
+
+      if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length < 15) {
+        return res.status(400).json({ message: "Minimum 15 photos required" });
+      }
+
+      const secondMeRecord = await storage.createSecondMe({
+        clientId: userRecord.clientId,
+        photoUrls,
+        status: "pending",
+        setupPaid: false,
+        weeklySubscriptionActive: false,
+      });
+
+      res.status(201).json(secondMeRecord);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to create Second Me request" });
+    }
+  });
+
+  // Admin: Get all Second Me requests
+  app.get("/api/admin/second-me/requests", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+    try {
+      const requests = await storage.getAllSecondMeRequests();
+      
+      // Join with client data to get client names
+      const requestsWithClientNames = await Promise.all(
+        requests.map(async (request) => {
+          const client = await storage.getClient(request.clientId);
+          return {
+            ...request,
+            clientName: client?.name || "Unknown Client",
+          };
+        })
+      );
+
+      res.json(requestsWithClientNames);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch Second Me requests" });
+    }
+  });
+
+  // Admin: Update Second Me request (set avatar, status, etc.)
+  app.patch("/api/admin/second-me/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status, avatarUrl, notes, setupPaid, weeklySubscriptionActive } = req.body;
+
+      const updateData: any = {};
+      if (status) updateData.status = status;
+      if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+      if (notes !== undefined) updateData.notes = notes;
+      if (setupPaid !== undefined) updateData.setupPaid = setupPaid;
+      if (weeklySubscriptionActive !== undefined) updateData.weeklySubscriptionActive = weeklySubscriptionActive;
+
+      const updated = await storage.updateSecondMe(id, updateData);
+      res.json(updated);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update Second Me request" });
+    }
+  });
+
+  // Admin: Upload weekly content for a Second Me avatar
+  app.post("/api/admin/second-me/content", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { secondMeId, content } = req.body;
+
+      if (!secondMeId || !content || !Array.isArray(content)) {
+        return res.status(400).json({ message: "Invalid request data" });
+      }
+
+      // Get the Second Me record to find clientId
+      const secondMeRecord = await storage.getSecondMe(secondMeId);
+      if (!secondMeRecord) {
+        return res.status(404).json({ message: "Second Me record not found" });
+      }
+
+      // Determine the week number (simple increment based on existing content)
+      const existingContent = await storage.getSecondMeContent(secondMeId);
+      const maxWeek = existingContent.reduce((max, item) => Math.max(max, item.weekNumber || 0), 0);
+      const nextWeek = maxWeek + 1;
+
+      // Create content entries
+      const contentToInsert = content.map((item: any) => ({
+        secondMeId,
+        clientId: secondMeRecord.clientId,
+        contentType: item.contentType || "image",
+        mediaUrl: item.mediaUrl,
+        caption: item.caption || "",
+        weekNumber: nextWeek,
+        status: "pending",
+      }));
+
+      const created = await storage.createBulkSecondMeContent(contentToInsert);
+      res.status(201).json(created);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to upload content" });
+    }
+  });
+
+  // Client: Get their Second Me content
+  app.get("/api/second-me/content", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+
+      // Get user to find clientId
+      const userRecord = await storage.getUser(userId.toString());
+      if (!userRecord || !userRecord.clientId) {
+        return res.status(404).json({ message: "No client record found" });
+      }
+
+      const secondMeRecord = await storage.getSecondMe(userRecord.clientId);
+      if (!secondMeRecord) {
+        return res.json([]);
+      }
+
+      const content = await storage.getSecondMeContent(secondMeRecord.id);
+      res.json(content);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch Second Me content" });
+    }
+  });
 }

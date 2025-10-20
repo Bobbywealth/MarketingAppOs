@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock, TrendingUp, Users, Heart, Eye, Share2, ThumbsUp, Video, Image as ImageIcon, DollarSign, Megaphone } from "lucide-react";
+import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock, TrendingUp, Users, Heart, Eye, Share2, ThumbsUp, Video, Image as ImageIcon, DollarSign, Megaphone, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -33,6 +33,11 @@ export default function ClientDashboard() {
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["/api/invoices"],
+    enabled: !!user,
+  });
+
+  const { data: secondMe } = useQuery({
+    queryKey: ["/api/second-me"],
     enabled: !!user,
   });
 
@@ -272,6 +277,120 @@ export default function ClientDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Second Me Widget */}
+        {secondMe ? (
+          <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-pink-500/5 to-orange-500/5"></div>
+            <CardHeader className="relative border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Second Me - AI Avatar</CardTitle>
+                    <CardDescription>Your AI digital twin status</CardDescription>
+                  </div>
+                </div>
+                <Link href="/second-me">
+                  <Button variant="outline" size="sm">
+                    Manage →
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="relative p-6">
+              <div className="flex items-center gap-4">
+                {secondMe.avatarUrl ? (
+                  <img 
+                    src={secondMe.avatarUrl} 
+                    alt="AI Avatar" 
+                    className="w-20 h-20 rounded-full object-cover border-2 border-primary"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Sparkles className="w-10 h-10 text-white" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-semibold">Status:</h4>
+                    <Badge className={
+                      secondMe.status === 'active' ? 'bg-green-500/20 text-green-700' :
+                      secondMe.status === 'ready' ? 'bg-green-500/20 text-green-700' :
+                      secondMe.status === 'processing' ? 'bg-blue-500/20 text-blue-700' :
+                      'bg-yellow-500/20 text-yellow-700'
+                    }>
+                      {secondMe.status === 'pending' && '⏳ Pending Payment'}
+                      {secondMe.status === 'processing' && '🔄 Creating Avatar'}
+                      {secondMe.status === 'ready' && '✅ Avatar Ready'}
+                      {secondMe.status === 'active' && '🌟 Active'}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Setup Fee</p>
+                      <Badge variant={secondMe.setupPaid ? "default" : "outline"} className="mt-1 text-xs">
+                        {secondMe.setupPaid ? '✓ Paid' : 'Pending'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Weekly Content</p>
+                      <Badge variant={secondMe.weeklySubscriptionActive ? "default" : "outline"} className="mt-1 text-xs">
+                        {secondMe.weeklySubscriptionActive ? '✓ Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </div>
+                  {secondMe.weeklySubscriptionActive && (
+                    <p className="text-xs text-muted-foreground mt-3">
+                      💰 $80/week • 4 AI-generated content pieces
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="glass-strong border-0 shadow-xl overflow-hidden hover:shadow-2xl transition-shadow">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-pink-500/5 to-orange-500/5"></div>
+            <CardHeader className="relative">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Create Your Second Me</CardTitle>
+                  <CardDescription>Get an AI digital twin for content creation</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Upload 15-20+ professional photos and we'll create your AI avatar. 
+                  Then get weekly AI-generated content featuring you!
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs font-semibold mb-1">Setup Fee</p>
+                    <p className="text-lg font-bold">Contact Us</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs font-semibold mb-1">Weekly Content</p>
+                    <p className="text-lg font-bold">$80/week</p>
+                  </div>
+                </div>
+                <Link href="/second-me">
+                  <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Upcoming Content */}
