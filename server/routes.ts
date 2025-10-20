@@ -79,17 +79,17 @@ export function registerRoutes(app: Express) {
         stage: "prospect",
         score: "warm", // warm lead since they started signup
         value: null,
-        notes: `⏳ EARLY LEAD CAPTURE (Step 2/4)
+        notes: `⏳ EARLY LEAD CAPTURE (Step 2/3)
 
 🎯 Source: Website Signup Form - IN PROGRESS
-Lead started the signup process but hasn't completed yet.
+Lead started the account creation process but hasn't completed yet.
 
 📋 COMPANY INFO:
 • Website: ${data.website || 'Not provided'}
 • Industry: ${data.industry || 'Not specified'}
 
 ⚠️ This lead is in progress - follow up to encourage completion!
-🎯 They're interested in a free marketing audit.
+🎯 They're interested in marketing services.
 
 ---
 This lead will be updated if they complete the full signup process.`,
