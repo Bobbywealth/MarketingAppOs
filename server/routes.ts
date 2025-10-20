@@ -3567,6 +3567,49 @@ Examples:
   // DIALPAD API ROUTES
   // ============================================
 
+  // Test Dialpad connection
+  app.get("/api/test-dialpad", async (req: Request, res: Response) => {
+    try {
+      if (!process.env.DIALPAD_API_KEY) {
+        return res.status(503).json({ 
+          success: false, 
+          message: "Dialpad API is not configured. Please add DIALPAD_API_KEY to your environment variables." 
+        });
+      }
+
+      const response = await fetch("https://dialpad.com/api/v2/users/me", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.DIALPAD_API_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Dialpad connection failed:", response.status, errorText);
+        return res.status(response.status).json({ 
+          success: false, 
+          message: "Dialpad connection failed", 
+          error: errorText,
+          status: response.status 
+        });
+      }
+
+      const data = await response.json();
+      console.log("✅ Connected to Dialpad:", data.name || data.id);
+
+      res.json({
+        success: true,
+        message: "✅ Connected to Dialpad successfully!",
+        user: data.name || data.id || data.email,
+        dialpadUserId: data.id,
+      });
+    } catch (error: any) {
+      console.error("❌ Dialpad connection error:", error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Get call logs
   app.get("/api/dialpad/calls", isAuthenticated, async (req: Request, res: Response) => {
     try {
