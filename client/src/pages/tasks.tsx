@@ -190,6 +190,24 @@ export default function TasksPage() {
     },
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      return apiRequest("DELETE", `/api/tasks/${taskId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Task deleted successfully" });
+    },
+    onError: (error: any) => {
+      console.error("Task delete error:", error);
+      toast({ 
+        title: "Failed to delete task", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
+    },
+  });
+
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     form.reset({
