@@ -68,8 +68,6 @@ export default function SignupPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
-  const [auditResults, setAuditResults] = useState<any>(null);
-  const [canSubmit, setCanSubmit] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
   // Fetch subscription packages
@@ -212,222 +210,8 @@ export default function SignupPage() {
     { name: "YouTube", value: "youtube", icon: "📺", color: "from-red-500 to-red-600" },
   ];
 
-  if (step === 5) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-        <div className="max-w-5xl mx-auto py-12">
-          {/* Success Header */}
-          <div className="text-center mb-12">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mx-auto mb-6 shadow-2xl">
-              <CheckCircle className="w-12 h-12 text-white" />
-            </div>
-            <h1 className="text-5xl font-black mb-4 bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
-              🎉 Your FREE Audit is Ready!
-            </h1>
-            <p className="text-xl text-gray-600 mb-4">
-              Here's what we found about your digital presence
-            </p>
-            <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white text-lg px-6 py-2">
-              Worth $2,500 • Yours FREE
-            </Badge>
-          </div>
-
-          {/* Debug Info */}
-          {auditResults && (
-            <div className="mb-4 p-4 bg-gray-100 rounded text-xs">
-              <details>
-                <summary className="cursor-pointer font-bold">🔍 Debug: View Raw Audit Data</summary>
-                <pre className="mt-2 overflow-auto">{JSON.stringify(auditResults, null, 2)}</pre>
-              </details>
-            </div>
-          )}
-
-          {/* Audit Summary */}
-          {auditResults && (
-            <div className="space-y-8">
-              {/* Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-50 to-cyan-50">
-                  <CardHeader>
-                    <CardTitle className="text-center">Total Issues Found</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <div className="text-5xl font-black text-blue-600">{auditResults.summary?.totalIssues || 0}</div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-red-50 to-orange-50">
-                  <CardHeader>
-                    <CardTitle className="text-center">Critical Issues</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <div className="text-5xl font-black text-red-600">{auditResults.summary?.criticalIssues || 0}</div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-green-50 to-emerald-50">
-                  <CardHeader>
-                    <CardTitle className="text-center">Audit Value</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <div className="text-5xl font-black text-green-600">${auditResults.summary?.estimatedValue || 2500}</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Website Audit Results */}
-              {auditResults.website && (
-                <Card className="border-0 shadow-2xl">
-                  <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-t-lg">
-                    <CardTitle className="text-2xl flex items-center gap-3">
-                      🌐 Website Audit Results
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-6">
-                    {/* SEO Info */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-3">SEO Analysis</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">Title Tag</p>
-                          <p className="font-semibold truncate">{auditResults.website.seo.title || '❌ Missing'}</p>
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">SSL/HTTPS</p>
-                          <p className="font-semibold">{auditResults.website.seo.hasSSL ? '✅ Enabled' : '❌ Missing'}</p>
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">H1 Tags</p>
-                          <p className="font-semibold">{auditResults.website.seo.h1Tags} found</p>
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">Images</p>
-                          <p className="font-semibold">{auditResults.website.seo.imageCount} total</p>
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">Alt Tags Missing</p>
-                          <p className="font-semibold">{auditResults.website.seo.imagesWithoutAlt}</p>
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">Load Time</p>
-                          <p className="font-semibold">{(auditResults.website.performance.loadTime / 1000).toFixed(2)}s</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Recommendations */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-3">🎯 Recommendations</h3>
-                      <div className="space-y-2">
-                        {auditResults.website.recommendations.map((rec: string, idx: number) => (
-                          <div key={idx} className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                            <p className="text-sm font-medium">{rec}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Social Media Audit Results */}
-              {auditResults.socialMedia && auditResults.socialMedia.length > 0 && (
-                <Card className="border-0 shadow-2xl">
-                  <CardHeader className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-t-lg">
-                    <CardTitle className="text-2xl flex items-center gap-3">
-                      📱 Social Media Audit Results
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-4">
-                    {auditResults.socialMedia.map((social: any, idx: number) => (
-                      <div key={idx} className="p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-xl font-bold capitalize">{social.platform}</h3>
-                          {social.isValid ? (
-                            <Badge className="bg-green-500 text-white">✅ Valid</Badge>
-                          ) : (
-                            <Badge className="bg-red-500 text-white">❌ Invalid</Badge>
-                          )}
-                        </div>
-                        
-                        {social.stats && (
-                          <div className="grid grid-cols-3 gap-4 mb-4">
-                            {social.stats.followers !== undefined && (
-                              <div className="text-center p-3 bg-white rounded-lg">
-                                <p className="text-2xl font-black text-blue-600">{social.stats.followers.toLocaleString()}</p>
-                                <p className="text-sm text-gray-600">Followers</p>
-                              </div>
-                            )}
-                            {social.stats.following !== undefined && (
-                              <div className="text-center p-3 bg-white rounded-lg">
-                                <p className="text-2xl font-black text-green-600">{social.stats.following.toLocaleString()}</p>
-                                <p className="text-sm text-gray-600">Following</p>
-                              </div>
-                            )}
-                            {social.stats.posts !== undefined && (
-                              <div className="text-center p-3 bg-white rounded-lg">
-                                <p className="text-2xl font-black text-purple-600">{social.stats.posts.toLocaleString()}</p>
-                                <p className="text-sm text-gray-600">Posts</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          {social.recommendations.map((rec: string, recIdx: number) => (
-                            <div key={recIdx} className="p-2 bg-white rounded text-sm">
-                              {rec}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* CTA Section */}
-              <Card className="border-0 shadow-2xl bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-                <CardContent className="p-8 text-center">
-                  <h2 className="text-3xl font-black mb-4">🚀 Ready to Fix These Issues?</h2>
-                  <p className="text-xl mb-6">Choose your package below and we'll start fixing these issues immediately!</p>
-                  <div className="flex gap-4 justify-center">
-                    <Button 
-                      onClick={() => setStep(6)} 
-                      className="bg-white text-orange-500 hover:bg-gray-100 font-bold text-lg px-8 py-4"
-                    >
-                      🎯 Choose Your Package
-                    </Button>
-                    <Button 
-                      onClick={() => window.print()} 
-                      variant="outline"
-                      className="border-2 border-white text-white hover:bg-white/20 font-bold text-lg px-8 py-4"
-                    >
-                      📄 Download Report
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Fallback if no audit results */}
-          {!auditResults && (
-            <Card className="border-0 shadow-2xl">
-              <CardContent className="p-12 text-center">
-                <h2 className="text-2xl font-bold mb-4">Processing Your Audit...</h2>
-                <p className="text-gray-600 mb-6">We're analyzing your digital presence. This may take a few moments.</p>
-                <Button onClick={() => setLocation("/")} className="bg-gradient-to-r from-blue-600 to-blue-700">
-                  Back to Home
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Step 6: Package Selection
-  if (step === 6) {
+  // Step 4: Package Selection
+  if (step === 4) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
         <div className="max-w-6xl mx-auto py-12">
@@ -676,17 +460,8 @@ export default function SignupPage() {
             <Form {...form}>
               <form 
                 onSubmit={(e) => {
-                  if (step !== 4 || !canSubmit) {
-                    e.preventDefault();
-                    if (step === 4 && !canSubmit) {
-                      toast({
-                        title: "Please wait...",
-                        description: "Form is loading, try again in a moment",
-                      });
-                    }
-                    return false;
-                  }
-                  form.handleSubmit(onSubmit)(e);
+                  e.preventDefault();
+                  // Form submission is handled by nextStep function
                 }} 
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -1279,7 +1054,7 @@ export default function SignupPage() {
                       Back
                     </Button>
                   )}
-                  {step <= 3 ? (
+                  {step < 3 ? (
                     <Button
                       type="button"
                       onClick={nextStep}
@@ -1289,26 +1064,26 @@ export default function SignupPage() {
                       Next
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
-                  ) : step === 4 ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setCanSubmit(true)}
-                        className="ml-auto"
-                      >
-                        Skip Social Media
-                      </Button>
+                  ) : step === 3 ? (
                     <Button
-                      type="submit"
-                        disabled={signupMutation.isPending || !canSubmit}
-                        className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      type="button"
+                      onClick={nextStep}
+                      disabled={signupMutation.isPending}
+                      className="ml-auto bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-bold text-lg px-8 py-4"
                       data-testid="button-submit"
                     >
-                        {signupMutation.isPending ? "🚀 Creating Your Audit..." : !canSubmit ? "⏳ Enter at least one URL or skip" : "🎯 GET MY FREE AUDIT NOW"}
-                        <ArrowRight className="w-5 h-5 ml-2" />
+                      {signupMutation.isPending ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Creating Account...
+                        </>
+                      ) : (
+                        <>
+                          🚀 Create Account & Choose Package
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
                     </Button>
-                    </>
                   ) : null}
                 </div>
               </form>
