@@ -54,6 +54,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isBulkMode, setIsBulkMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: users = [] } = useQuery<UserType[]>({
@@ -72,10 +73,9 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     retry: false,
   });
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const addMessage = (role: "ai" | "user", content: string) => {
@@ -609,6 +609,9 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
               </div>
             </div>
           )}
+          
+          {/* Invisible scroll anchor */}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
