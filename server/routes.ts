@@ -2886,9 +2886,10 @@ Examples:
             await storage.createNotification({
               userId: targetUserId,
               type: 'alert',
+              category: 'task',
               title: '🚨 Task Overdue',
               message: `Task "${task.title}" is overdue!`,
-              link: '/tasks',
+              actionUrl: '/tasks',
             });
             notificationsCreated++;
           }
@@ -2904,9 +2905,10 @@ Examples:
             await storage.createNotification({
               userId: targetUserId,
               type: 'warning',
+              category: 'task',
               title: '⏰ Task Due Today',
               message: `Task "${task.title}" is due today!`,
-              link: '/tasks',
+              actionUrl: '/tasks',
             });
             notificationsCreated++;
           }

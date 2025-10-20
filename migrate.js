@@ -265,6 +265,37 @@ async function runMigrations() {
         console.log('⚠️ tasks table already exists or error:', e.message);
       }
       
+      // Fix notifications table - add missing columns
+      try {
+        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR NOT NULL DEFAULT 'info';`);
+        console.log('✅ Added type column to notifications');
+      } catch (e) {
+        console.log('⚠️ type column in notifications already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR NOT NULL DEFAULT 'general';`);
+        console.log('✅ Added category column to notifications');
+      } catch (e) {
+        console.log('⚠️ category column in notifications already exists or error:', e.message);
+      }
+
+      // Rename link to action_url in notifications if needed
+      try {
+        await client.query(`
+          DO $$ 
+          BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='notifications' AND column_name='link') THEN
+              ALTER TABLE notifications RENAME COLUMN link TO action_url;
+            END IF;
+          END $$;
+        `);
+        console.log('✅ Renamed link to action_url in notifications (if it existed)');
+      } catch (e) {
+        console.log('⚠️ Column rename skipped:', e.message);
+      }
+      
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
       
