@@ -5,13 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Client } from "@shared/schema";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Clients() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,6 +32,9 @@ export default function Clients() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [draggedClient, setDraggedClient] = useState<Client | null>(null);
   const [dragOverClient, setDragOverClient] = useState<Client | null>(null);
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const { toast} = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
@@ -72,6 +86,40 @@ export default function Clients() {
     },
     onError: () => {
       toast({ title: "Failed to reorder clients", variant: "destructive" });
+    },
+  });
+
+  const deleteClientMutation = useMutation({
+    mutationFn: async (clientId: string) => {
+      return await apiRequest("DELETE", `/api/clients/${clientId}`, undefined);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
+      toast({ title: "✅ Client deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete client", variant: "destructive" });
+    },
+  });
+
+  const bulkDeleteClientsMutation = useMutation({
+    mutationFn: async (clientIds: string[]) => {
+      const promises = clientIds.map(id => 
+        apiRequest("DELETE", `/api/clients/${id}`, undefined)
+      );
+      await Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      setSelectedClients(new Set());
+      toast({ title: `✅ Deleted ${selectedClients.size} clients successfully` });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete clients", variant: "destructive" });
     },
   });
 
@@ -247,17 +295,47 @@ export default function Clients() {
           </Dialog>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search clients..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 glass shadow-sm"
-            data-testid="input-search-clients"
-          />
+        {/* Search Bar & Bulk Actions */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search clients..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 glass shadow-sm"
+              data-testid="input-search-clients"
+            />
+          </div>
+          
+          {selectedClients.size > 0 && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                {selectedClients.size} selected
+              </Badge>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (confirm(`Delete ${selectedClients.size} clients?`)) {
+                    bulkDeleteClientsMutation.mutate(Array.from(selectedClients));
+                  }
+                }}
+                disabled={bulkDeleteClientsMutation.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedClients(new Set())}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Premium Client Cards with Stagger Animation */}
@@ -279,7 +357,38 @@ export default function Clients() {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
               <CardContent className="relative p-6">
-                <div className="flex items-start gap-4 mb-4">
+                {/* Checkbox for selection */}
+                <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedClients.has(client.id)}
+                    onCheckedChange={(checked) => {
+                      const newSelected = new Set(selectedClients);
+                      if (checked) {
+                        newSelected.add(client.id);
+                      } else {
+                        newSelected.delete(client.id);
+                      }
+                      setSelectedClients(newSelected);
+                    }}
+                  />
+                </div>
+
+                {/* Delete button */}
+                <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setClientToDelete(client.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-start gap-4 mb-4 mt-6">
                   {/* Drag Handle - Only this triggers dragging */}
                   <div 
                     draggable
@@ -612,6 +721,31 @@ export default function Clients() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Client?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the client and all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (clientToDelete) {
+                    deleteClientMutation.mutate(clientToDelete);
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
