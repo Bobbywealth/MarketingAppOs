@@ -94,7 +94,7 @@ async function runMigrations() {
         console.log('⚠️ instagram_connected_at already exists or error:', e.message);
       }
       
-      // Create task_spaces table
+      // Create task_spaces table first (tasks table references it)
       try {
         await client.query(`
           CREATE TABLE IF NOT EXISTS task_spaces (
@@ -114,7 +114,33 @@ async function runMigrations() {
         console.log('⚠️ task_spaces table already exists or error:', e.message);
       }
       
-      // Create tasks table
+      // Add space_id column to existing tasks table FIRST (before trying to create table)
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS space_id VARCHAR;`);
+        console.log('✅ Added space_id column to tasks table');
+      } catch (e) {
+        console.log('⚠️ Could not add space_id to tasks (table might not exist yet):', e.message);
+      }
+      
+      // Try to add the foreign key constraint separately
+      try {
+        await client.query(`
+          DO $$ 
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_constraint WHERE conname = 'tasks_space_id_fkey'
+            ) THEN
+              ALTER TABLE tasks ADD CONSTRAINT tasks_space_id_fkey 
+                FOREIGN KEY (space_id) REFERENCES task_spaces(id);
+            END IF;
+          END $$;
+        `);
+        console.log('✅ Added foreign key constraint for space_id');
+      } catch (e) {
+        console.log('⚠️ Foreign key constraint already exists or error:', e.message);
+      }
+      
+      // Create tasks table if it doesn't exist (with all columns including space_id)
       try {
         await client.query(`
           CREATE TABLE IF NOT EXISTS tasks (
@@ -137,17 +163,9 @@ async function runMigrations() {
             updated_at TIMESTAMP DEFAULT NOW()
           );
         `);
-        console.log('✅ Created tasks table');
+        console.log('✅ Created tasks table with space_id column');
       } catch (e) {
         console.log('⚠️ tasks table already exists or error:', e.message);
-      }
-      
-      // Add space_id column to existing tasks table (if it exists but missing the column)
-      try {
-        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS space_id VARCHAR REFERENCES task_spaces(id);`);
-        console.log('✅ Added space_id to tasks table');
-      } catch (e) {
-        console.log('⚠️ space_id column already exists or error:', e.message);
       }
       
       console.log('✅ Migration script completed successfully!');
