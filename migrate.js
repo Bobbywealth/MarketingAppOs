@@ -295,6 +295,22 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ Column rename skipped:', e.message);
       }
+
+      // Fix invoices table - rename paid_date to paid_at
+      try {
+        await client.query(`
+          DO $$ 
+          BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='invoices' AND column_name='paid_date') THEN
+              ALTER TABLE invoices RENAME COLUMN paid_date TO paid_at;
+            END IF;
+          END $$;
+        `);
+        console.log('✅ Renamed paid_date to paid_at in invoices (if it existed)');
+      } catch (e) {
+        console.log('⚠️ Invoices column rename skipped:', e.message);
+      }
       
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
