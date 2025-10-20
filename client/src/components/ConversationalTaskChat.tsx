@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Sparkles, Loader2, Send, X, Check, Mic, MicOff } from "lucide-react";
+import { Sparkles, Loader2, Send, X, Check, Mic, MicOff, Image as ImageIcon, Trash2, ListPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User as UserType, Client } from "@shared/schema";
+import type { User as UserType, Client, Task } from "@shared/schema";
 
 interface Message {
   role: "ai" | "user";
@@ -41,16 +41,20 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "ai",
-      content: "👋 Hey there! I'm your AI Task Assistant. Let's get something done today! Just tell me what you need to do - be as detailed or as brief as you'd like. I'll figure out the rest! 🚀\n\nFor example:\n• \"Call John about the project tomorrow at 2pm\"\n• \"Weekly team meeting every Monday\"\n• \"Follow up on proposal - urgent\"",
+      content: "👋 Hey there! I'm your AI Task Assistant. I can help you:\n\n✨ **Create tasks** - Just tell me what to do\n🗑️ **Delete tasks** - Say \"delete [task name]\"\n📋 **Bulk create** - List multiple tasks at once\n🖼️ **Read images** - Upload a screenshot or photo\n\nExamples:\n• \"Call John tomorrow at 2pm - urgent\"\n• \"Delete the old meeting task\"\n• \"Create: 1) Review docs 2) Send email 3) Update report\"\n• Upload a to-do list screenshot!",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState("");
   const [taskData, setTaskData] = useState<TaskData>({});
+  const [bulkTasks, setBulkTasks] = useState<TaskData[]>([]);
   const [currentStep, setCurrentStep] = useState<"title" | "details" | "priority" | "dueDate" | "assignee" | "confirm">("title");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isBulkMode, setIsBulkMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
@@ -63,6 +67,11 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     meta: { returnNull: true },
   });
 
+  const { data: tasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+    retry: false,
+  });
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -73,43 +82,63 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     setMessages((prev) => [...prev, { role, content, timestamp: new Date() }]);
   };
 
-  const parseAIResponse = async (userInput: string) => {
+  const parseAIResponse = async (userInput: string, imageData?: string) => {
     setIsProcessing(true);
-    addMessage("user", userInput);
+    addMessage("user", userInput + (imageData ? " 📷" : ""));
 
     try {
-      // Use AI to parse the entire task at once
+      // Check if this is a delete request
+      const deleteKeywords = ["delete", "remove", "cancel", "drop"];
+      if (deleteKeywords.some(kw => userInput.toLowerCase().includes(kw))) {
+        await handleDeleteTask(userInput);
+        setIsProcessing(false);
+        setInput("");
+        return;
+      }
+
+      // Check if this is bulk creation (multiple numbered items or list)
+      const isBulk = /\d+[\)\.]\s/.test(userInput) || userInput.split('\n').length > 2;
+      
+      // Use AI to parse the task(s)
       const response = await apiRequest("POST", "/api/tasks/parse-ai", { 
         input: userInput,
+        imageData: imageData || undefined,
+        isBulk: isBulk,
         context: {
           today: new Date().toISOString(),
           users: users.map(u => ({ id: u.id, name: u.username })),
           clients: clients.map(c => ({ id: c.id, name: c.name })),
+          existingTasks: tasks.slice(0, 20).map(t => ({ id: t.id, title: t.title })),
         }
       });
       
       const parsed = await response.json();
       console.log("🤖 AI parsed:", parsed);
 
-      if (parsed.success) {
-        // Extract all the parsed data
+      if (parsed.success && parsed.tasks && parsed.tasks.length > 1) {
+        // Bulk creation
+        await handleBulkTasks(parsed.tasks);
+      } else if (parsed.success) {
+        // Single task creation
+        const taskInfo = parsed.tasks ? parsed.tasks[0] : parsed;
         const newTaskData: TaskData = {
-          title: parsed.title || userInput,
-          description: parsed.description || null,
-          priority: parsed.priority || "normal",
+          title: taskInfo.title || parsed.title || userInput,
+          description: taskInfo.description || parsed.description || null,
+          priority: taskInfo.priority || parsed.priority || "normal",
           status: "todo",
-          dueDate: parsed.dueDate || null,
-          isRecurring: parsed.isRecurring || false,
-          recurringPattern: parsed.recurringPattern || null,
-          recurringInterval: parsed.recurringInterval || 1,
-          recurringEndDate: parsed.recurringEndDate || null,
+          dueDate: taskInfo.dueDate || parsed.dueDate || null,
+          isRecurring: taskInfo.isRecurring || parsed.isRecurring || false,
+          recurringPattern: taskInfo.recurringPattern || parsed.recurringPattern || null,
+          recurringInterval: taskInfo.recurringInterval || parsed.recurringInterval || 1,
+          recurringEndDate: taskInfo.recurringEndDate || parsed.recurringEndDate || null,
         };
 
         // Try to match assignee
-        if (parsed.assignee) {
+        const assigneeName = taskInfo.assignee || parsed.assignee;
+        if (assigneeName) {
           const matchedUser = users.find(u => 
-            u.username?.toLowerCase().includes(parsed.assignee.toLowerCase()) ||
-            parsed.assignee.toLowerCase().includes(u.username?.toLowerCase())
+            u.username?.toLowerCase().includes(assigneeName.toLowerCase()) ||
+            assigneeName.toLowerCase().includes(u.username?.toLowerCase())
           );
           if (matchedUser) {
             newTaskData.assignedToId = matchedUser.id;
@@ -117,10 +146,11 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
         }
 
         // Try to match client
-        if (parsed.client) {
+        const clientName = taskInfo.client || parsed.client;
+        if (clientName) {
           const matchedClient = clients.find(c => 
-            c.name?.toLowerCase().includes(parsed.client.toLowerCase()) ||
-            parsed.client.toLowerCase().includes(c.name?.toLowerCase())
+            c.name?.toLowerCase().includes(clientName.toLowerCase()) ||
+            clientName.toLowerCase().includes(c.name?.toLowerCase())
           );
           if (matchedClient) {
             newTaskData.clientId = matchedClient.id;
@@ -160,6 +190,60 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
 
     setIsProcessing(false);
     setInput("");
+  };
+
+  const handleDeleteTask = async (userInput: string) => {
+    try {
+      // Extract task name from input
+      const taskName = userInput.replace(/delete|remove|cancel|drop/gi, '').trim();
+      
+      // Find matching task
+      const matchedTask = tasks.find(t => 
+        t.title.toLowerCase().includes(taskName.toLowerCase()) ||
+        taskName.toLowerCase().includes(t.title.toLowerCase())
+      );
+
+      if (!matchedTask) {
+        addMessage("ai", `I couldn't find a task matching "${taskName}". Here are your recent tasks:\n${tasks.slice(0, 5).map(t => `• ${t.title}`).join('\n')}\n\nTry being more specific!`);
+        return;
+      }
+
+      // Confirm deletion
+      addMessage("ai", `Found task: **"${matchedTask.title}"**\n\nAre you sure you want to delete it? (say "yes" to confirm)`);
+      setTaskData({ title: matchedTask.id } as any); // Store ID temporarily
+      setCurrentStep("confirm");
+      setIsBulkMode(false);
+      
+      // Mark as delete mode
+      (window as any).__deleteMode = true;
+      (window as any).__taskToDelete = matchedTask.id;
+    } catch (error) {
+      console.error("Delete error:", error);
+      addMessage("ai", "Oops! I had trouble with that. Could you try again?");
+    }
+  };
+
+  const handleBulkTasks = async (tasksData: any[]) => {
+    try {
+      setBulkTasks(tasksData);
+      setIsBulkMode(true);
+      
+      let confirmMsg = `Great! I found **${tasksData.length} tasks** to create:\n\n`;
+      tasksData.forEach((task, i) => {
+        confirmMsg += `${i + 1}. **${task.title}**`;
+        if (task.priority && task.priority !== "normal") confirmMsg += ` (${task.priority})`;
+        if (task.dueDate) confirmMsg += ` - Due: ${new Date(task.dueDate).toLocaleDateString()}`;
+        confirmMsg += `\n`;
+      });
+      
+      confirmMsg += `\n✨ Ready to create all ${tasksData.length} tasks! Say "yes" to proceed.`;
+      
+      addMessage("ai", confirmMsg);
+      setCurrentStep("confirm");
+    } catch (error) {
+      console.error("Bulk error:", error);
+      addMessage("ai", "Oops! I had trouble with that. Could you try again?");
+    }
   };
 
   const createTask = async () => {
@@ -300,13 +384,38 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isProcessing) return;
+    if ((!input.trim() && !uploadedImage) || isProcessing) return;
     
-    // If we're on confirm step and user says yes/ok/sure, create the task
+    // If we're on confirm step and user says yes/ok/sure
     if (currentStep === "confirm") {
       const affirmatives = ["yes", "yep", "yeah", "sure", "ok", "okay", "proceed", "create", "do it", "go ahead", "correct", "right", "perfect"];
       if (affirmatives.some(word => input.toLowerCase().includes(word))) {
         addMessage("user", input);
+        
+        // Check if delete mode
+        if ((window as any).__deleteMode) {
+          const taskId = (window as any).__taskToDelete;
+          addMessage("ai", "Deleting task... 🗑️");
+          setIsProcessing(true);
+          deleteTask(taskId).finally(() => {
+            setIsProcessing(false);
+            (window as any).__deleteMode = false;
+            (window as any).__taskToDelete = null;
+          });
+          setInput("");
+          return;
+        }
+        
+        // Check if bulk mode
+        if (isBulkMode) {
+          addMessage("ai", `Creating ${bulkTasks.length} tasks... ✨`);
+          setIsProcessing(true);
+          createBulkTasks().finally(() => setIsProcessing(false));
+          setInput("");
+          return;
+        }
+        
+        // Normal single task creation
         addMessage("ai", "Creating your task now! ✨");
         setIsProcessing(true);
         createTask().finally(() => setIsProcessing(false));
@@ -315,7 +424,123 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
       }
     }
     
-    parseAIResponse(input);
+    parseAIResponse(input, uploadedImage || undefined);
+    setUploadedImage(null);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if it's an image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setUploadedImage(base64);
+      toast({
+        title: "Image uploaded!",
+        description: "I'll analyze it when you send your message",
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      await apiRequest("DELETE", `/api/tasks/${taskId}`);
+      
+      addMessage("ai", "✅ **Task deleted!** Anything else I can help with?");
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      toast({
+        title: "✅ Task deleted!",
+      });
+
+      setTimeout(() => {
+        resetChat();
+      }, 2000);
+    } catch (error: any) {
+      console.error("❌ Delete error:", error);
+      const errorMessage = error?.message || "Unknown error";
+      addMessage("ai", `❌ Oops! Couldn't delete that task: ${errorMessage}`);
+      
+      toast({
+        title: "Failed to delete task",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const createBulkTasks = async () => {
+    try {
+      let successCount = 0;
+      
+      for (const taskInfo of bulkTasks) {
+        const taskPayload: any = {
+          title: taskInfo.title || "Untitled Task",
+          status: "todo",
+          priority: taskInfo.priority || "normal",
+          description: taskInfo.description || null,
+          dueDate: taskInfo.dueDate || null,
+          assignedToId: taskInfo.assignedToId || null,
+          clientId: taskInfo.clientId || null,
+        };
+
+        if (taskInfo.isRecurring) {
+          taskPayload.isRecurring = true;
+          taskPayload.recurringPattern = taskInfo.recurringPattern || "daily";
+          taskPayload.recurringInterval = taskInfo.recurringInterval || 1;
+          if (taskInfo.recurringEndDate) {
+            taskPayload.recurringEndDate = taskInfo.recurringEndDate;
+          }
+        }
+
+        try {
+          await apiRequest("POST", "/api/tasks", taskPayload);
+          successCount++;
+        } catch (err) {
+          console.error("Failed to create task:", taskInfo.title, err);
+        }
+      }
+      
+      addMessage("ai", `✅ **Success!** Created ${successCount} of ${bulkTasks.length} tasks!\n\nNeed to create more?`);
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      
+      toast({
+        title: `✅ Created ${successCount} tasks!`,
+      });
+
+      if (onTaskCreated) {
+        onTaskCreated();
+      }
+
+      setTimeout(() => {
+        resetChat();
+        setBulkTasks([]);
+        setIsBulkMode(false);
+      }, 2000);
+    } catch (error: any) {
+      console.error("❌ Bulk creation error:", error);
+      addMessage("ai", `❌ Oops! Something went wrong with bulk creation.`);
+      
+      toast({
+        title: "Failed to create tasks",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!isOpen) return null;
@@ -415,7 +640,42 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
       )}
 
       <CardContent className="p-4 border-t flex-shrink-0">
+        {uploadedImage && (
+          <div className="mb-3 relative">
+            <img src={uploadedImage} alt="Uploaded" className="w-full h-32 object-cover rounded-lg border" />
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              className="absolute top-2 right-2 h-6 w-6 p-0"
+              onClick={() => setUploadedImage(null)}
+            >
+              <X className="w-3 h-3" />
+            </Button>
+            <Badge className="absolute bottom-2 left-2 bg-black/70 text-white text-xs">
+              📷 Image attached
+            </Badge>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            className="flex-shrink-0"
+            title="Upload image"
+          >
+            <ImageIcon className="w-4 h-4" />
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -423,13 +683,14 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
             onClick={handleVoiceInput}
             disabled={isProcessing}
             className={`flex-shrink-0 ${isListening ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' : ''}`}
+            title="Voice input"
           >
             {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </Button>
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isListening ? "Listening..." : "Type your answer..."}
+            placeholder={uploadedImage ? "Tell me about this image..." : isListening ? "Listening..." : "Type your task..."}
             disabled={isProcessing || isListening}
             className="flex-1"
             autoFocus
@@ -437,13 +698,13 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || isProcessing || isListening}
+            disabled={(!input.trim() && !uploadedImage) || isProcessing || isListening}
           >
             <Send className="w-4 h-4" />
           </Button>
         </form>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          🎤 Voice input or type naturally - I'll guide you through!
+          🖼️ Upload image • 🎤 Voice • ✨ Delete • 📋 Bulk create
         </p>
       </CardContent>
     </Card>
