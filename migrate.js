@@ -94,6 +94,62 @@ async function runMigrations() {
         console.log('⚠️ instagram_connected_at already exists or error:', e.message);
       }
       
+      // Create task_spaces table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS task_spaces (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR NOT NULL,
+            icon VARCHAR DEFAULT '📁',
+            color VARCHAR DEFAULT '#3B82F6',
+            parent_space_id VARCHAR,
+            "order" INTEGER DEFAULT 0,
+            created_by INTEGER NOT NULL REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created task_spaces table');
+      } catch (e) {
+        console.log('⚠️ task_spaces table already exists or error:', e.message);
+      }
+      
+      // Create tasks table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS tasks (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            campaign_id VARCHAR REFERENCES campaigns(id),
+            client_id VARCHAR REFERENCES clients(id),
+            assigned_to_id INTEGER REFERENCES users(id),
+            space_id VARCHAR REFERENCES task_spaces(id),
+            title VARCHAR NOT NULL,
+            description TEXT,
+            status VARCHAR NOT NULL DEFAULT 'todo',
+            priority VARCHAR NOT NULL DEFAULT 'normal',
+            due_date TIMESTAMP,
+            completed_at TIMESTAMP,
+            is_recurring BOOLEAN DEFAULT false,
+            recurring_pattern VARCHAR,
+            recurring_interval INTEGER DEFAULT 1,
+            recurring_end_date TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created tasks table');
+      } catch (e) {
+        console.log('⚠️ tasks table already exists or error:', e.message);
+      }
+      
+      // Add space_id column to existing tasks table (if it exists but missing the column)
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS space_id VARCHAR REFERENCES task_spaces(id);`);
+        console.log('✅ Added space_id to tasks table');
+      } catch (e) {
+        console.log('⚠️ space_id column already exists or error:', e.message);
+      }
+      
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
       
