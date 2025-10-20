@@ -393,20 +393,20 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* Urgency Section */}
-          <div className="text-center mb-12 p-8 rounded-2xl bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-            <h2 className="text-3xl font-black mb-4">⚡ LIMITED TIME OFFER ⚡</h2>
-            <p className="text-xl font-bold mb-2">Get Your FREE Marketing Audit ($2,500 Value)</p>
-            <p className="text-lg opacity-90">Plus 30% OFF your first 3 months</p>
+          {/* Welcome Section */}
+          <div className="text-center mb-12 p-8 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <h2 className="text-3xl font-black mb-4">🚀 START YOUR GROWTH JOURNEY</h2>
+            <p className="text-xl font-bold mb-2">Join Hundreds of Growing Businesses</p>
+            <p className="text-lg opacity-90">Professional marketing services tailored to your needs</p>
             <div className="flex items-center justify-center gap-4 mt-6">
               <div className="bg-white/20 px-4 py-2 rounded-full">
-                <span className="font-bold">🎯 Custom Strategy</span>
+                <span className="font-bold">🎯 Expert Strategy</span>
               </div>
               <div className="bg-white/20 px-4 py-2 rounded-full">
-                <span className="font-bold">📊 ROI Analysis</span>
+                <span className="font-bold">📈 Proven Results</span>
               </div>
               <div className="bg-white/20 px-4 py-2 rounded-full">
-                <span className="font-bold">🚀 Growth Plan</span>
+                <span className="font-bold">🚀 Fast Growth</span>
               </div>
             </div>
           </div>
@@ -417,7 +417,6 @@ export default function SignupPage() {
               { num: 1, label: "Company", icon: Building2 },
               { num: 2, label: "Contact", icon: User },
               { num: 3, label: "Services", icon: Target },
-              { num: 4, label: "Social URLs", icon: Users },
             ].map((s) => (
               <div key={s.num} className="flex items-center flex-1">
                 <div className={`flex items-center gap-2 ${s.num < 3 ? 'flex-1' : ''}`}>
@@ -438,7 +437,7 @@ export default function SignupPage() {
                     {s.label}
                   </span>
                 </div>
-                {s.num < 4 && (
+                {s.num < 3 && (
                   <div className={`h-1 flex-1 mx-2 rounded-full ${step > s.num ? "bg-blue-600" : "bg-muted"}`} />
                 )}
               </div>
@@ -447,13 +446,13 @@ export default function SignupPage() {
 
           <Card className="p-8 shadow-2xl border-0 bg-white/90 backdrop-blur rounded-3xl">
             <div className="text-center mb-8">
-              <h2 className="text-4xl font-black mb-4 bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                🎯 Get Your FREE Marketing Audit
+              <h2 className="text-4xl font-black mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                🚀 Create Your Account
               </h2>
-              <p className="text-xl text-gray-600 font-medium">Tell us about your business and we'll create a custom growth plan worth $2,500</p>
-              <div className="mt-4 inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-bold">
+              <p className="text-xl text-gray-600 font-medium">Tell us about your business and choose the perfect marketing package for your needs</p>
+              <div className="mt-4 inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-bold">
                 <CheckCircle className="w-4 h-4" />
-                No commitment required • 100% Free
+                Quick setup • Choose your package • Start growing
               </div>
             </div>
             
