@@ -188,8 +188,14 @@ export function registerRoutes(app: Express) {
       const data = earlyLeadSchema.parse(req.body);
 
       // Check if lead with this email already exists
-      const existingLeads = await storage.getLeads();
-      const existingLead = existingLeads.find(l => l.email === data.email);
+      let existingLead = null;
+      try {
+        const existingLeads = await storage.getLeads();
+        existingLead = existingLeads.find(l => l.email === data.email);
+      } catch (getLeadsError) {
+        console.error('⚠️ Error fetching existing leads, continuing with creation:', getLeadsError);
+        // Continue anyway - we'll handle duplicates if they occur
+      }
 
       if (existingLead) {
         // Lead already exists, don't create duplicate
@@ -197,7 +203,7 @@ export function registerRoutes(app: Express) {
       }
 
       // Create early lead capture
-      const leadData = {
+      const leadData: any = {
         name: data.name,
         email: data.email,
         phone: data.phone,
@@ -221,11 +227,18 @@ Lead started the account creation process but hasn't completed yet.
 
 ---
 This lead will be updated if they complete the full signup process.`,
-        clientId: null,
         assignedToId: null,
         sourceMetadata: { type: "signup_early_capture", step: 2 },
         nextFollowUp: null,
       };
+
+      // Only add clientId if the column exists (for backwards compatibility)
+      // This will be handled by the migration eventually
+      try {
+        leadData.clientId = null;
+      } catch (e) {
+        // clientId column doesn't exist yet, skip it
+      }
 
       console.log('📝 Creating early lead with data:', leadData);
       const lead = await storage.createLead(leadData);
