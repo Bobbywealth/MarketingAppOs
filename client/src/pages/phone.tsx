@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,7 +29,8 @@ import {
   Star,
   PhoneOff,
   UserPlus,
-  Settings
+  Settings,
+  Send
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -44,6 +46,16 @@ interface CallLog {
   recordingUrl?: string;
 }
 
+interface SmsMessage {
+  id: string;
+  direction: "inbound" | "outbound";
+  from_number: string;
+  to_numbers: string[];
+  text: string;
+  timestamp: string;
+  status?: string;
+}
+
 export default function PhonePage() {
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -51,6 +63,9 @@ export default function PhonePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCall, setActiveCall] = useState<CallLog | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [activeTab, setActiveTab] = useState<"calls" | "sms">("calls");
+  const [smsRecipient, setSmsRecipient] = useState("");
+  const [smsMessage, setSmsMessage] = useState("");
 
   // Fetch call logs from Dialpad API
   const { data: callLogs = [], isLoading } = useQuery<CallLog[]>({
@@ -60,6 +75,16 @@ export default function PhonePage() {
       return response.json();
     },
     refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Fetch SMS messages from Dialpad API
+  const { data: smsMessages = [], isLoading: smsLoading } = useQuery<SmsMessage[]>({
+    queryKey: ["/api/dialpad/sms"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/dialpad/sms?limit=100", undefined);
+      return response.json();
+    },
+    refetchInterval: 15000, // Refresh every 15 seconds
   });
 
   const makeCallMutation = useMutation({
@@ -73,6 +98,25 @@ export default function PhonePage() {
       toast({ 
         title: "Call failed", 
         description: error?.message || "Unable to place call",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const sendSmsMutation = useMutation({
+    mutationFn: async (data: { to_numbers: string[]; text: string }) => {
+      return apiRequest("POST", "/api/dialpad/sms", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dialpad/sms"] });
+      setSmsRecipient("");
+      setSmsMessage("");
+      toast({ title: "✅ SMS Sent!", description: "Your message was sent successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "SMS failed", 
+        description: error?.message || "Unable to send SMS",
         variant: "destructive" 
       });
     },
@@ -96,6 +140,21 @@ export default function PhonePage() {
   const handleHangup = () => {
     setActiveCall(null);
     toast({ title: "Call ended" });
+  };
+
+  const handleSendSms = () => {
+    if (!smsRecipient || !smsMessage) {
+      toast({ 
+        title: "Missing information", 
+        description: "Please enter both recipient number and message",
+        variant: "destructive" 
+      });
+      return;
+    }
+    sendSmsMutation.mutate({ 
+      to_numbers: [smsRecipient],
+      text: smsMessage 
+    });
   };
 
   const formatDuration = (seconds: number) => {
@@ -151,17 +210,25 @@ export default function PhonePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Phone & Calling</h1>
-          <p className="text-muted-foreground">Make calls and manage communications via Dialpad</p>
+          <h1 className="text-3xl font-bold">Phone & SMS</h1>
+          <p className="text-muted-foreground">Make calls, send messages via Dialpad</p>
         </div>
         <div className="flex items-center gap-2">
+          <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="mr-4">
+            <TabsList>
+              <TabsTrigger value="calls" className="gap-2">
+                <Phone className="w-4 h-4" />
+                Calls
+              </TabsTrigger>
+              <TabsTrigger value="sms" className="gap-2">
+                <MessageSquare className="w-4 h-4" />
+                SMS
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           <Button variant="outline" size="sm">
             <Settings className="w-4 h-4 mr-2" />
             Settings
-          </Button>
-          <Button variant="outline" size="sm">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add Contact
           </Button>
         </div>
       </div>
@@ -240,9 +307,10 @@ export default function PhonePage() {
       </div>
 
       {/* Main Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Dialpad Section */}
-        <Card className="lg:col-span-4">
+      {activeTab === "calls" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Dialpad Section */}
+          <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Dialpad</span>
@@ -476,6 +544,102 @@ export default function PhonePage() {
           </ScrollArea>
         </Card>
       </div>
+      ) : (
+        /* SMS Interface */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* SMS Composer */}
+          <Card className="lg:col-span-4">
+            <CardHeader>
+              <CardTitle>Send SMS</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Recipient Phone Number</label>
+                <Input
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={smsRecipient}
+                  onChange={(e) => setSmsRecipient(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Message</label>
+                <Textarea
+                  placeholder="Type your message..."
+                  value={smsMessage}
+                  onChange={(e) => setSmsMessage(e.target.value)}
+                  className="mt-2 min-h-[150px]"
+                  maxLength={1600}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {smsMessage.length} / 1600 characters
+                </p>
+              </div>
+              <Button
+                className="w-full gap-2"
+                onClick={handleSendSms}
+                disabled={sendSmsMutation.isPending}
+              >
+                <Send className="w-4 h-4" />
+                {sendSmsMutation.isPending ? "Sending..." : "Send SMS"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* SMS History */}
+          <Card className="lg:col-span-8">
+            <CardHeader>
+              <CardTitle>SMS History</CardTitle>
+            </CardHeader>
+            <ScrollArea className="h-[600px]">
+              <CardContent className="space-y-2">
+                {smsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Loading messages...
+                  </div>
+                ) : smsMessages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MessageSquare className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+                    <p className="text-muted-foreground mb-2">No SMS messages yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Your messages will appear here once you connect Dialpad
+                    </p>
+                  </div>
+                ) : (
+                  smsMessages.map((msg) => (
+                    <Card key={msg.id} className="hover-elevate">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {msg.direction === "outbound" ? (
+                                <Badge variant="default">Sent</Badge>
+                              ) : (
+                                <Badge variant="secondary">Received</Badge>
+                              )}
+                              <span className="text-sm font-medium">
+                                {msg.direction === "outbound" 
+                                  ? `To: ${msg.to_numbers.join(", ")}`
+                                  : `From: ${msg.from_number}`
+                                }
+                              </span>
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </ScrollArea>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
