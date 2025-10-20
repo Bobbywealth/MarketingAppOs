@@ -580,6 +580,130 @@ export default function Clients() {
                     </div>
                   </div>
 
+                  {/* Social Media */}
+                  {selectedClient.socialLinks && Object.keys(selectedClient.socialLinks).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Social Media</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {selectedClient.socialLinks.instagram && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-pink-500/10 to-orange-500/10 border border-pink-500/20">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">📷</span>
+                              <span className="text-sm font-medium text-muted-foreground">Instagram</span>
+                            </div>
+                            <a 
+                              href={`https://instagram.com/${selectedClient.socialLinks.instagram.replace('@', '')}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-foreground hover:text-primary transition-colors"
+                            >
+                              @{selectedClient.socialLinks.instagram.replace('@', '')}
+                            </a>
+                          </div>
+                        )}
+                        {selectedClient.socialLinks.facebook && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">📘</span>
+                              <span className="text-sm font-medium text-muted-foreground">Facebook</span>
+                            </div>
+                            <a 
+                              href={`https://facebook.com/${selectedClient.socialLinks.facebook}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-foreground hover:text-primary transition-colors"
+                            >
+                              {selectedClient.socialLinks.facebook}
+                            </a>
+                          </div>
+                        )}
+                        {selectedClient.socialLinks.twitter && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-sky-500/10 to-blue-500/10 border border-sky-500/20">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">𝕏</span>
+                              <span className="text-sm font-medium text-muted-foreground">Twitter/X</span>
+                            </div>
+                            <a 
+                              href={`https://twitter.com/${selectedClient.socialLinks.twitter.replace('@', '')}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-foreground hover:text-primary transition-colors"
+                            >
+                              @{selectedClient.socialLinks.twitter.replace('@', '')}
+                            </a>
+                          </div>
+                        )}
+                        {selectedClient.socialLinks.tiktok && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-slate-900/10 to-slate-700/10 border border-slate-500/20">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">🎵</span>
+                              <span className="text-sm font-medium text-muted-foreground">TikTok</span>
+                            </div>
+                            <a 
+                              href={`https://tiktok.com/@${selectedClient.socialLinks.tiktok.replace('@', '')}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-foreground hover:text-primary transition-colors"
+                            >
+                              @{selectedClient.socialLinks.tiktok.replace('@', '')}
+                            </a>
+                          </div>
+                        )}
+                        {selectedClient.socialLinks.linkedin && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-blue-700/10 to-blue-800/10 border border-blue-700/20">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">💼</span>
+                              <span className="text-sm font-medium text-muted-foreground">LinkedIn</span>
+                            </div>
+                            <a 
+                              href={`https://linkedin.com/in/${selectedClient.socialLinks.linkedin}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-foreground hover:text-primary transition-colors"
+                            >
+                              {selectedClient.socialLinks.linkedin}
+                            </a>
+                          </div>
+                        )}
+                        {selectedClient.socialLinks.youtube && (
+                          <div className="p-3 rounded-lg bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/20">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">▶️</span>
+                              <span className="text-sm font-medium text-muted-foreground">YouTube</span>
+                            </div>
+                            <a 
+                              href={`https://youtube.com/@${selectedClient.socialLinks.youtube.replace('@', '')}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-foreground hover:text-primary transition-colors"
+                            >
+                              @{selectedClient.socialLinks.youtube.replace('@', '')}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Subscription Package */}
+                  {selectedClient.stripeSubscriptionId && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Subscription</h3>
+                      <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">Active Package</p>
+                            <p className="font-semibold">Premium Subscription</p>
+                            <p className="text-xs text-muted-foreground mt-1">Stripe ID: {selectedClient.stripeSubscriptionId}</p>
+                          </div>
+                          <Badge className="bg-green-500/20 text-green-700 border-green-500/30">
+                            Active
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Service Tags */}
                   {selectedClient.serviceTags && selectedClient.serviceTags.length > 0 && (
                     <div>
