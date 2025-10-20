@@ -1111,7 +1111,9 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const tasksToday = tasks.filter((t) => {
         if (!t.dueDate) return false;
         const dueDate = new Date(t.dueDate);
-        return dueDate >= today && dueDate < tomorrow;
+        // Set to start of day for comparison
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate.getTime() === today.getTime();
       });
 
       const totalTasksToday = tasksToday.length;
