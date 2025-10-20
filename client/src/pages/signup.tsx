@@ -103,13 +103,22 @@ export default function SignupPage() {
   const earlyLeadCaptureMutation = useMutation({
     mutationFn: async (data: { name: string; email: string; phone: string; company: string; website?: string; industry?: string }) => {
       const response = await apiRequest("POST", "/api/early-lead", data);
-      return response.json();
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || "Failed to create lead");
+      }
+      return result;
     },
-    onSuccess: () => {
-      console.log("✅ Early lead captured after step 2");
+    onSuccess: (result) => {
+      console.log("✅ Early lead captured after step 2:", result);
     },
     onError: (error) => {
       console.error("❌ Failed to capture early lead:", error);
+      toast({
+        title: "⚠️ Lead Capture Failed",
+        description: "We couldn't save your information, but you can still continue with the audit.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -154,14 +163,16 @@ export default function SignupPage() {
       // Capture lead early after step 2 (contact info completed)
       if (step === 2) {
         const formData = form.getValues();
-        earlyLeadCaptureMutation.mutate({
+        const leadData = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           company: formData.company,
           website: formData.website || undefined,
           industry: formData.industry || undefined,
-        });
+        };
+        console.log("📝 Capturing early lead with data:", leadData);
+        earlyLeadCaptureMutation.mutate(leadData);
       }
       
       const nextStepNum = step + 1;
