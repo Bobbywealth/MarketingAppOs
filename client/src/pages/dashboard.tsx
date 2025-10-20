@@ -24,6 +24,10 @@ export default function Dashboard() {
     meta: { returnNull: true }, // Don't throw error if Stripe not configured
   });
 
+  // Use Stripe revenue if available, otherwise fall back to internal invoices
+  const stripeRevenue = stripeData?.totalRevenue || 0;
+  const displayRevenue = stripeRevenue > 0 ? stripeRevenue : (stats?.monthlyRevenue || 0);
+
   const metrics = [
     {
       title: "Total Clients",
@@ -57,7 +61,7 @@ export default function Dashboard() {
     },
     {
       title: "Revenue (MTD)",
-      value: `$${((stats?.monthlyRevenue || 0) / 1000).toFixed(1)}k`,
+      value: `$${(displayRevenue / 1000).toFixed(1)}k`,
       change: "-5%",
       changeType: "negative" as const,
       icon: DollarSign,
