@@ -222,10 +222,10 @@ export default function SignupPage() {
               🎯 Choose Your Package
             </h1>
             <p className="text-xl text-gray-600 mb-4">
-              Based on your audit, here are our recommended packages to fix your issues and grow your brand
+              Select the perfect marketing package to grow your business
             </p>
             <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-lg px-6 py-2">
-              {auditResults?.summary?.totalIssues || 0} Issues Found • Let's Fix Them!
+              ✨ Professional Marketing Services
             </Badge>
           </div>
 
