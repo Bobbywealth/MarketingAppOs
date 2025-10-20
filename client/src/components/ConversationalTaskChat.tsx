@@ -53,6 +53,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const [isListening, setIsListening] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isBulkMode, setIsBulkMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +78,56 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Handle drag and drop
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+
+    if (imageFile) {
+      handleImageUpload(imageFile);
+    } else {
+      toast({
+        title: "Invalid file type",
+        description: "Please drop an image file (PNG, JPG, etc.)",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setUploadedImage(result);
+      toast({
+        title: "📷 Image uploaded!",
+        description: "Tell me what you want to do with this image",
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const addMessage = (role: "ai" | "user", content: string) => {
     setMessages((prev) => [...prev, { role, content, timestamp: new Date() }]);
