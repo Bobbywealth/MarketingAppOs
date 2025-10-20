@@ -300,6 +300,142 @@ export default function LeadsPage() {
         </Dialog>
       </div>
 
+      {/* Lead Detail Dialog */}
+      <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          {selectedLead && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <DialogTitle className="text-2xl">{selectedLead.name}</DialogTitle>
+                    <DialogDescription className="flex items-center gap-2 mt-2">
+                      <Badge variant={getStageBadge(selectedLead.stage)}>
+                        {selectedLead.stage.replace('_', ' ')}
+                      </Badge>
+                      {selectedLead.score && (
+                        <Badge 
+                          variant="outline" 
+                          className={`gap-1 ${
+                            selectedLead.score === 'hot' ? 'border-red-500 text-red-700 bg-red-50' :
+                            selectedLead.score === 'warm' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
+                            'border-blue-500 text-blue-700 bg-blue-50'
+                          }`}
+                        >
+                          {selectedLead.score === 'hot' && '🔥'}
+                          {selectedLead.score === 'warm' && '☀️'}
+                          {selectedLead.score === 'cold' && '❄️'}
+                          <span className="ml-1 capitalize">{selectedLead.score} Lead</span>
+                        </Badge>
+                      )}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-6 mt-4">
+                {/* Contact Information */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Contact Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedLead.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <a href={`mailto:${selectedLead.email}`} className="text-blue-600 hover:underline">
+                          {selectedLead.email}
+                        </a>
+                      </div>
+                    )}
+                    {selectedLead.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <a href={`tel:${selectedLead.phone}`} className="text-blue-600 hover:underline">
+                          {selectedLead.phone}
+                        </a>
+                      </div>
+                    )}
+                    {selectedLead.company && (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedLead.company}</span>
+                      </div>
+                    )}
+                    {selectedLead.website && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <a href={selectedLead.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          Website
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Lead Details */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Lead Details</h3>
+                  <div className="space-y-2">
+                    {selectedLead.value && (
+                      <div className="flex items-center justify-between py-2 border-b">
+                        <span className="text-muted-foreground">Potential Value</span>
+                        <span className="font-semibold">${(selectedLead.value / 100).toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <span className="text-muted-foreground">Source</span>
+                      <span className="capitalize">{selectedLead.source.replace('_', ' ')}</span>
+                    </div>
+                    {selectedLead.createdAt && (
+                      <div className="flex items-center justify-between py-2 border-b">
+                        <span className="text-muted-foreground">Added</span>
+                        <span>{format(new Date(selectedLead.createdAt), 'MMM d, yyyy')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {selectedLead.notes && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3">Notes</h3>
+                    <div className="bg-muted/50 rounded-lg p-4 whitespace-pre-wrap text-sm">
+                      {selectedLead.notes}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button 
+                    onClick={() => {
+                      if (selectedLead.email) {
+                        window.location.href = `mailto:${selectedLead.email}`;
+                      }
+                    }}
+                    className="flex-1"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Email
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      if (selectedLead.phone) {
+                        window.location.href = `tel:${selectedLead.phone}`;
+                      }
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card className="hover-elevate">
@@ -523,16 +659,52 @@ export default function LeadsPage() {
                       </div>
 
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (lead.email) {
+                              window.location.href = `mailto:${lead.email}`;
+                            }
+                          }}
+                          title="Send Email"
+                        >
                           <Mail className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (lead.phone) {
+                              window.location.href = `tel:${lead.phone}`;
+                            }
+                          }}
+                          title="Call"
+                        >
                           <Phone className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSelectedLead(lead);
+                          }}
+                          title="Edit Lead"
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); }}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSelectedLead(lead);
+                          }}
+                          title="More Options"
+                        >
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </div>
