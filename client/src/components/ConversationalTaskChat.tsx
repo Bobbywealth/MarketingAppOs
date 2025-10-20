@@ -24,6 +24,10 @@ interface TaskData {
   dueDate?: string;
   assignedToId?: number;
   clientId?: string;
+  isRecurring?: boolean;
+  recurringPattern?: string;
+  recurringInterval?: number;
+  recurringEndDate?: string;
 }
 
 interface ConversationalTaskChatProps {
@@ -37,7 +41,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "ai",
-      content: "👋 Hi! I'm your AI Task Assistant. I'll help you create a task. What would you like to work on?",
+      content: "👋 Hey there! I'm your AI Task Assistant. Let's get something done today! Just tell me what you need to do - be as detailed or as brief as you'd like. I'll figure out the rest! 🚀\n\nFor example:\n• \"Call John about the project tomorrow at 2pm\"\n• \"Weekly team meeting every Monday\"\n• \"Follow up on proposal - urgent\"",
       timestamp: new Date(),
     },
   ]);
@@ -73,90 +77,85 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     setIsProcessing(true);
     addMessage("user", userInput);
 
-    // Simulate thinking
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    switch (currentStep) {
-      case "title":
-        setTaskData((prev) => ({ ...prev, title: userInput, status: "todo" }));
-        addMessage("ai", `Great! I'll create a task called "${userInput}". Would you like to add a description or any details? (You can say "no" to skip)`);
-        setCurrentStep("details");
-        break;
-
-      case "details":
-        if (userInput.toLowerCase().includes("no") || userInput.toLowerCase().includes("skip")) {
-          addMessage("ai", "No problem! How urgent is this task? Please choose: **Low**, **Normal**, **High**, or **Urgent**");
-          setCurrentStep("priority");
-        } else {
-          setTaskData((prev) => ({ ...prev, description: userInput }));
-          addMessage("ai", "Perfect! I've noted that. How urgent is this task? Choose: **Low**, **Normal**, **High**, or **Urgent**");
-          setCurrentStep("priority");
+    try {
+      // Use AI to parse the entire task at once
+      const response = await apiRequest("POST", "/api/tasks/parse-ai", { 
+        input: userInput,
+        context: {
+          today: new Date().toISOString(),
+          users: users.map(u => ({ id: u.id, name: u.username })),
+          clients: clients.map(c => ({ id: c.id, name: c.name })),
         }
-        break;
+      });
+      
+      const parsed = await response.json();
+      console.log("🤖 AI parsed:", parsed);
 
-      case "priority":
-        const priority = userInput.toLowerCase().includes("urgent") ? "urgent" :
-                        userInput.toLowerCase().includes("high") ? "high" :
-                        userInput.toLowerCase().includes("low") ? "low" : "normal";
-        setTaskData((prev) => ({ ...prev, priority }));
-        addMessage("ai", `Got it, set to **${priority}** priority. When is this due? (e.g., "tomorrow", "next Monday", "12/31/2024", or "no due date")`);
-        setCurrentStep("dueDate");
-        break;
+      if (parsed.success) {
+        // Extract all the parsed data
+        const newTaskData: TaskData = {
+          title: parsed.title || userInput,
+          description: parsed.description || null,
+          priority: parsed.priority || "normal",
+          status: "todo",
+          dueDate: parsed.dueDate || null,
+          isRecurring: parsed.isRecurring || false,
+          recurringPattern: parsed.recurringPattern || null,
+          recurringInterval: parsed.recurringInterval || 1,
+          recurringEndDate: parsed.recurringEndDate || null,
+        };
 
-      case "dueDate":
-        if (userInput.toLowerCase().includes("no") || userInput.toLowerCase().includes("skip")) {
-          addMessage("ai", `No due date set. ${users.length > 0 ? "Who should work on this? Please type their name or say 'me' or 'skip'" : "Almost done! Let me create this task for you."}`);
-          setCurrentStep(users.length > 0 ? "assignee" : "confirm");
-        } else {
-          // Parse date with AI
-          try {
-            const response = await apiRequest("POST", "/api/tasks/parse-ai", { 
-              input: `Parse this date: "${userInput}". Today is ${new Date().toLocaleDateString()}` 
-            });
-            const parsed = await response.json();
-            if (parsed.dueDate) {
-              setTaskData((prev) => ({ ...prev, dueDate: parsed.dueDate }));
-              addMessage("ai", `Perfect! Due date set to **${new Date(parsed.dueDate).toLocaleDateString()}**. ${users.length > 0 ? "Who should work on this? Type their name or say 'me' or 'skip'" : "Let me create this task now!"}`);
-              setCurrentStep(users.length > 0 ? "assignee" : "confirm");
-            } else {
-              addMessage("ai", "I couldn't parse that date. Could you try again? (e.g., '2024-12-25' or 'tomorrow')");
-            }
-          } catch {
-            addMessage("ai", "Let me set that for you. Moving on! Who should work on this? Type their name or say 'skip'");
-            setCurrentStep("assignee");
-          }
-        }
-        break;
-
-      case "assignee":
-        if (userInput.toLowerCase().includes("skip") || userInput.toLowerCase().includes("no")) {
-          addMessage("ai", "No problem! Let me create this task now. ✨");
-          setCurrentStep("confirm");
-          await createTask();
-        } else if (userInput.toLowerCase().includes("me")) {
-          // Assign to current user (you'd need to get current user ID)
-          addMessage("ai", "Assigning to you! Creating task now... ✨");
-          setCurrentStep("confirm");
-          await createTask();
-        } else {
-          // Find user by name
+        // Try to match assignee
+        if (parsed.assignee) {
           const matchedUser = users.find(u => 
-            u.username?.toLowerCase().includes(userInput.toLowerCase())
+            u.username?.toLowerCase().includes(parsed.assignee.toLowerCase()) ||
+            parsed.assignee.toLowerCase().includes(u.username?.toLowerCase())
           );
           if (matchedUser) {
-            setTaskData((prev) => ({ ...prev, assignedToId: matchedUser.id }));
-            addMessage("ai", `Perfect! Assigning to **${matchedUser.username}**. Creating your task now! ✨`);
-            setCurrentStep("confirm");
-            await createTask();
-          } else {
-            addMessage("ai", `I couldn't find "${userInput}". Available users: ${users.map(u => u.username).join(", ")}. Try again or say "skip"`);
+            newTaskData.assignedToId = matchedUser.id;
           }
         }
-        break;
 
-      case "confirm":
-        await createTask();
-        break;
+        // Try to match client
+        if (parsed.client) {
+          const matchedClient = clients.find(c => 
+            c.name?.toLowerCase().includes(parsed.client.toLowerCase()) ||
+            parsed.client.toLowerCase().includes(c.name?.toLowerCase())
+          );
+          if (matchedClient) {
+            newTaskData.clientId = matchedClient.id;
+          }
+        }
+
+        setTaskData(newTaskData);
+
+        // Build a friendly confirmation message
+        let confirmMsg = `Perfect! I understood:\n\n`;
+        confirmMsg += `📌 **Task:** ${newTaskData.title}\n`;
+        if (newTaskData.description) confirmMsg += `📝 **Details:** ${newTaskData.description}\n`;
+        confirmMsg += `⚡ **Priority:** ${newTaskData.priority}\n`;
+        if (newTaskData.dueDate) {
+          confirmMsg += `📅 **Due:** ${new Date(newTaskData.dueDate).toLocaleDateString()}\n`;
+        }
+        if (newTaskData.isRecurring) {
+          confirmMsg += `🔄 **Recurring:** ${newTaskData.recurringPattern} (every ${newTaskData.recurringInterval})\n`;
+        }
+        if (newTaskData.assignedToId) {
+          const user = users.find(u => u.id === newTaskData.assignedToId);
+          if (user) confirmMsg += `👤 **Assigned to:** ${user.username}\n`;
+        }
+        
+        confirmMsg += `\n✨ Ready to create this task! Should I proceed? (say "yes" or make changes)`;
+        
+        addMessage("ai", confirmMsg);
+        setCurrentStep("confirm");
+      } else {
+        // Ask for clarification
+        addMessage("ai", "Hmm, I'm not quite sure I got that. Could you tell me more? What's the task you need to create?");
+      }
+    } catch (error) {
+      console.error("Parse error:", error);
+      addMessage("ai", "Oops! I had trouble understanding that. Could you rephrase? For example: 'Weekly team meeting every Monday at 10am'");
     }
 
     setIsProcessing(false);
@@ -168,7 +167,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
       console.log("🔄 Attempting to create task with data:", taskData);
       
       // Ensure required fields have values
-      const taskPayload = {
+      const taskPayload: any = {
         title: taskData.title || "Untitled Task",
         status: taskData.status || "todo",
         priority: taskData.priority || "normal",
@@ -177,6 +176,16 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
         assignedToId: taskData.assignedToId || null,
         clientId: taskData.clientId || null,
       };
+
+      // Add recurring fields if task is recurring
+      if (taskData.isRecurring) {
+        taskPayload.isRecurring = true;
+        taskPayload.recurringPattern = taskData.recurringPattern || "daily";
+        taskPayload.recurringInterval = taskData.recurringInterval || 1;
+        if (taskData.recurringEndDate) {
+          taskPayload.recurringEndDate = taskData.recurringEndDate;
+        }
+      }
       
       console.log("📤 Sending task payload:", taskPayload);
       
@@ -191,7 +200,15 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
       const task = await response.json();
       console.log("✅ Task created:", task);
       
-      addMessage("ai", `✅ **Task created successfully!** "${task.title}" is now in your task list. Need anything else?`);
+      let successMsg = `✅ **Task created successfully!**\n\n"${task.title}" is now in your task list`;
+      if (taskData.isRecurring) {
+        successMsg += ` and will repeat ${taskData.recurringPattern}!`;
+      } else {
+        successMsg += "!";
+      }
+      successMsg += "\n\nNeed to create another task?";
+      
+      addMessage("ai", successMsg);
       
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       
@@ -225,7 +242,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     setMessages([
       {
         role: "ai",
-        content: "👋 Hi! I'm your AI Task Assistant. What would you like to work on next?",
+        content: "👋 Hey! Ready for another task? Just tell me what you need - I'll handle the details! 🚀",
         timestamp: new Date(),
       },
     ]);
@@ -284,6 +301,20 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isProcessing) return;
+    
+    // If we're on confirm step and user says yes/ok/sure, create the task
+    if (currentStep === "confirm") {
+      const affirmatives = ["yes", "yep", "yeah", "sure", "ok", "okay", "proceed", "create", "do it", "go ahead", "correct", "right", "perfect"];
+      if (affirmatives.some(word => input.toLowerCase().includes(word))) {
+        addMessage("user", input);
+        addMessage("ai", "Creating your task now! ✨");
+        setIsProcessing(true);
+        createTask().finally(() => setIsProcessing(false));
+        setInput("");
+        return;
+      }
+    }
+    
     parseAIResponse(input);
   };
 
@@ -371,7 +402,12 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
             )}
             {taskData.dueDate && (
               <Badge variant="secondary" className="text-xs">
-                Due: {new Date(taskData.dueDate).toLocaleDateString()}
+                📅 Due: {new Date(taskData.dueDate).toLocaleDateString()}
+              </Badge>
+            )}
+            {taskData.isRecurring && (
+              <Badge variant="secondary" className="text-xs bg-purple-500/10 text-purple-600">
+                🔄 {taskData.recurringPattern}
               </Badge>
             )}
           </div>
