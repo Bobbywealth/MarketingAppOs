@@ -314,10 +314,11 @@ export class DialpadService {
     }
   }
 
-  // Get current user info (test connection)
-  async getCurrentUser() {
+  // Test Dialpad API connection
+  async testConnection() {
     try {
-      const url = `${DIALPAD_API_BASE}/users/me`;
+      // Test by fetching a single call record
+      const url = `${DIALPAD_API_BASE}/calls?limit=1`;
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -328,18 +329,8 @@ export class DialpadService {
       }
 
       const data = await response.json();
-      console.log('✅ Connected to Dialpad:', data.name || data.id);
-      return data;
-    } catch (error: any) {
-      console.error('❌ Error fetching current user:', error.message);
-      throw new Error(error.message || 'Failed to fetch user info');
-    }
-  }
-
-  // Test Dialpad API connection
-  async testConnection() {
-    try {
-      return await this.getCurrentUser();
+      console.log('✅ Connected to Dialpad! API key is valid.');
+      return { connected: true, apiKeyValid: true };
     } catch (error: any) {
       console.error('❌ Dialpad connection test failed:', error.message);
       throw error;

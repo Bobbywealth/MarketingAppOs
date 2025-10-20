@@ -3577,7 +3577,8 @@ Examples:
         });
       }
 
-      const response = await fetch("https://dialpad.com/api/v2/users/me", {
+      // Test with a simple calls endpoint (we know this exists)
+      const response = await fetch("https://dialpad.com/api/v2/calls?limit=1", {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.DIALPAD_API_KEY}`,
@@ -3596,13 +3597,15 @@ Examples:
       }
 
       const data = await response.json();
-      console.log("✅ Connected to Dialpad:", data.name || data.id);
+      console.log("✅ Connected to Dialpad! Retrieved", data.items?.length || 0, "call records");
 
       res.json({
         success: true,
         message: "✅ Connected to Dialpad successfully!",
-        user: data.name || data.id || data.email,
-        dialpadUserId: data.id,
+        endpoint: "/api/v2/calls",
+        recordsRetrieved: data.items?.length || 0,
+        apiKeyValid: true,
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       console.error("❌ Dialpad connection error:", error.message);
