@@ -479,7 +479,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     setUploadedImage(null);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -493,17 +493,8 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
       return;
     }
 
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setUploadedImage(base64);
-      toast({
-        title: "Image uploaded!",
-        description: "I'll analyze it when you send your message",
-      });
-    };
-    reader.readAsDataURL(file);
+    // Use the shared handleImageUpload function
+    handleImageUpload(file);
   };
 
   const deleteTask = async (taskId: string) => {
@@ -716,7 +707,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={handleImageUpload}
+            onChange={handleFileInputChange}
             className="hidden"
           />
           <Button
