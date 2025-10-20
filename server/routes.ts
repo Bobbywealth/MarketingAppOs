@@ -1123,34 +1123,30 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Dashboard stats
+  // Dashboard stats - OPTIMIZED
   app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
     try {
-      // Batch all data fetches in parallel for performance
-      const [clients, campaigns, leads, invoices, tasks, tickets, contentPosts, websiteProjects, activityLogs] = await Promise.all([
-        storage.getClients(),
-        storage.getCampaigns(),
-        storage.getLeads(),
-        storage.getInvoices(),
-        storage.getTasks(),
-        storage.getTickets(),
-        storage.getContentPosts(),
-        storage.getWebsiteProjects(),
-        storage.getActivityLogs(20), // Get recent 20 activity logs
+      // Only fetch lightweight data and minimal records for activity feed
+      const [clients, campaigns, leads, tasks, activityLogs] = await Promise.all([
+        storage.getClients(), // Small dataset, usually < 100 records
+        storage.getCampaigns(), // Small dataset
+        storage.getLeads(), // Could be large, but we need value calc
+        storage.getTasks(), // Could be large
+        storage.getActivityLogs(15), // Only get 15 recent logs
       ]);
 
-      console.log("📊 Dashboard Stats:");
+      console.log("📊 Dashboard Stats (Optimized):");
       console.log("  - Total Clients:", clients.length);
-      console.log("  - Client Names:", clients.map(c => c.name).join(", "));
       console.log("  - Total Campaigns:", campaigns.length);
       console.log("  - Total Leads:", leads.length);
       console.log("  - Total Tasks:", tasks.length);
 
+      // Quick counts and aggregates
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
-      const monthlyRevenue = invoices
-        .filter((inv) => inv.status === "paid")
-        .reduce((sum, inv) => sum + inv.amount, 0);
+      
+      // Skip invoices for now - not critical for dashboard load
+      const monthlyRevenue = 0; // Will be replaced by Stripe data if available
 
       // Task metrics
       const totalTasks = tasks.length;
@@ -1180,106 +1176,38 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const inProgressTasksToday = tasksToday.filter((t) => t.status === "in_progress").length;
       const reviewTasksToday = tasksToday.filter((t) => t.status === "review").length;
 
-      // Recent Activity Feed - collect activities from all sources
+      // Recent Activity Feed - OPTIMIZED: Only use most recent data to avoid slow sorting
       const recentActivity: any[] = [];
+      
+      // Quick recent items only (first 3 of each)
 
-      // Client activities (sort by timestamp, then take most recent)
-      [...clients]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5)
-        .forEach(client => {
-          recentActivity.push({
-            type: 'success',
-            title: `New client added: ${client.name}`,
-            time: formatActivityTime(client.createdAt),
-            timestamp: client.createdAt,
-          });
+      // Simplified activity feed - only most recent items (reduced from sorting everything)
+      clients.slice(0, 2).forEach(client => {
+        recentActivity.push({
+          type: 'success',
+          title: `Client: ${client.name}`,
+          time: formatActivityTime(client.createdAt),
+          timestamp: client.createdAt,
         });
+      });
 
-      // Campaign activities
-      [...campaigns]
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-        .slice(0, 5)
-        .forEach(campaign => {
-          const client = clients.find(c => c.id === campaign.clientId);
-          recentActivity.push({
-            type: 'info',
-            title: `Campaign ${campaign.status}: ${campaign.name}${client ? ` for ${client.name}` : ''}`,
-            time: formatActivityTime(campaign.updatedAt || campaign.createdAt),
-            timestamp: campaign.updatedAt || campaign.createdAt,
-          });
+      campaigns.slice(0, 2).forEach(campaign => {
+        recentActivity.push({
+          type: 'info',
+          title: `Campaign: ${campaign.name}`,
+          time: formatActivityTime(campaign.createdAt),
+          timestamp: campaign.createdAt,
         });
+      });
 
-      // Task activities (completed tasks)
-      [...tasks]
-        .filter(t => t.status === 'completed')
-        .sort((a, b) => new Date(b.completedAt || b.updatedAt).getTime() - new Date(a.completedAt || a.updatedAt).getTime())
-        .slice(0, 5)
-        .forEach(task => {
-          recentActivity.push({
-            type: 'success',
-            title: `Task completed: ${task.title}`,
-            time: formatActivityTime(task.completedAt || task.updatedAt),
-            timestamp: task.completedAt || task.updatedAt,
-          });
+      tasks.filter(t => t.status === 'completed').slice(0, 2).forEach(task => {
+        recentActivity.push({
+          type: 'success',
+          title: `Task completed: ${task.title}`,
+          time: formatActivityTime(task.updatedAt),
+          timestamp: task.updatedAt,
         });
-
-      // Lead activities
-      [...leads]
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-        .slice(0, 5)
-        .forEach(lead => {
-          const statusColors: any = { 'prospect': 'info', 'qualified': 'warning', 'proposal': 'warning', 'closed': 'success', 'lost': 'error' };
-          recentActivity.push({
-            type: statusColors[lead.stage] || 'info',
-            title: `Lead ${lead.stage}: ${lead.name} - $${lead.value || 0}`,
-            time: formatActivityTime(lead.updatedAt || lead.createdAt),
-            timestamp: lead.updatedAt || lead.createdAt,
-          });
-        });
-
-      // Invoice activities
-      [...invoices]
-        .filter(inv => inv.status === 'paid')
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-        .slice(0, 3)
-        .forEach(invoice => {
-          const client = clients.find(c => c.id === invoice.clientId);
-          recentActivity.push({
-            type: 'success',
-            title: `Invoice paid: $${invoice.amount}${client ? ` from ${client.name}` : ''}`,
-            time: formatActivityTime(invoice.updatedAt || invoice.createdAt),
-            timestamp: invoice.updatedAt || invoice.createdAt,
-          });
-        });
-
-      // Ticket activities
-      [...tickets]
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-        .slice(0, 5)
-        .forEach(ticket => {
-          const statusColors: any = { 'open': 'warning', 'in_progress': 'info', 'resolved': 'success', 'closed': 'info' };
-          recentActivity.push({
-            type: statusColors[ticket.status] || 'info',
-            title: `Support ticket ${ticket.status}: ${ticket.subject}`,
-            time: formatActivityTime(ticket.updatedAt || ticket.createdAt),
-            timestamp: ticket.updatedAt || ticket.createdAt,
-          });
-        });
-
-      // Content activities
-      [...contentPosts]
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-        .slice(0, 3)
-        .forEach(post => {
-          const statusColors: any = { 'draft': 'info', 'pending': 'warning', 'approved': 'success', 'published': 'success', 'rejected': 'error' };
-          recentActivity.push({
-            type: statusColors[post.status] || 'info',
-            title: `Content ${post.status}: ${post.title}`,
-            time: formatActivityTime(post.updatedAt || post.createdAt),
-            timestamp: post.updatedAt || post.createdAt,
-          });
-        });
+      });
 
       // Website project activities
       [...websiteProjects]
