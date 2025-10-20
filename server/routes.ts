@@ -2636,20 +2636,32 @@ Examples:
       // Try to get data from connected Instagram account first
       if (client.socialLinks?.instagram && client.instagramAccessToken) {
         try {
+          console.log(`📊 Fetching connected Instagram data for client ${clientId}`);
           instagramData = await InstagramService.getAccountMetrics(
             client.instagramAccessToken,
             client.instagramUserId || ''
           );
         } catch (error) {
           console.error('Failed to fetch connected Instagram data:', error);
+          // Clear invalid token
+          await storage.updateClient(clientId, {
+            instagramAccessToken: null,
+            instagramUserId: null,
+            instagramConnectedAt: null,
+          });
         }
       }
 
       // Fallback to scraping public data
       if (!instagramData && client.socialLinks?.instagram) {
-        const username = client.socialLinks.instagram.split('/').pop()?.replace('@', '');
-        if (username) {
-          instagramData = await InstagramService.scrapePublicData(username);
+        try {
+          const username = client.socialLinks.instagram.split('/').pop()?.replace('@', '');
+          if (username) {
+            console.log(`🔍 Scraping public Instagram data for @${username}`);
+            instagramData = await InstagramService.scrapePublicData(username);
+          }
+        } catch (error) {
+          console.error('Failed to scrape Instagram data:', error);
         }
       }
 
@@ -2740,7 +2752,8 @@ Examples:
       const redirectUri = `${req.protocol}://${req.get('host')}/api/instagram/callback`;
 
       if (!instagramClientId) {
-        return res.status(500).json({ message: "Instagram integration not configured" });
+        console.log("⚠️ Instagram OAuth not configured - missing INSTAGRAM_CLIENT_ID");
+        return res.redirect('/client-analytics?error=instagram_not_configured');
       }
 
       const authUrl = InstagramService.getAuthUrl(
@@ -2752,7 +2765,7 @@ Examples:
       res.redirect(authUrl);
     } catch (error) {
       console.error("Error initiating Instagram auth:", error);
-      res.status(500).json({ message: "Failed to initiate Instagram authentication" });
+      res.redirect('/client-analytics?error=instagram_auth_failed');
     }
   });
 
@@ -2761,7 +2774,8 @@ Examples:
       const { code, state } = req.query;
       
       if (!code || !state) {
-        return res.status(400).send('Missing authorization code or state');
+        console.log("⚠️ Instagram callback missing code or state");
+        return res.redirect('/client-analytics?error=missing_params');
       }
 
       const clientId = state as string;
@@ -2770,7 +2784,8 @@ Examples:
       const redirectUri = `${req.protocol}://${req.get('host')}/api/instagram/callback`;
 
       if (!instagramClientId || !instagramClientSecret) {
-        return res.status(500).send('Instagram integration not configured');
+        console.log("⚠️ Instagram OAuth not configured - missing credentials");
+        return res.redirect('/client-analytics?error=instagram_not_configured');
       }
 
       // Exchange code for access token
@@ -2788,6 +2803,7 @@ Examples:
         instagramConnectedAt: new Date(),
       });
 
+      console.log(`✅ Instagram connected successfully for client ${clientId}`);
       // Redirect back to analytics page with success message
       res.redirect('/client-analytics?instagram=connected');
     } catch (error) {
