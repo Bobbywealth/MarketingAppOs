@@ -35,6 +35,11 @@ export default function Analytics() {
     queryKey: [metricsUrl],
   });
 
+  // Fetch website analytics
+  const { data: websiteStats } = useQuery({
+    queryKey: ["/api/analytics/website"],
+  });
+
   const getFilteredMetrics = () => {
     if (!metrics) return [];
     if (selectedPlatform === "all") return metrics;
@@ -344,70 +349,121 @@ export default function Analytics() {
           </TabsContent>
 
           <TabsContent value="website" className="space-y-6">
-            {!websiteMetrics ? (
+            {!websiteStats ? (
               <Card className="border-0 shadow-lg">
                 <CardContent className="p-12 text-center text-muted-foreground">
                   <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No website analytics available</p>
-                  <p className="text-sm mt-2">Connect Google Analytics to track website performance</p>
+                  <p>Loading website analytics...</p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-0 shadow-lg" data-testid="card-page-views">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Page Views</CardTitle>
-                    <Eye className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold" data-testid="text-page-views">
-                      {websiteMetrics.pageViews.toLocaleString()}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">Total visits</p>
-                  </CardContent>
-                </Card>
+              <>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  <Card className="border-0 shadow-lg" data-testid="card-page-views">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Page Views</CardTitle>
+                      <Eye className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold" data-testid="text-page-views">
+                        {websiteStats.pageViews.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">Total visits</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="border-0 shadow-lg" data-testid="card-bounce-rate">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Bounce Rate</CardTitle>
-                    <TrendingDown className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold" data-testid="text-bounce-rate">
-                      {websiteMetrics.bounceRate.toFixed(1)}%
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">Single-page sessions</p>
-                  </CardContent>
-                </Card>
+                  <Card className="border-0 shadow-lg" data-testid="card-unique-visitors">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Unique Visitors</CardTitle>
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold" data-testid="text-unique-visitors">
+                        {websiteStats.uniqueVisitors.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">Individual users</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="border-0 shadow-lg" data-testid="card-session-duration">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold" data-testid="text-session-duration">
-                      {Math.floor(websiteMetrics.avgSessionDuration / 60)}m
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {websiteMetrics.avgSessionDuration % 60}s per visit
-                    </p>
-                  </CardContent>
-                </Card>
+                  <Card className="border-0 shadow-lg" data-testid="card-bounce-rate">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Bounce Rate</CardTitle>
+                      <TrendingDown className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold" data-testid="text-bounce-rate">
+                        {websiteStats.bounceRate.toFixed(1)}%
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">Single-page sessions</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="border-0 shadow-lg" data-testid="card-conversion-rate">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-                    <Target className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold" data-testid="text-conversion-rate">
-                      {websiteMetrics.conversionRate.toFixed(2)}%
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">Visitors to conversions</p>
-                  </CardContent>
-                </Card>
-              </div>
+                  <Card className="border-0 shadow-lg" data-testid="card-session-duration">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Avg. Session</CardTitle>
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold" data-testid="text-session-duration">
+                        {Math.floor(websiteStats.avgSessionDuration / 60)}m {websiteStats.avgSessionDuration % 60}s
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">Time on site</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Card className="border-0 shadow-lg">
+                    <CardHeader>
+                      <CardTitle>Top Pages</CardTitle>
+                      <CardDescription>Most visited pages on your website</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {websiteStats.topPages?.map((page: any, index: number) => (
+                          <div key={page.path} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <p className="font-medium">{page.title || page.path}</p>
+                                <p className="text-sm text-muted-foreground">{page.path}</p>
+                              </div>
+                            </div>
+                            <Badge variant="secondary">{page.views} views</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-lg">
+                    <CardHeader>
+                      <CardTitle>Traffic Sources</CardTitle>
+                      <CardDescription>Where your visitors come from</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {websiteStats.trafficSources?.map((source: any) => (
+                          <div key={source.source} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{source.source}</span>
+                              <span className="text-sm text-muted-foreground">{source.visits} visits ({source.percentage}%)</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2">
+                              <div 
+                                className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all"
+                                style={{ width: `${source.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
             )}
           </TabsContent>
         </Tabs>

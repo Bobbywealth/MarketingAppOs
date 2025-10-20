@@ -2573,6 +2573,61 @@ Examples:
     }
   });
 
+  // Public tracking endpoint (no auth required for website tracking)
+  app.post("/api/track/pageview", async (req: Request, res: Response) => {
+    try {
+      const { page, referrer, userAgent } = req.body;
+      
+      // Store pageview data
+      console.log('📊 Page view tracked:', {
+        page,
+        referrer,
+        userAgent,
+        ip: req.ip,
+        timestamp: new Date().toISOString()
+      });
+
+      // You can store this in database for analytics
+      // await storage.trackPageView({ page, referrer, userAgent, ip: req.ip });
+      
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('Error tracking pageview:', error);
+      res.status(500).json({ message: "Failed to track pageview" });
+    }
+  });
+
+  // Get website analytics summary
+  app.get("/api/analytics/website", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      // For now, return sample data
+      // TODO: Implement actual tracking data from database
+      const stats = {
+        pageViews: 1250,
+        uniqueVisitors: 450,
+        bounceRate: 42.5,
+        avgSessionDuration: 180, // in seconds
+        topPages: [
+          { path: '/', views: 450, title: 'Home' },
+          { path: '/services', views: 230, title: 'Services' },
+          { path: '/pricing', views: 180, title: 'Pricing' },
+          { path: '/contact', views: 150, title: 'Contact' },
+          { path: '/about', views: 120, title: 'About' },
+        ],
+        trafficSources: [
+          { source: 'Direct', visits: 450, percentage: 36 },
+          { source: 'Google', visits: 375, percentage: 30 },
+          { source: 'Social Media', visits: 250, percentage: 20 },
+          { source: 'Referral', visits: 175, percentage: 14 },
+        ],
+      };
+      res.json(stats);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch website analytics" });
+    }
+  });
+
   // Analytics metrics routes
   app.get("/api/analytics/metrics", isAuthenticated, async (req: Request, res: Response) => {
     try {
