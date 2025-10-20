@@ -25,6 +25,10 @@ import {
 import { z, ZodError } from "zod";
 import Stripe from "stripe";
 import * as microsoftAuth from "./microsoftAuth";
+import multer from "multer";
+import path from "path";
+import fs from "fs/promises";
+import { existsSync } from "fs";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -44,7 +48,131 @@ function handleValidationError(error: unknown, res: Response) {
   return res.status(500).json({ message: "Internal server error" });
 }
 
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), 'uploads');
+
+// Ensure upload directory exists
+if (!existsSync(uploadDir)) {
+  fs.mkdir(uploadDir, { recursive: true }).catch(console.error);
+}
+
+const storage_multer = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const nameWithoutExt = path.basename(file.originalname, ext);
+    cb(null, nameWithoutExt + '-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({
+  storage: storage_multer,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images and videos
+    const allowedMimes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images and videos are allowed.'));
+    }
+  }
+});
+
 export function registerRoutes(app: Express) {
+  // File upload endpoint
+  app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Generate URL for the uploaded file
+      const fileUrl = `/uploads/${req.file.filename}`;
+      
+      res.json({
+        success: true,
+        url: fileUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      res.status(500).json({ 
+        message: "Upload failed", 
+        error: error.message 
+      });
+    }
+  });
+
+  // File download/serve endpoint
+  app.get("/uploads/:filename", async (req: Request, res: Response) => {
+    try {
+      const filename = req.params.filename;
+      const filePath = path.join(uploadDir, filename);
+
+      // Check if file exists
+      if (!existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Get file stats for size and modified date
+      const stats = await fs.stat(filePath);
+      
+      // Set appropriate headers
+      const ext = path.extname(filename).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.ogg': 'video/ogg',
+        '.mov': 'video/quicktime'
+      };
+
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', stats.size);
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      
+      // If download query param is present, force download
+      if (req.query.download === 'true') {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      }
+
+      // Stream the file
+      res.sendFile(filePath);
+    } catch (error: any) {
+      console.error('Download error:', error);
+      res.status(500).json({ 
+        message: "Failed to download file", 
+        error: error.message 
+      });
+    }
+  });
+
   // Early lead capture endpoint (captures lead after step 2)
   app.post("/api/early-lead", async (req: Request, res: Response) => {
     try {

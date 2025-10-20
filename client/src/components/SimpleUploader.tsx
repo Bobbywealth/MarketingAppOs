@@ -41,45 +41,40 @@ export function SimpleUploader({
       setUploading(true);
       setProgress(10);
 
-      // Get upload URL from backend
-      const response = await apiRequest("POST", "/api/objects/upload", {
-        filename: `content-${Date.now()}-${file.name}`,
-        contentType: file.type,
-      });
-      const data = await response.json();
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
       
       setProgress(30);
 
-      // Upload file to the pre-signed URL
-      const uploadResponse = await fetch(data.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type,
-        },
+      // Upload file to backend
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Include cookies for authentication
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error("Upload failed");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Upload failed");
       }
 
+      const data = await response.json();
+      
       setProgress(90);
-
-      // Extract the URL without query parameters
-      const uploadedUrl = data.uploadUrl.split('?')[0];
       
       setProgress(100);
-      onUploadComplete(uploadedUrl);
+      onUploadComplete(data.url);
       
       toast({
         title: "✅ Upload successful!",
         description: "Your file has been uploaded.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload error:", error);
       toast({
         title: "Upload failed",
-        description: "Could not upload file. Please try again.",
+        description: error.message || "Could not upload file. Please try again.",
         variant: "destructive",
       });
     } finally {

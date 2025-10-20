@@ -11,3 +11,6 @@ vite.config.ts.*
 
 # Local state files
 .local/
+
+# Uploaded files
+uploads/
