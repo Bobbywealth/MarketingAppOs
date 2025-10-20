@@ -18,6 +18,9 @@ import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, 
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
 import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
+import instagramLogo from "@assets/instagram-logo.png";
+import tiktokLogo from "@assets/tiktok-logo.png";
+import linkedinLogo from "@assets/linkedin-logo.png";
 
 export default function LandingPage() {
   const { data: packages = [], isLoading: packagesLoading } = useQuery<SubscriptionPackage[]>({
@@ -309,8 +312,8 @@ export default function LandingPage() {
             </div>
 
             <div className="text-center group">
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">IG</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={instagramLogo} alt="Instagram" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Instagram</p>
             </div>
@@ -330,15 +333,15 @@ export default function LandingPage() {
             </div>
 
             <div className="text-center group">
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">LI</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={linkedinLogo} alt="LinkedIn" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">LinkedIn</p>
             </div>
 
             <div className="text-center group">
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">TT</span>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={tiktokLogo} alt="TikTok" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">TikTok</p>
             </div>
