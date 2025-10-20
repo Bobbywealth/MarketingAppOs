@@ -69,6 +69,7 @@ export default function SignupPage() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [auditResults, setAuditResults] = useState<any>(null);
 
   // Fetch subscription packages
   const { data: packages } = useQuery({
