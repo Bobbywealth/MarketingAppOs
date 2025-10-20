@@ -314,9 +314,9 @@ export default function LandingPage() {
 
             <div className="text-center group">
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={instagramLogo} alt="Instagram" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+                <img src={tiktokLogo} alt="TikTok" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Instagram</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">TikTok</p>
             </div>
 
             <div className="text-center group">
@@ -342,9 +342,9 @@ export default function LandingPage() {
 
             <div className="text-center group">
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={tiktokLogo} alt="TikTok" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+                <img src={instagramLogo} alt="Instagram" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">TikTok</p>
+              <p className="text-xs sm:text-sm font-semibold text-gray-700">Instagram</p>
             </div>
 
             {/* Search & Ads */}
