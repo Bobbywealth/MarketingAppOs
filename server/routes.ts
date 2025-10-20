@@ -2357,7 +2357,9 @@ Examples:
   app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
       const users = await storage.getAllUsers();
-      res.json(users);
+      // Filter out clients - they should only appear in /clients page, not team management
+      const teamMembers = users.filter(user => user.role !== 'client');
+      res.json(teamMembers);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch users" });
