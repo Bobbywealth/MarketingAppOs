@@ -147,6 +147,132 @@ export default function ClientDashboard() {
           ))}
         </div>
 
+        {/* Social Media Overview */}
+        <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 via-purple-500/5 to-blue-500/5"></div>
+          <CardHeader className="relative border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-pink-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Social Media Overview</CardTitle>
+                  <CardDescription>Your social presence at a glance</CardDescription>
+                </div>
+              </div>
+              <Link href="/client-analytics">
+                <Button variant="outline" size="sm">
+                  View Full Analytics →
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="relative p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Instagram */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center">
+                    <ImageIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-semibold">Instagram</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    Not Connected
+                  </Badge>
+                </div>
+                <div className="space-y-2 pl-10">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Posts</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                  <Link href="/client-analytics">
+                    <Button variant="ghost" size="sm" className="w-full text-xs">
+                      Connect Account
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Facebook */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <ThumbsUp className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-semibold">Facebook</span>
+                  <Badge className="ml-auto text-xs bg-green-500/20 text-green-700 border-green-500/30">
+                    +8%
+                  </Badge>
+                </div>
+                <div className="space-y-2 pl-10">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Followers</span>
+                    <span className="font-medium">8,932</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Engagement</span>
+                    <span className="font-medium">3.2%</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Reach</span>
+                    <span className="font-medium">28,500</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* TikTok */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center">
+                    <Video className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="font-semibold">TikTok</span>
+                  <Badge className="ml-auto text-xs bg-green-500/20 text-green-700 border-green-500/30">
+                    +23%
+                  </Badge>
+                </div>
+                <div className="space-y-2 pl-10">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Followers</span>
+                    <span className="font-medium">23,567</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Engagement</span>
+                    <span className="font-medium">6.5%</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Views</span>
+                    <span className="font-medium">125,000</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="mt-6 pt-6 border-t border-border/50">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">32,499</div>
+                  <div className="text-xs text-muted-foreground mt-1">Total Followers</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">23</div>
+                  <div className="text-xs text-muted-foreground mt-1">Posts This Month</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">5.2%</div>
+                  <div className="text-xs text-muted-foreground mt-1">Avg Engagement</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-500">+12%</div>
+                  <div className="text-xs text-muted-foreground mt-1">Growth Rate</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Upcoming Content */}
           <Card className="glass-strong border-0 shadow-xl">
