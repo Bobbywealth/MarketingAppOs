@@ -1137,6 +1137,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Dashboard stats - OPTIMIZED
   app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
     try {
+      console.log("🔍 Dashboard API called - fetching data...");
+      
       // Only fetch lightweight data and minimal records for activity feed
       const [clients, campaigns, leads, tasks, activityLogs] = await Promise.all([
         storage.getClients(), // Small dataset, usually < 100 records
@@ -1151,6 +1153,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.log("  - Total Campaigns:", campaigns.length);
       console.log("  - Total Leads:", leads.length);
       console.log("  - Total Tasks:", tasks.length);
+      console.log("  - Activity Logs:", activityLogs.length);
 
       // Quick counts and aggregates
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
@@ -1263,7 +1266,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .slice(0, 5);
 
-      res.json({
+      const responseData = {
         totalClients: clients.length,
         activeCampaigns,
         pipelineValue,
@@ -1284,10 +1287,19 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         todoTasksToday,
         inProgressTasksToday,
         reviewTasksToday,
+      };
+
+      console.log("✅ Sending dashboard response with:", {
+        totalClients: responseData.totalClients,
+        activeCampaigns: responseData.activeCampaigns,
+        pipelineValue: responseData.pipelineValue,
       });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats" });
+
+      res.json(responseData);
+    } catch (error: any) {
+      console.error("❌ Dashboard API error:", error);
+      console.error("Error details:", error.message, error.stack);
+      res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
     }
   });
 
