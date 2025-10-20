@@ -164,6 +164,186 @@ This lead will be updated if they complete the full signup process.`,
     }
   });
 
+  // Simplified signup endpoint (no audit, direct to package selection)
+  app.post("/api/signup-simple", async (req: Request, res: Response) => {
+    try {
+      const signupSchema = z.object({
+        company: z.string().min(1),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+        companySize: z.string().optional(),
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        services: z.array(z.string()).min(1),
+        budget: z.string().optional(),
+        webDevType: z.string().optional(),
+        webDevFeatures: z.array(z.string()).optional(),
+        webDevTimeline: z.string().optional(),
+        webDevBudget: z.string().optional(),
+        appPlatforms: z.array(z.string()).optional(),
+        appType: z.string().optional(),
+        appFeatures: z.array(z.string()).optional(),
+        appTimeline: z.string().optional(),
+        appBudget: z.string().optional(),
+        notes: z.string().optional(),
+      });
+
+      const data = signupSchema.parse(req.body);
+      console.log('📝 Processing simplified signup for:', data.email);
+
+      // Check for existing lead and update it
+      const existingLeads = await storage.getLeads();
+      const existingLead = existingLeads.find(l => l.email === data.email);
+
+      if (existingLead) {
+        // Update existing lead with complete information
+        const updatedNotes = `${existingLead.notes || ''}
+
+🎯 COMPLETED SIGNUP PROCESS
+Services Interested: ${data.services.join(', ')}
+Budget: ${data.budget || 'Not specified'}
+
+${data.webDevType ? `
+🌐 WEB DEVELOPMENT DETAILS:
+• Type: ${data.webDevType}
+• Features: ${data.webDevFeatures?.join(', ') || 'None specified'}
+• Timeline: ${data.webDevTimeline || 'Not specified'}
+• Budget: ${data.webDevBudget || 'Not specified'}
+` : ''}
+
+${data.appType ? `
+📱 MOBILE APP DETAILS:
+• Platforms: ${data.appPlatforms?.join(', ') || 'Not specified'}
+• Type: ${data.appType}
+• Features: ${data.appFeatures?.join(', ') || 'None specified'}
+• Timeline: ${data.appTimeline || 'Not specified'}
+• Budget: ${data.appBudget || 'Not specified'}
+` : ''}
+
+${data.notes ? `
+💬 ADDITIONAL NOTES:
+${data.notes}
+` : ''}
+
+---
+Lead completed signup process and is ready for package selection.`;
+
+        await storage.updateLead(existingLead.id, {
+          stage: "qualified",
+          score: "hot",
+          notes: updatedNotes,
+          sourceMetadata: { 
+            ...existingLead.sourceMetadata,
+            completedSignup: true,
+            services: data.services,
+            webDev: data.webDevType ? {
+              type: data.webDevType,
+              features: data.webDevFeatures,
+              timeline: data.webDevTimeline,
+              budget: data.webDevBudget
+            } : undefined,
+            mobileDev: data.appType ? {
+              platforms: data.appPlatforms,
+              type: data.appType,
+              features: data.appFeatures,
+              timeline: data.appTimeline,
+              budget: data.appBudget
+            } : undefined
+          },
+        });
+
+        console.log('✅ Updated existing lead with complete signup data');
+        res.json({ success: true, leadId: existingLead.id, message: "Account created successfully!" });
+      } else {
+        // Create new lead if none exists
+        const leadData = {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          company: data.company,
+          website: data.website || null,
+          source: "website",
+          stage: "qualified",
+          score: "hot",
+          value: null,
+          notes: `🎯 NEW SIGNUP - QUALIFIED LEAD
+
+📋 COMPANY INFO:
+• Website: ${data.website || 'Not provided'}
+• Industry: ${data.industry || 'Not specified'}
+• Company Size: ${data.companySize || 'Not specified'}
+
+🎯 SERVICES INTERESTED:
+${data.services.join(', ')}
+Budget: ${data.budget || 'Not specified'}
+
+${data.webDevType ? `
+🌐 WEB DEVELOPMENT DETAILS:
+• Type: ${data.webDevType}
+• Features: ${data.webDevFeatures?.join(', ') || 'None specified'}
+• Timeline: ${data.webDevTimeline || 'Not specified'}
+• Budget: ${data.webDevBudget || 'Not specified'}
+` : ''}
+
+${data.appType ? `
+📱 MOBILE APP DETAILS:
+• Platforms: ${data.appPlatforms?.join(', ') || 'Not specified'}
+• Type: ${data.appType}
+• Features: ${data.appFeatures?.join(', ') || 'None specified'}
+• Timeline: ${data.appTimeline || 'Not specified'}
+• Budget: ${data.appBudget || 'Not specified'}
+` : ''}
+
+${data.notes ? `
+💬 ADDITIONAL NOTES:
+${data.notes}
+` : ''}
+
+---
+This lead completed the full signup process and is ready for package selection.`,
+          clientId: null,
+          assignedToId: null,
+          sourceMetadata: { 
+            type: "signup_complete",
+            services: data.services,
+            webDev: data.webDevType ? {
+              type: data.webDevType,
+              features: data.webDevFeatures,
+              timeline: data.webDevTimeline,
+              budget: data.webDevBudget
+            } : undefined,
+            mobileDev: data.appType ? {
+              platforms: data.appPlatforms,
+              type: data.appType,
+              features: data.appFeatures,
+              timeline: data.appTimeline,
+              budget: data.appBudget
+            } : undefined
+          },
+          nextFollowUp: null,
+        };
+
+        const lead = await storage.createLead(leadData);
+        console.log('✅ Created new qualified lead from complete signup');
+        res.json({ success: true, leadId: lead.id, message: "Account created successfully!" });
+      }
+    } catch (error) {
+      console.error('❌ Simplified signup error:', error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        message: "Failed to create account. Please try again.",
+      });
+    }
+  });
+
   // Public signup endpoint (no authentication required)
   app.post("/api/signup", async (req: Request, res: Response) => {
     try {

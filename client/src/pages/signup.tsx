@@ -46,14 +46,18 @@ const signupSchema = z.object({
   services: z.array(z.string()).min(1, "Please select at least one service"),
   budget: z.string().optional(),
   
-  // Social Media Platforms
-  socialPlatforms: z.array(z.string()).optional(),
-  instagramUrl: z.string().optional(),
-  facebookUrl: z.string().optional(),
-  tiktokUrl: z.string().optional(),
-  linkedinUrl: z.string().optional(),
-  twitterUrl: z.string().optional(),
-  youtubeUrl: z.string().optional(),
+  // Web Development Details
+  webDevType: z.string().optional(),
+  webDevFeatures: z.array(z.string()).optional(),
+  webDevTimeline: z.string().optional(),
+  webDevBudget: z.string().optional(),
+  
+  // Mobile App Development Details
+  appPlatforms: z.array(z.string()).optional(),
+  appType: z.string().optional(),
+  appFeatures: z.array(z.string()).optional(),
+  appTimeline: z.string().optional(),
+  appBudget: z.string().optional(),
   
   notes: z.string().optional(),
 });
@@ -89,13 +93,15 @@ export default function SignupPage() {
       phone: "",
       services: [],
       budget: "",
-      socialPlatforms: [],
-      instagramUrl: "",
-      facebookUrl: "",
-      tiktokUrl: "",
-      linkedinUrl: "",
-      twitterUrl: "",
-      youtubeUrl: "",
+      webDevType: "",
+      webDevFeatures: [],
+      webDevTimeline: "",
+      webDevBudget: "",
+      appPlatforms: [],
+      appType: "",
+      appFeatures: [],
+      appTimeline: "",
+      appBudget: "",
       notes: "",
     },
   });
@@ -124,17 +130,16 @@ export default function SignupPage() {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupFormData) => {
-      const response = await apiRequest("POST", "/api/signup", data);
+      const response = await apiRequest("POST", "/api/signup-simple", data);
       const result = await response.json();
       return result;
     },
     onSuccess: (result) => {
-      setAuditResults(result.audit);
       toast({
-        title: "🎉 Your Free Audit is Ready!",
-        description: "Check out your personalized marketing insights below.",
+        title: "🎉 Account Created!",
+        description: "Welcome! Choose your package to get started.",
       });
-      setStep(5); // Show audit results page
+      setStep(4); // Go directly to package selection
     },
     onError: (error: Error) => {
       toast({
@@ -175,17 +180,12 @@ export default function SignupPage() {
         earlyLeadCaptureMutation.mutate(leadData);
       }
       
-      const nextStepNum = step + 1;
-      setStep(nextStepNum);
-      
-      // Enable submit only when reaching step 4
-      if (nextStepNum === 4) {
-        // Add a longer delay to give user time to enter URLs
-        setTimeout(() => {
-          setCanSubmit(true);
-        }, 3000); // 3 seconds should be enough
+      // If on step 3 (services), submit the form to create account and go to package selection
+      if (step === 3) {
+        const formData = form.getValues();
+        signupMutation.mutate(formData);
       } else {
-        setCanSubmit(false);
+        setStep(step + 1);
       }
     }
   };
@@ -895,6 +895,330 @@ export default function SignupPage() {
                       )}
                     />
 
+                    {/* Web Development Details */}
+                    {form.watch("services")?.includes("Web Development") && (
+                      <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 className="font-semibold text-blue-900 flex items-center gap-2">
+                          <span className="text-xl">🌐</span>
+                          Web Development Details
+                        </h3>
+                        
+                        <FormField
+                          control={form.control}
+                          name="webDevType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What type of website do you need?</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select website type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="business-website">Business Website</SelectItem>
+                                  <SelectItem value="ecommerce">E-commerce Store</SelectItem>
+                                  <SelectItem value="portfolio">Portfolio/Personal Site</SelectItem>
+                                  <SelectItem value="blog">Blog/Content Site</SelectItem>
+                                  <SelectItem value="landing-page">Landing Page</SelectItem>
+                                  <SelectItem value="web-app">Web Application</SelectItem>
+                                  <SelectItem value="redesign">Website Redesign</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="webDevFeatures"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What features do you need? (Select all that apply)</FormLabel>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[
+                                  "Contact Forms",
+                                  "Online Payments",
+                                  "User Accounts/Login",
+                                  "Content Management",
+                                  "Search Functionality",
+                                  "Multi-language Support",
+                                  "Analytics Integration",
+                                  "Social Media Integration",
+                                  "Email Marketing Integration",
+                                  "Live Chat",
+                                  "Booking/Scheduling",
+                                  "Custom Database"
+                                ].map((feature) => (
+                                  <FormField
+                                    key={feature}
+                                    control={form.control}
+                                    name="webDevFeatures"
+                                    render={({ field }) => (
+                                      <FormItem className="flex items-start space-x-2 space-y-0">
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(feature)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...(field.value || []), feature])
+                                                : field.onChange(field.value?.filter((value) => value !== feature));
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal cursor-pointer text-sm">
+                                          {feature}
+                                        </FormLabel>
+                                      </FormItem>
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="webDevTimeline"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>When do you need it completed?</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select timeline" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="asap">ASAP (Rush job)</SelectItem>
+                                    <SelectItem value="1-month">Within 1 month</SelectItem>
+                                    <SelectItem value="2-3-months">2-3 months</SelectItem>
+                                    <SelectItem value="3-6-months">3-6 months</SelectItem>
+                                    <SelectItem value="6-months-plus">6+ months</SelectItem>
+                                    <SelectItem value="flexible">Flexible timeline</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="webDevBudget"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Web Development Budget</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select budget range" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="<5000">Less than $5,000</SelectItem>
+                                    <SelectItem value="5000-10000">$5,000 - $10,000</SelectItem>
+                                    <SelectItem value="10000-25000">$10,000 - $25,000</SelectItem>
+                                    <SelectItem value="25000-50000">$25,000 - $50,000</SelectItem>
+                                    <SelectItem value="50000+">$50,000+</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mobile App Development Details */}
+                    {form.watch("services")?.includes("Mobile App Development") && (
+                      <div className="space-y-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                          <span className="text-xl">📱</span>
+                          Mobile App Development Details
+                        </h3>
+                        
+                        <FormField
+                          control={form.control}
+                          name="appPlatforms"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Which platforms do you need? (Select all that apply)</FormLabel>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[
+                                  "iOS (iPhone/iPad)",
+                                  "Android",
+                                  "Cross-platform (React Native/Flutter)",
+                                  "Progressive Web App (PWA)"
+                                ].map((platform) => (
+                                  <FormField
+                                    key={platform}
+                                    control={form.control}
+                                    name="appPlatforms"
+                                    render={({ field }) => (
+                                      <FormItem className="flex items-start space-x-2 space-y-0">
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(platform)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...(field.value || []), platform])
+                                                : field.onChange(field.value?.filter((value) => value !== platform));
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal cursor-pointer text-sm">
+                                          {platform}
+                                        </FormLabel>
+                                      </FormItem>
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="appType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What type of app do you need?</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select app type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="business-app">Business/Corporate App</SelectItem>
+                                  <SelectItem value="ecommerce-app">E-commerce App</SelectItem>
+                                  <SelectItem value="social-app">Social/Community App</SelectItem>
+                                  <SelectItem value="utility-app">Utility/Productivity App</SelectItem>
+                                  <SelectItem value="game">Game/Entertainment</SelectItem>
+                                  <SelectItem value="education-app">Education/Learning App</SelectItem>
+                                  <SelectItem value="health-fitness">Health/Fitness App</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="appFeatures"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What features do you need? (Select all that apply)</FormLabel>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[
+                                  "User Registration/Login",
+                                  "Push Notifications",
+                                  "In-App Purchases",
+                                  "GPS/Location Services",
+                                  "Camera Integration",
+                                  "Social Media Sharing",
+                                  "Offline Functionality",
+                                  "Real-time Chat",
+                                  "Payment Processing",
+                                  "Analytics/Tracking",
+                                  "Admin Dashboard",
+                                  "API Integration"
+                                ].map((feature) => (
+                                  <FormField
+                                    key={feature}
+                                    control={form.control}
+                                    name="appFeatures"
+                                    render={({ field }) => (
+                                      <FormItem className="flex items-start space-x-2 space-y-0">
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(feature)}
+                                            onCheckedChange={(checked) => {
+                                              return checked
+                                                ? field.onChange([...(field.value || []), feature])
+                                                : field.onChange(field.value?.filter((value) => value !== feature));
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="font-normal cursor-pointer text-sm">
+                                          {feature}
+                                        </FormLabel>
+                                      </FormItem>
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="appTimeline"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>When do you need it completed?</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select timeline" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="asap">ASAP (Rush job)</SelectItem>
+                                    <SelectItem value="2-3-months">2-3 months</SelectItem>
+                                    <SelectItem value="3-6-months">3-6 months</SelectItem>
+                                    <SelectItem value="6-12-months">6-12 months</SelectItem>
+                                    <SelectItem value="12-months-plus">12+ months</SelectItem>
+                                    <SelectItem value="flexible">Flexible timeline</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="appBudget"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>App Development Budget</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select budget range" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="<10000">Less than $10,000</SelectItem>
+                                    <SelectItem value="10000-25000">$10,000 - $25,000</SelectItem>
+                                    <SelectItem value="25000-50000">$25,000 - $50,000</SelectItem>
+                                    <SelectItem value="50000-100000">$50,000 - $100,000</SelectItem>
+                                    <SelectItem value="100000+">$100,000+</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <FormField
                       control={form.control}
                       name="budget"
@@ -941,209 +1265,6 @@ export default function SignupPage() {
                   </div>
                 )}
 
-                {/* Step 4: Social Media URLs */}
-                {step === 4 && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">🔗 Your Social Media URLs</h2>
-                      <p className="text-sm text-muted-foreground">Provide your current social media profiles so we can analyze them (Optional - but recommended for complete audit)</p>
-                    </div>
-
-                    <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
-                      <FormField
-                        control={form.control}
-                        name="instagramUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <span className="text-xl">📸</span>
-                              Instagram URL
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text"
-                                placeholder="https://instagram.com/yourusername" 
-                                value={field.value || ''} 
-                                onChange={(e) => {
-                                  field.onChange(e);
-                                  // Enable submit when user starts typing
-                                  if (!canSubmit && e.target.value.length > 0) {
-                                    setCanSubmit(true);
-                                  }
-                                }}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                className="w-full"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="facebookUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <span className="text-xl">👥</span>
-                              Facebook URL
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text"
-                                placeholder="https://facebook.com/yourusername" 
-                                value={field.value || ''} 
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                className="w-full"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="tiktokUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <span className="text-xl">🎵</span>
-                              TikTok URL
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text"
-                                placeholder="https://tiktok.com/@yourusername" 
-                                value={field.value || ''} 
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                className="w-full"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="linkedinUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <span className="text-xl">💼</span>
-                              LinkedIn URL
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text"
-                                placeholder="https://linkedin.com/company/yourcompany" 
-                                value={field.value || ''} 
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                className="w-full"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="twitterUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <span className="text-xl">🐦</span>
-                              Twitter/X URL
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text"
-                                placeholder="https://twitter.com/yourusername" 
-                                value={field.value || ''} 
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                className="w-full"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="youtubeUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <span className="text-xl">📺</span>
-                              YouTube URL
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text"
-                                placeholder="https://youtube.com/c/yourchannel" 
-                                value={field.value || ''} 
-                                onChange={field.onChange}
-                                onBlur={field.onBlur}
-                                name={field.name}
-                                className="w-full"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between pt-4">
