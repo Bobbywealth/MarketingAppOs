@@ -39,6 +39,24 @@ import {
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
 
+// Helper function to get badge variant based on stage
+function getStageBadge(stage: string): "default" | "secondary" | "outline" | "destructive" {
+  switch (stage) {
+    case "prospect":
+      return "secondary";
+    case "qualified":
+      return "default";
+    case "proposal":
+      return "outline";
+    case "closed_won":
+      return "default";
+    case "closed_lost":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
 export default function LeadsPage() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -446,10 +464,10 @@ export default function LeadsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-semibold text-lg">{lead.name}</h3>
-                            <Badge variant={getStatusBadge(lead.status) as any}>
-                              {lead.status.replace('_', ' ')}
+                            <Badge variant={getStageBadge(lead.stage)}>
+                              {lead.stage.replace('_', ' ')}
                             </Badge>
-                            {lead.score && lead.score > 70 && (
+                            {lead.score === "hot" && (
                               <Badge variant="outline" className="gap-1">
                                 <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
                                 Hot Lead
