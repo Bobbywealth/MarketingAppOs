@@ -56,6 +56,14 @@ interface SmsMessage {
   status?: string;
 }
 
+interface Contact {
+  id: string;
+  name: string;
+  phones?: Array<{ type: string; value: string }>;
+  emails?: Array<{ type: string; value: string }>;
+  company?: string;
+}
+
 export default function PhonePage() {
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -63,7 +71,7 @@ export default function PhonePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCall, setActiveCall] = useState<CallLog | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [activeTab, setActiveTab] = useState<"calls" | "sms">("calls");
+  const [activeTab, setActiveTab] = useState<"calls" | "sms" | "contacts">("calls");
   const [smsRecipient, setSmsRecipient] = useState("");
   const [smsMessage, setSmsMessage] = useState("");
 
@@ -85,6 +93,15 @@ export default function PhonePage() {
       return response.json();
     },
     refetchInterval: 15000, // Refresh every 15 seconds
+  });
+
+  // Fetch contacts from Dialpad API
+  const { data: contacts = [], isLoading: contactsLoading } = useQuery<Contact[]>({
+    queryKey: ["/api/dialpad/contacts"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/dialpad/contacts?limit=500", undefined);
+      return response.json();
+    },
   });
 
   const makeCallMutation = useMutation({
@@ -224,6 +241,10 @@ export default function PhonePage() {
                 <MessageSquare className="w-4 h-4" />
                 SMS
               </TabsTrigger>
+              <TabsTrigger value="contacts" className="gap-2">
+                <User className="w-4 h-4" />
+                Contacts
+              </TabsTrigger>
             </TabsList>
           </Tabs>
           <Button variant="outline" size="sm">
@@ -307,7 +328,105 @@ export default function PhonePage() {
       </div>
 
       {/* Main Interface */}
-      {activeTab === "calls" ? (
+      {activeTab === "contacts" ? (
+        /* Contacts Interface */
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Contacts ({contacts.length})</CardTitle>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search contacts..."
+                    className="pl-10 w-64"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <ScrollArea className="h-[700px]">
+              <CardContent>
+                {contactsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Loading contacts...
+                  </div>
+                ) : contacts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <User className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
+                    <p className="text-muted-foreground mb-2">No contacts yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Your Dialpad contacts will appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {contacts
+                      .filter(contact => 
+                        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        contact.company?.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((contact) => (
+                        <Card key={contact.id} className="hover-elevate group">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <Avatar className="h-12 w-12">
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {contact.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold truncate">{contact.name}</h4>
+                                {contact.company && (
+                                  <p className="text-sm text-muted-foreground truncate">
+                                    {contact.company}
+                                  </p>
+                                )}
+                                {contact.phones && contact.phones.length > 0 && (
+                                  <div className="mt-2 space-y-1">
+                                    {contact.phones.slice(0, 2).map((phone, idx) => (
+                                      <div key={idx} className="flex items-center gap-2 text-sm">
+                                        <Phone className="w-3 h-3 text-muted-foreground" />
+                                        <span className="text-muted-foreground">{phone.value}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 px-2 opacity-0 group-hover:opacity-100"
+                                          onClick={() => {
+                                            setPhoneNumber(phone.value);
+                                            setActiveTab("calls");
+                                          }}
+                                        >
+                                          <PhoneCall className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {contact.emails && contact.emails.length > 0 && (
+                                  <div className="mt-2">
+                                    {contact.emails.slice(0, 1).map((email, idx) => (
+                                      <div key={idx} className="flex items-center gap-2 text-sm">
+                                        <span className="text-xs text-muted-foreground truncate">
+                                          {email.value}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </ScrollArea>
+          </Card>
+        </div>
+      ) : activeTab === "calls" ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Dialpad Section */}
           <Card className="lg:col-span-4">
