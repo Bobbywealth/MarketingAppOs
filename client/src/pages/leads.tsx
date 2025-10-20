@@ -504,20 +504,19 @@ export default function LeadsPage() {
 
                           {lead.score && (
                             <div className="mt-2">
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-muted rounded-full h-2">
-                                  <div 
-                                    className={`h-2 rounded-full transition-all ${
-                                      lead.score >= 80 ? 'bg-green-500' :
-                                      lead.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                                    }`}
-                                    style={{ width: `${lead.score}%` }}
-                                  />
-                                </div>
-                                <span className={`text-xs font-semibold ${getLeadScoreColor(lead.score)}`}>
-                                  {lead.score}%
-                                </span>
-                              </div>
+                              <Badge 
+                                variant="outline" 
+                                className={`gap-1 ${
+                                  lead.score === 'hot' ? 'border-red-500 text-red-700 bg-red-50' :
+                                  lead.score === 'warm' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
+                                  'border-blue-500 text-blue-700 bg-blue-50'
+                                }`}
+                              >
+                                {lead.score === 'hot' && '🔥'}
+                                {lead.score === 'warm' && '☀️'}
+                                {lead.score === 'cold' && '❄️'}
+                                <span className="ml-1 capitalize">{lead.score} Lead</span>
+                              </Badge>
                             </div>
                           )}
                         </div>
