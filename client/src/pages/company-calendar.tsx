@@ -205,64 +205,6 @@ export default function CompanyCalendarPage() {
     .filter(event => new Date(event.start) > new Date())
     .slice(0, 5);
 
-  const connectGoogleMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("GET", "/api/google/calendar/auth");
-      const data = await response.json();
-      return data.authUrl;
-    },
-    onSuccess: (authUrl) => {
-      // Open Google OAuth in popup
-      window.open(authUrl, 'Google Calendar Authorization', 'width=600,height=700');
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to connect",
-        description: error?.message || "Could not connect to Google Calendar",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const syncGoogleMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/google/calendar/sync");
-    },
-    onSuccess: async () => {
-      const response = await syncGoogleMutation.data;
-      const data = await response?.json();
-      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
-      toast({
-        title: "✅ Sync complete!",
-        description: data?.message || "Events synced with Google Calendar",
-      });
-    },
-    onError: (error: any) => {
-      const errorMessage = error?.message || "Failed to sync";
-      if (errorMessage.includes("not connected")) {
-        toast({
-          title: "Not connected",
-          description: "Please connect your Google account first",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Sync failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
-    },
-  });
-
-  const handleGoogleSync = () => {
-    // Try to sync first, if not connected it will prompt to connect
-    syncGoogleMutation.mutate();
-  };
-
-  const handleGoogleConnect = () => {
-    connectGoogleMutation.mutate();
-  };
 
   const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -325,13 +267,9 @@ export default function CompanyCalendarPage() {
           <p className="text-muted-foreground">Manage team schedules and events</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleGoogleConnect}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Connect Google
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleGoogleSync} disabled={syncGoogleMutation.isPending}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncGoogleMutation.isPending ? 'animate-spin' : ''}`} />
-            {syncGoogleMutation.isPending ? "Syncing..." : "Sync Now"}
+          <Button variant="outline" size="sm">
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
           </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
