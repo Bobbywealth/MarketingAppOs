@@ -85,12 +85,36 @@ async function fixAllColumns() {
       console.log('     ⚠️  Error or already done:', e.message, '\n');
     }
     
-    console.log('  3. Adding updated_at column...');
+    console.log('  3. Adding description column...');
+    try {
+      await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS description TEXT`);
+      console.log('     ✅ Done\n');
+    } catch (e) {
+      console.log('     ⚠️  Already exists or error:', e.message, '\n');
+    }
+    
+    console.log('  4. Adding updated_at column...');
     try {
       await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
       console.log('     ✅ Done\n');
     } catch (e) {
       console.log('     ⚠️  Already exists or error:', e.message, '\n');
+    }
+    
+    console.log('  5. Renaming notes to description if exists...');
+    try {
+      const result = await client.query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name='invoices' AND column_name='notes'
+      `);
+      if (result.rows.length > 0) {
+        await client.query(`ALTER TABLE invoices RENAME COLUMN notes TO description`);
+        console.log('     ✅ Renamed notes to description\n');
+      } else {
+        console.log('     ⚠️  Column "notes" does not exist\n');
+      }
+    } catch (e) {
+      console.log('     ⚠️  Error or already done:', e.message, '\n');
     }
     
     // ===== VERIFY ALL CHANGES =====
