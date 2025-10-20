@@ -99,12 +99,22 @@ This lead will be updated if they complete the full signup process.`,
         nextFollowUp: null,
       };
 
+      console.log('📝 Creating early lead with data:', leadData);
       const lead = await storage.createLead(leadData);
+      console.log('✅ Early lead created successfully:', lead.id);
       
       res.json({ success: true, leadId: lead.id });
     } catch (error) {
-      console.error('Early lead capture error:', error);
-      return handleValidationError(error, res);
+      console.error('❌ Early lead capture error:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        leadData
+      });
+      return res.status(500).json({ 
+        success: false, 
+        message: "Failed to create lead. Please try again." 
+      });
     }
   });
 
