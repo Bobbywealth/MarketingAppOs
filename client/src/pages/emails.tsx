@@ -237,6 +237,24 @@ export default function EmailsPage() {
     },
   });
 
+  const deleteEmailMutation = useMutation({
+    mutationFn: async (emailId: string) => {
+      return apiRequest("DELETE", `/api/emails/${emailId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+      setSelectedEmail(null);
+      toast({ title: "🗑️ Email deleted permanently" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete email", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
+    },
+  });
+
   const handleReconnect = async () => {
     if (emailAccounts.length > 0) {
       try {
@@ -775,13 +793,30 @@ export default function EmailsPage() {
                                 <Button variant="outline" size="sm">
                                   <Star className="w-4 h-4" />
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => moveToFolderMutation.mutate({ emailId: selectedEmail.id, folder: "trash" })}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                {selectedEmail.folder !== "trash" ? (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => moveToFolderMutation.mutate({ emailId: selectedEmail.id, folder: "trash" })}
+                                    title="Move to Trash"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    onClick={() => {
+                                      if (confirm("Are you sure you want to permanently delete this email? This cannot be undone.")) {
+                                        deleteEmailMutation.mutate(selectedEmail.id);
+                                      }
+                                    }}
+                                    title="Delete Permanently"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                    Delete Forever
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>

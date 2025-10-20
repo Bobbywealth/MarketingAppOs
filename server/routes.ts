@@ -875,6 +875,17 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
     }
   });
 
+  // Delete email
+  app.delete("/api/emails/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteEmail(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting email:', error);
+      res.status(500).json({ message: "Failed to delete email" });
+    }
+  });
+
   // Parse email for structured data extraction
   app.post("/api/emails/:id/parse", isAuthenticated, async (req: Request, res: Response) => {
     try {
