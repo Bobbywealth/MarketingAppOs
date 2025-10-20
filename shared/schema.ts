@@ -35,6 +35,9 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   role: text("role").notNull().default("staff"), // admin, staff, client
   clientId: varchar("client_id"), // Links to clients table for client role users
+  googleAccessToken: text("google_access_token"),
+  googleRefreshToken: text("google_refresh_token"),
+  googleCalendarConnected: boolean("google_calendar_connected").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

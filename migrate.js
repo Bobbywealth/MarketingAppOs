@@ -94,6 +94,28 @@ async function runMigrations() {
         console.log('⚠️ instagram_connected_at already exists or error:', e.message);
       }
       
+      // Add Google Calendar fields to users table
+      try {
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_access_token TEXT;`);
+        console.log('✅ Added google_access_token to users');
+      } catch (e) {
+        console.log('⚠️ google_access_token already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_refresh_token TEXT;`);
+        console.log('✅ Added google_refresh_token to users');
+      } catch (e) {
+        console.log('⚠️ google_refresh_token already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_calendar_connected BOOLEAN DEFAULT false;`);
+        console.log('✅ Added google_calendar_connected to users');
+      } catch (e) {
+        console.log('⚠️ google_calendar_connected already exists or error:', e.message);
+      }
+
       // Create calendar_events table
       try {
         await client.query(`
