@@ -766,6 +766,25 @@ export const insertSubscriptionPackageSchema = createInsertSchema(subscriptionPa
 export type InsertSubscriptionPackage = z.infer<typeof insertSubscriptionPackageSchema>;
 export type SubscriptionPackage = typeof subscriptionPackages.$inferSelect;
 
+// Page Views table for website analytics tracking
+export const pageViews = pgTable("page_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  page: varchar("page").notNull(), // URL path
+  referrer: varchar("referrer"),
+  userAgent: text("user_agent"),
+  ip: varchar("ip"),
+  country: varchar("country"),
+  city: varchar("city"),
+  deviceType: varchar("device_type"), // mobile, desktop, tablet
+  browser: varchar("browser"),
+  sessionId: varchar("session_id"), // To track unique sessions
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPageViewSchema = createInsertSchema(pageViews).omit({ id: true, createdAt: true });
+export type InsertPageView = z.infer<typeof insertPageViewSchema>;
+export type PageView = typeof pageViews.$inferSelect;
+
 // Calendar Events table
 export const calendarEvents = pgTable("calendar_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -2576,19 +2576,25 @@ Examples:
   // Public tracking endpoint (no auth required for website tracking)
   app.post("/api/track/pageview", async (req: Request, res: Response) => {
     try {
-      const { page, referrer, userAgent } = req.body;
+      const { page, referrer, userAgent, sessionId } = req.body;
       
-      // Store pageview data
-      console.log('📊 Page view tracked:', {
+      // Parse user agent to extract device info
+      const ua = userAgent || '';
+      const deviceType = /mobile/i.test(ua) ? 'mobile' : /tablet/i.test(ua) ? 'tablet' : 'desktop';
+      const browser = /chrome/i.test(ua) ? 'Chrome' : /firefox/i.test(ua) ? 'Firefox' : /safari/i.test(ua) ? 'Safari' : 'Other';
+      
+      // Store pageview data in database
+      await storage.trackPageView({
         page,
         referrer,
-        userAgent,
-        ip: req.ip,
-        timestamp: new Date().toISOString()
+        userAgent: ua,
+        ip: req.ip || 'unknown',
+        deviceType,
+        browser,
+        sessionId: sessionId || req.ip || 'unknown',
       });
-
-      // You can store this in database for analytics
-      // await storage.trackPageView({ page, referrer, userAgent, ip: req.ip });
+      
+      console.log('📊 Page view tracked:', page);
       
       res.status(200).json({ success: true });
     } catch (error) {
@@ -2600,27 +2606,54 @@ Examples:
   // Get website analytics summary
   app.get("/api/analytics/website", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // For now, return sample data
-      // TODO: Implement actual tracking data from database
+      const days = parseInt(req.query.days as string) || 30;
+      
+      // Fetch real data from database
+      const pageViewsCount = await storage.getPageViewsCount(days);
+      const uniqueVisitors = await storage.getUniqueVisitors(days);
+      const topPagesData = await storage.getTopPages(days, 5);
+      
+      // Format top pages with titles
+      const topPages = topPagesData.map((page: any) => ({
+        path: page.page,
+        views: Number(page.views),
+        title: page.page === '/' ? 'Home' : 
+               page.page.split('/').filter(Boolean).join(' > ').replace(/-/g, ' ')
+      }));
+      
+      // Calculate estimated bounce rate and session duration
+      // These would need more sophisticated tracking in production
+      const bounceRate = pageViewsCount > 0 ? 42.5 : 0; // Placeholder
+      const avgSessionDuration = 180; // Placeholder
+      
+      // Get traffic sources from referrer data
+      const pageViews = await storage.getPageViews(days);
+      const referrerCounts: Record<string, number> = {};
+      
+      pageViews.forEach(pv => {
+        const referrer = pv.referrer || 'Direct';
+        const source = referrer === 'Direct' ? 'Direct' :
+                      referrer.includes('google') ? 'Google' :
+                      referrer.includes('facebook') || referrer.includes('twitter') || referrer.includes('instagram') ? 'Social Media' :
+                      'Referral';
+        referrerCounts[source] = (referrerCounts[source] || 0) + 1;
+      });
+      
+      const trafficSources = Object.entries(referrerCounts).map(([source, visits]) => ({
+        source,
+        visits,
+        percentage: pageViewsCount > 0 ? Math.round((visits / pageViewsCount) * 100) : 0
+      })).sort((a, b) => b.visits - a.visits);
+      
       const stats = {
-        pageViews: 1250,
-        uniqueVisitors: 450,
-        bounceRate: 42.5,
-        avgSessionDuration: 180, // in seconds
-        topPages: [
-          { path: '/', views: 450, title: 'Home' },
-          { path: '/services', views: 230, title: 'Services' },
-          { path: '/pricing', views: 180, title: 'Pricing' },
-          { path: '/contact', views: 150, title: 'Contact' },
-          { path: '/about', views: 120, title: 'About' },
-        ],
-        trafficSources: [
-          { source: 'Direct', visits: 450, percentage: 36 },
-          { source: 'Google', visits: 375, percentage: 30 },
-          { source: 'Social Media', visits: 250, percentage: 20 },
-          { source: 'Referral', visits: 175, percentage: 14 },
-        ],
+        pageViews: pageViewsCount,
+        uniqueVisitors,
+        bounceRate,
+        avgSessionDuration,
+        topPages,
+        trafficSources,
       };
+      
       res.json(stats);
     } catch (error) {
       console.error(error);

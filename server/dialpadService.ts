@@ -1,4 +1,5 @@
 const DIALPAD_API_BASE = 'https://dialpad.com/api/v2';
+const REQUEST_TIMEOUT = 5000; // 5 second timeout
 
 export class DialpadService {
   private apiKey: string;
@@ -20,6 +21,27 @@ export class DialpadService {
       .filter(([_, value]) => value !== undefined && value !== null)
       .map(([key, value]) => `${key}=${encodeURIComponent(value)}`);
     return filtered.length > 0 ? `?${filtered.join('&')}` : '';
+  }
+
+  // Fetch with timeout
+  private async fetchWithTimeout(url: string, options: any = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      return response;
+    } catch (error: any) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - Dialpad API took too long to respond');
+      }
+      throw error;
+    }
   }
 
   // Get call logs

@@ -27,6 +27,7 @@ import {
   calendarEvents,
   secondMe,
   secondMeContent,
+  pageViews,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -80,13 +81,15 @@ import {
   type InsertRolePermissions,
   type SubscriptionPackage,
   type InsertSubscriptionPackage,
+  type PageView,
+  type InsertPageView,
   type SecondMe,
   type InsertSecondMe,
   type SecondMeContent,
   type InsertSecondMeContent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, and } from "drizzle-orm";
+import { eq, desc, or, and, gte, count } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -1106,6 +1109,68 @@ export class DatabaseStorage implements IStorage {
       .insert(secondMeContent)
       .values(content)
       .returning();
+  }
+
+  // Page Views operations (Website Analytics Tracking)
+  async trackPageView(data: InsertPageView): Promise<PageView> {
+    const [record] = await db
+      .insert(pageViews)
+      .values(data)
+      .returning();
+    return record;
+  }
+
+  async getPageViews(days: number = 30): Promise<PageView[]> {
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - days);
+    
+    return await db
+      .select()
+      .from(pageViews)
+      .where(gte(pageViews.createdAt, dateLimit))
+      .orderBy(desc(pageViews.createdAt));
+  }
+
+  async getPageViewsCount(days: number = 30): Promise<number> {
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - days);
+    
+    const result = await db
+      .select({ count: count() })
+      .from(pageViews)
+      .where(gte(pageViews.createdAt, dateLimit));
+    
+    return result[0]?.count || 0;
+  }
+
+  async getUniqueVisitors(days: number = 30): Promise<number> {
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - days);
+    
+    const result = await db
+      .selectDistinct({ sessionId: pageViews.sessionId })
+      .from(pageViews)
+      .where(gte(pageViews.createdAt, dateLimit));
+    
+    return result.length;
+  }
+
+  async getTopPages(days: number = 30, limit: number = 10) {
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - days);
+    
+    const result = await db
+      .select({
+        page: pageViews.page,
+        views: count(pageViews.id)
+      })
+      .from(pageViews)
+      .where(gte(pageViews.createdAt, dateLimit))
+      .groupBy(pageViews.page)
+      .orderBy(desc(count(pageViews.id)))
+      .limit(limit);
+    
+    return result;
   }
 }
 
