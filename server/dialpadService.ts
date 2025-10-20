@@ -24,7 +24,7 @@ export class DialpadService {
     offset?: number;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/stats/calls`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/call`, {
         headers: this.getHeaders(),
         params,
       });
@@ -38,7 +38,7 @@ export class DialpadService {
   // Get specific call details
   async getCallDetails(callId: string) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/calls/${callId}`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/call/${callId}`, {
         headers: this.getHeaders(),
       });
       return response.data;
@@ -73,7 +73,7 @@ export class DialpadService {
     offset?: number;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/sms`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/sms/messages`, {
         headers: this.getHeaders(),
         params,
       });
@@ -91,7 +91,7 @@ export class DialpadService {
     from_number?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/sms`, data, {
+      const response = await axios.post(`${DIALPAD_API_BASE}/sms/messages`, data, {
         headers: this.getHeaders(),
       });
       return response.data;
@@ -108,7 +108,7 @@ export class DialpadService {
     search?: string;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/contacts`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/contact`, {
         headers: this.getHeaders(),
         params,
       });
@@ -127,7 +127,7 @@ export class DialpadService {
     company?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/contacts`, data, {
+      const response = await axios.post(`${DIALPAD_API_BASE}/contact`, data, {
         headers: this.getHeaders(),
       });
       return response.data;
@@ -145,7 +145,7 @@ export class DialpadService {
     offset?: number;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/voicemails`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/voicemail`, {
         headers: this.getHeaders(),
         params,
       });
@@ -159,7 +159,7 @@ export class DialpadService {
   // Get recording URL for a call
   async getRecordingUrl(callId: string) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/calls/${callId}/recording`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/call/${callId}/recording`, {
         headers: this.getHeaders(),
       });
       return response.data;
@@ -177,7 +177,7 @@ export class DialpadService {
     target_id?: string;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/stats/calls`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/stats/call`, {
         headers: this.getHeaders(),
         params,
       });
@@ -191,7 +191,7 @@ export class DialpadService {
   // Get current user info
   async getCurrentUser() {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/users/me`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/user/me`, {
         headers: this.getHeaders(),
       });
       return response.data;
