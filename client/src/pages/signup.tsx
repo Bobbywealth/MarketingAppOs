@@ -230,7 +230,7 @@ export default function SignupPage() {
 
           {/* Package Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {packages?.map((pkg: any) => (
+            {packages && Array.isArray(packages) && packages.length > 0 ? packages.map((pkg: any) => (
               <Card 
                 key={pkg.id} 
                 className={`relative border-2 cursor-pointer transition-all hover:shadow-2xl ${
@@ -259,13 +259,13 @@ export default function SignupPage() {
                 
                 <CardContent className="pt-0">
                   <ul className="space-y-2 mb-6">
-                    {pkg.features.slice(0, 6).map((feature: string, idx: number) => (
+                    {Array.isArray(pkg.features) && pkg.features.slice(0, 6).map((feature: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-2 text-sm">
                         <span className="text-green-500 mt-0.5">✓</span>
                         <span>{feature}</span>
                       </li>
                     ))}
-                    {pkg.features.length > 6 && (
+                    {Array.isArray(pkg.features) && pkg.features.length > 6 && (
                       <li className="text-sm text-gray-500 italic">
                         +{pkg.features.length - 6} more features...
                       </li>
@@ -284,7 +284,16 @@ export default function SignupPage() {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+            )) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500 mb-4">Loading packages...</p>
+                <div className="animate-pulse flex justify-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Continue Button */}
