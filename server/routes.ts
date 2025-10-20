@@ -1827,6 +1827,57 @@ Examples:
     }
   });
 
+  // Calendar Events routes
+  app.get("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const events = await storage.getCalendarEvents();
+      res.json(events);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch calendar events" });
+    }
+  });
+
+  app.post("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+
+      const eventData = {
+        ...req.body,
+        createdBy: userId,
+        start: new Date(req.body.start),
+        end: new Date(req.body.end),
+      };
+
+      const event = await storage.createCalendarEvent(eventData);
+      res.status(201).json(event);
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ message: error.message || "Failed to create calendar event" });
+    }
+  });
+
+  app.patch("/api/calendar/events/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const event = await storage.updateCalendarEvent(req.params.id, req.body);
+      res.json(event);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update calendar event" });
+    }
+  });
+
+  app.delete("/api/calendar/events/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      await storage.deleteCalendarEvent(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete calendar event" });
+    }
+  });
+
   // Task comment routes
   app.get("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
     try {

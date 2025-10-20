@@ -94,6 +94,30 @@ async function runMigrations() {
         console.log('⚠️ instagram_connected_at already exists or error:', e.message);
       }
       
+      // Create calendar_events table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS calendar_events (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            title VARCHAR NOT NULL,
+            description TEXT,
+            start TIMESTAMP NOT NULL,
+            "end" TIMESTAMP NOT NULL,
+            location VARCHAR,
+            type VARCHAR NOT NULL DEFAULT 'event',
+            attendees TEXT[],
+            google_event_id VARCHAR,
+            meet_link VARCHAR,
+            created_by INTEGER NOT NULL REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created calendar_events table');
+      } catch (e) {
+        console.log('⚠️ calendar_events table already exists or error:', e.message);
+      }
+      
       // Create task_spaces table first (tasks table references it)
       try {
         await client.query(`

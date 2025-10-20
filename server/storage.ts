@@ -24,6 +24,7 @@ import {
   emailAccounts,
   rolePermissions,
   subscriptionPackages,
+  calendarEvents,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -48,6 +49,8 @@ import {
   type ContentPost,
   type InsertContentPost,
   type Invoice,
+  type CalendarEvent,
+  type InsertCalendarEvent,
   type InsertInvoice,
   type Ticket,
   type InsertTicket,
@@ -120,6 +123,13 @@ export interface IStorage {
   // Task comment operations
   getTaskComments(taskId: string): Promise<TaskComment[]>;
   createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+  
+  // Calendar Events operations
+  getCalendarEvents(): Promise<CalendarEvent[]>;
+  getCalendarEvent(id: string): Promise<CalendarEvent | undefined>;
+  createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
+  updateCalendarEvent(id: string, data: Partial<InsertCalendarEvent>): Promise<CalendarEvent>;
+  deleteCalendarEvent(id: string): Promise<void>;
   
   // User View Preferences operations
   getUserViewPreferences(userId: number): Promise<UserViewPreferences | undefined>;
@@ -416,6 +426,38 @@ export class DatabaseStorage implements IStorage {
   async createTaskComment(commentData: InsertTaskComment): Promise<TaskComment> {
     const [comment] = await db.insert(taskComments).values(commentData).returning();
     return comment;
+  }
+
+  // Calendar Events operations
+  async getCalendarEvents(): Promise<CalendarEvent[]> {
+    return await db.select().from(calendarEvents).orderBy(desc(calendarEvents.start));
+  }
+
+  async getCalendarEvent(id: string): Promise<CalendarEvent | undefined> {
+    const [event] = await db.select().from(calendarEvents).where(eq(calendarEvents.id, id));
+    return event;
+  }
+
+  async createCalendarEvent(eventData: InsertCalendarEvent): Promise<CalendarEvent> {
+    const [event] = await db.insert(calendarEvents).values(eventData).returning();
+    return event;
+  }
+
+  async updateCalendarEvent(id: string, data: Partial<InsertCalendarEvent>): Promise<CalendarEvent> {
+    const [event] = await db
+      .update(calendarEvents)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(calendarEvents.id, id))
+      .returning();
+    
+    if (!event) {
+      throw new Error("Calendar event not found");
+    }
+    return event;
+  }
+
+  async deleteCalendarEvent(id: string): Promise<void> {
+    await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
   }
 
   // Lead operations

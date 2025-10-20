@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,15 +50,77 @@ export default function CompanyCalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    start: "",
+    end: "",
+    location: "",
+    type: "meeting",
+    syncWithGoogle: false,
+  });
 
-  // Mock data - will be replaced with Google Calendar API
+  // Fetch calendar events from API
   const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ["/api/calendar/events", currentDate.getMonth()],
-    queryFn: async () => {
-      // TODO: Replace with Google Calendar API
-      return [];
+    queryKey: ["/api/calendar/events"],
+  });
+
+  const createEventMutation = useMutation({
+    mutationFn: async (eventData: any) => {
+      return await apiRequest("POST", "/api/calendar/events", eventData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
+      setIsCreateDialogOpen(false);
+      resetForm();
+      toast({
+        title: "✅ Event created!",
+        description: "Calendar event has been added successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create event",
+        description: error?.message || "Something went wrong",
+        variant: "destructive",
+      });
     },
   });
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      start: "",
+      end: "",
+      location: "",
+      type: "meeting",
+      syncWithGoogle: false,
+    });
+  };
+
+  const handleCreateEvent = () => {
+    if (!formData.title || !formData.start || !formData.end) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createEventMutation.mutate({
+      title: formData.title,
+      description: formData.description || null,
+      start: new Date(formData.start).toISOString(),
+      end: new Date(formData.end).toISOString(),
+      location: formData.location || null,
+      type: formData.type,
+      syncWithGoogle: formData.syncWithGoogle,
+    });
+  };
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -133,21 +196,33 @@ export default function CompanyCalendarPage() {
               <div className="space-y-4">
                 <div>
                   <Label>Event Title *</Label>
-                  <Input placeholder="Team meeting, Client call, etc." />
+                  <Input 
+                    placeholder="Team meeting, Client call, etc."
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Start Date & Time *</Label>
-                    <Input type="datetime-local" />
+                    <Input 
+                      type="datetime-local"
+                      value={formData.start}
+                      onChange={(e) => setFormData({...formData, start: e.target.value})}
+                    />
                   </div>
                   <div>
                     <Label>End Date & Time *</Label>
-                    <Input type="datetime-local" />
+                    <Input 
+                      type="datetime-local"
+                      value={formData.end}
+                      onChange={(e) => setFormData({...formData, end: e.target.value})}
+                    />
                   </div>
                 </div>
                 <div>
                   <Label>Event Type</Label>
-                  <Select>
+                  <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -162,16 +237,30 @@ export default function CompanyCalendarPage() {
                 </div>
                 <div>
                   <Label>Description</Label>
-                  <Textarea placeholder="Event details..." rows={3} />
+                  <Textarea 
+                    placeholder="Event details..." 
+                    rows={3}
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  />
                 </div>
                 <div>
                   <Label>Location</Label>
-                  <Input placeholder="Office, Zoom, etc." />
+                  <Input 
+                    placeholder="Office, Zoom, etc."
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
                 </div>
                 <div>
                   <Label>Add to Google Calendar</Label>
                   <div className="flex items-center gap-2 mt-2">
-                    <input type="checkbox" id="google-sync" />
+                    <input 
+                      type="checkbox" 
+                      id="google-sync"
+                      checked={formData.syncWithGoogle}
+                      onChange={(e) => setFormData({...formData, syncWithGoogle: e.target.checked})}
+                    />
                     <label htmlFor="google-sync" className="text-sm">
                       Sync with Google Calendar
                     </label>
@@ -181,7 +270,9 @@ export default function CompanyCalendarPage() {
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button>Create Event</Button>
+                  <Button onClick={handleCreateEvent} disabled={createEventMutation.isPending}>
+                    {createEventMutation.isPending ? "Creating..." : "Create Event"}
+                  </Button>
                 </div>
               </div>
             </DialogContent>

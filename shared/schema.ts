@@ -762,3 +762,24 @@ export type RolePermissions = typeof rolePermissions.$inferSelect;
 export const insertSubscriptionPackageSchema = createInsertSchema(subscriptionPackages).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSubscriptionPackage = z.infer<typeof insertSubscriptionPackageSchema>;
 export type SubscriptionPackage = typeof subscriptionPackages.$inferSelect;
+
+// Calendar Events table
+export const calendarEvents = pgTable("calendar_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  start: timestamp("start").notNull(),
+  end: timestamp("end").notNull(),
+  location: varchar("location"),
+  type: varchar("type").notNull().default("event"), // meeting, call, deadline, reminder, event
+  attendees: text("attendees").array(),
+  googleEventId: varchar("google_event_id"),
+  meetLink: varchar("meet_link"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
