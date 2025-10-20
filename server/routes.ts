@@ -237,7 +237,6 @@ This lead will be updated if they complete the full signup process.`,
       console.error('Error details:', {
         message: error?.message,
         stack: error?.stack,
-        leadData
       });
       return res.status(500).json({ 
         success: false, 
@@ -3346,8 +3345,9 @@ Examples:
       const secondMeRecord = await storage.getSecondMe(userRecord.clientId);
       res.json(secondMeRecord || null);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch Second Me data" });
+      console.error('Second Me fetch error:', error);
+      // Return null if table doesn't exist yet (during migration)
+      res.json(null);
     }
   });
 
