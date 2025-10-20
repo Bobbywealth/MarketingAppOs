@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 const DIALPAD_API_BASE = 'https://dialpad.com/api/v2';
 
 export class DialpadService {
@@ -16,6 +14,14 @@ export class DialpadService {
     };
   }
 
+  private buildQueryString(params?: Record<string, any>): string {
+    if (!params) return '';
+    const filtered = Object.entries(params)
+      .filter(([_, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`);
+    return filtered.length > 0 ? `?${filtered.join('&')}` : '';
+  }
+
   // Get call logs
   async getCallLogs(params?: {
     start_time?: string;
@@ -29,29 +35,46 @@ export class DialpadService {
         ...params,
         limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
       };
-      const response = await axios.get(`${DIALPAD_API_BASE}/call`, {
+      
+      const queryString = this.buildQueryString(safeParams);
+      const url = `${DIALPAD_API_BASE}/call${queryString}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
-        params: safeParams,
       });
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Calls fetched:', Array.isArray(data) ? data.length : (data.calls?.length || 0));
       // Ensure we return an array
-      const data = response.data;
       return Array.isArray(data) ? data : (data.calls || []);
     } catch (error: any) {
-      console.error('Error fetching call logs:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch call logs');
+      console.error('❌ Error fetching call logs:', error.message);
+      throw new Error(error.message || 'Failed to fetch call logs');
     }
   }
 
   // Get specific call details
   async getCallDetails(callId: string) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/call/${callId}`, {
+      const url = `${DIALPAD_API_BASE}/call/${callId}`;
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error: any) {
-      console.error('Error fetching call details:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch call details');
+      console.error('❌ Error fetching call details:', error.message);
+      throw new Error(error.message || 'Failed to fetch call details');
     }
   }
 
@@ -63,13 +86,23 @@ export class DialpadService {
     from_user_id?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/call`, data, {
+      const url = `${DIALPAD_API_BASE}/call`;
+      const response = await fetch(url, {
+        method: 'POST',
         headers: this.getHeaders(),
+        body: JSON.stringify(data),
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Call started successfully:', result);
+      return result;
     } catch (error: any) {
-      console.error('Error making call:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to make call');
+      console.error('❌ Error making call:', error.message);
+      throw new Error(error.message || 'Failed to make call');
     }
   }
 
@@ -86,16 +119,26 @@ export class DialpadService {
         ...params,
         limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
       };
-      const response = await axios.get(`${DIALPAD_API_BASE}/message`, {
+      
+      const queryString = this.buildQueryString(safeParams);
+      const url = `${DIALPAD_API_BASE}/message${queryString}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
-        params: safeParams,
       });
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Messages fetched:', Array.isArray(data) ? data.length : (data.messages?.length || 0));
       // Ensure we return an array
-      const data = response.data;
       return Array.isArray(data) ? data : (data.messages || []);
     } catch (error: any) {
-      console.error('Error fetching SMS messages:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch SMS messages');
+      console.error('❌ Error fetching SMS messages:', error.message);
+      throw new Error(error.message || 'Failed to fetch SMS messages');
     }
   }
 
@@ -104,15 +147,26 @@ export class DialpadService {
     to_numbers: string[];
     text: string;
     from_number?: string;
+    from_user_id?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/message`, data, {
+      const url = `${DIALPAD_API_BASE}/message`;
+      const response = await fetch(url, {
+        method: 'POST',
         headers: this.getHeaders(),
+        body: JSON.stringify(data),
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ SMS sent successfully:', result);
+      return result;
     } catch (error: any) {
-      console.error('Error sending SMS:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to send SMS');
+      console.error('❌ Error sending SMS:', error.message);
+      throw new Error(error.message || 'Failed to send SMS');
     }
   }
 
@@ -128,16 +182,26 @@ export class DialpadService {
         ...params,
         limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
       };
-      const response = await axios.get(`${DIALPAD_API_BASE}/contacts`, {
+      
+      const queryString = this.buildQueryString(safeParams);
+      const url = `${DIALPAD_API_BASE}/contacts${queryString}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
-        params: safeParams,
       });
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Contacts fetched:', Array.isArray(data) ? data.length : (data.contacts?.length || 0));
       // Ensure we return an array
-      const data = response.data;
       return Array.isArray(data) ? data : (data.contacts || []);
     } catch (error: any) {
-      console.error('Error fetching contacts:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch contacts');
+      console.error('❌ Error fetching contacts:', error.message);
+      throw new Error(error.message || 'Failed to fetch contacts');
     }
   }
 
@@ -149,13 +213,23 @@ export class DialpadService {
     company?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/contacts`, data, {
+      const url = `${DIALPAD_API_BASE}/contacts`;
+      const response = await fetch(url, {
+        method: 'POST',
         headers: this.getHeaders(),
+        body: JSON.stringify(data),
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Contact created successfully:', result);
+      return result;
     } catch (error: any) {
-      console.error('Error creating contact:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to create contact');
+      console.error('❌ Error creating contact:', error.message);
+      throw new Error(error.message || 'Failed to create contact');
     }
   }
 
@@ -172,27 +246,43 @@ export class DialpadService {
         ...params,
         limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
       };
-      const response = await axios.get(`${DIALPAD_API_BASE}/voicemail`, {
+      
+      const queryString = this.buildQueryString(safeParams);
+      const url = `${DIALPAD_API_BASE}/voicemail${queryString}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
-        params: safeParams,
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error: any) {
-      console.error('Error fetching voicemails:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch voicemails');
+      console.error('❌ Error fetching voicemails:', error.message);
+      throw new Error(error.message || 'Failed to fetch voicemails');
     }
   }
 
   // Get recording URL for a call
   async getRecordingUrl(callId: string) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/call/${callId}/recording`, {
+      const url = `${DIALPAD_API_BASE}/call/${callId}/recording`;
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error: any) {
-      console.error('Error fetching recording:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch recording');
+      console.error('❌ Error fetching recording:', error.message);
+      throw new Error(error.message || 'Failed to fetch recording');
     }
   }
 
@@ -204,27 +294,42 @@ export class DialpadService {
     target_id?: string;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/stats/call`, {
+      const queryString = this.buildQueryString(params);
+      const url = `${DIALPAD_API_BASE}/stats/call${queryString}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
-        params,
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error: any) {
-      console.error('Error fetching call stats:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch call stats');
+      console.error('❌ Error fetching call stats:', error.message);
+      throw new Error(error.message || 'Failed to fetch call stats');
     }
   }
 
   // Get current user info
   async getCurrentUser() {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/user/me`, {
+      const url = `${DIALPAD_API_BASE}/user/me`;
+      const response = await fetch(url, {
+        method: 'GET',
         headers: this.getHeaders(),
       });
-      return response.data;
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error: any) {
-      console.error('Error fetching current user:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to fetch user info');
+      console.error('❌ Error fetching current user:', error.message);
+      throw new Error(error.message || 'Failed to fetch user info');
     }
   }
 }
@@ -233,4 +338,3 @@ export class DialpadService {
 export const dialpadService = process.env.DIALPAD_API_KEY 
   ? new DialpadService(process.env.DIALPAD_API_KEY)
   : null;
-
