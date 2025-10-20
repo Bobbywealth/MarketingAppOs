@@ -188,23 +188,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust Bar */}
-      <section className="py-8 px-4 bg-white border-b">
-        <div className="container mx-auto">
-          <div className="text-center mb-6">
-            <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">
-              Trusted by 500+ businesses worldwide
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-            <div className="text-2xl font-bold text-gray-400">Nike</div>
-            <div className="text-2xl font-bold text-gray-400">Spotify</div>
-            <div className="text-2xl font-bold text-gray-400">Airbnb</div>
-            <div className="text-2xl font-bold text-gray-400">Shopify</div>
-            <div className="text-2xl font-bold text-gray-400">Uber</div>
-          </div>
-        </div>
-      </section>
 
       {/* Our Services */}
       <section className="py-12 md:py-16 px-4 relative z-20">
