@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -66,6 +66,16 @@ export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [auditResults, setAuditResults] = useState<any>(null);
   const [canSubmit, setCanSubmit] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+
+  // Fetch subscription packages
+  const { data: packages } = useQuery({
+    queryKey: ["/api/subscription-packages"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/subscription-packages", undefined);
+      return response.json();
+    },
+  });
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -115,7 +125,7 @@ export default function SignupPage() {
         title: "🎉 Your Free Audit is Ready!",
         description: "Check out your personalized marketing insights below.",
       });
-      setStep(5); // Show results page
+      setStep(5); // Show audit results page
     },
     onError: (error: Error) => {
       toast({
@@ -367,14 +377,14 @@ export default function SignupPage() {
               <Card className="border-0 shadow-2xl bg-gradient-to-r from-orange-500 to-pink-500 text-white">
                 <CardContent className="p-8 text-center">
                   <h2 className="text-3xl font-black mb-4">🚀 Ready to Fix These Issues?</h2>
-                  <p className="text-xl mb-6">Our team will contact you within 24 hours with a custom strategy</p>
+                  <p className="text-xl mb-6">Choose your package below and we'll start fixing these issues immediately!</p>
                   <div className="flex gap-4 justify-center">
-          <Button 
-            onClick={() => setLocation("/")} 
+                    <Button 
+                      onClick={() => setStep(6)} 
                       className="bg-white text-orange-500 hover:bg-gray-100 font-bold text-lg px-8 py-4"
-          >
-            Back to Home
-          </Button>
+                    >
+                      🎯 Choose Your Package
+                    </Button>
                     <Button 
                       onClick={() => window.print()} 
                       variant="outline"
@@ -398,8 +408,119 @@ export default function SignupPage() {
                   Back to Home
                 </Button>
               </CardContent>
-        </Card>
+            </Card>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Step 6: Package Selection
+  if (step === 6) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
+        <div className="max-w-6xl mx-auto py-12">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-black mb-4 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
+              🎯 Choose Your Package
+            </h1>
+            <p className="text-xl text-gray-600 mb-4">
+              Based on your audit, here are our recommended packages to fix your issues and grow your brand
+            </p>
+            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-lg px-6 py-2">
+              {auditResults?.summary?.totalIssues || 0} Issues Found • Let's Fix Them!
+            </Badge>
+          </div>
+
+          {/* Package Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {packages?.map((pkg: any) => (
+              <Card 
+                key={pkg.id} 
+                className={`relative border-2 cursor-pointer transition-all hover:shadow-2xl ${
+                  selectedPackage === pkg.id 
+                    ? 'border-blue-500 bg-blue-50 shadow-xl' 
+                    : 'border-gray-200 hover:border-blue-300'
+                } ${pkg.isFeatured ? 'ring-2 ring-orange-400 ring-offset-2' : ''}`}
+                onClick={() => setSelectedPackage(pkg.id)}
+              >
+                {pkg.isFeatured && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-4 py-1">
+                      🔥 Most Popular
+                    </Badge>
+                  </div>
+                )}
+                
+                <CardHeader className="text-center pb-4">
+                  <CardTitle className="text-2xl mb-2">{pkg.name}</CardTitle>
+                  <div className="text-4xl font-black text-blue-600 mb-2">
+                    ${(pkg.price / 100).toFixed(0)}
+                    <span className="text-lg font-normal text-gray-500">/month</span>
+                  </div>
+                  <CardDescription className="text-sm">{pkg.description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="pt-0">
+                  <ul className="space-y-2 mb-6">
+                    {pkg.features.slice(0, 6).map((feature: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm">
+                        <span className="text-green-500 mt-0.5">✓</span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                    {pkg.features.length > 6 && (
+                      <li className="text-sm text-gray-500 italic">
+                        +{pkg.features.length - 6} more features...
+                      </li>
+                    )}
+                  </ul>
+                  
+                  <Button 
+                    className={`w-full ${
+                      selectedPackage === pkg.id 
+                        ? 'bg-blue-600 hover:bg-blue-700' 
+                        : 'bg-gray-600 hover:bg-gray-700'
+                    }`}
+                    onClick={() => setSelectedPackage(pkg.id)}
+                  >
+                    {selectedPackage === pkg.id ? '✓ Selected' : pkg.buttonText || 'Select Package'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Continue Button */}
+          <div className="text-center">
+            <Button 
+              size="lg" 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-lg px-12 py-4"
+              disabled={!selectedPackage}
+              onClick={() => {
+                if (selectedPackage) {
+                  // TODO: Integrate Stripe checkout
+                  toast({
+                    title: "🚀 Package Selected!",
+                    description: "Redirecting to secure checkout...",
+                  });
+                }
+              }}
+            >
+              Continue to Checkout 🚀
+            </Button>
+            
+            <div className="mt-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => setStep(5)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ← Back to Audit Results
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
