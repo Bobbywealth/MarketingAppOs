@@ -45,6 +45,14 @@ async function runMigrations() {
         console.log('⚠️ display_order already exists or error:', e.message);
       }
       
+      // Add client_id to leads table
+      try {
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS client_id VARCHAR REFERENCES clients(id);`);
+        console.log('✅ Added client_id to leads');
+      } catch (e) {
+        console.log('⚠️ client_id in leads already exists or error:', e.message);
+      }
+      
       // Create subscription_packages table
       try {
         await client.query(`
