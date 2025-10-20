@@ -149,6 +149,36 @@ export default function SignupPage() {
     },
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: async (data: { packageId: string; leadId?: string; email: string; name: string }) => {
+      const response = await apiRequest("POST", "/api/create-checkout-session", data);
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || "Failed to create checkout session");
+      }
+      return result;
+    },
+    onSuccess: (result) => {
+      // Redirect to Stripe checkout
+      if (result.checkoutUrl) {
+        toast({
+          title: "🚀 Redirecting to Checkout...",
+          description: "Taking you to secure payment page",
+        });
+        setTimeout(() => {
+          window.location.href = result.checkoutUrl;
+        }, 1000);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Checkout Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: SignupFormData) => {
     signupMutation.mutate(data);
   };
@@ -302,21 +332,26 @@ export default function SignupPage() {
             <Button 
               size="lg" 
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-lg px-12 py-4"
-              disabled={!selectedPackage}
+              disabled={!selectedPackage || checkoutMutation.isPending}
               onClick={() => {
                 if (selectedPackage) {
-                  toast({
-                    title: "🎉 Account Created Successfully!",
-                    description: "You can now log in and access your dashboard. Package selection saved!",
+                  const formValues = form.getValues();
+                  checkoutMutation.mutate({
+                    packageId: selectedPackage,
+                    email: formValues.email,
+                    name: formValues.name,
                   });
-                  // Redirect to login page after a brief delay
-                  setTimeout(() => {
-                    setLocation("/login");
-                  }, 2000);
                 }
               }}
             >
-              Complete Signup & Login 🚀
+              {checkoutMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating Checkout...
+                </>
+              ) : (
+                "Continue to Payment 💳"
+              )}
             </Button>
             
             <div className="mt-4">

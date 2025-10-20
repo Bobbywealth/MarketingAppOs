@@ -14,6 +14,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
+import PaymentSuccessPage from "@/pages/payment-success";
 import Dashboard from "@/pages/dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
 import ClientContent from "@/pages/client-content";
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/signup" component={SignupPage} />
+      <Route path="/payment-success" component={PaymentSuccessPage} />
       {!user && <Route path="/" component={Landing} />}
       {/* Client-specific routes */}
       {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}

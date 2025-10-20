@@ -311,3 +311,62 @@ export async function getStripeBalance() {
   }
 }
 
+// Create Checkout Session for signup package purchase
+export async function createCheckoutSession(params: {
+  packageId: string;
+  packageName: string;
+  packagePrice: number;
+  clientEmail: string;
+  clientName: string;
+  leadId?: string;
+  successUrl: string;
+  cancelUrl: string;
+}) {
+  const stripeInstance = getStripeInstance();
+  if (!stripeInstance) {
+    throw new Error('Stripe not configured');
+  }
+
+  try {
+    const session = await stripeInstance.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: params.packageName,
+              description: `Marketing package subscription`,
+            },
+            unit_amount: params.packagePrice, // Amount in cents
+            recurring: {
+              interval: 'month',
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      customer_email: params.clientEmail,
+      client_reference_id: params.leadId || undefined,
+      metadata: {
+        packageId: params.packageId,
+        packageName: params.packageName,
+        clientName: params.clientName,
+        leadId: params.leadId || '',
+      },
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+      billing_address_collection: 'required',
+    });
+
+    return {
+      sessionId: session.id,
+      checkoutUrl: session.url,
+    };
+  } catch (error) {
+    console.error('Error creating Stripe checkout session:', error);
+    throw error;
+  }
+}
+
