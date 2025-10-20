@@ -50,6 +50,9 @@ export default function CompanyCalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -83,6 +86,51 @@ export default function CompanyCalendarPage() {
     onError: (error: any) => {
       toast({
         title: "Failed to create event",
+        description: error?.message || "Something went wrong",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEventMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest("PATCH", `/api/calendar/events/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
+      setIsViewDialogOpen(false);
+      setIsEditMode(false);
+      setSelectedEvent(null);
+      toast({
+        title: "✅ Event updated!",
+        description: "Calendar event has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update event",
+        description: error?.message || "Something went wrong",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/calendar/events/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
+      setIsViewDialogOpen(false);
+      setSelectedEvent(null);
+      toast({
+        title: "✅ Event deleted!",
+        description: "Calendar event has been removed.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete event",
         description: error?.message || "Something went wrong",
         variant: "destructive",
       });
@@ -162,6 +210,58 @@ export default function CompanyCalendarPage() {
       title: "🔄 Syncing with Google Calendar",
       description: "Please connect your Google account in settings"
     });
+  };
+
+  const handleEventClick = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedEvent(event);
+    setIsViewDialogOpen(true);
+    setIsEditMode(false);
+  };
+
+  const handleEditEvent = () => {
+    if (!selectedEvent) return;
+    setIsEditMode(true);
+    setFormData({
+      title: selectedEvent.title,
+      description: selectedEvent.description || "",
+      start: format(new Date(selectedEvent.start), "yyyy-MM-dd'T'HH:mm"),
+      end: format(new Date(selectedEvent.end), "yyyy-MM-dd'T'HH:mm"),
+      location: selectedEvent.location || "",
+      type: selectedEvent.type,
+      syncWithGoogle: false,
+    });
+  };
+
+  const handleUpdateEvent = () => {
+    if (!selectedEvent) return;
+
+    if (!formData.title || !formData.start || !formData.end) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateEventMutation.mutate({
+      id: selectedEvent.id,
+      data: {
+        title: formData.title,
+        description: formData.description || null,
+        start: new Date(formData.start).toISOString(),
+        end: new Date(formData.end).toISOString(),
+        location: formData.location || null,
+        type: formData.type,
+      },
+    });
+  };
+
+  const handleDeleteEvent = () => {
+    if (!selectedEvent) return;
+    if (!confirm("Are you sure you want to delete this event?")) return;
+    deleteEventMutation.mutate(selectedEvent.id);
   };
 
   return (
@@ -275,6 +375,139 @@ export default function CompanyCalendarPage() {
                   </Button>
                 </div>
               </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* View/Edit Event Dialog */}
+          <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{isEditMode ? "Edit Event" : "Event Details"}</DialogTitle>
+                <DialogDescription>
+                  {isEditMode ? "Update event information" : "View event details"}
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedEvent && !isEditMode ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">{selectedEvent.title}</h3>
+                    <Badge className={getEventColor(selectedEvent.type)}>
+                      {selectedEvent.type}
+                    </Badge>
+                  </div>
+                  
+                  {selectedEvent.description && (
+                    <div>
+                      <Label>Description</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{selectedEvent.description}</p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Start</Label>
+                      <p className="text-sm mt-1">{format(new Date(selectedEvent.start), "PPp")}</p>
+                    </div>
+                    <div>
+                      <Label>End</Label>
+                      <p className="text-sm mt-1">{format(new Date(selectedEvent.end), "PPp")}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedEvent.location && (
+                    <div>
+                      <Label>Location</Label>
+                      <p className="text-sm mt-1">{selectedEvent.location}</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between gap-2 pt-4 border-t">
+                    <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleteEventMutation.isPending}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {deleteEventMutation.isPending ? "Deleting..." : "Delete"}
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                        Close
+                      </Button>
+                      <Button onClick={handleEditEvent}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : isEditMode && selectedEvent ? (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Event Title *</Label>
+                    <Input 
+                      placeholder="Team meeting, Client call, etc."
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Start Date & Time *</Label>
+                      <Input 
+                        type="datetime-local"
+                        value={formData.start}
+                        onChange={(e) => setFormData({...formData, start: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label>End Date & Time *</Label>
+                      <Input 
+                        type="datetime-local"
+                        value={formData.end}
+                        onChange={(e) => setFormData({...formData, end: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Event Type</Label>
+                    <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="meeting">Meeting</SelectItem>
+                        <SelectItem value="call">Call</SelectItem>
+                        <SelectItem value="deadline">Deadline</SelectItem>
+                        <SelectItem value="reminder">Reminder</SelectItem>
+                        <SelectItem value="event">Event</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea 
+                      placeholder="Event details..." 
+                      rows={3}
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label>Location</Label>
+                    <Input 
+                      placeholder="Office, Zoom, etc."
+                      value={formData.location}
+                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleUpdateEvent} disabled={updateEventMutation.isPending}>
+                      {updateEventMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </DialogContent>
           </Dialog>
         </div>
@@ -405,7 +638,8 @@ export default function CompanyCalendarPage() {
                       {dayEvents.slice(0, 2).map((event) => (
                         <div
                           key={event.id}
-                          className={`text-xs p-1 rounded text-white truncate ${getEventColor(event.type)}`}
+                          onClick={(e) => handleEventClick(event, e)}
+                          className={`text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.type)}`}
                         >
                           {event.title}
                         </div>
