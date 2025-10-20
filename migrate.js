@@ -72,6 +72,28 @@ async function runMigrations() {
         console.log('⚠️ subscription_packages table already exists or error:', e.message);
       }
       
+      // Add Instagram connection fields to clients table
+      try {
+        await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS instagram_access_token TEXT;`);
+        console.log('✅ Added instagram_access_token to clients');
+      } catch (e) {
+        console.log('⚠️ instagram_access_token already exists or error:', e.message);
+      }
+      
+      try {
+        await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS instagram_user_id VARCHAR;`);
+        console.log('✅ Added instagram_user_id to clients');
+      } catch (e) {
+        console.log('⚠️ instagram_user_id already exists or error:', e.message);
+      }
+      
+      try {
+        await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS instagram_connected_at TIMESTAMP;`);
+        console.log('✅ Added instagram_connected_at to clients');
+      } catch (e) {
+        console.log('⚠️ instagram_connected_at already exists or error:', e.message);
+      }
+      
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
       

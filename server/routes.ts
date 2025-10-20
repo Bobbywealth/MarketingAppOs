@@ -4,6 +4,7 @@ import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
 import { AuditService } from "./auditService";
+import { InstagramService } from "./instagramService";
 import {
   insertClientSchema,
   insertCampaignSchema,
@@ -2611,6 +2612,187 @@ Examples:
     } catch (error) {
       console.error("Error fetching packages:", error);
       res.status(500).json({ message: "Failed to fetch subscription packages" });
+    }
+  });
+
+  // Instagram Analytics endpoints
+  app.get("/api/instagram/analytics", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const clientId = user?.clientId;
+
+      if (!clientId) {
+        return res.status(400).json({ message: "Client ID required" });
+      }
+
+      // Get client's Instagram connection info
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      let instagramData = null;
+
+      // Try to get data from connected Instagram account first
+      if (client.socialLinks?.instagram && client.instagramAccessToken) {
+        try {
+          instagramData = await InstagramService.getAccountMetrics(
+            client.instagramAccessToken,
+            client.instagramUserId || ''
+          );
+        } catch (error) {
+          console.error('Failed to fetch connected Instagram data:', error);
+        }
+      }
+
+      // Fallback to scraping public data
+      if (!instagramData && client.socialLinks?.instagram) {
+        const username = client.socialLinks.instagram.split('/').pop()?.replace('@', '');
+        if (username) {
+          instagramData = await InstagramService.scrapePublicData(username);
+        }
+      }
+
+      // Return mock data if no Instagram connection
+      if (!instagramData) {
+        instagramData = {
+          followers: 0,
+          following: 0,
+          posts: 0,
+          engagement_rate: 0,
+          reach: 0,
+          impressions: 0,
+          profile_views: 0,
+          website_clicks: 0,
+          email_contacts: 0,
+          phone_calls: 0,
+          direction_clicks: 0,
+          text_message_clicks: 0,
+        };
+      }
+
+      res.json({
+        platform: 'instagram',
+        connected: !!client.instagramAccessToken,
+        username: client.socialLinks?.instagram?.split('/').pop()?.replace('@', '') || null,
+        metrics: instagramData,
+        lastUpdated: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error fetching Instagram analytics:", error);
+      res.status(500).json({ message: "Failed to fetch Instagram analytics" });
+    }
+  });
+
+  app.get("/api/instagram/posts", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const clientId = user?.clientId;
+      const limit = parseInt(req.query.limit as string) || 12;
+
+      if (!clientId) {
+        return res.status(400).json({ message: "Client ID required" });
+      }
+
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      let posts = [];
+
+      // Try to get posts from connected Instagram account
+      if (client.socialLinks?.instagram && client.instagramAccessToken) {
+        try {
+          posts = await InstagramService.getRecentPosts(
+            client.instagramAccessToken,
+            client.instagramUserId || '',
+            limit
+          );
+        } catch (error) {
+          console.error('Failed to fetch Instagram posts:', error);
+        }
+      }
+
+      res.json({
+        platform: 'instagram',
+        connected: !!client.instagramAccessToken,
+        posts,
+        total: posts.length,
+      });
+    } catch (error) {
+      console.error("Error fetching Instagram posts:", error);
+      res.status(500).json({ message: "Failed to fetch Instagram posts" });
+    }
+  });
+
+  // Instagram OAuth endpoints
+  app.get("/api/instagram/auth", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const clientId = user?.clientId;
+
+      if (!clientId) {
+        return res.status(400).json({ message: "Client ID required" });
+      }
+
+      const instagramClientId = process.env.INSTAGRAM_CLIENT_ID;
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/instagram/callback`;
+
+      if (!instagramClientId) {
+        return res.status(500).json({ message: "Instagram integration not configured" });
+      }
+
+      const authUrl = InstagramService.getAuthUrl(
+        instagramClientId,
+        redirectUri,
+        clientId // Use clientId as state
+      );
+
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error("Error initiating Instagram auth:", error);
+      res.status(500).json({ message: "Failed to initiate Instagram authentication" });
+    }
+  });
+
+  app.get("/api/instagram/callback", async (req: Request, res: Response) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code || !state) {
+        return res.status(400).send('Missing authorization code or state');
+      }
+
+      const clientId = state as string;
+      const instagramClientId = process.env.INSTAGRAM_CLIENT_ID;
+      const instagramClientSecret = process.env.INSTAGRAM_CLIENT_SECRET;
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/instagram/callback`;
+
+      if (!instagramClientId || !instagramClientSecret) {
+        return res.status(500).send('Instagram integration not configured');
+      }
+
+      // Exchange code for access token
+      const tokenData = await InstagramService.getAccessToken(
+        instagramClientId,
+        instagramClientSecret,
+        code as string,
+        redirectUri
+      );
+
+      // Update client with Instagram connection
+      await storage.updateClient(clientId, {
+        instagramAccessToken: tokenData.access_token,
+        instagramUserId: tokenData.user_id,
+        instagramConnectedAt: new Date(),
+      });
+
+      // Redirect back to analytics page with success message
+      res.redirect('/client-analytics?instagram=connected');
+    } catch (error) {
+      console.error("Error in Instagram callback:", error);
+      res.redirect('/client-analytics?error=instagram_auth_failed');
     }
   });
 

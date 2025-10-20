@@ -20,6 +20,19 @@ export default function ClientAnalytics() {
     enabled: !!user,
   });
 
+  // Fetch Instagram analytics
+  const { data: instagramData, isLoading: instagramLoading } = useQuery({
+    queryKey: ["/api/instagram/analytics"],
+    enabled: !!user?.clientId,
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
+
+  // Fetch Instagram posts
+  const { data: instagramPosts } = useQuery({
+    queryKey: ["/api/instagram/posts"],
+    enabled: !!user?.clientId,
+  });
+
   // Filter analytics for this client
   const clientAnalytics = analytics.filter((metric: any) => 
     metric.clientId === user?.clientId
@@ -59,28 +72,33 @@ export default function ClientAnalytics() {
     new Date(metric.date) >= thirtyDaysAgo
   );
 
-  // Platform breakdown
+  // Platform breakdown with real Instagram data
   const platformStats = {
     instagram: {
-      followers: 12458,
-      engagement: 4.8,
-      reach: 34200,
-      posts: 12,
-      trend: "+12%"
+      followers: instagramData?.metrics?.followers || 0,
+      engagement: instagramData?.metrics?.engagement_rate || 0,
+      reach: instagramData?.metrics?.reach || 0,
+      posts: instagramData?.metrics?.posts || 0,
+      trend: "+12%", // TODO: Calculate real trend
+      connected: instagramData?.connected || false,
+      username: instagramData?.username || null,
+      lastUpdated: instagramData?.lastUpdated || null,
     },
     facebook: {
       followers: 8932,
       engagement: 3.2,
       reach: 28500,
       posts: 8,
-      trend: "+8%"
+      trend: "+8%",
+      connected: false,
     },
     tiktok: {
       followers: 23567,
       engagement: 6.5,
       reach: 125000,
       posts: 15,
-      trend: "+23%"
+      trend: "+23%",
+      connected: false,
     }
   };
 
@@ -195,8 +213,17 @@ export default function ClientAnalytics() {
                       <span className="text-2xl">📷</span>
                     </div>
                     <div>
-                      <h3 className="font-semibold">Instagram</h3>
-                      <p className="text-sm text-muted-foreground">{platformStats.instagram.posts} posts</p>
+                      <h3 className="font-semibold flex items-center gap-2">
+                        Instagram
+                        {platformStats.instagram.connected ? (
+                          <Badge className="bg-green-500/10 text-green-600 text-xs">Connected</Badge>
+                        ) : (
+                          <Badge className="bg-gray-500/10 text-gray-600 text-xs">Not Connected</Badge>
+                        )}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {platformStats.instagram.username ? `@${platformStats.instagram.username}` : `${platformStats.instagram.posts} posts`}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -206,20 +233,47 @@ export default function ClientAnalytics() {
                     </span>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Followers</span>
-                    <span className="font-semibold">{platformStats.instagram.followers.toLocaleString()}</span>
+                
+                {platformStats.instagram.connected ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Followers</span>
+                      <span className="font-semibold">{platformStats.instagram.followers.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Engagement</span>
+                      <span className="font-semibold">{platformStats.instagram.engagement.toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Reach</span>
+                      <span className="font-semibold">{platformStats.instagram.reach.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Posts</span>
+                      <span className="font-semibold">{platformStats.instagram.posts}</span>
+                    </div>
+                    {platformStats.instagram.lastUpdated && (
+                      <div className="text-xs text-muted-foreground pt-2 border-t">
+                        Last updated: {format(new Date(platformStats.instagram.lastUpdated), 'MMM d, h:mm a')}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Engagement</span>
-                    <span className="font-semibold">{platformStats.instagram.engagement}%</span>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Connect your Instagram account to see real analytics
+                      </p>
+                      <Button 
+                        size="sm" 
+                        className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600"
+                        onClick={() => window.location.href = '/api/instagram/auth'}
+                      >
+                        📷 Connect Instagram
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Reach</span>
-                    <span className="font-semibold">{platformStats.instagram.reach.toLocaleString()}</span>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Facebook */}
