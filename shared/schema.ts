@@ -535,8 +535,8 @@ export const notifications = pgTable("notifications", {
   userId: integer("user_id").references(() => users.id).notNull(),
   title: varchar("title").notNull(),
   message: text("message").notNull(),
-  type: varchar("type").notNull(), // info, success, warning, error
-  category: varchar("category").notNull(), // task, payment, deadline, login, general
+  type: varchar("type").notNull().default('info'), // info, success, warning, error
+  category: varchar("category").notNull().default('general'), // task, payment, deadline, login, general
   isRead: boolean("is_read").default(false),
   actionUrl: varchar("action_url"), // Optional link to relevant page
   createdAt: timestamp("created_at").defaultNow(),
