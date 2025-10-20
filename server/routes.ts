@@ -2845,7 +2845,13 @@ Examples:
   // Check and create notifications for due/overdue tasks
   app.post("/api/notifications/check-tasks", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId;
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
       const tasks = await storage.getTasks();
       
       const now = new Date();
@@ -2862,19 +2868,23 @@ Examples:
         // Skip if no due date
         if (!task.dueDate) continue;
 
+        // Skip if no valid user to notify
+        const targetUserId = task.assignedToId || userId;
+        if (!targetUserId) continue;
+
         const dueDate = new Date(task.dueDate);
         const dueDateOnly = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
         
         // Check if task is overdue
         if (dueDateOnly < today) {
-          const existingNotifications = await storage.getNotifications(task.assignedToId || userId);
+          const existingNotifications = await storage.getNotifications(targetUserId);
           const alreadyNotified = existingNotifications.some(
             n => n.title.includes('Overdue') && n.message.includes(task.title)
           );
           
           if (!alreadyNotified) {
             await storage.createNotification({
-              userId: task.assignedToId || userId,
+              userId: targetUserId,
               type: 'alert',
               title: '🚨 Task Overdue',
               message: `Task "${task.title}" is overdue!`,
@@ -2885,14 +2895,14 @@ Examples:
         }
         // Check if task is due today
         else if (dueDateOnly.getTime() === today.getTime()) {
-          const existingNotifications = await storage.getNotifications(task.assignedToId || userId);
+          const existingNotifications = await storage.getNotifications(targetUserId);
           const alreadyNotified = existingNotifications.some(
             n => n.title.includes('Due Today') && n.message.includes(task.title)
           );
           
           if (!alreadyNotified) {
             await storage.createNotification({
-              userId: task.assignedToId || userId,
+              userId: targetUserId,
               type: 'warning',
               title: '⏰ Task Due Today',
               message: `Task "${task.title}" is due today!`,
