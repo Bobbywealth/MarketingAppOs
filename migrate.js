@@ -45,6 +45,33 @@ async function runMigrations() {
         console.log('⚠️ display_order already exists or error:', e.message);
       }
       
+      // Create subscription_packages table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS subscription_packages (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR NOT NULL,
+            description TEXT,
+            price INTEGER NOT NULL,
+            billing_period VARCHAR NOT NULL DEFAULT 'month',
+            features JSONB NOT NULL,
+            stripe_price_id VARCHAR,
+            stripe_product_id VARCHAR,
+            is_active BOOLEAN DEFAULT true,
+            is_featured BOOLEAN DEFAULT false,
+            display_order INTEGER DEFAULT 0,
+            button_text VARCHAR DEFAULT 'Get Started',
+            button_link VARCHAR,
+            max_clients INTEGER,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created subscription_packages table');
+      } catch (e) {
+        console.log('⚠️ subscription_packages table already exists or error:', e.message);
+      }
+      
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
       
