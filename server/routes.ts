@@ -444,11 +444,11 @@ Lead completed signup process and is ready for package selection.`;
       } else {
         // Create new lead if none exists
         const leadData = {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          company: data.company,
-          website: data.website || null,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        website: data.website || null,
           source: "website",
           stage: "qualified",
           score: "hot",
@@ -489,7 +489,7 @@ ${data.notes}
 ---
 This lead completed the full signup process and is ready for package selection.`,
           clientId: null,
-          assignedToId: null,
+        assignedToId: null,
           sourceMetadata: { 
             type: "signup_complete",
             services: data.services,
