@@ -17,12 +17,16 @@ export default function Tickets() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  const { data: user } = useQuery({ queryKey: ["/api/user"] });
+  const isClient = user?.role === 'client';
+
   const { data: tickets, isLoading } = useQuery<Ticket[]>({
     queryKey: ["/api/tickets"],
   });
 
   const { data: clients } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+    enabled: !isClient, // Only fetch clients list for admin/staff
   });
 
   const createTicketMutation = useMutation({
@@ -53,8 +57,11 @@ export default function Tickets() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    // For client users, use their clientId automatically
+    const clientId = isClient ? user?.clientId : formData.get("clientId");
+
     createTicketMutation.mutate({
-      clientId: formData.get("clientId"),
+      clientId,
       subject: formData.get("subject"),
       description: formData.get("description"),
       priority: formData.get("priority"),
@@ -119,21 +126,24 @@ export default function Tickets() {
             </DialogHeader>
             <form onSubmit={handleCreateTicket} className="space-y-4">
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clientId">Client *</Label>
-                  <Select name="clientId" required>
-                    <SelectTrigger data-testid="select-ticket-client">
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients?.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Only show client selector for admin/staff, not for clients */}
+                {!isClient && (
+                  <div className="space-y-2">
+                    <Label htmlFor="clientId">Client *</Label>
+                    <Select name="clientId" required>
+                      <SelectTrigger data-testid="select-ticket-client">
+                        <SelectValue placeholder="Select client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clients?.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="subject">Subject *</Label>
                   <Input id="subject" name="subject" required data-testid="input-subject" />
