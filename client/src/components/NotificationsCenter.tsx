@@ -113,6 +113,15 @@ export function NotificationsCenter() {
     },
   });
 
+  const createTestNotificationMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/notifications/test", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+    },
+  });
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Check for new notifications and play sound
@@ -314,10 +323,10 @@ export function NotificationsCenter() {
           )}
         </ScrollArea>
 
-        {notifications.length > 0 && (
-          <>
-            <Separator />
-            <div className="p-2">
+        <>
+          <Separator />
+          <div className="p-2 space-y-1">
+            {notifications.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -326,9 +335,18 @@ export function NotificationsCenter() {
               >
                 View all notifications
               </Button>
-            </div>
-          </>
-        )}
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => createTestNotificationMutation.mutate()}
+              disabled={createTestNotificationMutation.isPending}
+            >
+              {createTestNotificationMutation.isPending ? "Creating..." : "🧪 Test Notification"}
+            </Button>
+          </div>
+        </>
       </PopoverContent>
     </Popover>
   );

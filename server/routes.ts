@@ -2996,6 +2996,27 @@ Examples:
     }
   });
 
+  // Create a test notification (for testing purposes)
+  app.post("/api/notifications/test", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      await storage.createNotification({
+        userId,
+        type: 'info',
+        title: '🎉 Test Notification',
+        message: 'This is a test notification to verify the system is working!',
+        category: 'general',
+      });
+      
+      res.json({ message: "Test notification created" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to create test notification" });
+    }
+  });
+
   app.delete("/api/notifications/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       await storage.deleteNotification(req.params.id);
