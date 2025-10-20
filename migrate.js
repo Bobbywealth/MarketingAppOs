@@ -311,6 +311,67 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ Invoices column rename skipped:', e.message);
       }
+
+      // Add notes column to invoices
+      try {
+        await client.query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT;`);
+        console.log('✅ Added notes column to invoices');
+      } catch (e) {
+        console.log('⚠️ notes column in invoices already exists or error:', e.message);
+      }
+
+      // Fix content_posts table - add missing columns
+      try {
+        await client.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS client_id VARCHAR REFERENCES clients(id);`);
+        console.log('✅ Added client_id to content_posts');
+      } catch (e) {
+        console.log('⚠️ client_id in content_posts already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS platform_post_id VARCHAR;`);
+        console.log('✅ Added platform_post_id to content_posts');
+      } catch (e) {
+        console.log('⚠️ platform_post_id already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
+        console.log('✅ Added media_urls to content_posts');
+      } catch (e) {
+        console.log('⚠️ media_urls already exists or error:', e.message);
+      }
+
+      // Create page_views table for analytics
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS page_views (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            page VARCHAR NOT NULL,
+            referrer VARCHAR,
+            user_agent TEXT,
+            ip VARCHAR,
+            country VARCHAR,
+            city VARCHAR,
+            device_type VARCHAR,
+            browser VARCHAR,
+            session_id VARCHAR,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created page_views table');
+      } catch (e) {
+        console.log('⚠️ page_views table already exists or error:', e.message);
+      }
+
+      // Create indexes for faster analytics queries
+      try {
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_page_views_session_id ON page_views(session_id);`);
+        console.log('✅ Created indexes for page_views');
+      } catch (e) {
+        console.log('⚠️ page_views indexes already exist or error:', e.message);
+      }
       
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
