@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import type { SubscriptionPackage } from "@shared/schema";
 import {
   NavigationMenu,
@@ -24,6 +26,16 @@ import linkedinLogo from "@assets/linkedin-logo.png";
 import googleAdsLogo from "@assets/google-ads-logo.png";
 
 export default function LandingPage() {
+  const { toast } = useToast();
+  const [auditForm, setAuditForm] = useState({
+    website: "",
+    instagramUrl: "",
+    tiktokUrl: "",
+    facebookUrl: ""
+  });
+  const [auditResults, setAuditResults] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
+
   const { data: packages = [], isLoading: packagesLoading } = useQuery<SubscriptionPackage[]>({
     queryKey: ["/api/subscription-packages"],
     queryFn: async () => {
@@ -33,6 +45,41 @@ export default function LandingPage() {
     retry: false,
     meta: { returnNull: true },
   });
+
+  const auditMutation = useMutation({
+    mutationFn: async (data: typeof auditForm) => {
+      const response = await apiRequest("POST", "/api/social-audit", data);
+      return response.json();
+    },
+    onSuccess: (result) => {
+      setAuditResults(result);
+      setShowResults(true);
+      toast({
+        title: "🎉 Audit Complete!",
+        description: "Your social media audit results are ready.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "❌ Audit Failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAuditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auditForm.website) {
+      toast({
+        title: "⚠️ Website Required",
+        description: "Please enter your website URL to start the audit.",
+        variant: "destructive",
+      });
+      return;
+    }
+    auditMutation.mutate(auditForm);
+  };
 
   const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString()}`;
 
@@ -379,6 +426,167 @@ export default function LandingPage() {
               Don't see your preferred channel? <span className="text-blue-600 font-semibold">We can work on any platform!</span>
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Free Social Media Audit Section */}
+      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
+          <div className="absolute bottom-10 right-10 w-48 h-48 bg-white/5 rounded-full blur-2xl"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-pink-500/20 to-yellow-500/20 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="container mx-auto max-w-4xl relative z-10">
+          <div className="text-center mb-12">
+            <Badge className="bg-white/20 text-white border-white/30 mb-4">
+              🎯 Free Analysis
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Get Your FREE Social Media Audit
+            </h2>
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
+              Discover what's holding your social media back. Get a detailed analysis of your online presence in under 60 seconds.
+            </p>
+          </div>
+
+          {!showResults ? (
+            <Card className="bg-white/10 backdrop-blur border-white/20 shadow-2xl">
+              <CardHeader>
+                <CardTitle className="text-white text-center text-2xl">
+                  Enter Your Details for Instant Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAuditSubmit} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Website URL *
+                      </label>
+                      <Input
+                        type="url"
+                        placeholder="https://yourwebsite.com"
+                        value={auditForm.website}
+                        onChange={(e) => setAuditForm({...auditForm, website: e.target.value})}
+                        className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Instagram URL
+                      </label>
+                      <Input
+                        type="url"
+                        placeholder="https://instagram.com/yourusername"
+                        value={auditForm.instagramUrl}
+                        onChange={(e) => setAuditForm({...auditForm, instagramUrl: e.target.value})}
+                        className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        TikTok URL
+                      </label>
+                      <Input
+                        type="url"
+                        placeholder="https://tiktok.com/@yourusername"
+                        value={auditForm.tiktokUrl}
+                        onChange={(e) => setAuditForm({...auditForm, tiktokUrl: e.target.value})}
+                        className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white font-medium mb-2">
+                        Facebook URL
+                      </label>
+                      <Input
+                        type="url"
+                        placeholder="https://facebook.com/yourpage"
+                        value={auditForm.facebookUrl}
+                        onChange={(e) => setAuditForm({...auditForm, facebookUrl: e.target.value})}
+                        className="bg-white/20 border-white/30 text-white placeholder:text-white/60"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <Button 
+                      type="submit" 
+                      size="lg"
+                      disabled={auditMutation.isPending}
+                      className="bg-white text-blue-600 hover:bg-gray-100 font-bold text-lg px-12 py-4 shadow-xl"
+                    >
+                      {auditMutation.isPending ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          🚀 Get My FREE Audit Now
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-blue-100 text-sm mt-4">
+                      ✅ No signup required • ✅ Instant results • ✅ 100% Free
+                    </p>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-white/10 backdrop-blur border-white/20 shadow-2xl">
+              <CardHeader>
+                <CardTitle className="text-white text-center text-2xl">
+                  🎉 Your Social Media Audit Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-white">
+                {auditResults && (
+                  <div className="space-y-6">
+                    <div className="grid md:grid-cols-3 gap-6">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-yellow-300">
+                          {auditResults.summary?.totalIssues || 0}
+                        </div>
+                        <div className="text-blue-100">Issues Found</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-green-300">
+                          {auditResults.summary?.score || 0}/100
+                        </div>
+                        <div className="text-blue-100">Overall Score</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-blue-300">
+                          {auditResults.summary?.opportunities || 0}
+                        </div>
+                        <div className="text-blue-100">Opportunities</div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <Button 
+                        onClick={() => setShowResults(false)}
+                        variant="outline"
+                        className="border-white/30 text-white hover:bg-white/20 mr-4"
+                      >
+                        ← Run Another Audit
+                      </Button>
+                      <Link href="/signup">
+                        <Button className="bg-white text-blue-600 hover:bg-gray-100 font-bold">
+                          🎯 Get Professional Help →
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </section>
 

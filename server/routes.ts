@@ -118,6 +118,52 @@ This lead will be updated if they complete the full signup process.`,
     }
   });
 
+  // Public social media audit endpoint (no authentication required)
+  app.post("/api/social-audit", async (req: Request, res: Response) => {
+    try {
+      const auditSchema = z.object({
+        website: z.string().url("Must be a valid URL"),
+        instagramUrl: z.string().optional(),
+        tiktokUrl: z.string().optional(),
+        facebookUrl: z.string().optional(),
+      });
+
+      const data = auditSchema.parse(req.body);
+      console.log('🔍 Running social media audit for:', data.website);
+
+      // Generate audit report using existing AuditService
+      const auditReport = await AuditService.generateAuditReport({
+        website: data.website,
+        socialPlatforms: [],
+        instagramUrl: data.instagramUrl,
+        facebookUrl: data.facebookUrl,
+        tiktokUrl: data.tiktokUrl,
+        linkedinUrl: "",
+        twitterUrl: "",
+        youtubeUrl: "",
+      });
+
+      console.log('✅ Social media audit completed');
+      res.json({
+        success: true,
+        ...auditReport,
+      });
+    } catch (error) {
+      console.error('❌ Social media audit error:', error);
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        message: "Failed to complete audit. Please try again.",
+      });
+    }
+  });
+
   // Public signup endpoint (no authentication required)
   app.post("/api/signup", async (req: Request, res: Response) => {
     try {
