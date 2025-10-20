@@ -1220,20 +1220,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         });
       });
 
-      // Website project activities
-      [...websiteProjects]
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-        .slice(0, 3)
-        .forEach(project => {
-          const client = clients.find(c => c.id === project.clientId);
-          recentActivity.push({
-            type: 'info',
-            title: `Website project ${project.stage}: ${project.name}${client ? ` for ${client.name}` : ''}`,
-            time: formatActivityTime(project.updatedAt || project.createdAt),
-            timestamp: project.updatedAt || project.createdAt,
-          });
-        });
-
       // Activity logs (logins, payments, etc.)
       activityLogs.forEach(log => {
         const typeMap: any = {
