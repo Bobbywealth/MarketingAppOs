@@ -305,24 +305,27 @@ export default function SignupPage() {
               disabled={!selectedPackage}
               onClick={() => {
                 if (selectedPackage) {
-                  // TODO: Integrate Stripe checkout
                   toast({
-                    title: "🚀 Package Selected!",
-                    description: "Redirecting to secure checkout...",
+                    title: "🎉 Account Created Successfully!",
+                    description: "You can now log in and access your dashboard. Package selection saved!",
                   });
+                  // Redirect to login page after a brief delay
+                  setTimeout(() => {
+                    setLocation("/login");
+                  }, 2000);
                 }
               }}
             >
-              Continue to Checkout 🚀
+              Complete Signup & Login 🚀
             </Button>
             
             <div className="mt-4">
               <Button 
                 variant="ghost" 
-                onClick={() => setStep(5)}
+                onClick={() => setStep(3)}
                 className="text-gray-500 hover:text-gray-700"
               >
-                ← Back to Audit Results
+                ← Back to Previous Step
               </Button>
             </div>
           </div>
