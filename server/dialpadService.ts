@@ -33,7 +33,9 @@ export class DialpadService {
         headers: this.getHeaders(),
         params: safeParams,
       });
-      return response.data;
+      // Ensure we return an array
+      const data = response.data;
+      return Array.isArray(data) ? data : (data.calls || []);
     } catch (error: any) {
       console.error('Error fetching call logs:', error.response?.data || error.message);
       throw new Error(error.response?.data?.message || 'Failed to fetch call logs');
@@ -58,9 +60,10 @@ export class DialpadService {
     to_number: string;
     from_number?: string;
     from_extension_id?: string;
+    from_user_id?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/calls`, data, {
+      const response = await axios.post(`${DIALPAD_API_BASE}/call`, data, {
         headers: this.getHeaders(),
       });
       return response.data;
@@ -83,11 +86,13 @@ export class DialpadService {
         ...params,
         limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
       };
-      const response = await axios.get(`${DIALPAD_API_BASE}/sms/messages`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/message`, {
         headers: this.getHeaders(),
         params: safeParams,
       });
-      return response.data;
+      // Ensure we return an array
+      const data = response.data;
+      return Array.isArray(data) ? data : (data.messages || []);
     } catch (error: any) {
       console.error('Error fetching SMS messages:', error.response?.data || error.message);
       throw new Error(error.response?.data?.message || 'Failed to fetch SMS messages');
@@ -101,7 +106,7 @@ export class DialpadService {
     from_number?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/sms/messages`, data, {
+      const response = await axios.post(`${DIALPAD_API_BASE}/message`, data, {
         headers: this.getHeaders(),
       });
       return response.data;
@@ -127,7 +132,9 @@ export class DialpadService {
         headers: this.getHeaders(),
         params: safeParams,
       });
-      return response.data;
+      // Ensure we return an array
+      const data = response.data;
+      return Array.isArray(data) ? data : (data.contacts || []);
     } catch (error: any) {
       console.error('Error fetching contacts:', error.response?.data || error.message);
       throw new Error(error.response?.data?.message || 'Failed to fetch contacts');
