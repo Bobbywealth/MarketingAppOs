@@ -24,9 +24,14 @@ export class DialpadService {
     offset?: number;
   }) {
     try {
+      // Cap limit at 50 (Dialpad API maximum)
+      const safeParams = {
+        ...params,
+        limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
+      };
       const response = await axios.get(`${DIALPAD_API_BASE}/call`, {
         headers: this.getHeaders(),
-        params,
+        params: safeParams,
       });
       return response.data;
     } catch (error: any) {
@@ -73,9 +78,14 @@ export class DialpadService {
     offset?: number;
   }) {
     try {
+      // Cap limit at 50 (Dialpad API maximum)
+      const safeParams = {
+        ...params,
+        limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
+      };
       const response = await axios.get(`${DIALPAD_API_BASE}/sms/messages`, {
         headers: this.getHeaders(),
-        params,
+        params: safeParams,
       });
       return response.data;
     } catch (error: any) {
@@ -108,9 +118,14 @@ export class DialpadService {
     search?: string;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/contact`, {
+      // Cap limit at 50 (Dialpad API maximum)
+      const safeParams = {
+        ...params,
+        limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
+      };
+      const response = await axios.get(`${DIALPAD_API_BASE}/contacts`, {
         headers: this.getHeaders(),
-        params,
+        params: safeParams,
       });
       return response.data;
     } catch (error: any) {
@@ -127,7 +142,7 @@ export class DialpadService {
     company?: string;
   }) {
     try {
-      const response = await axios.post(`${DIALPAD_API_BASE}/contact`, data, {
+      const response = await axios.post(`${DIALPAD_API_BASE}/contacts`, data, {
         headers: this.getHeaders(),
       });
       return response.data;
@@ -145,9 +160,14 @@ export class DialpadService {
     offset?: number;
   }) {
     try {
+      // Cap limit at 50 (Dialpad API maximum)
+      const safeParams = {
+        ...params,
+        limit: params?.limit && params.limit > 50 ? 50 : params?.limit,
+      };
       const response = await axios.get(`${DIALPAD_API_BASE}/voicemail`, {
         headers: this.getHeaders(),
-        params,
+        params: safeParams,
       });
       return response.data;
     } catch (error: any) {

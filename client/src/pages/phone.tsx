@@ -79,7 +79,7 @@ export default function PhonePage() {
   const { data: callLogs = [], isLoading } = useQuery<CallLog[]>({
     queryKey: ["/api/dialpad/calls"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/dialpad/calls?limit=100", undefined);
+      const response = await apiRequest("GET", "/api/dialpad/calls?limit=50", undefined);
       return response.json();
     },
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -89,7 +89,7 @@ export default function PhonePage() {
   const { data: smsMessages = [], isLoading: smsLoading } = useQuery<SmsMessage[]>({
     queryKey: ["/api/dialpad/sms"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/dialpad/sms?limit=100", undefined);
+      const response = await apiRequest("GET", "/api/dialpad/sms?limit=50", undefined);
       return response.json();
     },
     refetchInterval: 15000, // Refresh every 15 seconds
@@ -99,7 +99,7 @@ export default function PhonePage() {
   const { data: contacts = [], isLoading: contactsLoading } = useQuery<Contact[]>({
     queryKey: ["/api/dialpad/contacts"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/dialpad/contacts?limit=500", undefined);
+      const response = await apiRequest("GET", "/api/dialpad/contacts?limit=50", undefined);
       return response.json();
     },
   });
