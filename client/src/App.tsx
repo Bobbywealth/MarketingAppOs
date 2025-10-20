@@ -10,6 +10,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { usePageTracking } from "@/hooks/usePageTracking";
 
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
@@ -46,6 +47,11 @@ import NotFound from "@/pages/not-found";
 function Router() {
   const { user } = useAuth();
   const isClient = user?.role === 'client';
+  
+  // Track page views for non-authenticated pages
+  if (!user) {
+    usePageTracking();
+  }
 
   return (
     <Switch>
@@ -90,6 +96,9 @@ function Router() {
 
 function AppContent() {
   const { user, isLoading } = useAuth();
+  
+  // Track page views automatically
+  usePageTracking();
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
