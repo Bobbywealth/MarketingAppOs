@@ -24,7 +24,7 @@ export class DialpadService {
     offset?: number;
   }) {
     try {
-      const response = await axios.get(`${DIALPAD_API_BASE}/calls`, {
+      const response = await axios.get(`${DIALPAD_API_BASE}/stats/calls`, {
         headers: this.getHeaders(),
         params,
       });
