@@ -843,7 +843,7 @@ export default function TasksPage() {
                 New Task
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl glass-strong">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
               <DialogHeader>
                 <DialogTitle>Create New Task</DialogTitle>
                 <DialogDescription>Add a new task to your workflow</DialogDescription>
@@ -1135,7 +1135,7 @@ export default function TasksPage() {
 
           {/* Edit Task Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-2xl glass-strong">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
               <DialogHeader>
                 <DialogTitle>Edit Task</DialogTitle>
                 <DialogDescription>Update task details</DialogDescription>
