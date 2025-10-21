@@ -2,7 +2,7 @@
   "name": "Marketing Team App",
   "short_name": "MTA CRM",
   "description": "Complete CRM solution for marketing teams",
-  "start_url": "/",
+  "start_url": "/pwa-home",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",

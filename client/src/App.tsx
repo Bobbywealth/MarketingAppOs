@@ -47,6 +47,7 @@ import SubscriptionPackages from "@/pages/subscription-packages";
 import SecondMe from "@/pages/second-me";
 import AdminSecondMe from "@/pages/admin-second-me";
 import Training from "@/pages/training";
+import PWAHomePage from "@/pages/pwa-home";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -60,6 +61,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/pwa-home" component={PWAHomePage} />
       <Route path="/login" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/signup" component={SignupPage} />
