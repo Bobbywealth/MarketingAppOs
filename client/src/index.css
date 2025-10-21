@@ -113,14 +113,20 @@
 
 /* Blob Animation - Smooth gradient movement */
 @keyframes blob {
-  0%, 100% {
-    transform: translate(0%, 0%) scale(1);
+  0% {
+    transform: translate(0%, 0%) scale(1) rotate(0deg);
   }
-  33% {
-    transform: translate(30%, -20%) scale(1.1);
+  25% {
+    transform: translate(50%, -30%) scale(1.2) rotate(90deg);
   }
-  66% {
-    transform: translate(-20%, 20%) scale(0.9);
+  50% {
+    transform: translate(30%, 30%) scale(0.8) rotate(180deg);
+  }
+  75% {
+    transform: translate(-30%, -20%) scale(1.1) rotate(270deg);
+  }
+  100% {
+    transform: translate(0%, 0%) scale(1) rotate(360deg);
   }
 }
 
@@ -397,48 +403,10 @@
     position: relative;
   }
 
-  /* Animated Gradient Mesh Background */
+  /* Animated Gradient Mesh Background - Disabled for now */
   .gradient-mesh-animated {
+    background-image: var(--gradient-mesh);
     position: relative;
-    overflow: hidden;
-  }
-
-  .gradient-mesh-animated::before,
-  .gradient-mesh-animated::after {
-    content: '';
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.5;
-    z-index: -1;
-    animation: blob 20s infinite ease-in-out;
-  }
-
-  .gradient-mesh-animated::before {
-    top: -20%;
-    left: -10%;
-    width: 60%;
-    height: 60%;
-    background: linear-gradient(135deg, 
-      hsl(217, 91%, 60%), 
-      hsl(250, 70%, 60%));
-  }
-
-  .gradient-mesh-animated::after {
-    bottom: -20%;
-    right: -10%;
-    width: 50%;
-    height: 50%;
-    background: linear-gradient(225deg, 
-      hsl(25, 95%, 53%), 
-      hsl(340, 82%, 52%));
-    animation-delay: -10s;
-  }
-
-  /* Dark mode adjustments */
-  .dark .gradient-mesh-animated::before,
-  .dark .gradient-mesh-animated::after {
-    opacity: 0.2;
   }
 
   .shimmer {
