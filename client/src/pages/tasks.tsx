@@ -108,6 +108,12 @@ export default function TasksPage() {
         priority: data.priority,
       };
       
+      // Add spaceId from currently selected space (if any)
+      if (selectedSpaceId) {
+        taskData.spaceId = selectedSpaceId;
+        console.log("✅ Adding task to space:", selectedSpaceId);
+      }
+      
       // Only add optional fields if they have values
       if (data.description) taskData.description = data.description;
       if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
