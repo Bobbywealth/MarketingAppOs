@@ -389,14 +389,14 @@ export default function EmailsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Email Management</h1>
-          <p className="text-muted-foreground">Manage your company emails and communications</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Email Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your company emails</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {!isConnected ? (
             <Button 
               className="gap-2" 

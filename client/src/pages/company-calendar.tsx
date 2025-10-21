@@ -259,14 +259,14 @@ export default function CompanyCalendarPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Company Calendar</h1>
-          <p className="text-muted-foreground">Manage team schedules and events</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Company Calendar</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage team schedules and events</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm">
             <Settings className="w-4 h-4 mr-2" />
             Settings
@@ -595,11 +595,12 @@ export default function CompanyCalendarPage() {
           </CardHeader>
           <CardContent>
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1 md:gap-2">
               {/* Day Headers */}
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                <div key={day} className="text-center text-sm font-semibold text-muted-foreground py-2">
-                  {day}
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
+                <div key={day} className="text-center text-[10px] md:text-sm font-semibold text-muted-foreground py-1 md:py-2">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.slice(0, 1)}</span>
                 </div>
               ))}
               
@@ -615,28 +616,28 @@ export default function CompanyCalendarPage() {
                     key={idx}
                     onClick={() => setSelectedDate(day)}
                     className={`
-                      min-h-[100px] p-2 border rounded-lg cursor-pointer transition-all
+                      min-h-[60px] md:min-h-[100px] p-1 md:p-2 border rounded-md md:rounded-lg cursor-pointer transition-all
                       ${!isCurrentMonth ? "bg-muted/30 text-muted-foreground" : "hover:bg-accent"}
-                      ${isSelected ? "ring-2 ring-primary" : ""}
+                      ${isSelected ? "ring-1 md:ring-2 ring-primary" : ""}
                       ${isTodayDate ? "bg-primary/5 border-primary" : ""}
                     `}
                   >
-                    <div className={`text-sm font-semibold mb-1 ${isTodayDate ? "text-primary" : ""}`}>
+                    <div className={`text-[10px] md:text-sm font-semibold mb-0.5 md:mb-1 ${isTodayDate ? "text-primary" : ""}`}>
                       {format(day, "d")}
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 md:space-y-1">
                       {dayEvents.slice(0, 2).map((event) => (
                         <div
                           key={event.id}
                           onClick={(e) => handleEventClick(event, e)}
-                          className={`text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.type)}`}
+                          className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.type)}`}
                         >
                           {event.title}
                         </div>
                       ))}
                       {dayEvents.length > 2 && (
-                        <div className="text-xs text-muted-foreground">
-                          +{dayEvents.length - 2} more
+                        <div className="text-[8px] md:text-xs text-muted-foreground">
+                          +{dayEvents.length - 2}
                         </div>
                       )}
                     </div>
