@@ -18,7 +18,8 @@ import {
   UsersRound,
   LogOut,
   Settings,
-  Sparkles
+  Sparkles,
+  BookOpen
 } from "lucide-react";
 import mtaLogoWhite from "@assets/mta-logo.png";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
@@ -200,6 +201,12 @@ const businessTools = [
     url: "/analytics",
     icon: BarChart3,
     permission: "canManageClients" as const,
+  },
+  {
+    title: "Training",
+    url: "/training",
+    icon: BookOpen,
+    permission: "canManageUsers" as const,
   },
 ];
 

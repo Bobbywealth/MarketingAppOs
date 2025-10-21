@@ -63,6 +63,7 @@ export default function TasksPage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(true);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -359,6 +360,8 @@ export default function TasksPage() {
     if (filterPriority !== "all" && task.priority !== filterPriority) return false;
     // Filter by selected space (null = show all tasks)
     if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
+    // Hide completed tasks if toggle is off
+    if (!showCompleted && task.status === "completed") return false;
     return true;
   });
 
@@ -809,6 +812,16 @@ export default function TasksPage() {
               <SelectItem value="urgent">Urgent</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button
+            variant={showCompleted ? "outline" : "secondary"}
+            size="default"
+            onClick={() => setShowCompleted(!showCompleted)}
+            data-testid="button-toggle-completed"
+            className="gap-2"
+          >
+            {showCompleted ? "✅ Hide Completed" : "👁️ Show Completed"}
+          </Button>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>

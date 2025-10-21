@@ -42,6 +42,7 @@ import CompanyCalendar from "@/pages/company-calendar";
 import SubscriptionPackages from "@/pages/subscription-packages";
 import SecondMe from "@/pages/second-me";
 import AdminSecondMe from "@/pages/admin-second-me";
+import Training from "@/pages/training";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -86,6 +87,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
       {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
       {!isClient && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
+      {!isClient && <ProtectedRoute path="/training" component={Training} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/settings" component={Settings} />
