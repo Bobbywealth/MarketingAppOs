@@ -1194,7 +1194,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       let tasks = allTasks;
       if (currentUser?.role !== UserRole.ADMIN) {
         // For managers, staff, and clients: only show tasks assigned to them
-        tasks = allTasks.filter((t) => t.assignedTo === currentUser?.id);
+        tasks = allTasks.filter((t) => t.assignedToId === currentUser?.id);
         console.log(`🔒 Filtered tasks for ${currentUser?.role}: ${tasks.length} assigned to user (out of ${allTasks.length} total)`);
       }
       
@@ -1710,7 +1710,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       let tasks = allTasks;
       if (currentUser?.role !== UserRole.ADMIN) {
         // For managers and staff: only show tasks assigned to them
-        tasks = allTasks.filter((t) => t.assignedTo === currentUser?.id);
+        tasks = allTasks.filter((t) => t.assignedToId === currentUser?.id);
         console.log(`🔒 Tasks filtered for ${currentUser?.role}: ${tasks.length} assigned to user (out of ${allTasks.length} total)`);
       }
       
