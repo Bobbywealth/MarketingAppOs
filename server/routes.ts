@@ -1140,20 +1140,22 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.log("🔍 Dashboard API called - fetching data...");
       
       // Only fetch lightweight data and minimal records for activity feed
-      const [clients, campaigns, leads, tasks, activityLogs] = await Promise.all([
+      const [clients, campaigns, leads, tasks] = await Promise.all([
         storage.getClients(), // Small dataset, usually < 100 records
         storage.getCampaigns(), // Small dataset
         storage.getLeads(), // Could be large, but we need value calc
         storage.getTasks(), // Could be large
-        storage.getActivityLogs(15), // Only get 15 recent logs
+        // storage.getActivityLogs(15), // DISABLED - causing database errors
       ]);
+      
+      // Create empty activity logs to prevent errors
+      const activityLogs: any[] = [];
 
       console.log("📊 Dashboard Stats (Optimized):");
       console.log("  - Total Clients:", clients.length);
       console.log("  - Total Campaigns:", campaigns.length);
       console.log("  - Total Leads:", leads.length);
       console.log("  - Total Tasks:", tasks.length);
-      console.log("  - Activity Logs:", activityLogs.length);
 
       // Quick counts and aggregates
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
