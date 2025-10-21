@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import mtaLogoBlue from '/attached_assets/mta-logo-blue.png';
+import mtaLogoBlue from '@assets/mta-logo-blue.png';
 
 export function LoadingScreen() {
   const [progress, setProgress] = useState(0);
