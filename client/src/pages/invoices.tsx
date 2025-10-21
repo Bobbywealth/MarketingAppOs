@@ -188,14 +188,14 @@ export default function Invoices() {
   }, 0);
 
   return (
-    <div className="min-h-full gradient-mesh p-6 lg:p-8 space-y-8">
+    <div className="min-h-full gradient-mesh p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 lg:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-gradient-purple">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1 md:space-y-2">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple">
             Invoices & Billing
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-sm md:text-base lg:text-lg text-muted-foreground">
             Real-time Stripe analytics and payment management
           </p>
         </div>

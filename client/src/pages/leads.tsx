@@ -161,12 +161,12 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Leads Management</h1>
-          <p className="text-muted-foreground">Track and manage your sales leads</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Leads Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Track and manage your sales leads</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>

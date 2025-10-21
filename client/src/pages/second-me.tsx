@@ -239,8 +239,8 @@ export default function SecondMePage() {
 
   // Initial setup - Upload photos
   return (
-    <div className="min-h-full gradient-mesh p-6 lg:p-8 xl:p-12">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-full gradient-mesh p-4 md:p-6 lg:p-8 xl:p-12">
+      <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 lg:space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">

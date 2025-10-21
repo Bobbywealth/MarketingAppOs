@@ -109,16 +109,16 @@ export default function Messages() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
-      <div className="p-6 border-b">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
-          <p className="text-muted-foreground">Internal communication with admins and staff</p>
+      <div className="p-4 md:p-6 border-b">
+        <div className="space-y-1 md:space-y-2">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Internal communication with admins and staff</p>
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-12 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
         {/* Team Members Sidebar */}
-        <div className="col-span-4 border-r flex flex-col">
+        <div className="hidden md:flex md:col-span-4 border-r flex-col">
           <div className="p-4 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -180,7 +180,7 @@ export default function Messages() {
         </div>
 
         {/* Messages Area */}
-        <div className="col-span-8 flex flex-col">
+        <div className="col-span-1 md:col-span-8 flex flex-col">
           {!selectedUserId ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">

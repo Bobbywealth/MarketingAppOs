@@ -223,12 +223,12 @@ export default function PhonePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Phone & SMS</h1>
-          <p className="text-muted-foreground">Make calls, send messages via Dialpad</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Phone & SMS</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Make calls, send messages via Dialpad</p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="mr-4">
