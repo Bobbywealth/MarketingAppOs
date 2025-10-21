@@ -94,6 +94,7 @@ export const campaigns = pgTable("campaigns", {
   budget: integer("budget"),
   description: text("description"),
   goals: text("goals"),
+  createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

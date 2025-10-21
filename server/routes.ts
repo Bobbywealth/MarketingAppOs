@@ -1505,9 +1505,19 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Campaign routes
-  app.get("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (_req: Request, res: Response) => {
+  app.get("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (req: Request, res: Response) => {
     try {
-      const campaigns = await storage.getCampaigns();
+      const currentUser = req.user;
+      const allCampaigns = await storage.getCampaigns();
+      
+      // Filter campaigns based on user role
+      let campaigns = allCampaigns;
+      if (currentUser?.role !== UserRole.ADMIN) {
+        // For managers and staff: only show campaigns they created
+        campaigns = allCampaigns.filter((c) => c.createdBy === currentUser?.id);
+        console.log(`🔒 Campaigns filtered for ${currentUser?.role}: ${campaigns.length} created by user (out of ${allCampaigns.length} total)`);
+      }
+      
       res.json(campaigns);
     } catch (error) {
       console.error(error);
@@ -1517,8 +1527,17 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (req: Request, res: Response) => {
     try {
+      const currentUser = req.user;
       const validatedData = insertCampaignSchema.parse(req.body);
-      const campaign = await storage.createCampaign(validatedData);
+      
+      // Automatically set createdBy to current user
+      const campaignData = {
+        ...validatedData,
+        createdBy: currentUser?.id,
+      };
+      
+      const campaign = await storage.createCampaign(campaignData);
+      console.log(`📣 Campaign created by ${currentUser?.username} (${currentUser?.role}):`, campaign.name);
       res.status(201).json(campaign);
     } catch (error) {
       handleValidationError(error, res);
