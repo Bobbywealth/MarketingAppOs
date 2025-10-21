@@ -19,7 +19,7 @@ export default function Dashboard() {
   console.log("  - Full stats object:", JSON.stringify(stats, null, 2));
 
   const { data: stripeData } = useQuery({
-    queryKey: ["/api/stripe/subscriptions"],
+    queryKey: ["/api/stripe/dashboard"],
     retry: false,
     meta: { returnNull: true }, // Don't throw error if Stripe not configured
   });
