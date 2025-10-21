@@ -131,18 +131,18 @@ function AppContent() {
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
             <header className="sticky top-0 z-50 flex items-center gap-3 px-3 md:px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              {/* Left: Hamburger + Logo */}
+              {/* Left: Hamburger + Logo (logo only on mobile) */}
               <div className="flex items-center gap-2 md:gap-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" className="md:mr-2" />
                 <img 
                   src={mtaLogoBlue} 
                   alt="Marketing Team App" 
-                  className="h-8 md:h-10 w-auto dark:hidden"
+                  className="h-8 w-auto dark:hidden md:hidden"
                 />
                 <img 
                   src={mtaLogoWhite} 
                   alt="Marketing Team App" 
-                  className="h-8 md:h-10 w-auto hidden dark:block"
+                  className="h-8 w-auto hidden dark:block md:dark:hidden"
                 />
               </div>
               
