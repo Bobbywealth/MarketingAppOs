@@ -1553,7 +1553,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Task Spaces routes
-  app.get("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+  app.get("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
       const spaces = await storage.getTaskSpaces();
       res.json(spaces);
@@ -1563,7 +1563,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.post("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.post("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
@@ -1584,7 +1584,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.patch("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.patch("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const space = await storage.updateTaskSpace(req.params.id, req.body);
       res.json(space);
@@ -1594,7 +1594,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.delete("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.delete("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       await storage.deleteTaskSpace(req.params.id);
       res.status(204).send();
@@ -1605,7 +1605,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Get tasks by space
-  app.get("/api/task-spaces/:id/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.get("/api/task-spaces/:id/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const tasks = await storage.getTasksBySpace(req.params.id);
       res.json(tasks);
@@ -1640,8 +1640,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Task routes (admin and staff only)
-  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  // Task routes (admin, manager, and staff)
+  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const currentUser = req.user;
       const allTasks = await storage.getTasks();
@@ -1661,7 +1661,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.post("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.post("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       console.log("📥 Backend received task data:", JSON.stringify(req.body, null, 2));
       const validatedData = insertTaskSchema.parse(req.body);
@@ -1675,7 +1675,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // AI-powered task parsing from natural language
-  app.post("/api/tasks/parse-ai", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.post("/api/tasks/parse-ai", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const { input } = req.body;
       
@@ -1758,7 +1758,7 @@ Examples:
     }
   });
 
-  app.patch("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.patch("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const validatedData = insertTaskSchema.partial().strip().parse(req.body);
       
@@ -1843,7 +1843,7 @@ Examples:
     }
   });
 
-  app.delete("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.delete("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       await storage.deleteTask(req.params.id);
       res.status(204).send();
