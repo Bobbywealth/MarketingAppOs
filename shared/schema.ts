@@ -639,7 +639,18 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertCampaignSchema = createInsertSchema(campaigns).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCampaignSchema = createInsertSchema(campaigns)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    startDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
+      if (!val) return null;
+      return val instanceof Date ? val : new Date(val);
+    }),
+    endDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => {
+      if (!val) return null;
+      return val instanceof Date ? val : new Date(val);
+    }),
+  });
 export const insertTaskSchema = createInsertSchema(tasks)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
