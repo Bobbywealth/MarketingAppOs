@@ -183,7 +183,10 @@ export function setupAuth(app: Express) {
         res.clearCookie('connect.sid');
         // Redirect for GET, return status for POST
         if (req.method === 'GET') {
-          res.redirect('/');
+          // Check if request is from PWA
+          const isPWA = req.query.pwa === 'true';
+          const redirectUrl = isPWA ? '/pwa-home' : '/';
+          res.redirect(redirectUrl);
         } else {
           res.sendStatus(200);
         }

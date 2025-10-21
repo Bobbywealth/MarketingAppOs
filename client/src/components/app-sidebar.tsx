@@ -212,6 +212,12 @@ const businessTools = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+
+  // Check if running as PWA (standalone mode)
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                (window.navigator as any).standalone === true;
+  
+  const logoutUrl = isPWA ? '/api/logout?pwa=true' : '/api/logout';
   const { canAccess } = usePermissions();
   const isClient = user?.role === 'client';
 
@@ -278,7 +284,7 @@ export function AppSidebar() {
             </div>
           </div>
           <a
-            href="/api/logout"
+            href={logoutUrl}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
             data-testid="button-logout"
           >
@@ -411,7 +417,7 @@ export function AppSidebar() {
             </div>
           </Link>
           <a
-            href="/api/logout"
+            href={logoutUrl}
             className="flex items-center gap-2 text-sm text-muted-foreground hover-elevate rounded-md px-3 py-2 transition-colors"
             data-testid="button-logout"
           >
