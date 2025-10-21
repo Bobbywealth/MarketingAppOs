@@ -2432,7 +2432,9 @@ Examples:
   // Global search route
   app.get("/api/search", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const currentUser = req.user;
       const query = req.query.q as string;
+      
       if (!query || query.trim().length < 2) {
         return res.json({
           clients: [],
@@ -2443,7 +2445,16 @@ Examples:
           tickets: [],
         });
       }
+      
       const results = await storage.globalSearch(query.trim());
+      
+      // Filter results based on user role
+      if (currentUser?.role !== UserRole.ADMIN) {
+        // For managers and staff: only show campaigns they created
+        results.campaigns = results.campaigns.filter((c: any) => c.createdBy === currentUser?.id);
+        // Tasks are already filtered by the tasks endpoint
+      }
+      
       res.json(results);
     } catch (error) {
       console.error(error);
