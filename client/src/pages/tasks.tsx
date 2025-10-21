@@ -40,6 +40,7 @@ const taskFormSchema = z.object({
   campaignId: z.string().optional(),
   clientId: z.string().optional(),
   assignedToId: z.string().optional(),
+  spaceId: z.string().optional(),
   isRecurring: z.boolean().optional(),
   recurringPattern: z.enum(["daily", "weekly", "monthly", "yearly"]).optional(),
   recurringInterval: z.number().optional(),
@@ -80,6 +81,11 @@ export default function TasksPage() {
     retry: false,
   });
 
+  const { data: spaces = [] } = useQuery<any[]>({
+    queryKey: ["/api/task-spaces"],
+    retry: false,
+  });
+
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
@@ -91,6 +97,7 @@ export default function TasksPage() {
       campaignId: "",
       clientId: "",
       assignedToId: "",
+      spaceId: "",
       isRecurring: false,
       recurringPattern: undefined,
       recurringInterval: 1,
@@ -108,17 +115,15 @@ export default function TasksPage() {
         priority: data.priority,
       };
       
-      // Add spaceId from currently selected space (if any)
-      if (selectedSpaceId) {
-        taskData.spaceId = selectedSpaceId;
-        console.log("✅ Adding task to space:", selectedSpaceId);
-      }
-      
       // Only add optional fields if they have values
       if (data.description) taskData.description = data.description;
       if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
       if (data.campaignId) taskData.campaignId = data.campaignId;
       if (data.clientId) taskData.clientId = data.clientId;
+      if (data.spaceId) {
+        taskData.spaceId = data.spaceId;
+        console.log("✅ Adding task to space:", data.spaceId);
+      }
       if (data.assignedToId && data.assignedToId !== "") {
         const parsedId = parseInt(data.assignedToId);
         if (!isNaN(parsedId)) {
@@ -168,6 +173,7 @@ export default function TasksPage() {
       if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
       if (data.campaignId) taskData.campaignId = data.campaignId;
       if (data.clientId) taskData.clientId = data.clientId;
+      if (data.spaceId) taskData.spaceId = data.spaceId;
       if (data.assignedToId) taskData.assignedToId = parseInt(data.assignedToId);
       if (data.isRecurring) {
         taskData.isRecurring = true;
@@ -225,6 +231,7 @@ export default function TasksPage() {
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
       campaignId: task.campaignId || "",
       clientId: task.clientId || "",
+      spaceId: task.spaceId || "",
       assignedToId: task.assignedToId?.toString() || "",
       isRecurring: task.isRecurring || false,
       recurringPattern: task.recurringPattern as any,
@@ -985,6 +992,31 @@ export default function TasksPage() {
                     )}
                   />
 
+                  <FormField
+                    control={form.control}
+                    name="spaceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Space (Optional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-task-space">
+                              <SelectValue placeholder="Select space (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {spaces.map((space) => (
+                              <SelectItem key={space.id} value={space.id}>
+                                {space.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Recurring Task Settings */}
                   <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
                     <FormField
@@ -1243,6 +1275,31 @@ export default function TasksPage() {
                             {clients.map((client) => (
                               <SelectItem key={client.id} value={client.id}>
                                 {client.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="spaceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Space (Optional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select space (optional)" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {spaces.map((space) => (
+                              <SelectItem key={space.id} value={space.id}>
+                                {space.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
