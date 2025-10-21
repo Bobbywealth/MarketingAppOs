@@ -166,6 +166,40 @@ export default function EmailsPage() {
     },
   });
 
+  // Validate and refresh token when page loads (prevents timeout)
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const validateToken = async () => {
+      try {
+        console.log("🔐 Validating email token...");
+        const response = await apiRequest("POST", "/api/emails/validate-token", {});
+        const result = await response.json();
+        
+        if (result.refreshed) {
+          console.log("✓ Token was refreshed");
+          toast({
+            title: "Connection Refreshed",
+            description: "Your email is now connected"
+          });
+        } else if (result.valid) {
+          console.log("✓ Token is valid");
+        }
+      } catch (error) {
+        console.error("❌ Token validation failed:", error);
+        toast({
+          title: "Connection Issue",
+          description: "Please reconnect your email account",
+          variant: "destructive"
+        });
+      }
+    };
+
+    // Validate token immediately on page load
+    validateToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected]);
+
   // Auto-sync emails every 5 minutes (silent background sync)
   useEffect(() => {
     if (!isConnected) return;
@@ -738,112 +772,124 @@ export default function EmailsPage() {
                     {/* Expanded Email Content */}
                     {selectedEmail?.id === email.id && (
                       <div className="bg-background border-t">
-                        <div className="p-6">
-                          {/* Email Header */}
-                          <div className="mb-4 pb-4 border-b">
-                            <h3 className="font-bold text-lg mb-3">{selectedEmail.subject}</h3>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-10 h-10">
-                                  <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-white font-semibold">
+                        <div className="p-4">
+                          {/* Compact Email Header */}
+                          <div className="mb-3 pb-3 border-b">
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <Avatar className="w-8 h-8 flex-shrink-0">
+                                  <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-white font-semibold text-xs">
                                     {getInitials(selectedEmail.fromName || selectedEmail.from)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div>
-                                  <p className="text-sm font-bold">{selectedEmail.fromName || selectedEmail.from}</p>
-                                  <p className="text-xs text-muted-foreground">{selectedEmail.from}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    <Clock className="w-3 h-3 inline mr-1" />
-                                    {new Date(selectedEmail.receivedAt).toLocaleString()}
-                                  </p>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold truncate">{selectedEmail.fromName || selectedEmail.from}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{selectedEmail.from}</p>
                                 </div>
+                                <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {new Date(selectedEmail.receivedAt).toLocaleString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric', 
+                                    hour: 'numeric', 
+                                    minute: '2-digit',
+                                    hour12: true 
+                                  })}
+                                </p>
                               </div>
-                              <div className="flex gap-2">
-                                <Button 
-                                  variant="default" 
-                                  size="sm"
-                                  onClick={() => handleAnalyzeEmail(selectedEmail.id)}
-                                  disabled={analyzingEmail}
-                                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-                                >
-                                  {analyzingEmail ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                      Analyzing...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Sparkles className="w-4 h-4 mr-2" />
-                                      Analyze with AI
-                                    </>
-                                  )}
-                                </Button>
+                            </div>
+                            
+                            {/* Action Buttons Row */}
+                            <div className="flex gap-1.5 flex-wrap">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleReply(selectedEmail)}
+                                className="h-8 text-xs"
+                              >
+                                <Reply className="w-3 h-3 mr-1" />
+                                Reply
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="h-8 text-xs"
+                              >
+                                <Forward className="w-3 h-3 mr-1" />
+                                Forward
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleAnalyzeEmail(selectedEmail.id)}
+                                disabled={analyzingEmail}
+                                className="h-8 text-xs bg-gradient-to-r from-purple-500/10 to-blue-500/10 hover:from-purple-500/20 hover:to-blue-500/20"
+                              >
+                                {analyzingEmail ? (
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Sparkles className="w-3 h-3 mr-1" />
+                                )}
+                                AI
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="h-8 px-2"
+                              >
+                                <Star className="w-3 h-3" />
+                              </Button>
+                              {selectedEmail.folder !== "trash" ? (
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => handleReply(selectedEmail)}
+                                  onClick={() => moveToFolderMutation.mutate({ emailId: selectedEmail.id, folder: "trash" })}
+                                  title="Move to Trash"
+                                  className="h-8 px-2"
                                 >
-                                  <Reply className="w-4 h-4 mr-2" />
-                                  Reply
+                                  <Trash2 className="w-3 h-3" />
                                 </Button>
-                                <Button variant="outline" size="sm">
-                                  <Forward className="w-4 h-4 mr-2" />
-                                  Forward
+                              ) : (
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm("Are you sure you want to permanently delete this email? This cannot be undone.")) {
+                                      deleteEmailMutation.mutate(selectedEmail.id);
+                                    }
+                                  }}
+                                  title="Delete Permanently"
+                                  className="h-8 text-xs"
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Delete
                                 </Button>
-                                <Button variant="outline" size="sm">
-                                  <Star className="w-4 h-4" />
-                                </Button>
-                                {selectedEmail.folder !== "trash" ? (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => moveToFolderMutation.mutate({ emailId: selectedEmail.id, folder: "trash" })}
-                                    title="Move to Trash"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                ) : (
-                                  <Button 
-                                    variant="destructive" 
-                                    size="sm"
-                                    onClick={() => {
-                                      if (confirm("Are you sure you want to permanently delete this email? This cannot be undone.")) {
-                                        deleteEmailMutation.mutate(selectedEmail.id);
-                                      }
-                                    }}
-                                    title="Delete Permanently"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-1" />
-                                    Delete Forever
-                                  </Button>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
 
                           {/* Email Body */}
                           {loadingEmailBody ? (
-                            <div className="flex items-center justify-center py-12">
+                            <div className="flex items-center justify-center py-8">
                               <div className="text-center">
-                                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
-                                <p className="text-sm text-muted-foreground">Loading full email...</p>
+                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
+                                <p className="text-xs text-muted-foreground">Loading...</p>
                               </div>
                             </div>
                           ) : (
-                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <div className="max-h-[500px] overflow-y-auto">
                               {selectedEmail.body ? (
                                 <div 
-                                  className="email-content"
+                                  className="email-content text-sm"
                                   dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
                                   style={{
                                     maxWidth: '100%',
-                                    overflow: 'auto',
+                                    lineHeight: '1.5',
                                   }}
                                 />
                               ) : (
-                                <div className="p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted">
-                                  <p className="text-muted-foreground">{selectedEmail.bodyPreview}</p>
-                                  <p className="text-xs text-muted-foreground mt-4 italic">Full email content not available. Showing preview only.</p>
+                                <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-muted">
+                                  <p className="text-sm text-muted-foreground">{selectedEmail.bodyPreview}</p>
+                                  <p className="text-xs text-muted-foreground mt-2 italic">Full content not available</p>
                                 </div>
                               )}
                             </div>

@@ -772,6 +772,47 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
     }
   });
 
+  // Validate and refresh token if needed (prevents timeout issues)
+  app.post("/api/emails/validate-token", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      const account = await storage.getEmailAccountByUserId(userId);
+      
+      if (!account || !account.isActive) {
+        return res.status(404).json({ valid: false, message: "No active email account found" });
+      }
+
+      // Check if token is expired or will expire soon (within 5 minutes)
+      const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
+      const now = new Date();
+      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+      
+      if (expiresAt && expiresAt < fiveMinutesFromNow) {
+        console.log(`🔄 Token expired or expiring soon, refreshing...`);
+        try {
+          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+          await storage.updateEmailAccount(account.id, {
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            tokenExpiresAt: refreshed.expiresOn,
+          });
+          console.log(`✓ Token refreshed successfully`);
+          return res.json({ valid: true, refreshed: true });
+        } catch (error) {
+          console.error(`❌ Token refresh failed:`, error);
+          return res.status(401).json({ valid: false, message: "Token refresh failed, please reconnect" });
+        }
+      }
+
+      res.json({ valid: true, refreshed: false });
+    } catch (error: any) {
+      console.error('Error validating token:', error);
+      res.status(500).json({ valid: false, message: "Failed to validate token" });
+    }
+  });
+
   // Sync emails from Microsoft
   app.post("/api/emails/sync", isAuthenticated, async (req: Request, res: Response) => {
     try {
