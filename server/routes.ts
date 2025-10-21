@@ -1135,18 +1135,27 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Dashboard stats - OPTIMIZED
-  app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
+  app.get("/api/dashboard/stats", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      console.log("🔍 Dashboard API called - fetching data...");
+      const currentUser = req.user;
+      console.log("🔍 Dashboard API called - fetching data for user:", currentUser?.username, "role:", currentUser?.role);
       
       // Only fetch lightweight data and minimal records for activity feed
-      const [clients, campaigns, leads, tasks] = await Promise.all([
+      const [clients, campaigns, leads, allTasks] = await Promise.all([
         storage.getClients(), // Small dataset, usually < 100 records
         storage.getCampaigns(), // Small dataset
         storage.getLeads(), // Could be large, but we need value calc
         storage.getTasks(), // Could be large
         // storage.getActivityLogs(15), // DISABLED - causing database errors
       ]);
+      
+      // Filter tasks based on user role
+      let tasks = allTasks;
+      if (currentUser?.role !== UserRole.ADMIN) {
+        // For managers, staff, and clients: only show tasks assigned to them
+        tasks = allTasks.filter((t) => t.assignedTo === currentUser?.id);
+        console.log(`🔒 Filtered tasks for ${currentUser?.role}: ${tasks.length} assigned to user (out of ${allTasks.length} total)`);
+      }
       
       // Create empty activity logs to prevent errors
       const activityLogs: any[] = [];
@@ -1155,7 +1164,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.log("  - Total Clients:", clients.length);
       console.log("  - Total Campaigns:", campaigns.length);
       console.log("  - Total Leads:", leads.length);
-      console.log("  - Total Tasks:", tasks.length);
+      console.log("  - Total Tasks (filtered):", tasks.length);
 
       // Quick counts and aggregates
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
@@ -1632,9 +1641,19 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Task routes (admin and staff only)
-  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
-      const tasks = await storage.getTasks();
+      const currentUser = req.user;
+      const allTasks = await storage.getTasks();
+      
+      // Filter tasks based on user role
+      let tasks = allTasks;
+      if (currentUser?.role !== UserRole.ADMIN) {
+        // For managers and staff: only show tasks assigned to them
+        tasks = allTasks.filter((t) => t.assignedTo === currentUser?.id);
+        console.log(`🔒 Tasks filtered for ${currentUser?.role}: ${tasks.length} assigned to user (out of ${allTasks.length} total)`);
+      }
+      
       res.json(tasks);
     } catch (error) {
       console.error(error);
