@@ -1194,36 +1194,36 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
       // Recent Activity Feed - OPTIMIZED: Only use most recent data to avoid slow sorting
       const recentActivity: any[] = [];
-      
+
       // Quick recent items only (first 3 of each)
 
       // Simplified activity feed - only most recent items (reduced from sorting everything)
       clients.slice(0, 2).forEach(client => {
-        recentActivity.push({
-          type: 'success',
+          recentActivity.push({
+            type: 'success',
           title: `Client: ${client.name}`,
-          time: formatActivityTime(client.createdAt),
-          timestamp: client.createdAt,
+            time: formatActivityTime(client.createdAt),
+            timestamp: client.createdAt,
+          });
         });
-      });
 
       campaigns.slice(0, 2).forEach(campaign => {
-        recentActivity.push({
-          type: 'info',
+          recentActivity.push({
+            type: 'info',
           title: `Campaign: ${campaign.name}`,
           time: formatActivityTime(campaign.createdAt),
           timestamp: campaign.createdAt,
+          });
         });
-      });
 
       tasks.filter(t => t.status === 'completed').slice(0, 2).forEach(task => {
-        recentActivity.push({
-          type: 'success',
-          title: `Task completed: ${task.title}`,
+          recentActivity.push({
+            type: 'success',
+            title: `Task completed: ${task.title}`,
           time: formatActivityTime(task.updatedAt),
           timestamp: task.updatedAt,
+          });
         });
-      });
 
       // Activity logs (logins, payments, etc.)
       activityLogs.forEach(log => {
@@ -1234,13 +1234,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           'client_added': 'success',
           'task_completed': 'success',
         };
-        recentActivity.push({
+          recentActivity.push({
           type: typeMap[log.activityType] || 'info',
           title: log.description,
           time: formatActivityTime(log.createdAt),
           timestamp: log.createdAt,
+          });
         });
-      });
 
       // Sort by timestamp (most recent first) and limit to 10
       const sortedActivity = recentActivity
@@ -1747,6 +1747,14 @@ Examples:
       const existingTask = await storage.getTask(req.params.id);
       if (!existingTask) {
         return res.status(404).json({ message: "Task not found" });
+      }
+
+      // Automatically set completedAt when status changes to completed
+      if (validatedData.status === "completed" && existingTask.status !== "completed") {
+        validatedData.completedAt = new Date();
+      } else if (validatedData.status && validatedData.status !== "completed") {
+        // Clear completedAt if status is changed away from completed
+        validatedData.completedAt = null;
       }
 
       const task = await storage.updateTask(req.params.id, validatedData);

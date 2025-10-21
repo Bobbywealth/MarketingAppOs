@@ -343,7 +343,6 @@ export default function TasksPage() {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       return apiRequest("PATCH", `/api/tasks/${id}`, { 
         status,
-        completedAt: status === "completed" ? new Date() : null,
       });
     },
     onSuccess: () => {
