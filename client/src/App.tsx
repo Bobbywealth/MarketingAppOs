@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -100,6 +100,7 @@ function Router() {
 
 function AppContent() {
   const { user, isLoading } = useAuth();
+  const [location] = useLocation();
   
   // Track page views automatically
   usePageTracking();
@@ -107,6 +108,34 @@ function AppContent() {
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
+  };
+
+  // Get page title based on current route
+  const getPageTitle = () => {
+    const path = location.toLowerCase();
+    
+    if (path === "/" || path === "/dashboard") return "Dashboard";
+    if (path === "/clients") return "Clients";
+    if (path === "/campaigns") return "Campaigns";
+    if (path === "/tasks") return "Tasks";
+    if (path === "/content") return "Content Calendar";
+    if (path === "/leads") return "Leads";
+    if (path === "/messages") return "Messages";
+    if (path === "/emails") return "Emails";
+    if (path === "/phone") return "Phone";
+    if (path === "/company-calendar") return "Calendar";
+    if (path === "/team") return "Team";
+    if (path === "/analytics") return "Analytics";
+    if (path === "/invoices") return "Billing";
+    if (path === "/subscription-packages") return "Packages";
+    if (path === "/onboarding") return "Onboarding";
+    if (path === "/tickets") return "Support Tickets";
+    if (path === "/website-projects") return "Website Projects";
+    if (path === "/second-me") return "Second Me";
+    if (path === "/training") return "Training";
+    if (path === "/settings") return "Settings";
+    
+    return "Marketing Team App";
   };
 
   if (isLoading) {
@@ -156,7 +185,12 @@ function AppContent() {
                 />
               </div>
               
-              {/* Center: Search (hidden on mobile) */}
+              {/* Center: Page Title (mobile) or Search (desktop) */}
+              <div className="flex md:hidden items-center justify-center flex-1">
+                <h1 className="text-lg font-semibold text-foreground truncate">
+                  {getPageTitle()}
+                </h1>
+              </div>
               <div className="hidden md:flex items-center justify-center flex-1">
                 <GlobalSearch />
               </div>
