@@ -136,7 +136,7 @@ function AppContent() {
                 <GlobalSearch />
               </div>
               <div className="flex items-center justify-end gap-2 flex-1">
-                <NotificationsCenter />
+                {/* <NotificationsCenter /> DISABLED DUE TO DATABASE ISSUES */}
                 <ThemeToggle />
               </div>
             </header>
