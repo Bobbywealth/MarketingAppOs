@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,10 +36,16 @@ export default function Clients() {
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>("none");
   const { toast} = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+  });
+
+  const { data: subscriptionPackages = [] } = useQuery<any[]>({
+    queryKey: ["/api/subscription-packages"],
+    retry: false,
   });
 
   const createClientMutation = useMutation({
@@ -49,6 +56,7 @@ export default function Clients() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       setDialogOpen(false);
+      setPaymentMethod("none");
       toast({ title: "Client created successfully" });
     },
     onError: () => {
@@ -131,7 +139,7 @@ export default function Clients() {
       .map(tag => tag.trim())
       .filter(Boolean);
 
-    createClientMutation.mutate({
+    const clientData: any = {
       name: formData.get("name"),
       email: formData.get("email"),
       phone: formData.get("phone"),
@@ -139,7 +147,26 @@ export default function Clients() {
       website: formData.get("website"),
       serviceTags,
       notes: formData.get("notes"),
-    });
+    };
+
+    // Add billing information if provided
+    const subscriptionPackageId = formData.get("subscriptionPackageId");
+    const paymentMethod = formData.get("paymentMethod");
+    const invoiceAmount = formData.get("invoiceAmount");
+
+    if (subscriptionPackageId) {
+      clientData.subscriptionPackageId = subscriptionPackageId;
+    }
+
+    if (paymentMethod) {
+      clientData.paymentMethod = paymentMethod;
+    }
+
+    if (invoiceAmount && paymentMethod === "manual") {
+      clientData.invoiceAmount = parseFloat(invoiceAmount as string);
+    }
+
+    createClientMutation.mutate(clientData);
   };
 
   const handleEditClient = (e: React.FormEvent<HTMLFormElement>) => {
@@ -239,7 +266,10 @@ export default function Clients() {
             <h1 className="text-4xl font-bold tracking-tight text-gradient" data-testid="text-page-title">Clients</h1>
             <p className="text-lg text-muted-foreground">Manage your client relationships</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setPaymentMethod("none");
+          }}>
             <DialogTrigger asChild>
               <Button size="lg" className="shadow-lg hover:shadow-xl transition-all" data-testid="button-add-client">
                 <Plus className="w-5 h-5 mr-2" />
@@ -280,6 +310,67 @@ export default function Clients() {
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea id="notes" name="notes" rows={3} data-testid="input-notes" className="glass" />
+                  </div>
+
+                  {/* Billing Setup Section */}
+                  <div className="col-span-2 pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <DollarSign className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Billing Setup (Optional)</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="subscriptionPackageId">Subscription Package</Label>
+                        <Select name="subscriptionPackageId">
+                          <SelectTrigger className="glass">
+                            <SelectValue placeholder="Select a package (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Package</SelectItem>
+                            {subscriptionPackages.map((pkg: any) => (
+                              <SelectItem key={pkg.id} value={pkg.id}>
+                                {pkg.name} - ${(pkg.price / 100).toFixed(2)}/mo
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paymentMethod">Payment Method</Label>
+                        <Select 
+                          name="paymentMethod" 
+                          value={paymentMethod}
+                          onValueChange={setPaymentMethod}
+                        >
+                          <SelectTrigger className="glass">
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None (Set up later)</SelectItem>
+                            <SelectItem value="stripe">Stripe (Automated Billing)</SelectItem>
+                            <SelectItem value="manual">Manual Invoice</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {paymentMethod === "manual" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="invoiceAmount">Invoice Amount ($)</Label>
+                          <Input 
+                            id="invoiceAmount" 
+                            name="invoiceAmount" 
+                            type="number" 
+                            step="0.01"
+                            placeholder="0.00" 
+                            className="glass" 
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            This will create a manual invoice for the client to pay
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-4">

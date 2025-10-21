@@ -26,7 +26,6 @@ import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
 import Leads from "@/pages/leads";
-import Pipeline from "@/pages/pipeline";
 import Content from "@/pages/content";
 import Invoices from "@/pages/invoices";
 import Tickets from "@/pages/tickets";
@@ -74,7 +73,6 @@ function Router() {
       {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
       {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
       {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
-      {!isClient && <ProtectedRoute path="/pipeline" component={Pipeline} />}
       {!isClient && <ProtectedRoute path="/content" component={Content} />}
       {!isClient && <ProtectedRoute path="/invoices" component={Invoices} />}
       {!isClient && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}

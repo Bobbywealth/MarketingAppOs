@@ -123,24 +123,13 @@ const companyTools = [
   },
 ];
 
-const businessTools = [
+// Operations Section (Clients, Marketing, Projects)
+const operationsTools = [
   {
     title: "Clients",
     url: "/clients",
     icon: Users,
     permission: "canManageClients" as const,
-  },
-  {
-    title: "Campaigns",
-    url: "/campaigns",
-    icon: Megaphone,
-    permission: "canManageCampaigns" as const,
-  },
-  {
-    title: "Tasks",
-    url: "/tasks",
-    icon: ListTodo,
-    permission: null, // Everyone can access tasks
   },
   {
     title: "Leads",
@@ -149,16 +138,56 @@ const businessTools = [
     permission: "canManageLeads" as const,
   },
   {
-    title: "Sales Pipeline",
-    url: "/pipeline",
-    icon: TrendingUp,
-    permission: "canManageLeads" as const,
+    title: "Campaigns",
+    url: "/campaigns",
+    icon: Megaphone,
+    permission: "canManageCampaigns" as const,
   },
   {
     title: "Content Calendar",
     url: "/content",
     icon: Calendar,
     permission: "canManageContent" as const,
+  },
+  {
+    title: "Tasks",
+    url: "/tasks",
+    icon: ListTodo,
+    permission: null, // Everyone can access tasks
+  },
+  {
+    title: "Onboarding",
+    url: "/onboarding",
+    icon: ClipboardCheck,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Support Tickets",
+    url: "/tickets",
+    icon: Ticket,
+    permission: "canManageTickets" as const,
+  },
+  {
+    title: "Website Projects",
+    url: "/website-projects",
+    icon: Globe,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Second Me",
+    url: "/admin-second-me",
+    icon: Sparkles,
+    permission: "canManageClients" as const,
+  },
+];
+
+// Business Section (Analytics, Finance, Admin)
+const businessTools = [
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
+    permission: "canManageClients" as const,
   },
   {
     title: "Invoices & Billing",
@@ -171,36 +200,6 @@ const businessTools = [
     url: "/subscription-packages",
     icon: Package,
     permission: "canManageUsers" as const, // Admin only
-  },
-  {
-    title: "Second Me",
-    url: "/admin-second-me",
-    icon: Sparkles,
-    permission: "canManageClients" as const,
-  },
-  {
-    title: "Support Tickets",
-    url: "/tickets",
-    icon: Ticket,
-    permission: "canManageTickets" as const,
-  },
-  {
-    title: "Onboarding",
-    url: "/onboarding",
-    icon: ClipboardCheck,
-    permission: "canManageClients" as const,
-  },
-  {
-    title: "Website Projects",
-    url: "/website-projects",
-    icon: Globe,
-    permission: "canManageClients" as const,
-  },
-  {
-    title: "Analytics",
-    url: "/analytics",
-    icon: BarChart3,
-    permission: "canManageClients" as const,
   },
   {
     title: "Training",
@@ -297,8 +296,13 @@ export function AppSidebar() {
     return canAccess(item.permission);
   });
 
-  const filteredBusinessTools = businessTools.filter(item => {
-    if (!item.permission) return true; // No permission required
+  const filteredOperations = operationsTools.filter(item => {
+    if (!item.permission) return true;
+    return canAccess(item.permission);
+  });
+
+  const filteredBusiness = businessTools.filter(item => {
+    if (!item.permission) return true;
     return canAccess(item.permission);
   });
 
@@ -340,14 +344,35 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Business/Marketing Tools Section */}
+        {/* Operations Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">
-            Business & Marketing
+            Operations
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredBusinessTools.map((item) => (
+              {filteredOperations.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url} data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}>
+                    <Link href={item.url}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Business Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">
+            Business
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {filteredBusiness.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url} data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}>
                     <Link href={item.url}>
@@ -398,3 +423,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
