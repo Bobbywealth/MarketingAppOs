@@ -3593,6 +3593,35 @@ Examples:
   // ============================================
 
   // Test Dialpad connection
+  // Manual database fix endpoint (ADMIN ONLY)
+  app.post("/api/admin/fix-database", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { db: dbClient } = await import('./db');
+      const { sql } = await import('drizzle-orm');
+      
+      console.log('🔧 Running manual database fixes...');
+      
+      // Execute raw SQL to add missing columns
+      await dbClient.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR DEFAULT 'info'`);
+      await dbClient.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR DEFAULT 'general'`);
+      await dbClient.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url VARCHAR`);
+      
+      console.log('✅ Database fixes applied successfully!');
+      
+      res.json({ 
+        success: true, 
+        message: 'Database columns added successfully. Refresh your dashboard now!' 
+      });
+    } catch (error: any) {
+      console.error('❌ Database fix failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message,
+        details: error.toString()
+      });
+    }
+  });
+
   app.get("/api/test-dialpad", async (req: Request, res: Response) => {
     try {
       if (!process.env.DIALPAD_API_KEY) {
