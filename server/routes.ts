@@ -3596,22 +3596,43 @@ Examples:
   // Manual database fix endpoint (ADMIN ONLY)
   app.post("/api/admin/fix-database", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
-      const { db: dbClient } = await import('./db');
-      const { sql } = await import('drizzle-orm');
+      const pg = await import('pg');
+      const { Pool } = pg.default;
       
-      console.log('🔧 Running manual database fixes...');
+      console.log('🔧 Running manual database fixes with raw PostgreSQL...');
       
-      // Execute raw SQL to add missing columns
-      await dbClient.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR DEFAULT 'info'`);
-      await dbClient.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR DEFAULT 'general'`);
-      await dbClient.execute(sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url VARCHAR`);
-      
-      console.log('✅ Database fixes applied successfully!');
-      
-      res.json({ 
-        success: true, 
-        message: 'Database columns added successfully. Refresh your dashboard now!' 
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       });
+      
+      const client = await pool.connect();
+      
+      try {
+        // Execute raw SQL to add missing columns
+        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR DEFAULT 'info'`);
+        console.log('✅ Added type column');
+        
+        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR DEFAULT 'general'`);
+        console.log('✅ Added category column');
+        
+        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url VARCHAR`);
+        console.log('✅ Added action_url column');
+        
+        client.release();
+        await pool.end();
+        
+        console.log('✅ Database fixes applied successfully!');
+        
+        res.json({ 
+          success: true, 
+          message: 'Database columns added successfully. Refresh your dashboard now!' 
+        });
+      } catch (error: any) {
+        client.release();
+        await pool.end();
+        throw error;
+      }
     } catch (error: any) {
       console.error('❌ Database fix failed:', error);
       res.status(500).json({ 
