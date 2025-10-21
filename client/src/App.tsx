@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -138,6 +139,7 @@ function AppContent() {
     return (
       <TooltipProvider>
         <Toaster />
+        <PWAInstallButton />
         <Router />
       </TooltipProvider>
     );
@@ -183,6 +185,7 @@ function AppContent() {
         </div>
       </SidebarProvider>
       <Toaster />
+      <PWAInstallButton />
     </TooltipProvider>
   );
 }
