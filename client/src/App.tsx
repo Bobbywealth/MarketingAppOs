@@ -16,6 +16,8 @@ import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
 import PaymentSuccessPage from "@/pages/payment-success";
+import mtaLogoBlue from "@assets/mta-logo-blue.png";
+import mtaLogoWhite from "@assets/mta-logo.png";
 import Dashboard from "@/pages/dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
 import ClientContent from "@/pages/client-content";
@@ -128,14 +130,29 @@ function AppContent() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center gap-4 px-4 py-3 border-b bg-background">
-              <div className="flex items-center gap-2 flex-1">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <header className="sticky top-0 z-50 flex items-center gap-3 px-3 md:px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              {/* Left: Hamburger + Logo */}
+              <div className="flex items-center gap-2 md:gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" className="md:mr-2" />
+                <img 
+                  src={mtaLogoBlue} 
+                  alt="Marketing Team App" 
+                  className="h-8 md:h-10 w-auto dark:hidden"
+                />
+                <img 
+                  src={mtaLogoWhite} 
+                  alt="Marketing Team App" 
+                  className="h-8 md:h-10 w-auto hidden dark:block"
+                />
               </div>
-              <div className="flex items-center justify-center flex-1">
+              
+              {/* Center: Search (hidden on mobile) */}
+              <div className="hidden md:flex items-center justify-center flex-1">
                 <GlobalSearch />
               </div>
-              <div className="flex items-center justify-end gap-2 flex-1">
+              
+              {/* Right: Actions */}
+              <div className="flex items-center gap-2 ml-auto">
                 {/* <NotificationsCenter /> DISABLED DUE TO DATABASE ISSUES */}
                 <ThemeToggle />
               </div>
