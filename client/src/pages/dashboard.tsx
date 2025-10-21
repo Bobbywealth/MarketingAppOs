@@ -215,7 +215,7 @@ export default function Dashboard() {
                       <p className="text-2xl font-bold text-violet-600 dark:text-violet-400" data-testid="metric-review-tasks">
                         {stats.taskMetrics.review}
                       </p>
-                      <p className="text-xs text-muted-foreground">In Review</p>
+                      <p className="text-xs text-muted-foreground">Review</p>
                     </div>
                   </div>
 
@@ -227,7 +227,7 @@ export default function Dashboard() {
                       <p className="text-2xl font-bold text-amber-600 dark:text-amber-400" data-testid="metric-pending-tasks">
                         {stats.taskMetrics.pending}
                       </p>
-                      <p className="text-xs text-muted-foreground">Pending</p>
+                      <p className="text-xs text-muted-foreground">To Do</p>
                     </div>
                   </div>
                 </div>
