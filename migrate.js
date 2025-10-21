@@ -267,14 +267,16 @@ async function runMigrations() {
       
       // Fix notifications table - add missing columns
       try {
-        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR NOT NULL DEFAULT 'info';`);
+        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR DEFAULT 'info';`);
+        await client.query(`UPDATE notifications SET type = 'info' WHERE type IS NULL;`);
         console.log('✅ Added type column to notifications');
       } catch (e) {
         console.log('⚠️ type column in notifications already exists or error:', e.message);
       }
 
       try {
-        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR NOT NULL DEFAULT 'general';`);
+        await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR DEFAULT 'general';`);
+        await client.query(`UPDATE notifications SET category = 'general' WHERE category IS NULL;`);
         console.log('✅ Added category column to notifications');
       } catch (e) {
         console.log('⚠️ category column in notifications already exists or error:', e.message);
