@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -11,6 +11,8 @@ import { NotificationsCenter } from "@/components/NotificationsCenter";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { usePageTracking } from "@/hooks/usePageTracking";
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
@@ -130,19 +132,27 @@ function AppContent() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="sticky top-0 z-50 flex items-center gap-3 px-3 md:px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className="sticky top-0 z-50 flex items-center gap-3 px-3 md:px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               {/* Left: Hamburger + Logo (logo only on mobile) */}
-              <div className="flex items-center gap-2 md:gap-3">
-                <SidebarTrigger data-testid="button-sidebar-toggle" className="md:mr-2" />
+              <div className="flex items-center gap-3 md:gap-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" asChild>
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    className="h-12 w-12 p-0 rounded-xl border-2 hover:bg-primary/10 hover:border-primary transition-all"
+                  >
+                    <Menu className="h-6 w-6" />
+                  </Button>
+                </SidebarTrigger>
                 <img 
                   src={mtaLogoBlue} 
                   alt="Marketing Team App" 
-                  className="h-10 w-auto dark:hidden md:hidden"
+                  className="h-20 w-auto dark:hidden md:hidden"
                 />
                 <img 
                   src={mtaLogoWhite} 
                   alt="Marketing Team App" 
-                  className="h-10 w-auto hidden dark:block md:dark:hidden"
+                  className="h-20 w-auto hidden dark:block md:dark:hidden"
                 />
               </div>
               
