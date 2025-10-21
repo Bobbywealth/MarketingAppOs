@@ -183,21 +183,23 @@ export default function Dashboard() {
 
                 {/* Task Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  {/* 📋 To Do */}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-2xl">
+                      📋
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-completed-tasks">
-                        {stats.taskMetrics.completed}
+                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400" data-testid="metric-pending-tasks">
+                        {stats.taskMetrics.pending}
                       </p>
-                      <p className="text-xs text-muted-foreground">Completed</p>
+                      <p className="text-xs text-muted-foreground">To Do</p>
                     </div>
                   </div>
 
+                  {/* ⚡ In Progress */}
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                      <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-2xl">
+                      ⚡
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="metric-inprogress-tasks">
@@ -207,9 +209,10 @@ export default function Dashboard() {
                     </div>
                   </div>
 
+                  {/* 👀 Review */}
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
-                    <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                      <Eye className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center text-2xl">
+                      👀
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-violet-600 dark:text-violet-400" data-testid="metric-review-tasks">
@@ -219,15 +222,16 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                      <ListTodo className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  {/* ✅ Completed */}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-2xl">
+                      ✅
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-amber-600 dark:text-amber-400" data-testid="metric-pending-tasks">
-                        {stats.taskMetrics.pending}
+                      <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-completed-tasks">
+                        {stats.taskMetrics.completed}
                       </p>
-                      <p className="text-xs text-muted-foreground">To Do</p>
+                      <p className="text-xs text-muted-foreground">Completed</p>
                     </div>
                   </div>
                 </div>
