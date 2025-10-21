@@ -137,12 +137,12 @@ function AppContent() {
                 <img 
                   src={mtaLogoBlue} 
                   alt="Marketing Team App" 
-                  className="h-8 w-auto dark:hidden md:hidden"
+                  className="h-10 w-auto dark:hidden md:hidden"
                 />
                 <img 
                   src={mtaLogoWhite} 
                   alt="Marketing Team App" 
-                  className="h-8 w-auto hidden dark:block md:dark:hidden"
+                  className="h-10 w-auto hidden dark:block md:dark:hidden"
                 />
               </div>
               
