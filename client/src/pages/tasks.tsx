@@ -576,15 +576,18 @@ export default function TasksPage() {
               {/* Expanded Details */}
               {expandedTaskId === task.id && (
                 <div className="px-4 py-4 bg-muted/20 border-t">
-                  <div className="space-y-3">
-                    {task.description && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">DESCRIPTION</p>
-                        <p className="text-sm">{task.description}</p>
-                      </div>
-                    )}
+                  <div className="space-y-4">
+                    {/* Description - Always show */}
+                    <div className="bg-background/50 rounded-lg p-3 border">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">DESCRIPTION</p>
+                      {task.description ? (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{task.description}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No description provided</p>
+                      )}
+                    </div>
                     
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1">STATUS</p>
                         <Select
