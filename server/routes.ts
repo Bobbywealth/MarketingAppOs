@@ -1323,6 +1323,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .slice(0, 5);
 
+      console.log("🔍 TOTAL CLIENTS DEBUG:");
+      console.log("   clients array length:", clients.length);
+      console.log("   clients array:", clients.map(c => ({ id: c.id, name: c.name })));
+
       const responseData = {
         totalClients: clients.length,
         activeCampaigns,

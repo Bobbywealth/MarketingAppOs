@@ -3,8 +3,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, DollarSign, Target } from "lucide-react";
+import { Plus, Calendar, DollarSign, Target, MoreVertical, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +17,8 @@ import type { Campaign, Client } from "@shared/schema";
 
 export default function Campaigns() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: campaigns, isLoading } = useQuery<Campaign[]>({
@@ -39,6 +43,21 @@ export default function Campaigns() {
     },
   });
 
+  const deleteCampaignMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/campaigns/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns"] });
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
+      toast({ title: "Campaign deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete campaign", variant: "destructive" });
+    },
+  });
+
   const handleCreateCampaign = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -54,6 +73,17 @@ export default function Campaigns() {
       startDate: formData.get("startDate") ? new Date(formData.get("startDate") as string) : null,
       endDate: formData.get("endDate") ? new Date(formData.get("endDate") as string) : null,
     });
+  };
+
+  const handleDeleteClick = (campaignId: string) => {
+    setCampaignToDelete(campaignId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (campaignToDelete) {
+      deleteCampaignMutation.mutate(campaignToDelete);
+    }
   };
 
   const getStatusGradient = (status: string) => {
@@ -218,9 +248,31 @@ export default function Campaigns() {
                 <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">
                   {campaign.name}
                 </CardTitle>
-                <Badge className={`bg-gradient-to-r ${getStatusGradient(campaign.status)} text-white shadow-md`}>
-                  {campaign.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={`bg-gradient-to-r ${getStatusGradient(campaign.status)} text-white shadow-md`}>
+                    {campaign.status}
+                  </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive cursor-pointer"
+                        onClick={() => handleDeleteClick(campaign.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Campaign
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
               <Badge className={`bg-gradient-to-r ${getTypeGradient(campaign.type)} border-0 w-fit shadow-sm`} variant="outline">
                 {campaign.type}
@@ -295,6 +347,28 @@ export default function Campaigns() {
         </Card>
       )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the campaign
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteCampaignMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
