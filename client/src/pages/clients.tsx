@@ -540,6 +540,60 @@ export default function Clients() {
                       <span className="truncate text-muted-foreground">{client.website}</span>
                     </div>
                   )}
+
+                  {/* Social Media Links */}
+                  {client.socialLinks && Object.keys(client.socialLinks as any).length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap text-sm p-2">
+                      {(client.socialLinks as any).instagram && (
+                        <a 
+                          href={`https://instagram.com/${(client.socialLinks as any).instagram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 transition-colors"
+                          title="Instagram"
+                        >
+                          <span className="text-pink-600 dark:text-pink-400">📷</span>
+                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).instagram}</span>
+                        </a>
+                      )}
+                      {(client.socialLinks as any).facebook && (
+                        <a 
+                          href={`https://facebook.com/${(client.socialLinks as any).facebook}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                          title="Facebook"
+                        >
+                          <span className="text-blue-600 dark:text-blue-400">📘</span>
+                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).facebook}</span>
+                        </a>
+                      )}
+                      {(client.socialLinks as any).twitter && (
+                        <a 
+                          href={`https://twitter.com/${(client.socialLinks as any).twitter.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
+                          title="Twitter/X"
+                        >
+                          <span className="text-sky-600 dark:text-sky-400">𝕏</span>
+                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).twitter}</span>
+                        </a>
+                      )}
+                      {(client.socialLinks as any).linkedin && (
+                        <a 
+                          href={`https://linkedin.com/in/${(client.socialLinks as any).linkedin}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-700/10 hover:bg-blue-700/20 transition-colors"
+                          title="LinkedIn"
+                        >
+                          <span className="text-blue-700 dark:text-blue-400">💼</span>
+                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).linkedin}</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {client.serviceTags && client.serviceTags.length > 0 && (

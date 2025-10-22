@@ -1878,14 +1878,16 @@ Examples:
               status: "todo",
               priority: existingTask.priority,
               dueDate: nextDueDate,
+              campaignId: existingTask.campaignId,
               clientId: existingTask.clientId,
               assignedToId: existingTask.assignedToId,
+              spaceId: existingTask.spaceId,
               isRecurring: true,
               recurringPattern: existingTask.recurringPattern,
               recurringInterval: existingTask.recurringInterval,
               recurringEndDate: existingTask.recurringEndDate,
             });
-            console.log("✅ New recurring task instance created for:", nextDueDate.toDateString());
+            console.log("✅ New recurring task instance created with campaign and space for:", nextDueDate.toDateString());
           }
         }
       }
