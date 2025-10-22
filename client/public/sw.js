@@ -1,3 +1,6 @@
+// OneSignal Service Worker Integration
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
+
 // Service Worker for Marketing Team App PWA
 const CACHE_NAME = 'mta-crm-v1';
 const STATIC_CACHE = 'mta-static-v1';

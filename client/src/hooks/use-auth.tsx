@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -7,6 +7,7 @@ import {
 import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { initOneSignal, setOneSignalUserId, logoutOneSignal, setOneSignalTag } from "@/lib/oneSignal";
 
 type AuthContextType = {
   user: SelectUser | null;
@@ -35,6 +36,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+
+  // Initialize OneSignal on mount
+  useEffect(() => {
+    initOneSignal();
+  }, []);
+
+  // Set OneSignal user ID when user logs in
+  useEffect(() => {
+    if (user?.id) {
+      setOneSignalUserId(String(user.id));
+      // Set user role as tag for segmented notifications
+      if (user.role) {
+        setOneSignalTag('role', user.role);
+      }
+    }
+  }, [user]);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
@@ -85,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
       queryClient.clear();
+      logoutOneSignal(); // Clear OneSignal user ID
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",

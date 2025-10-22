@@ -176,7 +176,7 @@ function AppContent() {
               
               {/* Right: Actions */}
               <div className="flex items-center gap-2 ml-auto">
-                {/* <NotificationsCenter /> DISABLED DUE TO DATABASE ISSUES */}
+                <NotificationsCenter />
                 <ThemeToggle />
               </div>
             </header>
