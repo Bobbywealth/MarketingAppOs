@@ -70,13 +70,23 @@ export const setOneSignalTag = (key: string, value: string) => {
 };
 
 // Request notification permission
-export const requestNotificationPermission = async () => {
-  if (window.OneSignalDeferred) {
-    window.OneSignalDeferred.push(async function(OneSignal: any) {
-      const permission = await OneSignal.Notifications.requestPermission();
-      console.log('Notification permission:', permission);
-      return permission;
-    });
-  }
+export const requestNotificationPermission = async (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    if (window.OneSignalDeferred) {
+      window.OneSignalDeferred.push(async function(OneSignal: any) {
+        try {
+          const permission = await OneSignal.Notifications.requestPermission();
+          console.log('Notification permission:', permission);
+          resolve(permission);
+        } catch (error) {
+          console.error('Failed to request notification permission:', error);
+          resolve(false);
+        }
+      });
+    } else {
+      console.warn('OneSignal not initialized');
+      resolve(false);
+    }
+  });
 };
 
