@@ -1858,30 +1858,36 @@ Examples:
         // Calculate next due date based on recurrence pattern
         let nextDueDate: Date | null = null;
         if (existingTask.dueDate && existingTask.recurringPattern && existingTask.recurringInterval) {
-          const currentDueDate = new Date(existingTask.dueDate);
-          nextDueDate = new Date(currentDueDate);
+          // Determine base date: use completion date or original due date
+          const now = new Date();
+          const baseDate = existingTask.scheduleFrom === "completion_date" ? now : new Date(existingTask.dueDate);
+          nextDueDate = new Date(baseDate);
+          
+          console.log(`📅 Calculating next due date from: ${existingTask.scheduleFrom || 'due_date'} (${baseDate.toDateString()})`);
           
           switch (existingTask.recurringPattern) {
             case "daily":
-              nextDueDate.setDate(currentDueDate.getDate() + existingTask.recurringInterval);
+              nextDueDate.setDate(baseDate.getDate() + existingTask.recurringInterval);
               break;
             case "weekly":
-              nextDueDate.setDate(currentDueDate.getDate() + (existingTask.recurringInterval * 7));
+              nextDueDate.setDate(baseDate.getDate() + (existingTask.recurringInterval * 7));
               break;
             case "monthly":
-              nextDueDate.setMonth(currentDueDate.getMonth() + existingTask.recurringInterval);
+              nextDueDate.setMonth(baseDate.getMonth() + existingTask.recurringInterval);
               break;
             case "yearly":
-              nextDueDate.setFullYear(currentDueDate.getFullYear() + existingTask.recurringInterval);
+              nextDueDate.setFullYear(baseDate.getFullYear() + existingTask.recurringInterval);
               break;
           }
+
+          console.log(`🎯 Next due date calculated: ${nextDueDate.toDateString()}`);
 
           // Check if we've exceeded the recurring end date
           if (existingTask.recurringEndDate && nextDueDate > new Date(existingTask.recurringEndDate)) {
             console.log("⏸️ Recurring task has reached end date, not creating new instance");
           } else {
             // Create new task instance
-            await storage.createTask({
+            const newTask = await storage.createTask({
               title: existingTask.title,
               description: existingTask.description,
               status: "todo",
@@ -1895,8 +1901,23 @@ Examples:
               recurringPattern: existingTask.recurringPattern,
               recurringInterval: existingTask.recurringInterval,
               recurringEndDate: existingTask.recurringEndDate,
+              scheduleFrom: existingTask.scheduleFrom,
             });
-            console.log("✅ New recurring task instance created with campaign and space for:", nextDueDate.toDateString());
+            console.log("✅ New recurring task instance created for:", nextDueDate.toDateString());
+            console.log("   Task ID:", newTask.id);
+
+            // Create notification for the new recurring task
+            if (existingTask.assignedToId) {
+              await storage.createNotification({
+                userId: existingTask.assignedToId,
+                type: 'info',
+                title: '🔄 Recurring Task Created',
+                message: `New instance of "${existingTask.title}" is due on ${nextDueDate.toLocaleDateString()}`,
+                actionUrl: `/tasks`,
+                isRead: false,
+              });
+              console.log("📬 Notification created for new recurring task");
+            }
           }
         }
       }
