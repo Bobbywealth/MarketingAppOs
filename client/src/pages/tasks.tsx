@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -522,6 +522,9 @@ export default function TasksPage() {
                   <div className="flex items-center gap-2">
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                     <span className="font-medium text-sm flex-1">{task.title}</span>
+                    {task.isRecurring && (
+                      <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" title={`Recurring: ${task.recurringPattern}`} />
+                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge className={`${getStatusColor(task.status)} text-xs`} variant="secondary">
@@ -543,6 +546,9 @@ export default function TasksPage() {
                   <div className="col-span-5 flex items-center gap-2 min-w-0">
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                     <span className="truncate text-sm font-medium">{task.title}</span>
+                    {task.isRecurring && (
+                      <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" title={`Recurring: ${task.recurringPattern}`} />
+                    )}
                   </div>
                   
                   <div className="col-span-2">
@@ -678,8 +684,14 @@ export default function TasksPage() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
                     <h3 className="font-semibold">{task.title}</h3>
+                    {task.isRecurring && (
+                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400">
+                        <Repeat className="w-3 h-3 mr-1" />
+                        {task.recurringPattern}
+                      </Badge>
+                    )}
                     <Badge className={getStatusColor(task.status)} variant="secondary">
                       {task.status.replace("_", " ")}
                     </Badge>
