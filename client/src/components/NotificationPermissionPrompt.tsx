@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, X, CheckCircle2, Clock, MessageSquare, Users } from "lucide-react";
+import { Bell, X, CheckCircle2, Clock, MessageSquare, Users, AlertCircle } from "lucide-react";
 import { requestNotificationPermission } from "@/lib/oneSignal";
+import { useToast } from "@/hooks/use-toast";
 
 export function NotificationPermissionPrompt() {
   const [isVisible, setIsVisible] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check if user has already been prompted or dismissed
@@ -34,13 +36,36 @@ export function NotificationPermissionPrompt() {
   const handleEnable = async () => {
     setIsRequesting(true);
     try {
-      await requestNotificationPermission();
+      console.log('Requesting notification permission...');
+      const granted = await requestNotificationPermission();
+      console.log('Permission granted:', granted);
+      
+      if (granted) {
+        toast({
+          title: "Notifications Enabled! 🎉",
+          description: "You'll now receive push notifications for important updates.",
+        });
+      } else {
+        toast({
+          title: "Notifications Blocked",
+          description: "You can enable them later in your browser settings.",
+          variant: "destructive",
+        });
+      }
+      
       // Close the prompt after requesting
       setTimeout(() => {
         setIsVisible(false);
-      }, 1000);
+      }, 500);
     } catch (error) {
       console.error('Failed to request notification permission:', error);
+      toast({
+        title: "Something went wrong",
+        description: "Please try again or check browser console for errors.",
+        variant: "destructive",
+      });
+      // Close prompt even on error
+      setIsVisible(false);
     } finally {
       setIsRequesting(false);
     }
