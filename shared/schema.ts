@@ -151,6 +151,7 @@ export const tasks = pgTable("tasks", {
   recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, yearly
   recurringInterval: integer("recurring_interval").default(1), // e.g., every 2 weeks
   recurringEndDate: timestamp("recurring_end_date"),
+  scheduleFrom: varchar("schedule_from").default("due_date"), // "due_date" or "completion_date"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

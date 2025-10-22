@@ -37,6 +37,7 @@ const taskFormSchema = z.object({
   status: z.enum(["todo", "in_progress", "review", "completed"]),
   priority: z.enum(["low", "normal", "high", "urgent"]),
   dueDate: z.string().optional(),
+  dueTime: z.string().optional(),
   campaignId: z.string().optional(),
   clientId: z.string().optional(),
   assignedToId: z.string().optional(),
@@ -45,6 +46,7 @@ const taskFormSchema = z.object({
   recurringPattern: z.enum(["daily", "weekly", "monthly", "yearly"]).optional(),
   recurringInterval: z.number().optional(),
   recurringEndDate: z.string().optional(),
+  scheduleFrom: z.enum(["due_date", "completion_date"]).optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -94,6 +96,7 @@ export default function TasksPage() {
       status: "todo",
       priority: "normal",
       dueDate: "",
+      dueTime: "",
       campaignId: "",
       clientId: "",
       assignedToId: "",
@@ -102,6 +105,7 @@ export default function TasksPage() {
       recurringPattern: undefined,
       recurringInterval: 1,
       recurringEndDate: "",
+      scheduleFrom: "due_date",
     },
   });
 
@@ -117,7 +121,16 @@ export default function TasksPage() {
       
       // Only add optional fields if they have values
       if (data.description) taskData.description = data.description;
-      if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
+      
+      // Combine date and time if both are provided
+      if (data.dueDate) {
+        if (data.dueTime) {
+          taskData.dueDate = `${data.dueDate}T${data.dueTime}`;
+        } else {
+          taskData.dueDate = data.dueDate;
+        }
+      }
+      
       if (data.campaignId) taskData.campaignId = data.campaignId;
       if (data.clientId) taskData.clientId = data.clientId;
       if (data.spaceId) {
@@ -137,7 +150,8 @@ export default function TasksPage() {
         taskData.isRecurring = true;
         if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
         if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
-        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate; // Send as string
+        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate;
+        if (data.scheduleFrom) taskData.scheduleFrom = data.scheduleFrom;
       }
       
       console.log("📤 Sending taskData:", taskData);
@@ -170,7 +184,16 @@ export default function TasksPage() {
       
       // Only add optional fields if they have values
       if (data.description) taskData.description = data.description;
-      if (data.dueDate) taskData.dueDate = data.dueDate; // Send as string, backend will convert
+      
+      // Combine date and time if both are provided
+      if (data.dueDate) {
+        if (data.dueTime) {
+          taskData.dueDate = `${data.dueDate}T${data.dueTime}`;
+        } else {
+          taskData.dueDate = data.dueDate;
+        }
+      }
+      
       if (data.campaignId) taskData.campaignId = data.campaignId;
       if (data.clientId) taskData.clientId = data.clientId;
       if (data.spaceId) taskData.spaceId = data.spaceId;
@@ -179,7 +202,8 @@ export default function TasksPage() {
         taskData.isRecurring = true;
         if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
         if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
-        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate; // Send as string
+        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate;
+        if (data.scheduleFrom) taskData.scheduleFrom = data.scheduleFrom;
       } else {
         taskData.isRecurring = false;
       }
@@ -943,19 +967,34 @@ export default function TasksPage() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="dueDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Due Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} data-testid="input-task-due-date" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="dueDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Due Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} data-testid="input-task-due-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dueTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Due Time (Optional)</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} placeholder="HH:MM" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
@@ -1109,6 +1148,47 @@ export default function TasksPage() {
                             )}
                           />
                         </div>
+
+                        <FormField
+                          control={form.control}
+                          name="scheduleFrom"
+                          render={({ field }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel>Schedule Next Task From</FormLabel>
+                              <FormControl>
+                                <div className="flex flex-col gap-2">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      value="due_date"
+                                      checked={field.value === "due_date"}
+                                      onChange={() => field.onChange("due_date")}
+                                      className="h-4 w-4"
+                                    />
+                                    <div>
+                                      <div className="font-medium text-sm">📅 Due Date</div>
+                                      <div className="text-xs text-muted-foreground">Next task uses same schedule (e.g., every Monday)</div>
+                                    </div>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      value="completion_date"
+                                      checked={field.value === "completion_date"}
+                                      onChange={() => field.onChange("completion_date")}
+                                      className="h-4 w-4"
+                                    />
+                                    <div>
+                                      <div className="font-medium text-sm">✅ Completion Date</div>
+                                      <div className="text-xs text-muted-foreground">Next task starts from when you complete this one</div>
+                                    </div>
+                                  </label>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                         <FormField
                           control={form.control}

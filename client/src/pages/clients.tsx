@@ -179,6 +179,18 @@ export default function Clients() {
       .map(tag => tag.trim())
       .filter(Boolean);
 
+    // Build social links object
+    const socialLinks: any = {};
+    const instagram = formData.get("instagram") as string;
+    const facebook = formData.get("facebook") as string;
+    const twitter = formData.get("twitter") as string;
+    const linkedin = formData.get("linkedin") as string;
+
+    if (instagram) socialLinks.instagram = instagram;
+    if (facebook) socialLinks.facebook = facebook;
+    if (twitter) socialLinks.twitter = twitter;
+    if (linkedin) socialLinks.linkedin = linkedin;
+
     updateClientMutation.mutate({
       id: editingClient.id,
       data: {
@@ -188,6 +200,7 @@ export default function Clients() {
         company: formData.get("company"),
         website: formData.get("website"),
         serviceTags,
+        socialLinks: Object.keys(socialLinks).length > 0 ? socialLinks : null,
         notes: formData.get("notes"),
       },
     });
@@ -965,6 +978,52 @@ export default function Clients() {
                     placeholder="SEO, PPC, Social Media (comma separated)" 
                   />
                   <p className="text-xs text-muted-foreground mt-1">Separate multiple tags with commas</p>
+                </div>
+
+                {/* Social Media Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <span>🌐</span>
+                    Social Media Accounts
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-instagram">Instagram</Label>
+                      <Input 
+                        id="edit-instagram" 
+                        name="instagram" 
+                        defaultValue={(editingClient.socialLinks as any)?.instagram || ""} 
+                        placeholder="@username or https://instagram.com/..." 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-facebook">Facebook</Label>
+                      <Input 
+                        id="edit-facebook" 
+                        name="facebook" 
+                        defaultValue={(editingClient.socialLinks as any)?.facebook || ""} 
+                        placeholder="username or profile URL" 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-twitter">Twitter/X</Label>
+                      <Input 
+                        id="edit-twitter" 
+                        name="twitter" 
+                        defaultValue={(editingClient.socialLinks as any)?.twitter || ""} 
+                        placeholder="@handle or profile URL" 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-linkedin">LinkedIn</Label>
+                      <Input 
+                        id="edit-linkedin" 
+                        name="linkedin" 
+                        defaultValue={(editingClient.socialLinks as any)?.linkedin || ""} 
+                        placeholder="username or profile URL" 
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
