@@ -34,6 +34,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarHeader,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -212,6 +213,7 @@ const businessTools = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { setOpenMobile } = useSidebar();
 
   // Check if running as PWA (standalone mode)
   const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
@@ -220,6 +222,11 @@ export function AppSidebar() {
   const logoutUrl = isPWA ? '/api/logout?pwa=true' : '/api/logout';
   const { canAccess } = usePermissions();
   const isClient = user?.role === 'client';
+
+  // Close sidebar on mobile when a link is clicked
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -260,7 +267,7 @@ export function AppSidebar() {
                       isActive={location === item.url}
                       data-testid={`sidebar-link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                     >
-                      <Link href={item.url} className="flex items-center gap-3">
+                      <Link href={item.url} className="flex items-center gap-3" onClick={handleLinkClick}>
                         <item.icon className="w-5 h-5" />
                         <span>{item.title}</span>
                       </Link>
@@ -339,7 +346,7 @@ export function AppSidebar() {
               {filteredCompanyTools.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url} data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}>
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={handleLinkClick}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -360,7 +367,7 @@ export function AppSidebar() {
               {filteredOperations.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url} data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}>
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={handleLinkClick}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -381,7 +388,7 @@ export function AppSidebar() {
               {filteredBusiness.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url} data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}>
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={handleLinkClick}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -410,7 +417,7 @@ export function AppSidebar() {
           </div>
         </div>
         <div className="space-y-1">
-          <Link href="/settings">
+          <Link href="/settings" onClick={handleLinkClick}>
             <div className="flex items-center gap-2 text-sm text-muted-foreground hover-elevate rounded-md px-3 py-2 transition-colors cursor-pointer">
               <Settings className="w-4 h-4" />
               <span>Settings</span>
