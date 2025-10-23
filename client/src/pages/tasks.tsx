@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -67,7 +67,16 @@ export default function TasksPage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(true);
+  // Load showCompleted preference from localStorage, default to false (hide completed)
+  const [showCompleted, setShowCompleted] = useState(() => {
+    const saved = localStorage.getItem('tasks-show-completed');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  // Save showCompleted preference to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('tasks-show-completed', JSON.stringify(showCompleted));
+  }, [showCompleted]);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
