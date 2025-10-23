@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
@@ -2434,6 +2435,31 @@ Examples:
     }
   });
 
+  // Get unread message counts per user (for badges)
+  app.get("/api/messages/unread-counts", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const currentUserId = (req.user as any).id;
+      const result = await pool.query(
+        `SELECT user_id, COUNT(*) as count 
+         FROM messages 
+         WHERE recipient_id = $1 AND is_read = false 
+         GROUP BY user_id`,
+        [currentUserId]
+      );
+      
+      // Convert to object { userId: count }
+      const counts: Record<number, number> = {};
+      result.rows.forEach((row: any) => {
+        counts[row.user_id] = parseInt(row.count);
+      });
+      
+      res.json(counts);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch unread counts" });
+    }
+  });
+
   // Get conversation between two users (for internal team messaging)
   app.get("/api/messages/conversation/:userId", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
@@ -2445,6 +2471,15 @@ Examples:
       }
 
       const messages = await storage.getConversation(currentUserId, otherUserId);
+      
+      // Mark all messages from this user as read
+      await pool.query(
+        `UPDATE messages 
+         SET is_read = true 
+         WHERE recipient_id = $1 AND user_id = $2 AND is_read = false`,
+        [currentUserId, otherUserId]
+      );
+      
       res.json(messages);
     } catch (error) {
       console.error(error);

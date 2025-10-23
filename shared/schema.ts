@@ -376,6 +376,7 @@ export const messages = pgTable("messages", {
   recipientId: integer("recipient_id").references(() => users.id), // For direct user messages
   content: text("content").notNull(),
   isInternal: boolean("is_internal").notNull().default(true),
+  isRead: boolean("is_read").notNull().default(false), // Track read status
   createdAt: timestamp("created_at").defaultNow(),
 });
 

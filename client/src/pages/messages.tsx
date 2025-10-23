@@ -26,6 +26,16 @@ export default function Messages() {
     queryKey: ["/api/users"],
   });
 
+  // Get unread message counts per user
+  const { data: unreadCounts } = useQuery<Record<number, number>>({
+    queryKey: ["/api/messages/unread-counts"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/messages/unread-counts", undefined);
+      return response.json();
+    },
+    refetchInterval: 3000, // Refresh every 3 seconds
+  });
+
   // Filter to only show admin, manager, and staff members (exclude clients and current user)
   const teamMembers = allUsers?.filter(u => 
     (u.role === 'admin' || u.role === 'manager' || u.role === 'staff') && 
@@ -46,6 +56,10 @@ export default function Messages() {
       return response.json();
     },
     refetchInterval: selectedUserId ? 3000 : false, // Auto-refresh every 3 seconds when conversation is open
+    onSuccess: () => {
+      // Invalidate unread counts after viewing a conversation
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
+    },
   });
 
   // Scroll to bottom when messages change
@@ -73,6 +87,7 @@ export default function Messages() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/conversation", selectedUserId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
       setMessageText("");
       toast({ title: "✅ Message sent" });
     },
@@ -165,6 +180,14 @@ export default function Messages() {
                             >
                               {member.role}
                             </Badge>
+                            {unreadCounts?.[member.id] && (
+                              <Badge 
+                                variant="destructive" 
+                                className="text-xs ml-auto animate-pulse"
+                              >
+                                {unreadCounts[member.id]}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">
                             Active • Click to message
