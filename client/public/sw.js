@@ -85,32 +85,5 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Handle push notifications (for future use)
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push notification received');
-  
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || 'Marketing Team App';
-  const options = {
-    body: data.body || 'You have a new notification',
-    icon: '/icon-192x192.png',
-    badge: '/icon-72x72.png',
-    vibrate: [200, 100, 200],
-    data: data.url || '/',
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
-});
-
-// Handle notification click
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked');
-  event.notification.close();
-
-  event.waitUntil(
-    clients.openWindow(event.notification.data)
-  );
-});
-
+// Push notifications are handled by OneSignal SDK (imported above)
+// No custom push handlers needed
