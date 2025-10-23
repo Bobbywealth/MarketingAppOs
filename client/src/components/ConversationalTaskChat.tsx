@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { parseInputDateEST } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import type { User as UserType, Client, Task } from "@shared/schema";
 
@@ -307,7 +308,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
         status: taskData.status || "todo",
         priority: taskData.priority || "normal",
         description: taskData.description || null,
-        dueDate: taskData.dueDate || null,
+        dueDate: taskData.dueDate ? parseInputDateEST(taskData.dueDate).toISOString() : null,
         assignedToId: taskData.assignedToId || null,
         clientId: taskData.clientId || null,
       };
@@ -318,7 +319,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
         taskPayload.recurringPattern = taskData.recurringPattern || "daily";
         taskPayload.recurringInterval = taskData.recurringInterval || 1;
         if (taskData.recurringEndDate) {
-          taskPayload.recurringEndDate = taskData.recurringEndDate;
+          taskPayload.recurringEndDate = parseInputDateEST(taskData.recurringEndDate).toISOString();
         }
       }
       

@@ -30,6 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
+import { parseInputDateEST } from "@/lib/dateUtils";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -122,12 +123,18 @@ export default function TasksPage() {
       // Only add optional fields if they have values
       if (data.description) taskData.description = data.description;
       
-      // Combine date and time if both are provided
+      // Combine date and time if both are provided, using EST timezone
       if (data.dueDate) {
         if (data.dueTime) {
-          taskData.dueDate = `${data.dueDate}T${data.dueTime}`;
+          // Parse as EST datetime
+          const estDateTime = parseInputDateEST(`${data.dueDate}T${data.dueTime}`);
+          taskData.dueDate = estDateTime.toISOString();
         } else {
-          taskData.dueDate = data.dueDate;
+          // Parse as EST date (end of day in EST)
+          const estDate = parseInputDateEST(data.dueDate);
+          // Set to end of day in EST to avoid timezone issues
+          estDate.setHours(23, 59, 59, 999);
+          taskData.dueDate = estDate.toISOString();
         }
       }
       
@@ -150,7 +157,7 @@ export default function TasksPage() {
         taskData.isRecurring = true;
         if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
         if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
-        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate;
+        if (data.recurringEndDate) taskData.recurringEndDate = parseInputDateEST(data.recurringEndDate).toISOString();
         if (data.scheduleFrom) taskData.scheduleFrom = data.scheduleFrom;
       }
       
@@ -185,12 +192,18 @@ export default function TasksPage() {
       // Only add optional fields if they have values
       if (data.description) taskData.description = data.description;
       
-      // Combine date and time if both are provided
+      // Combine date and time if both are provided, using EST timezone
       if (data.dueDate) {
         if (data.dueTime) {
-          taskData.dueDate = `${data.dueDate}T${data.dueTime}`;
+          // Parse as EST datetime
+          const estDateTime = parseInputDateEST(`${data.dueDate}T${data.dueTime}`);
+          taskData.dueDate = estDateTime.toISOString();
         } else {
-          taskData.dueDate = data.dueDate;
+          // Parse as EST date (end of day in EST)
+          const estDate = parseInputDateEST(data.dueDate);
+          // Set to end of day in EST to avoid timezone issues
+          estDate.setHours(23, 59, 59, 999);
+          taskData.dueDate = estDate.toISOString();
         }
       }
       
@@ -202,7 +215,7 @@ export default function TasksPage() {
         taskData.isRecurring = true;
         if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
         if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
-        if (data.recurringEndDate) taskData.recurringEndDate = data.recurringEndDate;
+        if (data.recurringEndDate) taskData.recurringEndDate = parseInputDateEST(data.recurringEndDate).toISOString();
         if (data.scheduleFrom) taskData.scheduleFrom = data.scheduleFrom;
       } else {
         taskData.isRecurring = false;
