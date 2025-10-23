@@ -62,6 +62,7 @@ export default function Invoices() {
     { description: "", amount: "" }
   ]);
   const [dateRange, setDateRange] = useState<{ start?: Date; end?: Date }>({});
+  const [dateRangeOption, setDateRangeOption] = useState<string>('all'); // Track selected option
   
   const { toast } = useToast();
 
@@ -201,7 +202,7 @@ export default function Invoices() {
         </div>
         <div className="flex gap-3 flex-wrap">
           <Select
-            value={dateRange.start ? 'custom' : 'all'}
+            value={dateRangeOption}
             onValueChange={(value) => {
               const now = new Date();
               let start: Date | undefined;
@@ -243,6 +244,7 @@ export default function Invoices() {
                   break;
               }
               
+              setDateRangeOption(value); // Track the selected option
               setDateRange({ start, end });
             }}
           >
