@@ -42,7 +42,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "ai",
-      content: "👋 Hey there! I'm your AI Task Assistant. I can help you:\n\n✨ **Create tasks** - Just tell me what to do\n🗑️ **Delete tasks** - Say \"delete [task name]\"\n📋 **Bulk create** - List multiple tasks at once\n🖼️ **Read images** - Upload a screenshot or photo\n\nExamples:\n• \"Call John tomorrow at 2pm - urgent\"\n• \"Delete the old meeting task\"\n• \"Create: 1) Review docs 2) Send email 3) Update report\"\n• Upload a to-do list screenshot!",
+      content: "Hey there! 👋 I'm your task assistant - think of me as your personal productivity buddy! 🚀\n\nJust tell me what you need to do in plain English, and I'll handle the rest. I can:\n\n✨ Create tasks from casual language\n📋 Add multiple tasks at once\n🖼️ Read screenshots or photos\n🗑️ Delete tasks you don't need\n\n**Try saying:**\n• \"Call Sarah tomorrow afternoon\"\n• \"Finish the proposal by Friday - high priority\"\n• \"Delete the old meeting task\"\n• Or just upload a screenshot!\n\nWhat's on your mind today? 😊",
       timestamp: new Date(),
     },
   ]);
@@ -139,9 +139,42 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     addMessage("user", userInput + (imageData ? " 📷" : ""));
 
     try {
+      const lowerInput = userInput.toLowerCase().trim();
+      
+      // Check for greetings - respond naturally!
+      const greetings = ["hi", "hello", "hey", "sup", "what's up", "whats up", "yo", "hola", "good morning", "good afternoon", "good evening"];
+      if (greetings.includes(lowerInput) || greetings.some(g => lowerInput === g || lowerInput.startsWith(g + " ") || lowerInput.startsWith(g + "!"))) {
+        const responses = [
+          "Hey there! 👋 What task can I help you create today?",
+          "Hi! 😊 Ready to knock out some tasks? What's on your mind?",
+          "Hello! ✨ What do you need to get done?",
+          "Hey! 🚀 Tell me what you're working on and I'll help organize it!",
+          "What's up! 👊 Got some tasks to add? Just tell me what you need!"
+        ];
+        addMessage("ai", responses[Math.floor(Math.random() * responses.length)]);
+        setIsProcessing(false);
+        setInput("");
+        return;
+      }
+
+      // Check for thank you / appreciation
+      const thanks = ["thanks", "thank you", "thx", "ty", "appreciate", "awesome", "great", "perfect"];
+      if (thanks.some(t => lowerInput.includes(t)) && lowerInput.split(' ').length <= 4) {
+        const responses = [
+          "You're welcome! 😊 Anything else you need?",
+          "Happy to help! 🙌 What else can I do for you?",
+          "No problem! ✨ Ready for another task?",
+          "Glad I could help! 💪 What's next?",
+        ];
+        addMessage("ai", responses[Math.floor(Math.random() * responses.length)]);
+        setIsProcessing(false);
+        setInput("");
+        return;
+      }
+
       // Check if this is a delete request
       const deleteKeywords = ["delete", "remove", "cancel", "drop"];
-      if (deleteKeywords.some(kw => userInput.toLowerCase().includes(kw))) {
+      if (deleteKeywords.some(kw => lowerInput.includes(kw))) {
         await handleDeleteTask(userInput);
         setIsProcessing(false);
         setInput("");
@@ -378,7 +411,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
     setMessages([
       {
         role: "ai",
-        content: "👋 Hey! Ready for another task? Just tell me what you need - I'll handle the details! 🚀",
+        content: "All done! 🎉 What else can I help you with? Just tell me what's next on your to-do list! 💪",
         timestamp: new Date(),
       },
     ]);
