@@ -3219,6 +3219,81 @@ Examples:
     }
   });
 
+  // Push Subscription routes
+  app.get("/api/push/vapid-public-key", (_req: Request, res: Response) => {
+    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
+  });
+
+  app.post("/api/push/subscribe", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const { subscription } = req.body;
+
+      if (!subscription || !subscription.endpoint) {
+        return res.status(400).json({ message: "Invalid subscription" });
+      }
+
+      // Store subscription in database
+      await pool.query(
+        `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (endpoint) DO UPDATE
+         SET user_id = $1, p256dh = $3, auth = $4, updated_at = NOW()`,
+        [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error saving push subscription:', error);
+      res.status(500).json({ message: "Failed to save subscription" });
+    }
+  });
+
+  app.post("/api/push/unsubscribe", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { endpoint } = req.body;
+
+      if (!endpoint) {
+        return res.status(400).json({ message: "Endpoint required" });
+      }
+
+      await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error removing push subscription:', error);
+      res.status(500).json({ message: "Failed to remove subscription" });
+    }
+  });
+
+  // Send push notification (Admin only)
+  app.post("/api/push/send", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { sendPushToUser, sendPushToRole, broadcastPush } = await import('./push.js');
+      const { userId, role, title, body, url, broadcast } = req.body;
+
+      if (!title || !body) {
+        return res.status(400).json({ message: "Title and body required" });
+      }
+
+      if (broadcast) {
+        await broadcastPush({ title, body, url });
+      } else if (userId) {
+        await sendPushToUser(userId, { title, body, url });
+      } else if (role) {
+        await sendPushToRole(role, { title, body, url });
+      } else {
+        return res.status(400).json({ message: "Must specify userId, role, or broadcast" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error sending push notification:', error);
+      res.status(500).json({ message: "Failed to send push notification" });
+    }
+  });
+
   // Activity logs routes (Admin only) - DISABLED DUE TO DATABASE ISSUES
   app.get("/api/activity-logs", isAuthenticated, requirePermission("canViewReports"), async (req: Request, res: Response) => {
     try {

@@ -48,6 +48,7 @@ import SubscriptionPackages from "@/pages/subscription-packages";
 import SecondMe from "@/pages/second-me";
 import AdminSecondMe from "@/pages/admin-second-me";
 import Training from "@/pages/training";
+import PushNotifications from "@/pages/push-notifications";
 import PWAHomePage from "@/pages/pwa-home";
 import NotFound from "@/pages/not-found";
 
@@ -94,6 +95,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
       {!isClient && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
       {!isClient && <ProtectedRoute path="/training" component={Training} />}
+      {!isClient && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/settings" component={Settings} />

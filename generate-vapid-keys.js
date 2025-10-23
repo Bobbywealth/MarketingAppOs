@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// Generate VAPID keys for Web Push
-const webpush = require('web-push');
+// Generate VAPID keys for Web Push (ES Module version)
+import webpush from 'web-push';
 
 console.log('🔑 Generating VAPID keys for Web Push...\n');
 
