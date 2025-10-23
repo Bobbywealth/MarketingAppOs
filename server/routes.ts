@@ -1520,6 +1520,26 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const validatedData = insertClientSchema.parse(req.body);
       console.log("Validated client data:", JSON.stringify(validatedData, null, 2));
       const client = await storage.createClient(validatedData);
+      
+      // Notify all admins and managers about new client
+      const users = await storage.getUsers();
+      const adminsAndManagers = users.filter(u => 
+        u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
+      );
+      
+      for (const user of adminsAndManagers) {
+        await storage.createNotification({
+          userId: user.id,
+          type: 'success',
+          title: '🎉 New Client Added',
+          message: `${client.name} has been added to the system`,
+          category: 'general',
+          actionUrl: '/clients',
+          isRead: false,
+        });
+      }
+      console.log(`📬 Notified ${adminsAndManagers.length} admins/managers about new client`);
+      
       res.status(201).json(client);
     } catch (error) {
       console.error("Error creating client:", error);
@@ -2037,6 +2057,26 @@ Examples:
     try {
       const validatedData = insertLeadSchema.parse(req.body);
       const lead = await storage.createLead(validatedData);
+      
+      // Notify all admins and managers about new lead
+      const users = await storage.getUsers();
+      const adminsAndManagers = users.filter(u => 
+        u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
+      );
+      
+      for (const user of adminsAndManagers) {
+        await storage.createNotification({
+          userId: user.id,
+          type: 'info',
+          title: '🎯 New Lead',
+          message: `${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
+          category: 'general',
+          actionUrl: '/leads',
+          isRead: false,
+        });
+      }
+      console.log(`📬 Notified ${adminsAndManagers.length} admins/managers about new lead`);
+      
       res.status(201).json(lead);
     } catch (error) {
       handleValidationError(error, res);
@@ -2428,6 +2468,22 @@ Examples:
       
       const message = await storage.createMessage(validatedData);
       console.log("✅ Message created successfully:", message.id);
+      
+      // Create notification for recipient
+      if (validatedData.recipientId) {
+        const sender = await storage.getUser(String(currentUserId));
+        await storage.createNotification({
+          userId: validatedData.recipientId,
+          type: 'info',
+          title: '💬 New Message',
+          message: `${sender?.firstName || sender?.username || 'Someone'} sent you a message`,
+          category: 'general',
+          actionUrl: '/messages',
+          isRead: false,
+        });
+        console.log("📬 Notification created for message recipient");
+      }
+      
       res.status(201).json(message);
     } catch (error: any) {
       console.error("❌ Failed to create message:", error);
