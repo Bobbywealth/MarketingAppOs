@@ -30,7 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
-import { parseInputDateEST } from "@/lib/dateUtils";
+import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST } from "@/lib/dateUtils";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -274,7 +274,7 @@ export default function TasksPage() {
       description: task.description || "",
       status: task.status as any,
       priority: task.priority as any,
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+      dueDate: task.dueDate ? toInputDateEST(task.dueDate) : "",
       campaignId: task.campaignId || "",
       clientId: task.clientId || "",
       spaceId: task.spaceId || "",
@@ -282,7 +282,7 @@ export default function TasksPage() {
       isRecurring: task.isRecurring || false,
       recurringPattern: task.recurringPattern as any,
       recurringInterval: task.recurringInterval || 1,
-      recurringEndDate: task.recurringEndDate ? new Date(task.recurringEndDate).toISOString().split('T')[0] : "",
+      recurringEndDate: task.recurringEndDate ? toInputDateEST(task.recurringEndDate) : "",
     });
     setIsEditDialogOpen(true);
   };
@@ -527,7 +527,7 @@ export default function TasksPage() {
                         {task.dueDate && (
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            {new Date(task.dueDate).toLocaleDateString()}
+                            {toLocaleDateStringEST(task.dueDate)}
                           </div>
                         )}
                         {task.assignedToId && (
@@ -595,7 +595,7 @@ export default function TasksPage() {
                     </Badge>
                     {task.dueDate && (
                       <span className="text-xs text-muted-foreground">
-                        {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {toLocaleDateStringEST(task.dueDate)}
                       </span>
                     )}
                   </div>
@@ -624,7 +624,7 @@ export default function TasksPage() {
                   </div>
                   
                   <div className="col-span-2 text-sm text-muted-foreground">
-                    {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "-"}
+                    {task.dueDate ? toLocaleDateStringEST(task.dueDate) : "-"}
                   </div>
                   
                   <div className="col-span-1 flex items-center justify-center">
@@ -677,7 +677,7 @@ export default function TasksPage() {
                           <p className="text-xs font-medium text-muted-foreground mb-1">DUE DATE</p>
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
-                            {new Date(task.dueDate).toLocaleDateString()}
+                            {toLocaleDateStringEST(task.dueDate)}
                           </div>
                         </div>
                       )}
@@ -775,7 +775,7 @@ export default function TasksPage() {
                     {task.dueDate && (
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
+                        Due: {toLocaleDateStringEST(task.dueDate)}
                       </div>
                     )}
                     {task.assignedToId && (
