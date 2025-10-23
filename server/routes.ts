@@ -1933,6 +1933,7 @@ Examples:
                 type: 'info',
                 title: '🔄 Recurring Task Created',
                 message: `New instance of "${existingTask.title}" is due on ${nextDueDate.toLocaleDateString()}`,
+                category: 'task',
                 actionUrl: `/tasks`,
                 isRead: false,
               });
