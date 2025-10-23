@@ -42,7 +42,7 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "ai",
-      content: "Hey there! 👋 I'm your task assistant - think of me as your personal productivity buddy! 🚀\n\nJust tell me what you need to do in plain English, and I'll handle the rest. I can:\n\n✨ Create tasks from casual language\n📋 Add multiple tasks at once\n🖼️ Read screenshots or photos\n🗑️ Delete tasks you don't need\n\n**Try saying:**\n• \"Call Sarah tomorrow afternoon\"\n• \"Finish the proposal by Friday - high priority\"\n• \"Delete the old meeting task\"\n• Or just upload a screenshot!\n\nWhat's on your mind today? 😊",
+      content: "Hey! 👋 I'm here to help you stay organized!\n\nJust talk to me like a normal person - no special format needed! Tell me what you need to do and I'll turn it into a task.\n\n**Some examples:**\n💬 \"Call Mike about the budget tomorrow\"\n💬 \"Remind me to send that email by Friday\"\n💬 \"I need to finish 3 things: review docs, update website, send invoices\"\n💬 Or upload a screenshot of your notes!\n\nWhat do you want to work on? 😊",
       timestamp: new Date(),
     },
   ]);
@@ -157,6 +157,21 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
         return;
       }
 
+      // Check for casual responses / acknowledgments (when not in confirm mode)
+      const casual = ["okay", "ok", "cool", "nice", "alright", "sure", "k", "kk", "got it", "sounds good", "yeah", "yep", "yup"];
+      if (currentStep !== "confirm" && casual.some(c => lowerInput === c || lowerInput === c + " :)" || lowerInput === c + "!")) {
+        const responses = [
+          "Awesome! 😊 So what's the task? Just describe it naturally - like \"Call John tomorrow\" or \"Finish the proposal by Friday\"",
+          "Cool! What do you need to get done? Just tell me in your own words! 💪",
+          "Perfect! What's on your to-do list? I'm all ears! 👂",
+          "Sweet! Let me know what you're working on and I'll organize it! ✨",
+        ];
+        addMessage("ai", responses[Math.floor(Math.random() * responses.length)]);
+        setIsProcessing(false);
+        setInput("");
+        return;
+      }
+
       // Check for thank you / appreciation
       const thanks = ["thanks", "thank you", "thx", "ty", "appreciate", "awesome", "great", "perfect"];
       if (thanks.some(t => lowerInput.includes(t)) && lowerInput.split(' ').length <= 4) {
@@ -165,6 +180,20 @@ export function ConversationalTaskChat({ isOpen, onClose, onTaskCreated }: Conve
           "Happy to help! 🙌 What else can I do for you?",
           "No problem! ✨ Ready for another task?",
           "Glad I could help! 💪 What's next?",
+        ];
+        addMessage("ai", responses[Math.floor(Math.random() * responses.length)]);
+        setIsProcessing(false);
+        setInput("");
+        return;
+      }
+
+      // Check for "I don't know" / "nothing" / "never mind"
+      const dismissive = ["idk", "i don't know", "i dont know", "nothing", "never mind", "nevermind", "not sure", "dunno"];
+      if (dismissive.some(d => lowerInput.includes(d))) {
+        const responses = [
+          "No worries! I'm here whenever you need me. Just say the word! 😊",
+          "All good! Whenever you're ready, just tell me what you need! 👍",
+          "That's okay! I'll be here when you think of something! ✨",
         ];
         addMessage("ai", responses[Math.floor(Math.random() * responses.length)]);
         setIsProcessing(false);

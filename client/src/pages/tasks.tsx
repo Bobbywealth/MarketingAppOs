@@ -30,7 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
-import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST } from "@/lib/dateUtils";
+import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -421,6 +421,22 @@ export default function TasksPage() {
       
       // If completed today, hide it
       if (completedDate.getTime() === today.getTime()) {
+        return false;
+      }
+    }
+    
+    // Hide tasks with future due dates (scheduled for tomorrow or later)
+    // Only hide if status is "todo" (not started yet)
+    if (task.status === "todo" && task.dueDate) {
+      const taskDueDate = toEST(task.dueDate);
+      const nowInEST = nowEST();
+      
+      // Set both to start of day for comparison
+      taskDueDate.setHours(0, 0, 0, 0);
+      nowInEST.setHours(0, 0, 0, 0);
+      
+      // If due date is in the future (tomorrow or later), hide it
+      if (taskDueDate.getTime() > nowInEST.getTime()) {
         return false;
       }
     }
