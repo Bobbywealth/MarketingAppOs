@@ -102,8 +102,8 @@ export function toInputDateTimeEST(date: Date | string | number): string {
 }
 
 /**
- * Parse input date as EST
- * Takes a date string like "2025-10-23" or "2025-10-23T14:30" and treats it as EST
+ * Parse input date as EST/EDT (America/New_York timezone)
+ * Takes a date string like "2025-10-23" or "2025-10-23T14:30" and treats it as America/New_York time
  */
 export function parseInputDateEST(dateString: string): Date {
   // Parse the date components
@@ -114,11 +114,10 @@ export function parseInputDateEST(dateString: string): Date {
   
   const [, year, month, day, hours = '00', minutes = '00'] = parts;
   
-  // Create a date string in EST timezone format
-  const estDateString = `${year}-${month}-${day}T${hours}:${minutes}:00`;
-  
-  // Use fromZonedTime to treat this as an EST time and convert to UTC
-  return fromZonedTime(estDateString, APP_TIMEZONE);
+  // Use fromZonedTime to properly convert from America/New_York time to UTC
+  // This function treats the input as if it's in the specified timezone
+  const dateInNY = `${year}-${month}-${day} ${hours}:${minutes}:00`;
+  return fromZonedTime(dateInNY, APP_TIMEZONE);
 }
 
 /**
