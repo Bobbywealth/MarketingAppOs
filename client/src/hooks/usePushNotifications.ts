@@ -31,18 +31,27 @@ export function usePushNotifications() {
     }
   }
 
-  async function urlBase64ToUint8Array(base64String: string) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding)
+  function urlBase64ToUint8Array(base64String: string): Uint8Array {
+    // Remove any padding
+    const base64 = base64String.replace(/=/g, '');
+    
+    // Convert base64url to base64
+    const standardBase64 = base64
       .replace(/-/g, '+')
       .replace(/_/g, '/');
+    
+    // Add padding
+    const padding = '='.repeat((4 - (standardBase64.length % 4)) % 4);
+    const paddedBase64 = standardBase64 + padding;
 
-    const rawData = window.atob(base64);
+    // Decode base64
+    const rawData = window.atob(paddedBase64);
     const outputArray = new Uint8Array(rawData.length);
 
     for (let i = 0; i < rawData.length; ++i) {
       outputArray[i] = rawData.charCodeAt(i);
     }
+    
     return outputArray;
   }
 
