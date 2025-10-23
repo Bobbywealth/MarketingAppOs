@@ -202,7 +202,7 @@ export default function PushNotifications() {
                 <Button
                   variant={targetType === "user" ? "default" : "outline"}
                   onClick={() => setTargetType("user")}
-                  className="flex items-center gap-2"}
+                  className="flex items-center gap-2"
                 >
                   <UserCheck className="w-4 h-4" />
                   Specific User
