@@ -2546,8 +2546,8 @@ Examples:
     }
   });
 
-  // User management routes (staff and admin only)
-  app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+  // User management routes (admin, manager, and staff)
+  app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
       const users = await storage.getAllUsers();
       // Filter out clients - they should only appear in /clients page, not team management
@@ -2968,23 +2968,7 @@ Examples:
     }
   });
 
-  // User management routes (Admin only)
-  app.get("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (_req: Request, res: Response) => {
-    try {
-      const users = await storage.getUsers();
-      // Don't send password hashes to frontend
-      const sanitizedUsers = users.map(({ id, username, role, createdAt }) => ({
-        id,
-        username,
-        role,
-        createdAt,
-      }));
-      res.json(sanitizedUsers);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
+  // Duplicate /api/users route removed - already defined at line 2550
 
   app.post("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
