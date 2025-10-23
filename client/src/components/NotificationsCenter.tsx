@@ -44,22 +44,34 @@ export function NotificationsCenter() {
     if (!soundEnabled) return;
     
     try {
-      // Create a simple beep sound
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      // Create a pleasant two-tone notification sound (like iOS)
+      const playTone = (frequency: number, startTime: number, duration: number) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine';
+        
+        // Louder volume with smooth envelope
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.02); // Quick attack
+        gainNode.gain.linearRampToValueAtTime(0.3, startTime + duration - 0.05); // Sustain
+        gainNode.gain.linearRampToValueAtTime(0, startTime + duration); // Fade out
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
       
-      oscillator.frequency.value = 800; // Frequency in Hz
-      oscillator.type = 'sine';
+      // Two-tone notification: higher pitch then lower pitch (like iOS/Android)
+      const now = audioContext.currentTime;
+      playTone(1000, now, 0.15); // First tone (higher)
+      playTone(800, now + 0.15, 0.15); // Second tone (lower)
       
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
     } catch (error) {
       console.error('Failed to play notification sound:', error);
     }
