@@ -2470,27 +2470,41 @@ Examples:
       const message = await storage.createMessage(validatedData);
       console.log("✅ Message created successfully:", message.id);
       
-      // Create notification for recipient
+      // Create notification for recipient (don't let this fail the message creation)
       if (validatedData.recipientId) {
-        const sender = await storage.getUser(String(currentUserId));
-        await storage.createNotification({
-          userId: validatedData.recipientId,
-          type: 'info',
-          title: '💬 New Message',
-          message: `${sender?.firstName || sender?.username || 'Someone'} sent you a message`,
-          category: 'general',
-          actionUrl: '/messages',
-          isRead: false,
-        });
-        console.log("📬 Notification created for message recipient");
+        try {
+          const sender = await storage.getUser(String(currentUserId));
+          await storage.createNotification({
+            userId: validatedData.recipientId,
+            type: 'info',
+            title: '💬 New Message',
+            message: `${sender?.firstName || sender?.username || 'Someone'} sent you a message`,
+            category: 'general',
+            actionUrl: '/messages',
+            isRead: false,
+          });
+          console.log("📬 Notification created for message recipient");
+        } catch (notifError) {
+          console.error("⚠️ Failed to create notification (non-critical):", notifError);
+          // Don't fail the message creation if notification fails
+        }
       }
       
       res.status(201).json(message);
     } catch (error: any) {
       console.error("❌ Failed to create message:", error);
+      console.error("Error name:", error?.name);
+      console.error("Error message:", error?.message);
+      console.error("Error stack:", error?.stack);
       console.error("Request body:", req.body);
       console.error("User ID:", (req.user as any)?.id);
-      handleValidationError(error, res);
+      
+      if (error instanceof ZodError) {
+        console.error("Validation errors:", JSON.stringify(error.errors, null, 2));
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      
+      res.status(500).json({ message: error?.message || "Internal server error" });
     }
   });
 
