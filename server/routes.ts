@@ -2995,10 +2995,17 @@ Examples:
   // Notifications routes
   app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Return empty array instead of querying broken notifications table
-      res.json([]);
-    } catch (error) {
-      console.error(error);
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      console.log("🔔 Fetching notifications for user:", userId);
+      
+      const notifications = await storage.getNotifications(userId);
+      console.log(`   Found ${notifications.length} notifications`);
+      
+      res.json(notifications);
+    } catch (error: any) {
+      console.error("❌ Error fetching notifications:", error);
       res.status(500).json({ message: "Failed to fetch notifications" });
     }
   });

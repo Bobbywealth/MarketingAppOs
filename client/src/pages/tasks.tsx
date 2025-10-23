@@ -397,7 +397,21 @@ export default function TasksPage() {
     if (filterPriority !== "all" && task.priority !== filterPriority) return false;
     // Filter by selected space (null = show all tasks)
     if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
-    // Hide completed tasks if toggle is off
+    
+    // Hide tasks completed TODAY (they'll reappear tomorrow)
+    if (task.status === "completed" && task.completedAt) {
+      const completedDate = new Date(task.completedAt);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      completedDate.setHours(0, 0, 0, 0);
+      
+      // If completed today, hide it
+      if (completedDate.getTime() === today.getTime()) {
+        return false;
+      }
+    }
+    
+    // Hide all completed tasks if toggle is off
     if (!showCompleted && task.status === "completed") return false;
     return true;
   });

@@ -104,6 +104,16 @@ export function NotificationsCenter() {
     },
   });
 
+  const createTestNotificationMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/notifications/test");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      playNotificationSound();
+    },
+  });
+
   const checkTasksMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/notifications/check-tasks", {});
@@ -258,6 +268,15 @@ export function NotificationsCenter() {
               <p className="text-xs text-muted-foreground mt-1">
                 We'll notify you when something important happens
               </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => createTestNotificationMutation.mutate()}
+                disabled={createTestNotificationMutation.isPending}
+                className="mt-4"
+              >
+                {createTestNotificationMutation.isPending ? "Creating..." : "Create Test Notification"}
+              </Button>
             </div>
           ) : (
             <div className="divide-y">
