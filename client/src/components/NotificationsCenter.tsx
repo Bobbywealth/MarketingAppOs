@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Bell, Check, CheckCheck, Trash2, X, AlertCircle, CheckCircle2, Info, AlertTriangle, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ export function NotificationsCenter() {
   const queryClient = useQueryClient();
   const previousCountRef = useRef<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [, setLocation] = useLocation();
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
@@ -134,6 +136,19 @@ export function NotificationsCenter() {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
     },
   });
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read
+    if (!notification.isRead) {
+      markAsReadMutation.mutate(notification.id);
+    }
+    
+    // Navigate to action URL if provided
+    if (notification.actionUrl) {
+      setIsOpen(false); // Close the popover
+      setLocation(notification.actionUrl);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -293,8 +308,9 @@ export function NotificationsCenter() {
                   key={notification.id}
                   className={`p-4 hover:bg-muted/50 transition-colors ${
                     !notification.isRead ? "bg-primary/5" : ""
-                  }`}
+                  } ${notification.actionUrl ? "cursor-pointer" : ""}`}
                   data-testid={`notification-${notification.id}`}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">{getIcon(notification.type)}</div>
@@ -326,7 +342,10 @@ export function NotificationsCenter() {
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs"
-                        onClick={() => markAsReadMutation.mutate(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsReadMutation.mutate(notification.id);
+                        }}
                         disabled={markAsReadMutation.isPending}
                       >
                         <Check className="w-3 h-3 mr-1" />
@@ -337,7 +356,10 @@ export function NotificationsCenter() {
                       variant="ghost"
                       size="sm"
                       className="h-7 text-xs text-destructive hover:text-destructive"
-                      onClick={() => deleteNotificationMutation.mutate(notification.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotificationMutation.mutate(notification.id);
+                      }}
                       disabled={deleteNotificationMutation.isPending}
                     >
                       <Trash2 className="w-3 h-3 mr-1" />
