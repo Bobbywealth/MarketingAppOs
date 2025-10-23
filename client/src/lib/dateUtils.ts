@@ -103,11 +103,22 @@ export function toInputDateTimeEST(date: Date | string | number): string {
 
 /**
  * Parse input date as EST
+ * Takes a date string like "2025-10-23" or "2025-10-23T14:30" and treats it as EST
  */
 export function parseInputDateEST(dateString: string): Date {
-  // Treat the input as EST time
-  const parsed = parseISO(dateString);
-  return fromEST(parsed);
+  // Parse the date components
+  const parts = dateString.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!parts) {
+    throw new Error('Invalid date format');
+  }
+  
+  const [, year, month, day, hours = '00', minutes = '00'] = parts;
+  
+  // Create a date string in EST timezone format
+  const estDateString = `${year}-${month}-${day}T${hours}:${minutes}:00`;
+  
+  // Use fromZonedTime to treat this as an EST time and convert to UTC
+  return fromZonedTime(estDateString, APP_TIMEZONE);
 }
 
 /**

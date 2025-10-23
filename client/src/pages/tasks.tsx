@@ -136,14 +136,10 @@ export default function TasksPage() {
       if (data.dueDate) {
         if (data.dueTime) {
           // Parse as EST datetime
-          const estDateTime = parseInputDateEST(`${data.dueDate}T${data.dueTime}`);
-          taskData.dueDate = estDateTime.toISOString();
+          taskData.dueDate = parseInputDateEST(`${data.dueDate}T${data.dueTime}`).toISOString();
         } else {
-          // Parse as EST date (end of day in EST)
-          const estDate = parseInputDateEST(data.dueDate);
-          // Set to end of day in EST to avoid timezone issues
-          estDate.setHours(23, 59, 59, 999);
-          taskData.dueDate = estDate.toISOString();
+          // Parse as EST date, set to end of day (11:59 PM EST)
+          taskData.dueDate = parseInputDateEST(`${data.dueDate}T23:59`).toISOString();
         }
       }
       
@@ -205,14 +201,10 @@ export default function TasksPage() {
       if (data.dueDate) {
         if (data.dueTime) {
           // Parse as EST datetime
-          const estDateTime = parseInputDateEST(`${data.dueDate}T${data.dueTime}`);
-          taskData.dueDate = estDateTime.toISOString();
+          taskData.dueDate = parseInputDateEST(`${data.dueDate}T${data.dueTime}`).toISOString();
         } else {
-          // Parse as EST date (end of day in EST)
-          const estDate = parseInputDateEST(data.dueDate);
-          // Set to end of day in EST to avoid timezone issues
-          estDate.setHours(23, 59, 59, 999);
-          taskData.dueDate = estDate.toISOString();
+          // Parse as EST date, set to end of day (11:59 PM EST)
+          taskData.dueDate = parseInputDateEST(`${data.dueDate}T23:59`).toISOString();
         }
       }
       
