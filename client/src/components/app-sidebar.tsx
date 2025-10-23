@@ -19,7 +19,8 @@ import {
   LogOut,
   Settings,
   Sparkles,
-  BookOpen
+  BookOpen,
+  Bell
 } from "lucide-react";
 import mtaLogoWhite from "@assets/mta-logo.png";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
@@ -207,6 +208,12 @@ const businessTools = [
     url: "/training",
     icon: BookOpen,
     permission: "canManageUsers" as const,
+  },
+  {
+    title: "Push Notifications",
+    url: "/push-notifications",
+    icon: Bell,
+    permission: "canManageUsers" as const, // Admin only
   },
 ];
 
