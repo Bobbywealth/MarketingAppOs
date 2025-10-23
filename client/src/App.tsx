@@ -8,7 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
-import { NotificationPermissionPrompt } from "@/components/NotificationPermissionPrompt";
+// NotificationPermissionPrompt removed - using Native Web Push
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -186,8 +186,7 @@ function AppContent() {
             </main>
           </div>
         </div>
-        {/* Notification Permission Prompt */}
-        <NotificationPermissionPrompt />
+        {/* NotificationPermissionPrompt removed - using Native Web Push */}
       </SidebarProvider>
       <Toaster />
       <PWAInstallButton />
