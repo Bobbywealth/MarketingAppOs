@@ -205,12 +205,17 @@ export function NotificationsCenter() {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
-          <Bell className="w-5 h-5" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative h-11 w-11 hover:bg-primary/10 transition-all rounded-xl" 
+          data-testid="button-notifications"
+        >
+          <Bell className={`w-6 h-6 transition-all ${unreadCount > 0 ? 'animate-pulse text-primary' : ''}`} />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center p-0 text-xs font-bold shadow-lg animate-pulse"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
