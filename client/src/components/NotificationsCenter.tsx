@@ -123,15 +123,6 @@ export function NotificationsCenter() {
     },
   });
 
-  const createTestNotificationMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/notifications/test", {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-    },
-  });
-
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Check for new notifications and play sound
