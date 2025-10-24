@@ -33,18 +33,14 @@ export function usePushNotifications() {
 
   function urlBase64ToUint8Array(base64String: string): Uint8Array {
     // Convert base64url to standard base64
-    const base64 = base64String
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
+    let base64 = base64String.replace(/-/g, '+').replace(/_/g, '/');
     
-    // Add proper padding
-    const paddedBase64 = base64.padEnd(
-      base64.length + ((4 - (base64.length % 4)) % 4),
-      '='
-    );
+    // Add padding if needed
+    const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+    base64 += padding;
 
     // Decode base64 to binary string
-    const rawData = window.atob(paddedBase64);
+    const rawData = window.atob(base64);
     
     // Convert binary string to Uint8Array
     const outputArray = new Uint8Array(rawData.length);
