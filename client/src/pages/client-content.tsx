@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Instagram, Facebook, Twitter, Linkedin, ChevronLeft, ChevronRight, Grid3x3, List, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Instagram, Facebook, Twitter, Linkedin, ChevronLeft, ChevronRight, Grid3x3, List, CheckCircle2, Clock, XCircle, Upload, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { SimpleUploader } from "@/components/SimpleUploader";
 
 interface ContentPost {
   id: string;
@@ -24,10 +31,73 @@ export default function ClientContent() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedPost, setSelectedPost] = useState<ContentPost | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    platform: "",
+    caption: "",
+    mediaUrl: "",
+    scheduledFor: "",
+    scheduledTime: "",
+  });
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: contentPosts = [], isLoading } = useQuery<ContentPost[]>({
     queryKey: ["/api/content-posts"],
   });
+
+  const createPostMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/content-posts", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
+      toast({
+        title: "Content Uploaded!",
+        description: "Your content has been submitted for approval.",
+      });
+      setUploadDialogOpen(false);
+      setUploadForm({
+        platform: "",
+        caption: "",
+        mediaUrl: "",
+        scheduledFor: "",
+        scheduledTime: "",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to upload content. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUploadSubmit = () => {
+    if (!uploadForm.platform || !uploadForm.caption) {
+      toast({
+        title: "Missing Fields",
+        description: "Please select a platform and add a caption.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const scheduledDateTime = uploadForm.scheduledFor && uploadForm.scheduledTime
+      ? `${uploadForm.scheduledFor}T${uploadForm.scheduledTime}:00Z`
+      : null;
+
+    createPostMutation.mutate({
+      platform: uploadForm.platform,
+      caption: uploadForm.caption,
+      mediaUrl: uploadForm.mediaUrl || null,
+      scheduledFor: scheduledDateTime,
+      approvalStatus: "pending", // Client-uploaded content starts as pending
+    });
+  };
 
   const getPlatformIcon = (platform: string) => {
     const iconMap: Record<string, any> = {
@@ -81,10 +151,17 @@ export default function ClientContent() {
         <div>
           <h1 className="text-3xl font-bold">Your Content Calendar</h1>
           <p className="text-muted-foreground mt-1">
-            View your scheduled content and approval status
+            View your scheduled content and upload your own
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setUploadDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Upload Content
+          </Button>
           <Button
             variant={viewMode === "calendar" ? "default" : "outline"}
             size="sm"
@@ -374,6 +451,114 @@ export default function ClientContent() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Content Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Upload Your Content</DialogTitle>
+            <DialogDescription>
+              Upload photos or videos from your photographer. We'll review and schedule them for you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="platform">Platform *</Label>
+              <Select
+                value={uploadForm.platform}
+                onValueChange={(value) => setUploadForm({ ...uploadForm, platform: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                  <SelectItem value="twitter">Twitter</SelectItem>
+                  <SelectItem value="linkedin">LinkedIn</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="caption">Caption *</Label>
+              <Textarea
+                id="caption"
+                placeholder="Write your caption here..."
+                value={uploadForm.caption}
+                onChange={(e) => setUploadForm({ ...uploadForm, caption: e.target.value })}
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <Label>Upload Media (Optional)</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Upload photos or videos for this post
+              </p>
+              <SimpleUploader
+                onUploadComplete={(url) => setUploadForm({ ...uploadForm, mediaUrl: url })}
+              />
+              {uploadForm.mediaUrl && (
+                <div className="mt-2">
+                  <img 
+                    src={uploadForm.mediaUrl} 
+                    alt="Uploaded content" 
+                    className="w-full rounded-lg object-cover max-h-64"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="scheduled-date">Preferred Date (Optional)</Label>
+                <Input
+                  id="scheduled-date"
+                  type="date"
+                  value={uploadForm.scheduledFor}
+                  onChange={(e) => setUploadForm({ ...uploadForm, scheduledFor: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="scheduled-time">Preferred Time (Optional)</Label>
+                <Input
+                  id="scheduled-time"
+                  type="time"
+                  value={uploadForm.scheduledTime}
+                  onChange={(e) => setUploadForm({ ...uploadForm, scheduledTime: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setUploadDialogOpen(false)}
+                disabled={createPostMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUploadSubmit}
+                disabled={createPostMutation.isPending}
+              >
+                {createPostMutation.isPending ? (
+                  <>
+                    <Upload className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Submit for Approval
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
