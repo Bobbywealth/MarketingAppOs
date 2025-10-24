@@ -2250,9 +2250,29 @@ Examples:
     }
   });
 
-  app.post("/api/content-posts", isAuthenticated, requirePermission("canManageContent"), async (req: Request, res: Response) => {
+  app.post("/api/content-posts", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
       console.log("Creating content post with data:", req.body);
+      
+      // If user is a client, they can only create content for themselves (pending approval)
+      if (user.role === 'client') {
+        const validatedData = insertContentPostSchema.parse({
+          ...req.body,
+          clientId: String(user.id), // Client can only create content for themselves
+          approvalStatus: 'pending', // Client uploads always start as pending
+        });
+        console.log("Client validated data:", validatedData);
+        const post = await storage.createContentPost(validatedData);
+        return res.status(201).json(post);
+      }
+      
+      // Admin/manager/staff can create content for any client
+      const hasPermission = await storage.checkPermission(user.id, "canManageContent");
+      if (!hasPermission) {
+        return res.status(403).json({ message: "You don't have permission to manage content" });
+      }
+      
       const validatedData = insertContentPostSchema.parse(req.body);
       console.log("Validated data:", validatedData);
       const post = await storage.createContentPost(validatedData);
@@ -3777,7 +3797,7 @@ Examples:
     }
   });
 
-  // Client: Create Second Me request (upload photos)
+  // Client: Create Second Me request (onboarding with character data)
   app.post("/api/second-me", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
@@ -3789,24 +3809,118 @@ Examples:
         return res.status(400).json({ message: "No client record found" });
       }
 
-      const { photoUrls } = req.body;
+      const { 
+        photos, 
+        characterName, 
+        vibe, 
+        mission, 
+        storyWords, 
+        topics, 
+        personalityType,
+        dreamCollab,
+        catchphrase,
+        targetAudience,
+        contentStyle,
+        bio
+      } = req.body;
 
-      if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length < 15) {
-        return res.status(400).json({ message: "Minimum 15 photos required" });
+      if (!photos || !Array.isArray(photos) || photos.length < 5) {
+        return res.status(400).json({ message: "Minimum 5 photos required" });
+      }
+
+      if (!characterName || !vibe || !mission) {
+        return res.status(400).json({ message: "Missing required character information" });
       }
 
       const secondMeRecord = await storage.createSecondMe({
         clientId: userRecord.clientId,
-        photoUrls,
+        photoUrls: photos, // Use photos from form
+        characterName,
+        vibe,
+        mission,
+        storyWords,
+        topics: JSON.stringify(topics || []),
+        personalityType,
+        dreamCollab,
+        catchphrase,
+        targetAudience,
+        contentStyle,
+        bio,
         status: "pending",
-        setupPaid: false,
-        weeklySubscriptionActive: false,
+        setupPaid: true, // FREE FOR TESTING
+        weeklySubscriptionActive: true, // FREE FOR TESTING
       });
 
       res.status(201).json(secondMeRecord);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to create Second Me request" });
+    }
+  });
+
+  // Client: Get character profile
+  app.get("/api/second-me/character", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+
+      // Get user to find clientId
+      const userRecord = await storage.getUser(userId.toString());
+      if (!userRecord || !userRecord.clientId) {
+        return res.status(404).json({ message: "No client record found" });
+      }
+
+      const secondMeRecord = await storage.getSecondMe(userRecord.clientId);
+      
+      if (!secondMeRecord) {
+        return res.json(null);
+      }
+
+      // Parse topics if stored as JSON string
+      const character = {
+        ...secondMeRecord,
+        topics: typeof secondMeRecord.topics === 'string' 
+          ? JSON.parse(secondMeRecord.topics) 
+          : secondMeRecord.topics || [],
+        photos: secondMeRecord.photoUrls || [],
+      };
+
+      res.json(character);
+    } catch (error) {
+      console.error('Character fetch error:', error);
+      res.json(null);
+    }
+  });
+
+  // Client: Get AI-generated content
+  app.get("/api/second-me/content", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+
+      // Get user to find clientId
+      const userRecord = await storage.getUser(userId.toString());
+      if (!userRecord || !userRecord.clientId) {
+        return res.status(404).json({ message: "No client record found" });
+      }
+
+      const content = await storage.getSecondMeContentByClientId(userRecord.clientId);
+      
+      // Transform to match frontend interface
+      const transformedContent = content.map(item => ({
+        id: item.id,
+        title: item.caption || `AI Content ${item.id}`,
+        type: item.contentType as "image" | "video",
+        url: item.mediaUrl,
+        thumbnail: item.mediaUrl, // Use same URL for thumbnail for now
+        createdAt: item.createdAt,
+        description: item.caption,
+      }));
+      
+      res.json(transformedContent);
+    } catch (error) {
+      console.error('Content fetch error:', error);
+      res.json([]);
     }
   });
 

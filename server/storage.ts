@@ -1096,6 +1096,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(secondMeContent.createdAt));
   }
 
+  async getSecondMeContentByClientId(clientId: number): Promise<SecondMeContent[]> {
+    return await db
+      .select()
+      .from(secondMeContent)
+      .where(eq(secondMeContent.clientId, clientId.toString()))
+      .orderBy(desc(secondMeContent.createdAt));
+  }
+
   async createSecondMeContent(data: InsertSecondMeContent): Promise<SecondMeContent> {
     const [record] = await db
       .insert(secondMeContent)

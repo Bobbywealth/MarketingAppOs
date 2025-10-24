@@ -13,6 +13,7 @@ import { User, Upload, Check, X, Sparkles, Image as ImageIcon, Video } from "luc
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SimpleUploader } from "@/components/SimpleUploader";
+import { useLocation } from "wouter";
 
 interface SecondMeRequest {
   id: string;
@@ -29,6 +30,7 @@ interface SecondMeRequest {
 
 export default function AdminSecondMePage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedRequest, setSelectedRequest] = useState<SecondMeRequest | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -139,13 +141,21 @@ export default function AdminSecondMePage() {
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight flex items-center gap-3">
+          <h1 className="text-4xl font-bold tracking-tight flex items-center justify-center gap-3">
             <Sparkles className="w-10 h-10 text-primary" />
             Second Me Management
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground mb-4">
             Manage client AI avatar requests and weekly content delivery
           </p>
+          <Button 
+            size="lg"
+            onClick={() => setLocation("/admin-second-me/upload")}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+          >
+            <Upload className="w-5 h-5 mr-2" />
+            Upload AI Content for Clients
+          </Button>
         </div>
 
         {/* Stats */}
