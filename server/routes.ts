@@ -1528,7 +1528,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
       );
       
+      const { sendPushToUser } = await import('./push.js');
+      
       for (const user of adminsAndManagers) {
+        // In-app notification
         await storage.createNotification({
           userId: user.id,
           type: 'success',
@@ -1538,6 +1541,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           actionUrl: '/clients',
           isRead: false,
         });
+        
+        // Push notification
+        await sendPushToUser(user.id, {
+          title: '🎉 New Client Added',
+          body: `${client.name} has been added to the system`,
+          url: '/clients',
+        }).catch(err => console.error('Failed to send push notification:', err));
       }
       console.log(`📬 Notified ${adminsAndManagers.length} admins/managers about new client`);
       
@@ -1757,6 +1767,20 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const validatedData = insertTaskSchema.parse(req.body);
       console.log("✅ Validation passed, creating task:", validatedData);
       const task = await storage.createTask(validatedData);
+      
+      // Send push notification if task is assigned to someone
+      if (task.assignedToId) {
+        const { sendPushToUser } = await import('./push.js');
+        const user = req.user as any;
+        const creatorName = user?.username || 'Someone';
+        
+        await sendPushToUser(task.assignedToId, {
+          title: '📋 New Task Assigned',
+          body: `${creatorName} assigned you: "${task.title}"`,
+          url: '/tasks',
+        }).catch(err => console.error('Failed to send push notification:', err));
+      }
+      
       res.status(201).json(task);
     } catch (error) {
       console.error("❌ Task creation error:", error);
@@ -2066,7 +2090,10 @@ Examples:
         u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
       );
       
+      const { sendPushToUser } = await import('./push.js');
+      
       for (const user of adminsAndManagers) {
+        // In-app notification
         await storage.createNotification({
           userId: user.id,
           type: 'info',
@@ -2076,6 +2103,13 @@ Examples:
           actionUrl: '/leads',
           isRead: false,
         });
+        
+        // Push notification
+        await sendPushToUser(user.id, {
+          title: '🎯 New Lead',
+          body: `${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
+          url: '/leads',
+        }).catch(err => console.error('Failed to send push notification:', err));
       }
       console.log(`📬 Notified ${adminsAndManagers.length} admins/managers about new lead`);
       
@@ -2509,16 +2543,27 @@ Examples:
       if (validatedData.recipientId) {
         try {
           const sender = await storage.getUser(String(currentUserId));
+          const senderName = sender?.firstName || sender?.username || 'Someone';
+          
+          // In-app notification
           await storage.createNotification({
             userId: validatedData.recipientId,
             type: 'info',
             title: '💬 New Message',
-            message: `${sender?.firstName || sender?.username || 'Someone'} sent you a message`,
+            message: `${senderName} sent you a message`,
             category: 'general',
             actionUrl: '/messages',
             isRead: false,
           });
           console.log("📬 Notification created for message recipient");
+          
+          // Push notification
+          const { sendPushToUser } = await import('./push.js');
+          await sendPushToUser(validatedData.recipientId, {
+            title: '💬 New Message',
+            body: `${senderName}: ${validatedData.content?.substring(0, 100) || 'Sent you a message'}`,
+            url: '/messages',
+          }).catch(err => console.error('Failed to send push notification:', err));
         } catch (notifError) {
           console.error("⚠️ Failed to create notification (non-critical):", notifError);
           // Don't fail the message creation if notification fails
