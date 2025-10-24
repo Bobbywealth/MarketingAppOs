@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Search, Users, MessageSquare, Check, CheckCheck } from "lucide-react";
+import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -132,8 +132,8 @@ export default function Messages() {
       </div>
 
       <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
-        {/* Team Members Sidebar */}
-        <div className="hidden md:flex md:col-span-4 border-r flex-col">
+        {/* Team Members Sidebar - Now visible on mobile */}
+        <div className={`${selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-4 border-r flex-col`}>
           <div className="p-4 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -202,10 +202,10 @@ export default function Messages() {
           </ScrollArea>
         </div>
 
-        {/* Messages Area */}
-        <div className="col-span-1 md:col-span-8 flex flex-col">
+        {/* Messages Area - Now with back button on mobile */}
+        <div className={`${!selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-8 flex-col`}>
           {!selectedUserId ? (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 hidden md:flex items-center justify-center">
               <div className="text-center">
                 <MessageSquare className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
                 <p className="text-lg font-medium mb-1">Select a team member</p>
@@ -219,6 +219,15 @@ export default function Messages() {
               {/* Chat Header */}
               <div className="p-4 border-b">
                 <div className="flex items-center gap-3">
+                  {/* Back button for mobile */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    onClick={() => setSelectedUserId(null)}
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
                   <Avatar className="w-10 h-10">
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {selectedUser && getInitials(selectedUser.username)}
