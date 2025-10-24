@@ -344,7 +344,7 @@ export default function ClientDashboard() {
                   </div>
                   {secondMe.weeklySubscriptionActive && (
                     <p className="text-xs text-muted-foreground mt-3">
-                      💰 $80/week • 4 AI-generated content pieces
+                      💰 $24.99/week • 4 AI-generated content pieces
                     </p>
                   )}
                 </div>
@@ -378,7 +378,7 @@ export default function ClientDashboard() {
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-xs font-semibold mb-1">Weekly Content</p>
-                    <p className="text-lg font-bold">$80/week</p>
+                    <p className="text-lg font-bold">$24.99/week</p>
                   </div>
                 </div>
                 <Link href="/second-me">

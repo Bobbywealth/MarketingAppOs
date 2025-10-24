@@ -372,7 +372,7 @@ export default function AdminSecondMePage() {
                   {selectedRequest.weeklySubscriptionActive ? (
                     <div className="space-y-4">
                       <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                        <p className="text-sm font-medium">📅 Weekly Subscription Active - $80/week</p>
+                        <p className="text-sm font-medium">📅 Weekly Subscription Active - $24.99/week</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Upload 4 pieces of AI-generated content each week
                         </p>

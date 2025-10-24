@@ -178,7 +178,7 @@ export default function SecondMePage() {
                     <span className="font-semibold">Weekly Content</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold">$80/week</span>
+                    <span className="text-2xl font-bold">$24.99/week</span>
                     {secondMe.weeklySubscriptionActive ? (
                       <Badge className="bg-green-500/20 text-green-700">Active</Badge>
                     ) : (
@@ -290,7 +290,7 @@ export default function SecondMePage() {
               <CardDescription>Recurring subscription</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold mb-4">$80/week</div>
+              <div className="text-4xl font-bold mb-4">$24.99/week</div>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-green-500" />
