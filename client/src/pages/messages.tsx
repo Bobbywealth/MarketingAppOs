@@ -123,8 +123,8 @@ export default function Messages() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
-      <div className="p-4 md:p-6 border-b">
+    <div className="min-h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] flex flex-col">
+      <div className="p-4 md:p-6 border-b bg-white sticky top-0 z-10">
         <div className="space-y-1 md:space-y-2">
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
           <p className="text-sm md:text-base text-muted-foreground">Internal communication with admins and staff</p>
@@ -133,8 +133,11 @@ export default function Messages() {
 
       <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
         {/* Team Members Sidebar - Now visible on mobile */}
-        <div className={`${selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-4 border-r flex-col`}>
-          <div className="p-4 border-b">
+        <div className={`${selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-4 border-r flex-col min-h-[calc(100vh-12rem)] md:min-h-0`}>
+          <div className="p-4 border-b space-y-3">
+            <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs font-medium text-blue-900">👆 Tap a team member to start messaging</p>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -161,8 +164,10 @@ export default function Messages() {
                     <div
                       key={member.id}
                       onClick={() => setSelectedUserId(member.id)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-accent ${
-                        selectedUserId === member.id ? 'bg-accent' : ''
+                      className={`p-3 md:p-3 rounded-lg cursor-pointer transition-all active:scale-98 ${
+                        selectedUserId === member.id 
+                          ? 'bg-accent border-l-4 border-primary' 
+                          : 'hover:bg-accent hover:shadow-sm'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -203,7 +208,7 @@ export default function Messages() {
         </div>
 
         {/* Messages Area - Now with back button on mobile */}
-        <div className={`${!selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-8 flex-col`}>
+        <div className={`${!selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-8 flex-col min-h-[calc(100vh-12rem)] md:min-h-0`}>
           {!selectedUserId ? (
             <div className="flex-1 hidden md:flex items-center justify-center">
               <div className="text-center">
@@ -217,34 +222,36 @@ export default function Messages() {
           ) : (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b">
-                <div className="flex items-center gap-3">
+              <div className="p-3 md:p-4 border-b bg-white sticky top-0 z-10">
+                <div className="flex items-center gap-2 md:gap-3">
                   {/* Back button for mobile */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="md:hidden"
+                    className="md:hidden hover:bg-accent"
                     onClick={() => setSelectedUserId(null)}
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <Avatar className="w-10 h-10">
+                  <Avatar className="w-10 h-10 md:w-12 md:h-12">
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {selectedUser && getInitials(selectedUser.username)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold">{selectedUser?.username}</h3>
+                    <h3 className="font-semibold text-sm md:text-base">{selectedUser?.username}</h3>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span className="text-xs text-muted-foreground">Online</span>
+                      <span className="text-xs text-muted-foreground">
+                        {selectedUser?.role === 'admin' ? 'Admin' : selectedUser?.role === 'manager' ? 'Manager' : 'Staff'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 p-3 md:p-4">
                 {messagesLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
@@ -314,7 +321,7 @@ export default function Messages() {
               </ScrollArea>
 
               {/* Message Input */}
-              <div className="p-4 border-t">
+              <div className="p-3 md:p-4 border-t bg-white sticky bottom-0">
                 <form onSubmit={handleSendMessage} className="flex gap-2">
                   <Input
                     value={messageText}
@@ -328,10 +335,11 @@ export default function Messages() {
                     type="submit"
                     disabled={!messageText.trim() || sendMessageMutation.isPending}
                     data-testid="button-send-message"
-                    className="gap-2"
+                    className="gap-2 shrink-0"
+                    size="default"
                   >
                     <Send className="w-4 h-4" />
-                    Send
+                    <span className="hidden sm:inline">Send</span>
                   </Button>
                 </form>
               </div>
