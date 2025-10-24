@@ -3178,26 +3178,50 @@ Examples:
         
         // Past due (overdue)
         if (hoursDiff < 0) {
+          const targetUserId = task.assignedToId || userId;
+          
+          // In-app notification
           await storage.createNotification({
-            userId: task.assignedToId || userId,
+            userId: targetUserId,
             type: 'error',
             title: '⏰ Task Overdue!',
             message: `Task "${task.title}" is overdue!`,
             category: 'deadline',
             actionUrl: '/tasks',
           });
+          
+          // Push notification
+          const { sendPushToUser } = await import('./push.js');
+          await sendPushToUser(targetUserId, {
+            title: '🚨 Task Overdue!',
+            body: `"${task.title}" is overdue!`,
+            url: '/tasks',
+          }).catch(err => console.error('Failed to send push notification:', err));
+          
           notificationsCreated++;
         }
         // Due within 24 hours
         else if (hoursDiff <= 24 && hoursDiff > 0) {
+          const targetUserId = task.assignedToId || userId;
+          
+          // In-app notification
           await storage.createNotification({
-            userId: task.assignedToId || userId,
+            userId: targetUserId,
             type: 'warning',
             title: '⚠️ Task Due Soon',
             message: `Task "${task.title}" is due in ${Math.round(hoursDiff)} hours`,
             category: 'deadline',
             actionUrl: '/tasks',
           });
+          
+          // Push notification
+          const { sendPushToUser } = await import('./push.js');
+          await sendPushToUser(targetUserId, {
+            title: '⏰ Task Due Soon',
+            body: `"${task.title}" is due in ${Math.round(hoursDiff)} hours`,
+            url: '/tasks',
+          }).catch(err => console.error('Failed to send push notification:', err));
+          
           notificationsCreated++;
         }
       }
