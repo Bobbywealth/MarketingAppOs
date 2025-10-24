@@ -1096,11 +1096,11 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(secondMeContent.createdAt));
   }
 
-  async getSecondMeContentByClientId(clientId: number): Promise<SecondMeContent[]> {
+  async getSecondMeContentByClientId(clientId: string): Promise<SecondMeContent[]> {
     return await db
       .select()
       .from(secondMeContent)
-      .where(eq(secondMeContent.clientId, clientId.toString()))
+      .where(eq(secondMeContent.clientId, clientId))
       .orderBy(desc(secondMeContent.createdAt));
   }
 

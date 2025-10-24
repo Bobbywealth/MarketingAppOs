@@ -3824,8 +3824,8 @@ Examples:
         bio
       } = req.body;
 
-      if (!photos || !Array.isArray(photos) || photos.length < 5) {
-        return res.status(400).json({ message: "Minimum 5 photos required" });
+      if (!photos || !Array.isArray(photos) || photos.length < 1) {
+        return res.status(400).json({ message: "Minimum 1 photo required" });
       }
 
       if (!characterName || !vibe || !mission) {
@@ -3904,7 +3904,7 @@ Examples:
         return res.status(404).json({ message: "No client record found" });
       }
 
-      const content = await storage.getSecondMeContentByClientId(userRecord.clientId);
+      const content = await storage.getSecondMeContentByClientId(userRecord.clientId.toString());
       
       // Transform to match frontend interface
       const transformedContent = content.map(item => ({

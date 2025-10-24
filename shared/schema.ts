@@ -832,6 +832,18 @@ export const secondMe = pgTable("second_me", {
   stripeSetupPaymentId: varchar("stripe_setup_payment_id"),
   stripeWeeklySubscriptionId: varchar("stripe_weekly_subscription_id"),
   notes: text("notes"), // Admin notes about the avatar
+  // Character fields
+  characterName: varchar("character_name", { length: 255 }),
+  vibe: varchar("vibe", { length: 100 }),
+  mission: text("mission"),
+  storyWords: varchar("story_words", { length: 255 }),
+  topics: text("topics"), // JSON array stored as text
+  personalityType: varchar("personality_type", { length: 100 }),
+  dreamCollab: varchar("dream_collab", { length: 255 }),
+  catchphrase: text("catchphrase"),
+  targetAudience: text("target_audience"),
+  contentStyle: varchar("content_style", { length: 100 }),
+  bio: text("bio"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

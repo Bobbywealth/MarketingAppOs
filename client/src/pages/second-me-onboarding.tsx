@@ -79,10 +79,10 @@ export default function SecondMeOnboarding() {
   };
 
   const handleSubmit = () => {
-    if (!formData.characterName || uploadedPhotos.length < 5) {
+    if (!formData.characterName || uploadedPhotos.length < 1) {
       toast({
         title: "Missing Information",
-        description: "Please upload at least 5 photos and complete all required fields.",
+        description: "Please upload at least 1 photo and enter a character name.",
         variant: "destructive",
       });
       return;
@@ -119,7 +119,7 @@ export default function SecondMeOnboarding() {
                 </div>
                 <div>
                   <CardTitle className="text-2xl">Upload Your Photos</CardTitle>
-                  <CardDescription>Upload 15-20+ professional photos for best results</CardDescription>
+                  <CardDescription>Upload 20+ professional photos for best results (min. 20 required)</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -164,15 +164,21 @@ export default function SecondMeOnboarding() {
                   <li>✓ Different angles: front, side, 3/4 view</li>
                   <li>✓ Various expressions and poses</li>
                   <li>✓ Plain or simple backgrounds preferred</li>
-                  <li>✓ Minimum 5 photos required (15-20+ recommended)</li>
+                  <li>✓ Minimum 20 photos required</li>
                 </ul>
               </div>
 
               <div className="flex justify-between">
-                <div></div>
+                <Button 
+                  variant="outline"
+                  onClick={() => setStep(2)}
+                  size="lg"
+                >
+                  Skip (Testing)
+                </Button>
                 <Button 
                   onClick={() => setStep(2)} 
-                  disabled={uploadedPhotos.length < 5}
+                  disabled={uploadedPhotos.length < 20}
                   size="lg"
                 >
                   Continue <ArrowRight className="w-4 h-4 ml-2" />
@@ -264,13 +270,22 @@ export default function SecondMeOnboarding() {
                 <Button variant="outline" onClick={() => setStep(1)}>
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
-                <Button 
-                  onClick={() => setStep(3)}
-                  disabled={!formData.characterName || !formData.vibe || !formData.mission}
-                  size="lg"
-                >
-                  Continue <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => setStep(3)}
+                    size="lg"
+                  >
+                    Skip (Testing)
+                  </Button>
+                  <Button 
+                    onClick={() => setStep(3)}
+                    disabled={!formData.characterName || !formData.vibe || !formData.mission}
+                    size="lg"
+                  >
+                    Continue <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -376,15 +391,25 @@ export default function SecondMeOnboarding() {
                 <Button variant="outline" onClick={() => setStep(2)}>
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
-                <Button 
-                  onClick={handleSubmit}
-                  disabled={createSecondMeMutation.isPending || !formData.topics?.length || !formData.targetAudience}
-                  size="lg"
-                  className="bg-gradient-to-r from-purple-500 to-pink-500"
-                >
-                  {createSecondMeMutation.isPending ? "Creating..." : "Create My Second Me"} 
-                  <Sparkles className="w-4 h-4 ml-2" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={handleSubmit}
+                    disabled={createSecondMeMutation.isPending}
+                    size="lg"
+                  >
+                    Skip & Submit
+                  </Button>
+                  <Button 
+                    onClick={handleSubmit}
+                    disabled={createSecondMeMutation.isPending || !formData.topics?.length || !formData.targetAudience}
+                    size="lg"
+                    className="bg-gradient-to-r from-purple-500 to-pink-500"
+                  >
+                    {createSecondMeMutation.isPending ? "Creating..." : "Create My Second Me"} 
+                    <Sparkles className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
