@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { BookingModal } from "@/components/BookingModal";
 import type { SubscriptionPackage } from "@shared/schema";
 import {
   NavigationMenu,
@@ -27,6 +28,7 @@ import googleAdsLogo from "@assets/google-ads-logo.png";
 
 export default function LandingPage() {
   const { toast } = useToast();
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [auditForm, setAuditForm] = useState({
     website: "",
     instagramUrl: "",
@@ -191,11 +193,15 @@ export default function LandingPage() {
                     <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                   </Button>
                 </Link>
-                <Link href="/contact" className="w-full sm:w-auto">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8 font-semibold" data-testid="button-login-hero">
-                    📞 Book Strategy Call
-                  </Button>
-                </Link>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8 font-semibold" 
+                  data-testid="button-login-hero"
+                  onClick={() => setBookingModalOpen(true)}
+                >
+                  📞 Book Strategy Call
+                </Button>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-blue-100 pt-4 px-4">
                 <div className="flex items-center gap-2 justify-center">
@@ -965,11 +971,14 @@ export default function LandingPage() {
                 <ArrowRight className="w-6 h-6 ml-2" />
               </Button>
             </Link>
-            <Link href="/contact">
-              <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white/10 text-xl px-12 py-7 font-bold">
-                Book a Call
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="border-2 border-white text-white hover:bg-white/10 text-xl px-12 py-7 font-bold"
+              onClick={() => setBookingModalOpen(true)}
+            >
+              Book a Call
+            </Button>
           </div>
           <p className="text-base text-blue-100 flex flex-wrap justify-center gap-6">
             <span>✓ No long-term contracts</span>
@@ -1008,6 +1017,9 @@ export default function LandingPage() {
         </div>
       </div>
 
+
+      {/* Booking Modal */}
+      <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} />
 
       {/* Footer */}
       <footer className="border-t py-12 px-4 bg-background pb-20 md:pb-12">

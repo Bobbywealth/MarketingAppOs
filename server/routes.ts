@@ -2042,6 +2042,62 @@ Examples:
     }
   });
 
+  // Public booking endpoint (no authentication required)
+  app.post("/api/bookings", async (req: Request, res: Response) => {
+    try {
+      const { name, email, phone, company, message, datetime, date, time } = req.body;
+
+      // Create calendar event for admin
+      const event = await storage.createCalendarEvent({
+        title: `📞 Strategy Call: ${name}${company ? ` (${company})` : ''}`,
+        description: `Strategy call booking from website\n\n` +
+          `Contact: ${name}\n` +
+          `Email: ${email}\n` +
+          `Phone: ${phone}\n` +
+          `${company ? `Company: ${company}\n` : ''}` +
+          `\nMessage:\n${message}`,
+        start: new Date(datetime),
+        end: new Date(new Date(datetime).getTime() + 30 * 60000), // 30 minutes
+        type: "booking",
+        location: phone,
+        createdBy: 1, // System user
+      });
+
+      // Create a notification for admin
+      try {
+        const adminUsers = await storage.getAdminUsers();
+        for (const admin of adminUsers) {
+          await storage.createNotification({
+            userId: admin.id,
+            title: "📞 New Strategy Call Booked",
+            message: `${name} booked a strategy call for ${new Date(datetime).toLocaleString('en-US', { 
+              dateStyle: 'long', 
+              timeStyle: 'short',
+              timeZone: 'America/New_York'
+            })}`,
+            type: "info",
+            actionUrl: "/company-calendar",
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+        // Don't fail the whole request if notification fails
+      }
+
+      // TODO: Send confirmation email to customer
+      // TODO: Send notification email to admin
+
+      res.status(201).json({
+        success: true,
+        eventId: event.id,
+        message: "Booking confirmed!",
+      });
+    } catch (error) {
+      console.error("Booking error:", error);
+      res.status(500).json({ message: "Failed to create booking" });
+    }
+  });
+
   // Task comment routes
   app.get("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
     try {
