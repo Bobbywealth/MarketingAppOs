@@ -46,21 +46,27 @@ export default function SecondMeOnboarding() {
 
   const createSecondMeMutation = useMutation({
     mutationFn: async (data: OnboardingData) => {
+      console.log("Submitting Second Me data:", data);
       const response = await apiRequest("POST", "/api/second-me", data);
-      return response.json();
+      const result = await response.json();
+      console.log("Second Me response:", result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Second Me created successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/second-me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/second-me/character"] });
       toast({
         title: "🎉 Your Second Me is Ready!",
         description: "We'll start generating your AI content soon!",
       });
       setStep(4); // Go to success screen
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Second Me creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create your Second Me. Please try again.",
+        description: error?.message || "Failed to create your Second Me. Please try again.",
         variant: "destructive",
       });
     },
@@ -119,7 +125,18 @@ export default function SecondMeOnboarding() {
             <h2 className="text-sm font-semibold text-muted-foreground">
               Step {step} of {totalSteps}
             </h2>
-            <span className="text-sm font-semibold text-primary">{Math.round(progress)}%</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-primary">{Math.round(progress)}%</span>
+              {/* Testing: Jump to success screen */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setStep(4)}
+                className="text-xs"
+              >
+                Preview Success
+              </Button>
+            </div>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
