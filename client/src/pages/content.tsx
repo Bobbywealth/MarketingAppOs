@@ -314,13 +314,13 @@ export default function Content() {
                   New Post
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl glass-strong">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
                 <DialogHeader>
                   <DialogTitle className="text-2xl">Create Content Post</DialogTitle>
                   <DialogDescription>Schedule a new social media post for your client</DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleCreatePost)} className="space-y-4">
+                  <form onSubmit={form.handleSubmit(handleCreatePost)} className="space-y-4 pb-4">
                     <FormField
                       control={form.control}
                       name="clientId"
