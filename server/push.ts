@@ -52,6 +52,7 @@ export async function sendPushToUser(
       icon: payload.icon || '/icon-192x192.png',
       badge: payload.badge || '/icon-72x72.png',
       url: payload.url || '/',
+      timestamp: Date.now(), // Current timestamp in milliseconds
     });
 
     // Send to all subscriptions

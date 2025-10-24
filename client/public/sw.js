@@ -92,10 +92,11 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Marketing Team App';
   const options = {
     body: data.body || 'You have a new notification',
-    icon: '/icon-192x192.png',
-    badge: '/icon-72x72.png',
+    icon: data.icon || '/icon-192x192.png',
+    badge: data.badge || '/icon-72x72.png',
     vibrate: [200, 100, 200],
     data: data.url || '/',
+    timestamp: data.timestamp || Date.now(), // Use server timestamp or current time
     actions: [
       {
         action: 'open',
