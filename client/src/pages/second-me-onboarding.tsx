@@ -78,8 +78,8 @@ export default function SecondMeOnboarding() {
     setFormData({ ...formData, photos: newPhotos });
   };
 
-  const handleSubmit = () => {
-    if (!formData.characterName || uploadedPhotos.length < 1) {
+  const handleSubmit = (skipValidation = false) => {
+    if (!skipValidation && (!formData.characterName || uploadedPhotos.length < 1)) {
       toast({
         title: "Missing Information",
         description: "Please upload at least 1 photo and enter a character name.",
@@ -88,7 +88,22 @@ export default function SecondMeOnboarding() {
       return;
     }
 
-    createSecondMeMutation.mutate(formData as OnboardingData);
+    // If skipping, provide default values
+    const submitData = skipValidation ? {
+      ...formData,
+      photos: uploadedPhotos.length > 0 ? uploadedPhotos : ["https://via.placeholder.com/400"],
+      characterName: formData.characterName || "Test Character",
+      vibe: formData.vibe || "creative",
+      mission: formData.mission || "Testing the system",
+      storyWords: formData.storyWords || "Bold, Creative, Innovative",
+      topics: formData.topics?.length ? formData.topics : ["Testing"],
+      personalityType: formData.personalityType || "energetic",
+      targetAudience: formData.targetAudience || "Test audience",
+      contentStyle: formData.contentStyle || "educational",
+      bio: formData.bio || "This is a test character for system testing.",
+    } : formData;
+
+    createSecondMeMutation.mutate(submitData as OnboardingData);
   };
 
   const vibeOptions = ["Professional", "Creative", "Casual", "Inspirational", "Funny", "Motivational", "Educational"];
@@ -394,14 +409,14 @@ export default function SecondMeOnboarding() {
                 <div className="flex gap-2">
                   <Button 
                     variant="outline"
-                    onClick={handleSubmit}
+                    onClick={() => handleSubmit(true)}
                     disabled={createSecondMeMutation.isPending}
                     size="lg"
                   >
                     Skip & Submit
                   </Button>
                   <Button 
-                    onClick={handleSubmit}
+                    onClick={() => handleSubmit(false)}
                     disabled={createSecondMeMutation.isPending || !formData.topics?.length || !formData.targetAudience}
                     size="lg"
                     className="bg-gradient-to-r from-purple-500 to-pink-500"

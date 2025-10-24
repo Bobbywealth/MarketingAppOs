@@ -3824,12 +3824,9 @@ Examples:
         bio
       } = req.body;
 
-      if (!photos || !Array.isArray(photos) || photos.length < 1) {
-        return res.status(400).json({ message: "Minimum 1 photo required" });
-      }
-
-      if (!characterName || !vibe || !mission) {
-        return res.status(400).json({ message: "Missing required character information" });
+      // Allow test data for quick onboarding
+      if (!characterName) {
+        return res.status(400).json({ message: "Character name is required" });
       }
 
       const secondMeRecord = await storage.createSecondMe({
