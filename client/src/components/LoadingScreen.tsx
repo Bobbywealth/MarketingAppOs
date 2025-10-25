@@ -39,11 +39,19 @@ export function LoadingScreen() {
         </div>
 
         {/* App Name */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent animate-pulse">
             Marketing Team App
           </h1>
-          <p className="text-sm text-muted-foreground">Loading your workspace...</p>
+          <p className="text-base md:text-lg font-medium text-foreground/80">
+            {progress < 30 && "🚀 Initializing your workspace..."}
+            {progress >= 30 && progress < 60 && "📊 Loading your data..."}
+            {progress >= 60 && progress < 90 && "✨ Almost ready..."}
+            {progress >= 90 && "🎉 Welcome back!"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Your complete marketing management solution
+          </p>
         </div>
 
         {/* Progress Bar */}

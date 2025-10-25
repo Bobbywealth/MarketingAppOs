@@ -18,8 +18,49 @@ export default function PWAHomePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500">
-        <Loader2 className="w-12 h-12 animate-spin text-white" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 p-6">
+        {/* Animated Background */}
+        <div className="absolute top-0 left-0 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }}></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }}></div>
+        
+        {/* Logo */}
+        <div className="relative z-10 mb-8">
+          <img 
+            src={mtaLogoBlue} 
+            alt="Marketing Team App" 
+            className="h-24 w-auto mx-auto drop-shadow-2xl animate-pulse" 
+            style={{ animationDuration: '2s' }} 
+          />
+        </div>
+        
+        {/* Loading Content */}
+        <div className="relative z-10 text-center space-y-6 max-w-md">
+          <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">
+            Marketing Team App
+          </h1>
+          
+          {/* Progress Bar */}
+          <div className="space-y-3">
+            <div className="w-64 h-2 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+              <div className="h-full bg-gradient-to-r from-white via-blue-200 to-white rounded-full animate-pulse" style={{ width: '80%', animationDuration: '1.5s' }}></div>
+            </div>
+            <p className="text-white/90 text-lg font-medium animate-pulse">
+              Preparing your workspace...
+            </p>
+          </div>
+          
+          {/* Loading Dots */}
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+            <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-3 h-3 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+          </div>
+          
+          {/* Tagline */}
+          <p className="text-white/70 text-sm">
+            ✨ Your complete marketing management solution
+          </p>
+        </div>
       </div>
     );
   }
