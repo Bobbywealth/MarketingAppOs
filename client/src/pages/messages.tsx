@@ -42,6 +42,11 @@ export default function Messages() {
     u.id !== user?.id
   ) || [];
 
+  // Debug logging
+  console.log("📋 All users:", allUsers?.length || 0);
+  console.log("👥 Team members:", teamMembers.length, teamMembers.map(u => ({ id: u.id, username: u.username, role: u.role })));
+  console.log("👤 Current user:", user?.username, user?.role);
+
   // Filter by search query
   const filteredTeamMembers = teamMembers.filter(member =>
     member.username.toLowerCase().includes(searchQuery.toLowerCase())
@@ -123,7 +128,7 @@ export default function Messages() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] flex flex-col">
+    <div className="min-h-screen md:h-[calc(100vh-4rem)] flex flex-col">
       <div className="p-4 md:p-6 border-b bg-white sticky top-0 z-10">
         <div className="space-y-1 md:space-y-2">
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
@@ -131,9 +136,9 @@ export default function Messages() {
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
+      <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
         {/* Team Members Sidebar - Now visible on mobile */}
-        <div className={`${selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-4 border-r flex-col min-h-[calc(100vh-12rem)] md:min-h-0`}>
+        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col h-[calc(100vh-10rem)] md:h-auto`}>
           <div className="p-4 border-b space-y-3">
             <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-xs font-medium text-blue-900">👆 Tap a team member to start messaging</p>
@@ -208,7 +213,7 @@ export default function Messages() {
         </div>
 
         {/* Messages Area - Now with back button on mobile */}
-        <div className={`${!selectedUserId ? 'hidden md:flex' : 'flex'} md:col-span-8 flex-col min-h-[calc(100vh-12rem)] md:min-h-0`}>
+        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col h-[calc(100vh-10rem)] md:h-auto`}>
           {!selectedUserId ? (
             <div className="flex-1 hidden md:flex items-center justify-center">
               <div className="text-center">
