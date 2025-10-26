@@ -163,40 +163,42 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-12 md:py-24 px-4 overflow-hidden gradient-animate-hero hero-glow flex items-center">
+      <section className="relative py-16 md:py-24 lg:py-32 px-4 overflow-hidden gradient-animate-hero hero-glow flex items-center min-h-[80vh] md:min-h-[85vh]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.3),transparent_50%)]"></div>
         <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
         <div className="container mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center max-w-full">
-              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block">
+          <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
+            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center lg:text-left max-w-full">
+              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block mx-auto lg:mx-0">
                 <span className="animate-pulse">🔥 </span>
-                Limited Spots Available - Book This Month
+                <span className="hidden sm:inline">Limited Spots Available - Book This Month</span>
+                <span className="sm:hidden">Only 3 Spots Left!</span>
               </Badge>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-shadow-soft px-2">
-                Your Remote <br />
-                Digital Marketing <br />
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight text-shadow-soft px-2">
+                Your Remote <br className="hidden sm:block" />
+                Digital Marketing <br className="hidden sm:block" />
                 <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
               </h1>
-              <p className="text-xl sm:text-2xl font-semibold text-white mb-2 px-4">
+              <p className="text-lg sm:text-xl md:text-2xl font-semibold text-white mb-2 px-2 sm:px-4">
                 Stop Wasting Money on Marketing That Doesn't Work
               </p>
-              <p className="text-base sm:text-lg md:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto px-6">
+              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0 px-2 sm:px-6 lg:px-0">
                 Join 500+ businesses, influencers, and entrepreneurs who've 3X'd their results with our proven marketing system. 
-                <span className="font-semibold text-white">Guaranteed results or your money back.</span>
+                <span className="font-semibold text-white block mt-1">Guaranteed results or your money back.</span>
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center items-center w-full px-4">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-stretch sm:items-center w-full px-2 sm:px-4 lg:px-0">
                 <Link href="/signup" className="w-full sm:w-auto">
-                  <Button size="lg" className="gap-2 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all px-8 md:px-10 font-bold text-lg animate-pulse" data-testid="button-get-started-hero">
-                    🚀 Get Started Free (Only 3 Spots Left)
+                  <Button size="lg" className="gap-2 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all px-6 sm:px-8 md:px-10 py-6 md:py-7 font-bold text-base md:text-lg animate-pulse" data-testid="button-get-started-hero">
+                    <span className="hidden sm:inline">🚀 Get Started Free (Only 3 Spots Left)</span>
+                    <span className="sm:hidden">🚀 Get Started Free</span>
                     <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
                   </Button>
                 </Link>
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8 font-semibold" 
+                  className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8 py-6 md:py-7 font-semibold text-base md:text-lg" 
                   data-testid="button-login-hero"
                   onClick={() => setBookingModalOpen(true)}
                 >
@@ -737,6 +739,135 @@ export default function LandingPage() {
             </p>
             <p className="text-sm text-muted-foreground">
               Need something custom? <Link href="/contact" className="text-blue-600 hover:underline font-semibold">Let's talk</Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Second Me AI Pricing */}
+      <section className="py-20 px-4 bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(139,92,246,0.1),transparent_50%)]"></div>
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-full mb-4">
+              <Bot className="w-5 h-5" />
+              <span className="font-semibold">NEW: AI-Powered</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 bg-clip-text text-transparent">
+              Second Me: Your AI Marketing Assistant
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+              Clone your expertise and let AI handle the repetitive work. Available 24/7 to answer questions, create content, and engage with your audience.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
+            {/* Second Me Starter */}
+            <Card className="p-6 md:p-8 hover-lift transition-all duration-300 border-2 border-purple-200 bg-white/80 backdrop-blur">
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-6 h-6 text-purple-600" />
+                  <h3 className="text-2xl font-bold">Second Me Starter</h3>
+                </div>
+                <p className="text-muted-foreground">Perfect for solopreneurs and small teams</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl md:text-5xl font-bold">$297</span>
+                <span className="text-muted-foreground">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">1 AI personality trained on your brand</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Up to 500 conversations/month</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Website chat widget integration</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Social media auto-responses</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Basic analytics dashboard</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Email support</span>
+                </li>
+              </ul>
+              <Link href="/signup">
+                <Button className="w-full bg-purple-600 hover:bg-purple-700" size="lg">
+                  Start Free Trial
+                </Button>
+              </Link>
+            </Card>
+
+            {/* Second Me Pro */}
+            <Card className="p-6 md:p-8 hover-lift transition-all duration-300 border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 relative shadow-xl">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <Badge className="bg-blue-600 text-white">Most Popular</Badge>
+              </div>
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-6 h-6 text-blue-600" />
+                  <h3 className="text-2xl font-bold">Second Me Pro</h3>
+                </div>
+                <p className="text-muted-foreground">For growing businesses and agencies</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl md:text-5xl font-bold">$597</span>
+                <span className="text-muted-foreground">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Up to 3 AI personalities</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Unlimited conversations</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">All Starter features</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Advanced AI training & customization</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Multi-platform integration (Instagram, Facebook, WhatsApp)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Lead qualification & CRM integration</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Priority support & dedicated account manager</span>
+                </li>
+              </ul>
+              <Link href="/signup">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
+                  Start Free Trial
+                </Button>
+              </Link>
+            </Card>
+          </div>
+
+          <div className="text-center">
+            <p className="text-sm md:text-base text-muted-foreground mb-4">
+              🎁 <strong>Special Launch Offer:</strong> Get 2 months free when you pay annually
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Need enterprise features? <Link href="/contact" className="text-blue-600 hover:underline font-semibold">Contact us for custom pricing</Link>
             </p>
           </div>
         </div>

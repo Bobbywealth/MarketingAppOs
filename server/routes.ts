@@ -2098,6 +2098,41 @@ Examples:
     }
   });
 
+  // Public contact form endpoint (no authentication required)
+  app.post("/api/contact", async (req: Request, res: Response) => {
+    try {
+      const { name, email, phone, company, message } = req.body;
+
+      // Create a notification for all admins
+      try {
+        const adminUsers = await storage.getAdminUsers();
+        for (const admin of adminUsers) {
+          await storage.createNotification({
+            userId: admin.id,
+            title: "📧 New Contact Form Submission",
+            message: `${name}${company ? ` from ${company}` : ''} sent a message`,
+            type: "info",
+            actionUrl: "/messages",
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to create notification:", notifError);
+      }
+
+      // TODO: Send email notification to admin
+      // TODO: Send confirmation email to customer
+      // TODO: Store contact form submission in database
+
+      res.json({ 
+        success: true, 
+        message: "Thank you for your message. We'll get back to you soon!" 
+      });
+    } catch (error) {
+      console.error("Contact form error:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
   // Task comment routes
   app.get("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
     try {
