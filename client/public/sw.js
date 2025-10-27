@@ -1,9 +1,11 @@
 // Native Web Push Service Worker
 
 // Service Worker for Marketing Team App PWA
-const CACHE_NAME = 'mta-crm-v1';
-const STATIC_CACHE = 'mta-static-v1';
-const DYNAMIC_CACHE = 'mta-dynamic-v1';
+// Update these version numbers to force cache refresh
+const CACHE_VERSION = '2.0.0';
+const CACHE_NAME = `mta-crm-v${CACHE_VERSION}`;
+const STATIC_CACHE = `mta-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `mta-dynamic-v${CACHE_VERSION}`;
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -55,13 +57,46 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-first strategy for HTML files (always get latest app version)
+  if (request.url.includes('.html') || request.url.endsWith('/')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache the new version
+          const responseToCache = response.clone();
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if offline
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || caches.match('/index.html');
+          });
+        })
+    );
+    return;
+  }
+
+  // Cache-first strategy for other assets
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
+        // Return cached version but update cache in background
+        fetch(request).then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
+        }).catch(() => {});
+        
         return cachedResponse;
       }
 
-      // Clone the request
+      // Not in cache, fetch from network
       return fetch(request).then((response) => {
         // Don't cache non-successful responses
         if (!response || response.status !== 200 || response.type === 'error') {
@@ -128,4 +163,29 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.openWindow(event.notification.data || '/')
   );
+});
+
+// Handle messages from the app
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Skipping waiting - activating new service worker immediately');
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    console.log('[SW] Clearing all caches');
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('[SW] Deleting cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        console.log('[SW] All caches cleared');
+        return self.clients.claim();
+      })
+    );
+  }
 });

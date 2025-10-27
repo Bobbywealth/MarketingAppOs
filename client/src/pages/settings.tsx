@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { User, Bell, Shield, Database } from "lucide-react";
+import { User, Bell, Shield, Database, RefreshCw, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function SettingsPage() {
@@ -28,6 +28,59 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  // PWA Update functions
+  const clearPWACache = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        registration.active?.postMessage({ type: 'CLEAR_CACHE' });
+        
+        toast({
+          title: "🧹 Cache Cleared",
+          description: "PWA cache has been cleared. Reloading app...",
+        });
+        
+        // Wait a moment then reload
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear cache",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const forceAppUpdate = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          // Unregister and re-register to get fresh service worker
+          await registration.unregister();
+          
+          toast({
+            title: "🔄 Updating App",
+            description: "Fetching latest version...",
+          });
+          
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update app",
+        variant: "destructive",
+      });
+    }
+  };
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof profileData) => {
@@ -131,6 +184,10 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications">
             <Bell className="w-4 h-4 mr-2" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="app">
+            <Smartphone className="w-4 h-4 mr-2" />
+            App
           </TabsTrigger>
           {user?.role === "admin" && (
             <>
@@ -327,6 +384,62 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch defaultChecked />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* App Settings */}
+        <TabsContent value="app" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>App & PWA Settings</CardTitle>
+              <CardDescription>
+                Manage your Progressive Web App settings and updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Clear App Cache</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    If the app isn't showing recent changes, clear the cache to get the latest version. The app will reload automatically.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={clearPWACache}
+                    className="w-full sm:w-auto"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Clear Cache & Reload
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Force App Update</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Completely refresh the app to get the absolute latest version. This will unregister and re-download the service worker.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={forceAppUpdate}
+                    className="w-full sm:w-auto"
+                  >
+                    <Smartphone className="w-4 h-4 mr-2" />
+                    Force Update
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium mb-2">💡 Tip</h4>
+                  <p className="text-sm text-muted-foreground">
+                    The PWA (Progressive Web App) caches content for offline use. If you notice the app isn't showing recent changes from the desktop version, use "Clear Cache & Reload" to sync with the latest updates.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
