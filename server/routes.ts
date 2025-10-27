@@ -292,6 +292,40 @@ This lead will be updated if they complete the full signup process.`,
       const lead = await storage.createLead(leadData);
       console.log('✅ Early lead created successfully:', lead.id);
       
+      // Notify all admins and managers about new early lead
+      try {
+        const users = await storage.getUsers();
+        const adminsAndManagers = users.filter(u => 
+          u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
+        );
+        
+        const { sendPushToUser } = await import('./push.js');
+        
+        for (const user of adminsAndManagers) {
+          // In-app notification
+          await storage.createNotification({
+            userId: user.id,
+            type: 'info',
+            title: '🎯 New Early Lead',
+            message: `${lead.name}${lead.company ? ` from ${lead.company}` : ''} - Started signup process`,
+            category: 'general',
+            actionUrl: '/leads',
+            isRead: false,
+          });
+          
+          // Push notification
+          await sendPushToUser(user.id, {
+            title: '🎯 New Early Lead',
+            body: `${lead.name}${lead.company ? ` from ${lead.company}` : ''} - Started signup process`,
+            url: '/leads',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+        console.log(`✅ Notifications sent to ${adminsAndManagers.length} admins/managers`);
+      } catch (notifError) {
+        console.error('⚠️ Failed to send notifications for early lead:', notifError);
+        // Don't fail the request if notification fails
+      }
+      
       res.json({ success: true, leadId: lead.id });
     } catch (error: any) {
       console.error('❌ Early lead capture error:', error);
