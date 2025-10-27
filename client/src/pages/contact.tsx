@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft } from "lucide-react";
+import { Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft, Calendar } from "lucide-react";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
+import { BookingModal } from "@/components/BookingModal";
 
 export default function ContactPage() {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -93,6 +95,35 @@ export default function ContactPage() {
               Ready to transform your marketing? Get in touch with our team and let's discuss how we can help you grow.
             </p>
           </div>
+
+          {/* Book a Call CTA */}
+          <Card className="mb-12 border-2 border-blue-500 shadow-2xl bg-gradient-to-br from-blue-50 to-purple-50">
+            <CardContent className="p-8 md:p-12">
+              <div className="text-center max-w-2xl mx-auto">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Calendar className="w-10 h-10 text-white" />
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                  Book a FREE Strategy Call
+                </h2>
+                <p className="text-lg text-gray-600 mb-8">
+                  Schedule a 30-minute call with our team to discuss your marketing goals. 
+                  No obligations, just valuable insights for your business.
+                </p>
+                <Button 
+                  size="lg" 
+                  className="text-lg px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-xl"
+                  onClick={() => setBookingModalOpen(true)}
+                >
+                  <Calendar className="w-5 h-5 mr-2" />
+                  Book Your Call Now
+                </Button>
+                <p className="text-sm text-gray-500 mt-4">
+                  ✓ 30-minute strategy session • ✓ No credit card required • ✓ Instant confirmation
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid md:grid-cols-2 gap-12">
             {/* Contact Form */}
@@ -277,11 +308,15 @@ export default function ContactPage() {
                   <p className="mb-6 text-white/90">
                     Book a free 30-minute strategy call with our team to discuss your marketing goals.
                   </p>
-                  <Link href="/">
-                    <Button variant="secondary" size="lg" className="w-full">
-                      Book a Strategy Call
-                    </Button>
-                  </Link>
+                  <Button 
+                    variant="secondary" 
+                    size="lg" 
+                    className="w-full"
+                    onClick={() => setBookingModalOpen(true)}
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Book a Strategy Call
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -298,6 +333,9 @@ export default function ContactPage() {
           </p>
         </div>
       </footer>
+
+      {/* Booking Modal */}
+      <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} />
     </div>
   );
 }
