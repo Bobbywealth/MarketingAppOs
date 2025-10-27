@@ -2563,21 +2563,31 @@ Examples:
   app.post("/api/tickets", isAuthenticated, requirePermission("canManageTickets"), async (req: Request, res: Response) => {
     try {
       const validatedData = insertTicketSchema.parse(req.body);
-      const userId = (req as any).userId;
       const userRole = (req as any).userRole;
+      const user = req.user as any;
       
       // For clients: ensure they can only create tickets with their own clientId
-      let ticketData = { ...validatedData, createdBy: userId };
+      let ticketData: any = { ...validatedData };
       
       if (userRole === "client") {
-        // Clients cannot set arbitrary clientId or assignedTo
-        delete (ticketData as any).assignedTo;
-        // Note: In production, you'd link user to their client record to set clientId correctly
+        // Clients cannot set arbitrary assignedTo
+        delete ticketData.assignedToId;
+        
+        // Get clientId from user record
+        if (!user?.clientId) {
+          return res.status(400).json({ 
+            message: "Your account is not linked to a client record. Please contact support." 
+          });
+        }
+        
+        // Force use of user's own clientId
+        ticketData.clientId = user.clientId;
       }
       
       const ticket = await storage.createTicket(ticketData);
       res.status(201).json(ticket);
     } catch (error) {
+      console.error("Error creating ticket:", error);
       handleValidationError(error, res);
     }
   });
