@@ -2196,7 +2196,10 @@ Examples:
       // Create a notification for all admins
       try {
         console.log("📬 Creating notifications for admins...");
+        const { sendPushToUser } = await import('./push.js');
+        
         for (const admin of adminUsers) {
+          // In-app notification
           await storage.createNotification({
             userId: admin.id,
             title: "📞 New Strategy Call Booked",
@@ -2210,6 +2213,17 @@ Examples:
             actionUrl: "/company-calendar",
             isRead: false,
           });
+          
+          // Push notification
+          await sendPushToUser(admin.id, {
+            title: "📞 New Strategy Call Booked",
+            body: `${name} booked a strategy call for ${new Date(datetime).toLocaleString('en-US', { 
+              dateStyle: 'long', 
+              timeStyle: 'short',
+              timeZone: 'America/New_York'
+            })}`,
+            url: "/company-calendar",
+          }).catch(err => console.error('Failed to send push notification to admin:', err));
         }
         console.log(`✅ Notifications sent to ${adminUsers.length} admins`);
       } catch (notifError) {
@@ -3693,7 +3707,9 @@ Examples:
 
   // Push Subscription routes
   app.get("/api/push/vapid-public-key", (_req: Request, res: Response) => {
-    res.json({ publicKey: process.env.VAPID_PUBLIC_KEY || '' });
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    console.log('🔑 VAPID Public Key requested:', publicKey ? 'Present' : 'Missing');
+    res.json({ publicKey: publicKey || '' });
   });
 
   app.post("/api/push/subscribe", isAuthenticated, async (req: Request, res: Response) => {
