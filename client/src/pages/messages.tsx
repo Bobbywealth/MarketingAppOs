@@ -157,11 +157,26 @@ export default function Messages() {
           <ScrollArea className="flex-1">
             <div className="p-2">
               {filteredTeamMembers.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="w-12 h-12 mx-auto text-muted-foreground mb-2 opacity-50" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="text-center py-8 md:py-12 px-4">
+                  <Users className="w-12 h-12 md:w-16 md:h-16 mx-auto text-muted-foreground mb-3 opacity-50" />
+                  <p className="text-sm md:text-base font-medium text-muted-foreground mb-2">
                     {searchQuery ? "No team members found" : "No team members available"}
                   </p>
+                  {!searchQuery && (
+                    <div className="mt-4 text-left bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <p className="text-xs text-blue-900 dark:text-blue-100 mb-2 font-medium">💡 Why am I not seeing anyone?</p>
+                      <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1.5 list-disc list-inside">
+                        <li>Team messages are only for admins, managers, and staff</li>
+                        <li>You may be the only team member registered</li>
+                        <li>Ask your admin to add more team members</li>
+                      </ul>
+                    </div>
+                  )}
+                  {searchQuery && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Try a different search term
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-1">
