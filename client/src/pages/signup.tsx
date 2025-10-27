@@ -416,30 +416,6 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* Benefits Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <div className="text-center p-8 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 hover:border-green-300 transition-all hover:scale-105">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <TrendingUp className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-black mb-3 text-green-700">3x Faster Growth</h3>
-              <p className="text-gray-600 font-medium">Our clients see 3x faster growth compared to in-house teams</p>
-            </div>
-            <div className="text-center p-8 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 hover:border-blue-300 transition-all hover:scale-105">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-black mb-3 text-blue-700">24/7 Support</h3>
-              <p className="text-gray-600 font-medium">Dedicated account manager and round-the-clock support</p>
-            </div>
-            <div className="text-center p-8 rounded-2xl bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 hover:border-purple-300 transition-all hover:scale-105">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-black mb-3 text-purple-700">Proven Results</h3>
-              <p className="text-gray-600 font-medium">Data-driven strategies that deliver measurable ROI</p>
-            </div>
-          </div>
 
           {/* Welcome Section */}
           <div className="text-center mb-12 p-8 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white">
