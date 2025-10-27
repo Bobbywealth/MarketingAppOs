@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Phone, 
   PhoneCall,
@@ -30,7 +31,9 @@ import {
   PhoneOff,
   UserPlus,
   Settings,
-  Send
+  Send,
+  AlertCircle,
+  ExternalLink
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -75,14 +78,24 @@ export default function PhonePage() {
   const [smsRecipient, setSmsRecipient] = useState("");
   const [smsMessage, setSmsMessage] = useState("");
 
+  // Check Dialpad connection status
+  const { data: dialpadStatus } = useQuery({
+    queryKey: ["/api/test-dialpad"],
+    retry: false,
+  });
+
+  const isDialpadConfigured = dialpadStatus?.connected;
+
   // Fetch call logs from Dialpad API
-  const { data: callLogs = [], isLoading } = useQuery<CallLog[]>({
+  const { data: callLogs = [], isLoading, error: callLogsError } = useQuery<CallLog[]>({
     queryKey: ["/api/dialpad/calls"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/dialpad/calls?limit=50", undefined);
       return response.json();
     },
     refetchInterval: 30000, // Refresh every 30 seconds
+    enabled: isDialpadConfigured === true,
+    retry: false,
   });
 
   // Fetch SMS messages from Dialpad API
@@ -93,6 +106,8 @@ export default function PhonePage() {
       return response.json();
     },
     refetchInterval: 15000, // Refresh every 15 seconds
+    enabled: isDialpadConfigured === true,
+    retry: false,
   });
 
   // Fetch contacts from Dialpad API
@@ -102,6 +117,8 @@ export default function PhonePage() {
       const response = await apiRequest("GET", "/api/dialpad/contacts?limit=50", undefined);
       return response.json();
     },
+    enabled: isDialpadConfigured === true,
+    retry: false,
   });
 
   const makeCallMutation = useMutation({
@@ -253,6 +270,70 @@ export default function PhonePage() {
           </Button>
         </div>
       </div>
+
+      {/* Dialpad Setup Alert */}
+      {!isDialpadConfigured && (
+        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="flex flex-col gap-3">
+            <div>
+              <p className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                🔌 Dialpad Not Connected
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                To enable phone calls and SMS, you need to connect your Dialpad account.
+              </p>
+            </div>
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                📋 Setup Instructions:
+              </p>
+              <ol className="text-xs text-amber-800 dark:text-amber-200 space-y-1.5 list-decimal list-inside">
+                <li>Get your Dialpad API key from <a href="https://dialpad.com/settings/integrations" target="_blank" rel="noopener noreferrer" className="underline inline-flex items-center gap-1 hover:text-amber-600">dialpad.com/settings/integrations <ExternalLink className="w-3 h-3" /></a></li>
+                <li>Go to your Render dashboard → Your service → Environment</li>
+                <li>Add environment variable: <code className="bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded font-mono">DIALPAD_API_KEY</code> = your_api_key</li>
+                <li>Click "Save Changes" and Render will automatically redeploy</li>
+                <li>Refresh this page once deployment is complete</li>
+              </ol>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open('https://dialpad.com/settings/integrations', '_blank')}
+                className="gap-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Get API Key
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open('https://dashboard.render.com/', '_blank')}
+                className="gap-2"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Render Dashboard
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Success Alert */}
+      {isDialpadConfigured && (
+        <Alert className="bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800">
+          <AlertCircle className="h-4 w-4 text-emerald-600" />
+          <AlertDescription>
+            <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+              ✅ Dialpad Connected!
+            </p>
+            <p className="text-sm text-emerald-800 dark:text-emerald-200">
+              Your phone and SMS features are now active. You can make calls, send messages, and manage contacts.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
