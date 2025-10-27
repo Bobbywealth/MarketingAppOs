@@ -21,6 +21,7 @@ export default function SettingsPage() {
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
     email: user?.email || "",
+    username: user?.username || "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -156,6 +157,26 @@ export default function SettingsPage() {
 
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!profileData.username.trim()) {
+      toast({
+        title: "Error",
+        description: "Username is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (profileData.username.length < 3) {
+      toast({
+        title: "Error",
+        description: "Username must be at least 3 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     updateProfileMutation.mutate(profileData);
   };
 
@@ -254,9 +275,13 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <Label>Username</Label>
-                  <Input value={user?.username} disabled />
+                  <Input 
+                    value={profileData.username}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
+                    placeholder="Enter username"
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Username cannot be changed
+                    Choose a unique username for your account
                   </p>
                 </div>
 

@@ -3470,12 +3470,21 @@ Examples:
   app.patch("/api/user/profile", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const currentUserId = (req.user as any).id;
-      const { firstName, lastName, email } = req.body;
+      const { firstName, lastName, email, username } = req.body;
+      
+      // Check if username is being changed and if it's already taken
+      if (username !== undefined) {
+        const existingUser = await storage.getUserByUsername(username);
+        if (existingUser && existingUser.id !== currentUserId) {
+          return res.status(400).json({ message: "Username already taken" });
+        }
+      }
       
       const updateData: any = {};
       if (firstName !== undefined) updateData.firstName = firstName;
       if (lastName !== undefined) updateData.lastName = lastName;
       if (email !== undefined) updateData.email = email;
+      if (username !== undefined) updateData.username = username;
 
       await storage.updateUser(currentUserId, updateData);
       
