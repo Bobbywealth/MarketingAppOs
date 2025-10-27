@@ -2387,16 +2387,18 @@ Examples:
   app.post("/api/content-posts", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      console.log("Creating content post with data:", req.body);
+      console.log("🎨 Creating content post");
+      console.log("👤 User:", user?.username, "Role:", user?.role);
+      console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
       
       // If user is a client, they can only create content for themselves (pending approval)
       if (user.role === 'client') {
         const validatedData = insertContentPostSchema.parse({
           ...req.body,
-          clientId: String(user.id), // Client can only create content for themselves
+          clientId: String(user.clientId || user.id), // Client can only create content for themselves
           approvalStatus: 'pending', // Client uploads always start as pending
         });
-        console.log("Client validated data:", validatedData);
+        console.log("✅ Client validated data:", validatedData);
         const post = await storage.createContentPost(validatedData);
         return res.status(201).json(post);
       }
@@ -2404,16 +2406,39 @@ Examples:
       // Admin/manager/staff can create content for any client
       const hasPermission = await storage.checkPermission(user.id, "canManageContent");
       if (!hasPermission) {
+        console.log("❌ Permission denied for user:", user.id);
         return res.status(403).json({ message: "You don't have permission to manage content" });
       }
       
+      // Ensure clientId is present
+      if (!req.body.clientId) {
+        console.log("❌ Missing clientId in request");
+        return res.status(400).json({ message: "clientId is required" });
+      }
+      
       const validatedData = insertContentPostSchema.parse(req.body);
-      console.log("Validated data:", validatedData);
+      console.log("✅ Validated data:", JSON.stringify(validatedData, null, 2));
       const post = await storage.createContentPost(validatedData);
+      console.log("✅ Content post created:", post.id);
       res.status(201).json(post);
-    } catch (error) {
-      console.error("Content post creation error:", error);
-      return handleValidationError(error, res);
+    } catch (error: any) {
+      console.error("❌ Content post creation error:");
+      console.error("Error type:", error.constructor.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      
+      if (error instanceof ZodError) {
+        console.error("Validation errors:", error.errors);
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      
+      return res.status(500).json({ 
+        message: "Internal server error",
+        error: error.message || "Unknown error"
+      });
     }
   });
 
