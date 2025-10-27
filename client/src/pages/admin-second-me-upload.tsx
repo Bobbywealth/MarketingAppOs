@@ -42,7 +42,7 @@ export default function AdminSecondMeUpload() {
   });
 
   const uploadContentMutation = useMutation({
-    mutationFn: async (data: { clientId: number; contentType: string; mediaUrl: string; caption: string }) => {
+    mutationFn: async (data: { secondMeId: string; content: Array<{ contentType: string; mediaUrl: string; caption: string }> }) => {
       const response = await apiRequest("POST", "/api/admin/second-me/content", data);
       return response.json();
     },
@@ -76,10 +76,12 @@ export default function AdminSecondMeUpload() {
     }
 
     uploadContentMutation.mutate({
-      clientId: selectedClient.clientId,
-      contentType,
-      mediaUrl: contentUrl,
-      caption: caption || `AI Generated ${contentType === "image" ? "Image" : "Video"}`,
+      secondMeId: selectedClient.id,
+      content: [{
+        contentType,
+        mediaUrl: contentUrl,
+        caption: caption || `AI Generated ${contentType === "image" ? "Image" : "Video"}`,
+      }],
     });
   };
 

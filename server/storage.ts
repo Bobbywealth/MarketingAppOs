@@ -1089,6 +1089,15 @@ export class DatabaseStorage implements IStorage {
     return record;
   }
 
+  async getSecondMeById(id: string): Promise<SecondMe | undefined> {
+    const [record] = await db
+      .select()
+      .from(secondMe)
+      .where(eq(secondMe.id, id))
+      .limit(1);
+    return record;
+  }
+
   async getAllSecondMeRequests(): Promise<SecondMe[]> {
     return await db
       .select()

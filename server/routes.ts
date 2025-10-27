@@ -4560,7 +4560,7 @@ Examples:
       }
 
       // Get the Second Me record to find clientId
-      const secondMeRecord = await storage.getSecondMe(secondMeId);
+      const secondMeRecord = await storage.getSecondMeById(secondMeId);
       if (!secondMeRecord) {
         return res.status(404).json({ message: "Second Me record not found" });
       }
