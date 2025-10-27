@@ -185,23 +185,23 @@ export default function SignupPage() {
 
   const nextStep = async () => {
     const fields = step === 1 
-      ? ["company", "website", "industry", "companySize"] as const
-      : step === 2 
       ? ["name", "email", "phone"] as const
-      : step === 3
+      : step === 2 
       ? ["services"] as const
+      : step === 3
+      ? ["company", "website", "industry", "companySize"] as const
       : [];
     
     const isValid = await form.trigger(fields);
     if (isValid) {
-      // Capture lead early after step 2 (contact info completed)
-      if (step === 2) {
+      // Capture lead early after step 1 (contact info completed)
+      if (step === 1) {
         const formData = form.getValues();
         const leadData = {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          company: formData.company,
+          company: formData.company || "Not provided yet",
           website: formData.website || undefined,
           industry: formData.industry || undefined,
         };
@@ -209,7 +209,7 @@ export default function SignupPage() {
         earlyLeadCaptureMutation.mutate(leadData);
       }
       
-      // If on step 3 (services), submit the form to create account and go to package selection
+      // If on step 3 (company info), submit the form to create account and go to package selection
       if (step === 3) {
         const formData = form.getValues();
         signupMutation.mutate(formData);
@@ -462,9 +462,9 @@ export default function SignupPage() {
           {/* Progress Steps */}
           <div className="flex items-center justify-between mb-8">
             {[
-              { num: 1, label: "Company", icon: Building2 },
-              { num: 2, label: "Contact", icon: User },
-              { num: 3, label: "Services", icon: Target },
+              { num: 1, label: "Contact", icon: User },
+              { num: 2, label: "Services", icon: Target },
+              { num: 3, label: "Company", icon: Building2 },
             ].map((s) => (
               <div key={s.num} className="flex items-center flex-1">
                 <div className={`flex items-center gap-2 ${s.num < 3 ? 'flex-1' : ''}`}>
@@ -518,113 +518,12 @@ export default function SignupPage() {
                 }}
                 className="space-y-6"
               >
-                {/* Step 1: Company Information */}
+                {/* Step 1: Contact Information */}
                 {step === 1 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div>
-                      <h2 className="text-2xl font-bold mb-2">Company Information</h2>
-                      <p className="text-sm text-muted-foreground">Let's start with some basic details about your company.</p>
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company Name *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="Acme Inc." 
-                              {...field} 
-                              data-testid="input-company"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Website</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://example.com" {...field} data-testid="input-website" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="industry"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Industry</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-industry">
-                                <SelectValue placeholder="Select your industry" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="technology">Technology</SelectItem>
-                              <SelectItem value="healthcare">Healthcare</SelectItem>
-                              <SelectItem value="finance">Finance</SelectItem>
-                              <SelectItem value="retail">Retail</SelectItem>
-                              <SelectItem value="education">Education</SelectItem>
-                              <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                              <SelectItem value="real-estate">Real Estate</SelectItem>
-                              <SelectItem value="hospitality">Hospitality</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="companySize"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company Size</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-company-size">
-                                <SelectValue placeholder="Select company size" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="1-10">1-10 employees</SelectItem>
-                              <SelectItem value="11-50">11-50 employees</SelectItem>
-                              <SelectItem value="51-200">51-200 employees</SelectItem>
-                              <SelectItem value="201-500">201-500 employees</SelectItem>
-                              <SelectItem value="500+">500+ employees</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-
-                {/* Step 2: Contact Information */}
-                {step === 2 && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div>
                       <h2 className="text-2xl font-bold mb-2">Contact Information</h2>
-                      <p className="text-sm text-muted-foreground">How can we reach you?</p>
+                      <p className="text-sm text-muted-foreground">Let's start with your contact details.</p>
                     </div>
 
                     <FormField
@@ -671,8 +570,8 @@ export default function SignupPage() {
                   </div>
                 )}
 
-                {/* Step 3: Service Interests */}
-                {step === 3 && (
+                {/* Step 2: Services */}
+                {step === 2 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div>
                       <h2 className="text-2xl font-bold mb-2">What Services Interest You?</h2>
@@ -1087,6 +986,106 @@ export default function SignupPage() {
                   </div>
                 )}
 
+                {/* Step 3: Company Information */}
+                {step === 3 && (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">Company Information</h2>
+                      <p className="text-sm text-muted-foreground">Tell us about your business.</p>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="company"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name *</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Acme Inc." 
+                              {...field} 
+                              data-testid="input-company"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://example.com" {...field} data-testid="input-website" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="industry"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Industry</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-industry">
+                                <SelectValue placeholder="Select your industry" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="technology">Technology</SelectItem>
+                              <SelectItem value="healthcare">Healthcare</SelectItem>
+                              <SelectItem value="finance">Finance</SelectItem>
+                              <SelectItem value="retail">Retail</SelectItem>
+                              <SelectItem value="education">Education</SelectItem>
+                              <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                              <SelectItem value="real-estate">Real Estate</SelectItem>
+                              <SelectItem value="hospitality">Hospitality</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="companySize"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Size</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-company-size">
+                                <SelectValue placeholder="Select company size" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1-10">1-10 employees</SelectItem>
+                              <SelectItem value="11-50">11-50 employees</SelectItem>
+                              <SelectItem value="51-200">51-200 employees</SelectItem>
+                              <SelectItem value="201-500">201-500 employees</SelectItem>
+                              <SelectItem value="500+">500+ employees</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between pt-4">
