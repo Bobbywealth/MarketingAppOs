@@ -2206,7 +2206,9 @@ Examples:
               timeZone: 'America/New_York'
             })}`,
             type: "info",
+            category: "general",
             actionUrl: "/company-calendar",
+            isRead: false,
           });
         }
         console.log(`✅ Notifications sent to ${adminUsers.length} admins`);
@@ -2247,7 +2249,9 @@ Examples:
             title: "📧 New Contact Form Submission",
             message: `${name}${company ? ` from ${company}` : ''} sent a message`,
             type: "info",
+            category: "general",
             actionUrl: "/messages",
+            isRead: false,
           });
         }
       } catch (notifError) {

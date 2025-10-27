@@ -625,19 +625,23 @@ export default function CompanyCalendarPage() {
                     <div className={`text-[10px] md:text-sm font-semibold mb-0.5 md:mb-1 ${isTodayDate ? "text-primary" : ""}`}>
                       {format(day, "d")}
                     </div>
-                    <div className="space-y-0.5 md:space-y-1">
-                      {dayEvents.slice(0, 2).map((event) => (
+                    <div className="space-y-0.5 md:space-y-1 max-h-[80px] md:max-h-[120px] overflow-y-auto">
+                      {dayEvents.slice(0, 3).map((event, eventIdx) => (
                         <div
                           key={event.id}
                           onClick={(e) => handleEventClick(event, e)}
-                          className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.type)}`}
+                          className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.type)} mb-0.5`}
+                          style={{
+                            position: 'relative',
+                            zIndex: dayEvents.length - eventIdx,
+                          }}
                         >
                           {event.title}
                         </div>
                       ))}
-                      {dayEvents.length > 2 && (
-                        <div className="text-[8px] md:text-xs text-muted-foreground">
-                          +{dayEvents.length - 2}
+                      {dayEvents.length > 3 && (
+                        <div className="text-[8px] md:text-xs text-muted-foreground font-medium">
+                          +{dayEvents.length - 3} more
                         </div>
                       )}
                     </div>
