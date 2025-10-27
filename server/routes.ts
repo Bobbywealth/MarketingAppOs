@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { pool } from "./db";
+import { pool, db } from "./db";
+import { sql } from "drizzle-orm";
 import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
@@ -3520,25 +3521,97 @@ Examples:
     try {
       const { sendPushToUser, sendPushToRole, broadcastPush } = await import('./push.js');
       const { userId, role, title, body, url, broadcast } = req.body;
+      const user = req.user as any;
 
       if (!title || !body) {
         return res.status(400).json({ message: "Title and body required" });
       }
 
+      let targetType: string;
+      let targetValue: string | null = null;
+      let recipientCount = 0;
+
+      // Determine target type and count recipients
       if (broadcast) {
+        targetType = "broadcast";
+        // Count all users with push subscriptions
+        const result = await db.execute(sql`SELECT COUNT(DISTINCT user_id) as count FROM push_subscriptions`);
+        recipientCount = Number(result.rows[0]?.count || 0);
         await broadcastPush({ title, body, url });
       } else if (userId) {
+        targetType = "user";
+        targetValue = String(userId);
+        // Count subscriptions for this user
+        const result = await db.execute(sql`SELECT COUNT(*) as count FROM push_subscriptions WHERE user_id = ${userId}`);
+        recipientCount = Number(result.rows[0]?.count || 0);
         await sendPushToUser(userId, { title, body, url });
       } else if (role) {
+        targetType = "role";
+        targetValue = role;
+        // Count users with this role that have push subscriptions
+        const result = await db.execute(sql`
+          SELECT COUNT(DISTINCT ps.user_id) as count 
+          FROM push_subscriptions ps
+          JOIN users u ON u.id = ps.user_id
+          WHERE u.role = ${role}
+        `);
+        recipientCount = Number(result.rows[0]?.count || 0);
         await sendPushToRole(role, { title, body, url });
       } else {
         return res.status(400).json({ message: "Must specify userId, role, or broadcast" });
       }
 
-      res.json({ success: true });
+      // Save to push notification history
+      await storage.createPushNotificationHistory({
+        title,
+        body,
+        url: url || null,
+        targetType,
+        targetValue,
+        sentBy: user.id,
+        recipientCount,
+        successful: true,
+      });
+
+      res.json({ success: true, recipientCount });
     } catch (error) {
       console.error('Error sending push notification:', error);
+      
+      // Try to save failed notification to history
+      try {
+        const { userId, role, title, body, url, broadcast } = req.body;
+        const user = req.user as any;
+        
+        let targetType: string = broadcast ? "broadcast" : (userId ? "user" : "role");
+        let targetValue: string | null = userId ? String(userId) : (role || null);
+        
+        await storage.createPushNotificationHistory({
+          title: title || "Unknown",
+          body: body || "Unknown",
+          url: url || null,
+          targetType,
+          targetValue,
+          sentBy: user?.id || null,
+          recipientCount: 0,
+          successful: false,
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+        });
+      } catch (historyError) {
+        console.error('Failed to save push notification history:', historyError);
+      }
+      
       res.status(500).json({ message: "Failed to send push notification" });
+    }
+  });
+
+  // Get push notification history (Admin only)
+  app.get("/api/push/history", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+    try {
+      const history = await storage.getPushNotificationHistory();
+      res.json(history);
+    } catch (error) {
+      console.error('Error fetching push notification history:', error);
+      res.status(500).json({ message: "Failed to fetch push notification history" });
     }
   });
 

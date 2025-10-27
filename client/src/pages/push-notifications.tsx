@@ -5,11 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bell, Send, Users, UserCheck, Globe } from "lucide-react";
+import { Bell, Send, Users, UserCheck, Globe, History, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
+
+interface PushNotificationHistoryItem {
+  id: string;
+  title: string;
+  body: string;
+  url: string | null;
+  targetType: string;
+  targetValue: string | null;
+  sentBy: number | null;
+  recipientCount: number;
+  successful: boolean;
+  errorMessage: string | null;
+  createdAt: string;
+}
 
 export default function PushNotifications() {
   const { toast } = useToast();
@@ -21,6 +38,11 @@ export default function PushNotifications() {
   const [targetType, setTargetType] = useState<"user" | "role" | "broadcast">("broadcast");
   const [targetValue, setTargetValue] = useState("");
   const [sending, setSending] = useState(false);
+
+  // Fetch push notification history
+  const { data: history, refetch: refetchHistory } = useQuery<PushNotificationHistoryItem[]>({
+    queryKey: ["/api/push/history"],
+  });
 
   const handleSend = async () => {
     if (!title || !body) {
@@ -52,15 +74,19 @@ export default function PushNotifications() {
       const response = await apiRequest("POST", "/api/push/send", payload);
 
       if (response.ok) {
+        const data = await response.json();
         toast({
           title: "✅ Sent!",
-          description: "Push notification sent successfully",
+          description: `Push notification sent to ${data.recipientCount} recipient(s)`,
         });
 
         // Clear form
         setTitle("");
         setBody("");
         setUrl("");
+        
+        // Refresh history
+        refetchHistory();
       } else {
         throw new Error("Failed to send");
       }
@@ -302,6 +328,95 @@ export default function PushNotifications() {
             >
               Task Update
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Notification History */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Notification History
+            </CardTitle>
+            <CardDescription>
+              View all sent push notifications and their delivery status
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!history || history.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No push notifications sent yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {history.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-lg border ${
+                      item.successful
+                        ? "bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
+                        : "bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          {item.successful ? (
+                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                          )}
+                          <h4 className="font-semibold">{item.title}</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{item.body}</p>
+                        {item.url && (
+                          <p className="text-xs text-muted-foreground">
+                            🔗 Action URL: {item.url}
+                          </p>
+                        )}
+                        {!item.successful && item.errorMessage && (
+                          <p className="text-xs text-red-600 dark:text-red-400">
+                            ❌ Error: {item.errorMessage}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 text-right">
+                        <div className="flex items-center gap-2">
+                          {item.targetType === "broadcast" && (
+                            <Badge variant="default" className="flex items-center gap-1">
+                              <Globe className="w-3 h-3" />
+                              Broadcast
+                            </Badge>
+                          )}
+                          {item.targetType === "role" && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {item.targetValue}
+                            </Badge>
+                          )}
+                          {item.targetType === "user" && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <UserCheck className="w-3 h-3" />
+                              User #{item.targetValue}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="w-3 h-3" />
+                          {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                        </div>
+                        {item.successful && (
+                          <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                            {item.recipientCount} recipient{item.recipientCount !== 1 ? "s" : ""}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

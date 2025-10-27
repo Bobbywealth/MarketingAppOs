@@ -19,6 +19,7 @@ import {
   projectFeedback,
   analyticsMetrics,
   notifications,
+  pushNotificationHistory,
   activityLogs,
   emails,
   emailAccounts,
@@ -71,6 +72,8 @@ import {
   type InsertAnalyticsMetric,
   type Notification,
   type InsertNotification,
+  type PushNotificationHistory,
+  type InsertPushNotificationHistory,
   type ActivityLog,
   type InsertActivityLog,
   type Email,
@@ -210,6 +213,10 @@ export interface IStorage {
   getAnalyticsMetrics(clientId?: string): Promise<AnalyticsMetric[]>;
   createAnalyticsMetric(metric: InsertAnalyticsMetric): Promise<AnalyticsMetric>;
   deleteAnalyticsMetric(id: string): Promise<void>;
+
+  // Push notification history operations
+  getPushNotificationHistory(): Promise<PushNotificationHistory[]>;
+  createPushNotificationHistory(history: InsertPushNotificationHistory): Promise<PushNotificationHistory>;
 
   // Global search
   globalSearch(query: string): Promise<{
@@ -764,6 +771,16 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAnalyticsMetric(id: string): Promise<void> {
     await db.delete(analyticsMetrics).where(eq(analyticsMetrics.id, id));
+  }
+
+  // Push notification history operations
+  async getPushNotificationHistory(): Promise<PushNotificationHistory[]> {
+    return await db.select().from(pushNotificationHistory).orderBy(desc(pushNotificationHistory.createdAt)).limit(100);
+  }
+
+  async createPushNotificationHistory(historyData: InsertPushNotificationHistory): Promise<PushNotificationHistory> {
+    const [history] = await db.insert(pushNotificationHistory).values(historyData).returning();
+    return history;
   }
 
   // Global search

@@ -552,6 +552,28 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+// Push Notification History table (for tracking sent push notifications)
+export const pushNotificationHistory = pgTable("push_notification_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  body: text("body").notNull(),
+  url: varchar("url"), // Optional action URL
+  targetType: varchar("target_type").notNull(), // broadcast, role, user
+  targetValue: varchar("target_value"), // Role name or user ID if targeted
+  sentBy: integer("sent_by").references(() => users.id), // Admin who sent it
+  recipientCount: integer("recipient_count").default(0), // Number of recipients
+  successful: boolean("successful").default(true),
+  errorMessage: text("error_message"), // If sending failed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pushNotificationHistoryRelations = relations(pushNotificationHistory, ({ one }) => ({
+  sender: one(users, {
+    fields: [pushNotificationHistory.sentBy],
+    references: [users.id],
+  }),
+}));
+
 // Emails table (for tracking company emails via GoDaddy Outlook)
 export const emails = pgTable("emails", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -763,6 +785,10 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+export const insertPushNotificationHistorySchema = createInsertSchema(pushNotificationHistory).omit({ id: true, createdAt: true });
+export type InsertPushNotificationHistory = z.infer<typeof insertPushNotificationHistorySchema>;
+export type PushNotificationHistory = typeof pushNotificationHistory.$inferSelect;
 
 export const insertEmailSchema = createInsertSchema(emails).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertEmail = z.infer<typeof insertEmailSchema>;
