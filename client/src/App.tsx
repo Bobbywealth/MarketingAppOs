@@ -23,6 +23,7 @@ import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
 import PaymentSuccessPage from "@/pages/payment-success";
 import ContactPage from "@/pages/contact";
+import BlogPage from "@/pages/blog";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
 import mtaLogoWhite from "@assets/mta-logo.png";
 import Dashboard from "@/pages/dashboard";
@@ -75,6 +76,7 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
       <Route path="/contact" component={ContactPage} />
+      <Route path="/blog" component={BlogPage} />
       {!user && <Route path="/" component={Landing} />}
       {/* Client-specific routes */}
       {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}

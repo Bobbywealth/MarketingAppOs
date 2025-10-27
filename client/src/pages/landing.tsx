@@ -93,9 +93,9 @@ export default function LandingPage() {
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#home" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-home">
+            <Link href="/" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-home">
               Home
-            </a>
+            </Link>
             
             <NavigationMenu>
               <NavigationMenuList>
@@ -135,15 +135,15 @@ export default function LandingPage() {
               </NavigationMenuList>
             </NavigationMenu>
             
-            <a href="#blog" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-blog">
+            <Link href="/blog" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-blog">
               Blog
-            </a>
+            </Link>
             <a href="#about" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-about">
               About Us
             </a>
-            <a href="#contact" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-contact">
+            <Link href="/contact" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-contact">
               Contact Us
-            </a>
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2 md:gap-4">
