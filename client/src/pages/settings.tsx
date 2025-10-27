@@ -23,6 +23,12 @@ export default function SettingsPage() {
     email: user?.email || "",
   });
 
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof profileData) => {
       return apiRequest("PATCH", "/api/user/profile", data);
@@ -38,6 +44,36 @@ export default function SettingsPage() {
       toast({
         title: "Error",
         description: error?.message || "Failed to update profile.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: typeof passwordData) => {
+      const response = await apiRequest("POST", "/api/user/change-password", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to change password");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "✅ Password changed",
+        description: "Your password has been changed successfully.",
+      });
+      // Clear password fields
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to change password.",
         variant: "destructive",
       });
     },
@@ -68,6 +104,11 @@ export default function SettingsPage() {
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfileMutation.mutate(profileData);
+  };
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+    changePasswordMutation.mutate(passwordData);
   };
 
   return (
@@ -181,20 +222,59 @@ export default function SettingsPage() {
               <CardTitle>Change Password</CardTitle>
               <CardDescription>Update your password to keep your account secure</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input id="currentPassword" type="password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" type="password" />
-              </div>
-              <Button>Update Password</Button>
+            <CardContent>
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password *</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                    }
+                    placeholder="Enter current password"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password *</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, newPassword: e.target.value })
+                    }
+                    placeholder="Minimum 6 characters"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password *</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                    }
+                    placeholder="Re-enter new password"
+                    minLength={6}
+                    required
+                  />
+                </div>
+
+                <Separator />
+
+                <Button
+                  type="submit"
+                  disabled={changePasswordMutation.isPending}
+                >
+                  {changePasswordMutation.isPending ? "Updating..." : "Update Password"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>

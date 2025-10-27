@@ -3307,6 +3307,60 @@ Examples:
     }
   });
 
+  // Change password endpoint
+  app.post("/api/user/change-password", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { comparePasswords } = await import('./auth.js');
+      const { hashPassword } = await import('./auth.js');
+      const currentUserId = (req.user as any).id;
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+
+      // Validation
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ message: "New passwords do not match" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      if (currentPassword === newPassword) {
+        return res.status(400).json({ message: "New password must be different from current password" });
+      }
+
+      // Get current user
+      const users = await storage.getUsers();
+      const user = users.find(u => u.id === currentUserId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isValid = await comparePasswords(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update password
+      await storage.updateUser(currentUserId, { password: hashedPassword });
+
+      console.log(`✅ Password changed successfully for user: ${user.username}`);
+
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Password change error:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
   // Notifications routes
   app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
     try {
