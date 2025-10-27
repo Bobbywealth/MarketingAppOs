@@ -683,7 +683,7 @@ export default function LandingPage() {
               <p className="text-muted-foreground">No packages available at this time.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               {packages.map((pkg) => (
                 <Card
                   key={pkg.id}
