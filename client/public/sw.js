@@ -154,14 +154,33 @@ self.addEventListener('push', (event) => {
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked:', event.action);
+  console.log('[SW] Notification data:', event.notification.data);
   event.notification.close();
 
   if (event.action === 'close') {
     return;
   }
 
+  const urlToOpen = event.notification.data || '/';
+  console.log('[SW] Opening URL:', urlToOpen);
+
   event.waitUntil(
-    clients.openWindow(event.notification.data || '/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if app is already open
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          // App is open, focus it and navigate
+          client.focus();
+          client.postMessage({ 
+            type: 'NAVIGATE', 
+            url: urlToOpen 
+          });
+          return;
+        }
+      }
+      // App is not open, open new window
+      return clients.openWindow(urlToOpen);
+    })
   );
 });
 

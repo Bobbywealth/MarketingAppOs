@@ -15,6 +15,8 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import { usePageTracking } from "@/hooks/usePageTracking";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
@@ -130,9 +132,26 @@ function HamburgerMenu() {
 
 function AppContent() {
   const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   
   // Track page views automatically
   usePageTracking();
+
+  // Handle navigation from push notifications
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'NAVIGATE') {
+        console.log('Navigating to:', event.data.url);
+        setLocation(event.data.url);
+      }
+    };
+
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+    
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    };
+  }, [setLocation]);
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
