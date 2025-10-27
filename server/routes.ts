@@ -2548,9 +2548,17 @@ Examples:
       }
       
       // Admin/manager/staff can create content for any client
-      const hasPermission = await storage.checkPermission(user.id, "canManageContent");
-      if (!hasPermission) {
-        console.log("❌ Permission denied for user:", user.id);
+      // Get user role to check permissions
+      const userRecord = await storage.getUser(String(user.id));
+      if (!userRecord) {
+        console.log("❌ User not found:", user.id);
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Check if user has permission to manage content
+      const { hasPermission } = await import('./rbac.js');
+      if (!hasPermission(userRecord.role as any, "canManageContent")) {
+        console.log("❌ Permission denied for user:", user.id, "role:", userRecord.role);
         return res.status(403).json({ message: "You don't have permission to manage content" });
       }
       
