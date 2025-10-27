@@ -4221,11 +4221,17 @@ Examples:
   app.get("/api/test-dialpad", async (req: Request, res: Response) => {
     try {
       if (!process.env.DIALPAD_API_KEY) {
+        console.log("❌ DIALPAD_API_KEY not found in environment");
         return res.status(503).json({ 
-          success: false, 
+          success: false,
+          connected: false,
           message: "Dialpad API is not configured. Please add DIALPAD_API_KEY to your environment variables." 
         });
       }
+
+      console.log("🔍 Testing Dialpad connection...");
+      console.log("🔑 API Key present: Yes (length:", process.env.DIALPAD_API_KEY.length, ")");
+      console.log("🔑 API Key starts with:", process.env.DIALPAD_API_KEY.substring(0, 10) + "...");
 
       // Test with a simple calls endpoint (we know this exists)
       const response = await fetch("https://dialpad.com/api/v2/calls?limit=1", {
@@ -4235,22 +4241,29 @@ Examples:
         },
       });
 
+      const responseText = await response.text();
+      console.log("📡 Dialpad API Response Status:", response.status);
+      console.log("📡 Dialpad API Response Headers:", Object.fromEntries(response.headers.entries()));
+      console.log("📡 Dialpad API Response Body:", responseText.substring(0, 500));
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Dialpad connection failed:", response.status, errorText);
+        console.error("❌ Dialpad connection failed:", response.status);
         return res.status(response.status).json({ 
-          success: false, 
+          success: false,
+          connected: false,
           message: "Dialpad connection failed", 
-          error: errorText,
-          status: response.status 
+          error: responseText,
+          status: response.status,
+          hint: response.status === 401 ? "API Key is invalid or expired. Please check your Dialpad API key." : "Unknown error",
         });
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       console.log("✅ Connected to Dialpad! Retrieved", data.items?.length || 0, "call records");
 
       res.json({
         success: true,
+        connected: true,
         message: "✅ Connected to Dialpad successfully!",
         endpoint: "/api/v2/calls",
         recordsRetrieved: data.items?.length || 0,
@@ -4259,7 +4272,13 @@ Examples:
       });
     } catch (error: any) {
       console.error("❌ Dialpad connection error:", error.message);
-      res.status(500).json({ success: false, error: error.message });
+      console.error("❌ Full error:", error);
+      res.status(500).json({ 
+        success: false, 
+        connected: false,
+        error: error.message,
+        details: error.toString(),
+      });
     }
   });
 
