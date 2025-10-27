@@ -52,12 +52,51 @@ export default function Clients() {
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/clients", data);
     },
-    onSuccess: () => {
+    onSuccess: async (response: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-      setDialogOpen(false);
-      setPaymentMethod("none");
-      toast({ title: "Client created successfully" });
+      
+      const clientData = await response.json();
+      
+      // If a subscription package was selected, redirect to Stripe checkout
+      if (variables.subscriptionPackageId && variables.subscriptionPackageId !== "none") {
+        try {
+          toast({ title: "Client created! Redirecting to payment..." });
+          
+          const checkoutResponse = await apiRequest("POST", "/api/create-checkout-session", {
+            packageId: variables.subscriptionPackageId,
+            email: variables.email,
+            name: variables.name,
+            clientId: clientData.id,
+          });
+          
+          const checkoutData = await checkoutResponse.json();
+          
+          if (checkoutData.success && checkoutData.checkoutUrl) {
+            // Redirect to Stripe checkout
+            window.location.href = checkoutData.checkoutUrl;
+          } else {
+            toast({ 
+              title: "Client created, but payment setup failed", 
+              description: "You can set up payment later",
+              variant: "destructive" 
+            });
+            setDialogOpen(false);
+          }
+        } catch (error) {
+          console.error("Checkout error:", error);
+          toast({ 
+            title: "Client created, but payment setup failed", 
+            description: "You can set up payment later",
+            variant: "destructive" 
+          });
+          setDialogOpen(false);
+        }
+      } else {
+        setDialogOpen(false);
+        setPaymentMethod("none");
+        toast({ title: "Client created successfully" });
+      }
     },
     onError: () => {
       toast({ title: "Failed to create client", variant: "destructive" });
