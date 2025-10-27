@@ -1,4 +1,4 @@
-const DIALPAD_API_BASE = 'https://dialpad.com/api/v2';
+const DIALPAD_API_BASE = 'https://api.dialpad.com/v2';
 const REQUEST_TIMEOUT = 5000; // 5 second timeout
 
 export class DialpadService {
