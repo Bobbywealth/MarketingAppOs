@@ -547,65 +547,6 @@ export default function EmailsPage() {
         </Alert>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Inbox</p>
-                <p className="text-2xl font-bold">{folderCounts.inbox}</p>
-              </div>
-              <div className="p-3 bg-blue-500/10 rounded-lg">
-                <Inbox className="w-6 h-6 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Unread</p>
-                <p className="text-2xl font-bold">{folderCounts.unread}</p>
-              </div>
-              <div className="p-3 bg-orange-500/10 rounded-lg">
-                <Mail className="w-6 h-6 text-orange-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Spam</p>
-                <p className="text-2xl font-bold">{folderCounts.spam}</p>
-              </div>
-              <div className="p-3 bg-red-500/10 rounded-lg">
-                <AlertCircle className="w-6 h-6 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Starred</p>
-                <p className="text-2xl font-bold">{folderCounts.starred}</p>
-              </div>
-              <div className="p-3 bg-yellow-500/10 rounded-lg">
-                <Star className="w-6 h-6 text-yellow-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Email Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Sidebar - Folders */}
@@ -707,7 +648,7 @@ export default function EmailsPage() {
             </div>
           </CardHeader>
           <Separator />
-          <ScrollArea className="h-[700px]">
+          <ScrollArea className="h-[calc(100vh-250px)]">
             {isLoading ? (
               <div className="p-8 text-center text-muted-foreground">
                 Loading emails...
@@ -878,7 +819,7 @@ export default function EmailsPage() {
                               </div>
                             </div>
                           ) : (
-                            <div className="max-h-[400px] overflow-y-auto">
+                            <div className="max-h-[calc(100vh-450px)] overflow-y-auto">
                               {selectedEmail.body ? (
                                 <div 
                                   className="email-content text-xs"
