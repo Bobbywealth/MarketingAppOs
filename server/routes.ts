@@ -2154,9 +2154,29 @@ Examples:
   // Public booking endpoint (no authentication required)
   app.post("/api/bookings", async (req: Request, res: Response) => {
     try {
+      console.log("📅 Booking request received:", req.body);
       const { name, email, phone, company, message, datetime, date, time } = req.body;
 
+      if (!name || !email || !phone || !datetime) {
+        console.error("❌ Missing required fields:", { name: !!name, email: !!email, phone: !!phone, datetime: !!datetime });
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Get admin users first
+      const adminUsers = await storage.getAdminUsers();
+      console.log(`📋 Found ${adminUsers.length} admin users`);
+      
+      if (adminUsers.length === 0) {
+        console.error("❌ No admin users found!");
+        return res.status(500).json({ message: "System configuration error: No admin users found" });
+      }
+
+      // Use first admin's ID for createdBy
+      const firstAdminId = adminUsers[0].id;
+      console.log(`✅ Using admin ID ${firstAdminId} for createdBy`);
+
       // Create calendar event for admin
+      console.log("📅 Creating calendar event...");
       const event = await storage.createCalendarEvent({
         title: `📞 Strategy Call: ${name}${company ? ` (${company})` : ''}`,
         description: `Strategy call booking from website\n\n` +
@@ -2164,17 +2184,18 @@ Examples:
           `Email: ${email}\n` +
           `Phone: ${phone}\n` +
           `${company ? `Company: ${company}\n` : ''}` +
-          `\nMessage:\n${message}`,
+          `\nMessage:\n${message || 'No additional message'}`,
         start: new Date(datetime),
         end: new Date(new Date(datetime).getTime() + 30 * 60000), // 30 minutes
         type: "booking",
         location: phone,
-        createdBy: 1, // System user
+        createdBy: firstAdminId,
       });
+      console.log("✅ Calendar event created:", event.id);
 
-      // Create a notification for admin
+      // Create a notification for all admins
       try {
-        const adminUsers = await storage.getAdminUsers();
+        console.log("📬 Creating notifications for admins...");
         for (const admin of adminUsers) {
           await storage.createNotification({
             userId: admin.id,
@@ -2188,22 +2209,27 @@ Examples:
             actionUrl: "/company-calendar",
           });
         }
+        console.log(`✅ Notifications sent to ${adminUsers.length} admins`);
       } catch (notifError) {
-        console.error("Failed to create notification:", notifError);
+        console.error("⚠️ Failed to create notification:", notifError);
         // Don't fail the whole request if notification fails
       }
 
-      // TODO: Send confirmation email to customer
-      // TODO: Send notification email to admin
-
+      console.log("🎉 Booking completed successfully!");
       res.status(201).json({
         success: true,
         eventId: event.id,
         message: "Booking confirmed!",
       });
-    } catch (error) {
-      console.error("Booking error:", error);
-      res.status(500).json({ message: "Failed to create booking" });
+    } catch (error: any) {
+      console.error("❌ Booking error:");
+      console.error("Error type:", error?.constructor?.name);
+      console.error("Error message:", error?.message);
+      console.error("Error stack:", error?.stack);
+      res.status(500).json({ 
+        message: "Failed to create booking",
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      });
     }
   });
 
