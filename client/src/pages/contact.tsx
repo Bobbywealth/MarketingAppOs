@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Phone, MapPin, Send, CheckCircle, ArrowLeft, Calendar } from "lucide-react";
+import { Mail, Phone, Send, CheckCircle, ArrowLeft, Calendar } from "lucide-react";
 import mtaLogoBlue from "@assets/mta-logo-blue.png";
 import { BookingModal } from "@/components/BookingModal";
 
@@ -252,8 +252,8 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold mb-1">Email Us</h3>
-                        <a href="mailto:hello@marketingteamapp.com" className="text-blue-600 hover:underline">
-                          hello@marketingteamapp.com
+                        <a href="mailto:business@wolfpaqmarketing.com" className="text-blue-600 hover:underline">
+                          business@wolfpaqmarketing.com
                         </a>
                         <p className="text-sm text-gray-500 mt-1">
                           We'll respond within 24 hours
@@ -271,8 +271,8 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold mb-1">Call Us</h3>
-                        <a href="tel:+15551234567" className="text-green-600 hover:underline">
-                          (555) 123-4567
+                        <a href="tel:+14242387201" className="text-green-600 hover:underline">
+                          +1 (424) 238-7201
                         </a>
                         <p className="text-sm text-gray-500 mt-1">
                           Mon-Fri, 9am-6pm EST
@@ -282,23 +282,6 @@ export default function ContactPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
-                        <MapPin className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold mb-1">Visit Us</h3>
-                        <p className="text-gray-600">
-                          123 Marketing Street<br />
-                          Suite 100<br />
-                          New York, NY 10001
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Quick Links */}
