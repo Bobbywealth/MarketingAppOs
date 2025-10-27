@@ -32,8 +32,8 @@ export default function Dashboard() {
     {
       title: "Total Clients",
       value: stats?.totalClients || 0,
-      change: "+12%",
-      changeType: "positive" as const,
+      change: `${stats?.clientsChange || "0"}%`,
+      changeType: (stats?.clientsChange && parseInt(stats.clientsChange) >= 0) ? "positive" as const : "negative" as const,
       icon: Users,
       gradientFrom: "from-blue-500",
       gradientTo: "to-cyan-500",
@@ -42,8 +42,8 @@ export default function Dashboard() {
     {
       title: "Active Campaigns",
       value: stats?.activeCampaigns || 0,
-      change: "+8%",
-      changeType: "positive" as const,
+      change: `${stats?.campaignsChange || "0"}%`,
+      changeType: (stats?.campaignsChange && parseInt(stats.campaignsChange) >= 0) ? "positive" as const : "negative" as const,
       icon: Megaphone,
       gradientFrom: "from-orange-500",
       gradientTo: "to-pink-500",
@@ -52,8 +52,8 @@ export default function Dashboard() {
     {
       title: "Pipeline Value",
       value: `$${((stats?.pipelineValue || 0) / 1000).toFixed(1)}k`,
-      change: "+23%",
-      changeType: "positive" as const,
+      change: `${stats?.pipelineChange || "0"}%`,
+      changeType: (stats?.pipelineChange && parseInt(stats.pipelineChange) >= 0) ? "positive" as const : "negative" as const,
       icon: TrendingUp,
       gradientFrom: "from-emerald-500",
       gradientTo: "to-teal-500",
@@ -62,8 +62,8 @@ export default function Dashboard() {
     {
       title: "Revenue (MTD)",
       value: `$${(displayRevenue / 1000).toFixed(1)}k`,
-      change: "-5%",
-      changeType: "negative" as const,
+      change: `${stats?.revenueChange || "0"}%`,
+      changeType: (stats?.revenueChange && parseInt(stats.revenueChange) >= 0) ? "positive" as const : "negative" as const,
       icon: DollarSign,
       gradientFrom: "from-violet-500",
       gradientTo: "to-purple-500",

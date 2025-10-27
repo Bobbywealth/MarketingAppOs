@@ -1220,6 +1220,44 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       // Skip invoices for now - not critical for dashboard load
       const monthlyRevenue = 0; // Will be replaced by Stripe data if available
 
+      // Calculate percentage changes (compare with last month)
+      const now = new Date();
+      const firstDayOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const firstDayOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+      // Last month's data
+      const clientsLastMonth = clients.filter(c => {
+        const createdAt = new Date(c.createdAt);
+        return createdAt < firstDayOfThisMonth;
+      }).length;
+
+      const campaignsLastMonth = campaigns.filter(c => {
+        const createdAt = new Date(c.createdAt);
+        return createdAt >= firstDayOfLastMonth && createdAt <= lastDayOfLastMonth && c.status === "active";
+      }).length;
+
+      const leadsLastMonth = leads.filter(l => {
+        const createdAt = new Date(l.createdAt);
+        return createdAt < firstDayOfThisMonth;
+      });
+      const pipelineValueLastMonth = leadsLastMonth.reduce((sum, lead) => sum + (lead.value || 0), 0);
+
+      // Calculate percentage changes
+      const calculateChange = (current: number, previous: number): string => {
+        if (previous === 0) return current > 0 ? "+100" : "0";
+        const change = ((current - previous) / previous) * 100;
+        const rounded = Math.round(change);
+        return rounded > 0 ? `+${rounded}` : `${rounded}`;
+      };
+
+      const clientsChange = calculateChange(clients.length, clientsLastMonth);
+      const campaignsChange = calculateChange(activeCampaigns, campaignsLastMonth);
+      const pipelineChange = calculateChange(pipelineValue, pipelineValueLastMonth);
+      
+      // For revenue, we'll use 0 for now since it's not implemented
+      const revenueChange = "0";
+
       // Task metrics
       const totalTasks = tasks.length;
       const completedTasks = tasks.filter((t) => t.status === "completed").length;
@@ -1333,6 +1371,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         activeCampaigns,
         pipelineValue,
         monthlyRevenue,
+        // Percentage changes (live calculated)
+        clientsChange,
+        campaignsChange,
+        pipelineChange,
+        revenueChange,
         recentActivity: sortedActivity,
         upcomingDeadlines: sortedDeadlines,
         taskMetrics: {
