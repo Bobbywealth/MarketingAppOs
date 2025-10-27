@@ -3802,7 +3802,7 @@ Examples:
 
       // Save to push notification history
       try {
-        await storage.createPushNotificationHistory({
+        console.log('💾 Saving push notification history:', {
           title,
           body,
           url: url || null,
@@ -3812,8 +3812,25 @@ Examples:
           recipientCount,
           successful: true,
         });
+        
+        const historyRecord = await storage.createPushNotificationHistory({
+          title,
+          body,
+          url: url || null,
+          targetType,
+          targetValue,
+          sentBy: user?.id || user?.claims?.sub || null,
+          recipientCount,
+          successful: true,
+        });
+        
+        console.log('✅ Push notification history saved:', historyRecord);
       } catch (historyError) {
-        console.error('Failed to save push notification history (non-critical):', historyError);
+        console.error('❌ Failed to save push notification history:', historyError);
+        console.error('History error details:', {
+          message: historyError?.message,
+          stack: historyError?.stack,
+        });
         // Don't fail the request if history saving fails
       }
 
@@ -3859,11 +3876,52 @@ Examples:
   // Get push notification history (Admin only)
   app.get("/api/push/history", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
+      console.log('📋 Fetching push notification history...');
       const history = await storage.getPushNotificationHistory();
+      console.log('📋 History fetched:', history.length, 'records');
       res.json(history);
     } catch (error) {
-      console.error('Error fetching push notification history:', error);
+      console.error('❌ Error fetching push notification history:', error);
       res.status(500).json({ message: "Failed to fetch push notification history" });
+    }
+  });
+
+  // Test push notification history table
+  app.get("/api/push/test-history", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      console.log('🧪 Testing push notification history table...');
+      
+      // Try to create a test record
+      const testRecord = await storage.createPushNotificationHistory({
+        title: "Test Notification",
+        body: "This is a test to verify the history table works",
+        url: "/test",
+        targetType: "broadcast",
+        targetValue: null,
+        sentBy: (req.user as any)?.id || 1,
+        recipientCount: 1,
+        successful: true,
+      });
+      
+      console.log('✅ Test record created:', testRecord);
+      
+      // Try to fetch all records
+      const allRecords = await storage.getPushNotificationHistory();
+      console.log('✅ All records fetched:', allRecords.length);
+      
+      res.json({ 
+        success: true, 
+        testRecord, 
+        totalRecords: allRecords.length,
+        message: "Push notification history table is working correctly"
+      });
+    } catch (error) {
+      console.error('❌ Error testing push notification history:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        message: "Push notification history table test failed"
+      });
     }
   });
 
