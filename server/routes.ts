@@ -1663,6 +1663,39 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       const campaign = await storage.createCampaign(campaignData);
       console.log(`📣 Campaign created by ${currentUser?.username} (${currentUser?.role}):`, campaign.name);
+      
+      // Notify client users if campaign is assigned to a client
+      if (campaign.clientId) {
+        try {
+          const clientUsers = await storage.getUsersByClientId(campaign.clientId);
+          const { sendPushToUser } = await import('./push.js');
+          
+          for (const clientUser of clientUsers) {
+            // In-app notification
+            await storage.createNotification({
+              userId: clientUser.id,
+              type: 'success',
+              title: '🎯 New Campaign Created',
+              message: `A new campaign "${campaign.name}" has been created for you`,
+              category: 'general',
+              actionUrl: '/client-campaigns',
+              isRead: false,
+            });
+            
+            // Push notification
+            await sendPushToUser(clientUser.id, {
+              title: '🎯 New Campaign Created',
+              body: `"${campaign.name}" has been created for you`,
+              url: '/client-campaigns',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+          console.log(`📬 Notified ${clientUsers.length} client user(s) about new campaign`);
+        } catch (notifError) {
+          console.error('Failed to notify client about campaign:', notifError);
+          // Don't fail campaign creation if notification fails
+        }
+      }
+      
       res.status(201).json(campaign);
     } catch (error) {
       handleValidationError(error, res);
@@ -1812,9 +1845,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.log("✅ Validation passed, creating task:", validatedData);
       const task = await storage.createTask(validatedData);
       
+      const { sendPushToUser } = await import('./push.js');
+      
       // Send push notification if task is assigned to someone
       if (task.assignedToId) {
-        const { sendPushToUser } = await import('./push.js');
         const user = req.user as any;
         const creatorName = user?.username || 'Someone';
         
@@ -1823,6 +1857,37 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           body: `${creatorName} assigned you: "${task.title}"`,
           url: '/tasks',
         }).catch(err => console.error('Failed to send push notification:', err));
+      }
+      
+      // Notify client users if task is related to their client
+      if (task.clientId) {
+        try {
+          const clientUsers = await storage.getUsersByClientId(task.clientId);
+          
+          for (const clientUser of clientUsers) {
+            // In-app notification
+            await storage.createNotification({
+              userId: clientUser.id,
+              type: 'info',
+              title: '📋 New Task Created',
+              message: `A new task "${task.title}" has been created for your account`,
+              category: 'general',
+              actionUrl: '/client-dashboard',
+              isRead: false,
+            });
+            
+            // Push notification
+            await sendPushToUser(clientUser.id, {
+              title: '📋 New Task',
+              body: `"${task.title}" has been created for your account`,
+              url: '/client-dashboard',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+          console.log(`📬 Notified ${clientUsers.length} client user(s) about new task`);
+        } catch (notifError) {
+          console.error('Failed to notify client about task:', notifError);
+          // Don't fail task creation if notification fails
+        }
       }
       
       res.status(201).json(task);
@@ -2421,6 +2486,38 @@ Examples:
       console.log("✅ Validated data:", JSON.stringify(validatedData, null, 2));
       const post = await storage.createContentPost(validatedData);
       console.log("✅ Content post created:", post.id);
+      
+      // Notify client users about new content post
+      if (post.clientId) {
+        try {
+          const clientUsers = await storage.getUsersByClientId(post.clientId);
+          const { sendPushToUser } = await import('./push.js');
+          
+          for (const clientUser of clientUsers) {
+            // In-app notification
+            await storage.createNotification({
+              userId: clientUser.id,
+              type: 'success',
+              title: '📝 New Content Posted',
+              message: `New content has been scheduled${post.scheduledFor ? ` for ${new Date(post.scheduledFor).toLocaleDateString()}` : ''}`,
+              category: 'general',
+              actionUrl: '/client-content',
+              isRead: false,
+            });
+            
+            // Push notification
+            await sendPushToUser(clientUser.id, {
+              title: '📝 New Content Posted',
+              body: 'New content has been scheduled for you',
+              url: '/client-content',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+          console.log(`📬 Notified ${clientUsers.length} client user(s) about new content`);
+        } catch (notifError) {
+          console.error('Failed to notify client about content:', notifError);
+        }
+      }
+      
       res.status(201).json(post);
     } catch (error: any) {
       console.error("❌ Content post creation error:");
@@ -2505,6 +2602,38 @@ Examples:
     try {
       const validatedData = insertInvoiceSchema.parse(req.body);
       const invoice = await storage.createInvoice(validatedData);
+      
+      // Notify client users about new invoice
+      if (invoice.clientId) {
+        try {
+          const clientUsers = await storage.getUsersByClientId(invoice.clientId);
+          const { sendPushToUser } = await import('./push.js');
+          
+          for (const clientUser of clientUsers) {
+            // In-app notification
+            await storage.createNotification({
+              userId: clientUser.id,
+              type: 'info',
+              title: '💰 New Invoice',
+              message: `Invoice #${invoice.invoiceNumber} for $${invoice.amount} is now available`,
+              category: 'general',
+              actionUrl: '/client-billing',
+              isRead: false,
+            });
+            
+            // Push notification
+            await sendPushToUser(clientUser.id, {
+              title: '💰 New Invoice',
+              body: `Invoice #${invoice.invoiceNumber} for $${invoice.amount}`,
+              url: '/client-billing',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+          console.log(`📬 Notified ${clientUsers.length} client user(s) about new invoice`);
+        } catch (notifError) {
+          console.error('Failed to notify client about invoice:', notifError);
+        }
+      }
+      
       res.status(201).json(invoice);
     } catch (error) {
       handleValidationError(error, res);
