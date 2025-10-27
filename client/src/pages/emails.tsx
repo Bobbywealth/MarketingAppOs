@@ -726,42 +726,44 @@ export default function EmailsPage() {
                   <div key={email.id} className="border-b">
                     {/* Compact Email Row */}
                     <div
-                      className={`p-3 hover:bg-accent/60 cursor-pointer transition-all border-l-4 ${
+                      className={`py-2 px-3 hover:bg-accent/50 cursor-pointer transition-all border-l-2 ${
                         !email.isRead 
-                          ? "bg-blue-50 dark:bg-blue-950/20 border-l-blue-500" 
+                          ? "bg-blue-50/50 dark:bg-blue-950/10 border-l-blue-500" 
                           : "border-l-transparent"
                       } ${
                         selectedEmail?.id === email.id 
-                          ? "bg-accent/40 border-l-primary" 
+                          ? "bg-accent/30 border-l-primary" 
                           : ""
                       }`}
                       onClick={() => handleEmailClick(email)}
                     >
-                      <div className="flex items-center gap-3">
-                        <Avatar className={`w-8 h-8 flex-shrink-0 ${!email.isRead ? "ring-2 ring-blue-500" : ""}`}>
-                          <AvatarFallback className={`text-xs ${!email.isRead ? "bg-blue-500 text-white" : ""}`}>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className={`w-6 h-6 flex-shrink-0 ${!email.isRead ? "ring-1 ring-blue-500" : ""}`}>
+                          <AvatarFallback className={`text-[10px] ${!email.isRead ? "bg-blue-500 text-white" : ""}`}>
                             {getInitials(email.fromName || email.from)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0 grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-3">
-                            <p className={`text-sm truncate ${!email.isRead ? "font-bold text-foreground" : "text-muted-foreground"}`}>
+                        <div className="flex-1 min-w-0 grid grid-cols-12 gap-3 items-center">
+                          <div className="col-span-2">
+                            <p className={`text-xs truncate ${!email.isRead ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                               {email.fromName || email.from}
                             </p>
                           </div>
-                          <div className="col-span-7">
-                            <p className={`text-sm truncate ${!email.isRead ? "font-semibold text-foreground" : "text-foreground/80"}`}>
-                              {email.subject}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {email.bodyPreview}
-                            </p>
+                          <div className="col-span-8">
+                            <div className="flex items-baseline gap-2">
+                              <p className={`text-xs truncate flex-1 ${!email.isRead ? "font-semibold text-foreground" : "text-foreground/80"}`}>
+                                {email.subject}
+                              </p>
+                              <span className="text-[10px] text-muted-foreground/60 hidden md:inline">—</span>
+                              <p className="text-[11px] text-muted-foreground/70 truncate flex-1 hidden md:block">
+                                {email.bodyPreview}
+                              </p>
+                            </div>
                           </div>
-                          <div className="col-span-2 flex items-center justify-end gap-2">
-                            {email.isStarred && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}
-                            {email.hasAttachments && <Paperclip className="w-3 h-3 text-muted-foreground" />}
-                            {!email.isRead && <Badge className="text-xs bg-blue-500 hover:bg-blue-600">New</Badge>}
-                            <span className={`text-xs whitespace-nowrap ${!email.isRead ? "font-semibold" : "text-muted-foreground"}`}>
+                          <div className="col-span-2 flex items-center justify-end gap-1.5">
+                            {email.isStarred && <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />}
+                            {email.hasAttachments && <Paperclip className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0" />}
+                            <span className={`text-[10px] whitespace-nowrap ${!email.isRead ? "font-semibold" : "text-muted-foreground"}`}>
                               {formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true })}
                             </span>
                           </div>
@@ -772,21 +774,21 @@ export default function EmailsPage() {
                     {/* Expanded Email Content */}
                     {selectedEmail?.id === email.id && (
                       <div className="bg-background border-t">
-                        <div className="p-4">
+                        <div className="p-3">
                           {/* Compact Email Header */}
-                          <div className="mb-3 pb-3 border-b">
+                          <div className="mb-2 pb-2 border-b">
                             <div className="flex items-start justify-between gap-3 mb-2">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <Avatar className="w-8 h-8 flex-shrink-0">
-                                  <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-white font-semibold text-xs">
+                                <Avatar className="w-7 h-7 flex-shrink-0">
+                                  <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-white font-semibold text-[10px]">
                                     {getInitials(selectedEmail.fromName || selectedEmail.from)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold truncate">{selectedEmail.fromName || selectedEmail.from}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{selectedEmail.from}</p>
+                                  <p className="text-xs font-semibold truncate">{selectedEmail.fromName || selectedEmail.from}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{selectedEmail.from}</p>
                                 </div>
-                                <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                <p className="text-[10px] text-muted-foreground whitespace-nowrap">
                                   {new Date(selectedEmail.receivedAt).toLocaleString('en-US', { 
                                     month: 'short', 
                                     day: 'numeric', 
@@ -799,12 +801,12 @@ export default function EmailsPage() {
                             </div>
                             
                             {/* Action Buttons Row */}
-                            <div className="flex gap-1.5 flex-wrap">
+                            <div className="flex gap-1 flex-wrap">
                               <Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleReply(selectedEmail)}
-                                className="h-8 text-xs"
+                                className="h-7 text-[10px] px-2"
                               >
                                 <Reply className="w-3 h-3 mr-1" />
                                 Reply
@@ -812,7 +814,7 @@ export default function EmailsPage() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                className="h-8 text-xs"
+                                className="h-7 text-[10px] px-2"
                               >
                                 <Forward className="w-3 h-3 mr-1" />
                                 Forward
@@ -822,7 +824,7 @@ export default function EmailsPage() {
                                 size="sm"
                                 onClick={() => handleAnalyzeEmail(selectedEmail.id)}
                                 disabled={analyzingEmail}
-                                className="h-8 text-xs bg-gradient-to-r from-purple-500/10 to-blue-500/10 hover:from-purple-500/20 hover:to-blue-500/20"
+                                className="h-7 text-[10px] px-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 hover:from-purple-500/20 hover:to-blue-500/20"
                               >
                                 {analyzingEmail ? (
                                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -834,7 +836,7 @@ export default function EmailsPage() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
-                                className="h-8 px-2"
+                                className="h-7 px-2"
                               >
                                 <Star className="w-3 h-3" />
                               </Button>
@@ -844,7 +846,7 @@ export default function EmailsPage() {
                                   size="sm"
                                   onClick={() => moveToFolderMutation.mutate({ emailId: selectedEmail.id, folder: "trash" })}
                                   title="Move to Trash"
-                                  className="h-8 px-2"
+                                  className="h-7 px-2"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </Button>
@@ -858,7 +860,7 @@ export default function EmailsPage() {
                                     }
                                   }}
                                   title="Delete Permanently"
-                                  className="h-8 text-xs"
+                                  className="h-7 text-[10px] px-2"
                                 >
                                   <Trash2 className="w-3 h-3 mr-1" />
                                   Delete
@@ -869,17 +871,17 @@ export default function EmailsPage() {
 
                           {/* Email Body */}
                           {loadingEmailBody ? (
-                            <div className="flex items-center justify-center py-8">
+                            <div className="flex items-center justify-center py-4">
                               <div className="text-center">
-                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-                                <p className="text-xs text-muted-foreground">Loading...</p>
+                                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1 text-primary" />
+                                <p className="text-[10px] text-muted-foreground">Loading...</p>
                               </div>
                             </div>
                           ) : (
-                            <div className="max-h-[500px] overflow-y-auto">
+                            <div className="max-h-[400px] overflow-y-auto">
                               {selectedEmail.body ? (
                                 <div 
-                                  className="email-content text-sm"
+                                  className="email-content text-xs"
                                   dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
                                   style={{
                                     maxWidth: '100%',
@@ -887,9 +889,9 @@ export default function EmailsPage() {
                                   }}
                                 />
                               ) : (
-                                <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-muted">
-                                  <p className="text-sm text-muted-foreground">{selectedEmail.bodyPreview}</p>
-                                  <p className="text-xs text-muted-foreground mt-2 italic">Full content not available</p>
+                                <div className="p-3 bg-muted/30 rounded-lg border border-dashed border-muted">
+                                  <p className="text-xs text-muted-foreground">{selectedEmail.bodyPreview}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-1 italic">Full content not available</p>
                                 </div>
                               )}
                             </div>
@@ -897,21 +899,21 @@ export default function EmailsPage() {
 
                           {/* AI Analysis Results */}
                           {emailAnalysis && (
-                            <div className="mt-6 space-y-4">
-                              <div className="flex items-center gap-2 mb-4">
-                                <Sparkles className="w-5 h-5 text-purple-500" />
-                                <h4 className="font-bold text-lg">AI Analysis</h4>
+                            <div className="mt-4 space-y-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Sparkles className="w-4 h-4 text-purple-500" />
+                                <h4 className="font-bold text-sm">AI Analysis</h4>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {/* Summary Card */}
                                 <Card className="col-span-full bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200">
-                                  <CardContent className="p-4">
-                                    <div className="flex items-start gap-3">
-                                      <Lightbulb className="w-5 h-5 text-purple-600 mt-0.5" />
+                                  <CardContent className="p-3">
+                                    <div className="flex items-start gap-2">
+                                      <Lightbulb className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
                                       <div className="flex-1">
-                                        <h5 className="font-semibold text-sm mb-2">Summary</h5>
-                                        <p className="text-sm text-foreground/80">{emailAnalysis.summary}</p>
+                                        <h5 className="font-semibold text-xs mb-1">Summary</h5>
+                                        <p className="text-xs text-foreground/80">{emailAnalysis.summary}</p>
                                       </div>
                                     </div>
                                   </CardContent>
@@ -919,10 +921,10 @@ export default function EmailsPage() {
 
                                 {/* Sentiment */}
                                 <Card>
-                                  <CardContent className="p-4">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <TrendingUp className="w-4 h-4 text-blue-600" />
-                                      <h5 className="font-semibold text-sm">Sentiment</h5>
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <TrendingUp className="w-3 h-3 text-blue-600" />
+                                      <h5 className="font-semibold text-xs">Sentiment</h5>
                                     </div>
                                     <Badge 
                                       variant={
@@ -930,7 +932,7 @@ export default function EmailsPage() {
                                         emailAnalysis.sentiment === 'negative' ? 'destructive' : 
                                         'secondary'
                                       }
-                                      className="capitalize"
+                                      className="capitalize text-[10px]"
                                     >
                                       {emailAnalysis.sentiment === 'positive' && '😊 '}
                                       {emailAnalysis.sentiment === 'negative' && '😟 '}
@@ -942,17 +944,17 @@ export default function EmailsPage() {
 
                                 {/* Priority */}
                                 <Card>
-                                  <CardContent className="p-4">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <AlertCircle className="w-4 h-4 text-orange-600" />
-                                      <h5 className="font-semibold text-sm">Priority</h5>
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <AlertCircle className="w-3 h-3 text-orange-600" />
+                                      <h5 className="font-semibold text-xs">Priority</h5>
                                     </div>
                                     <Badge 
                                       variant={
                                         emailAnalysis.priority === 'urgent' || emailAnalysis.priority === 'high' ? 'destructive' : 
                                         'secondary'
                                       }
-                                      className="capitalize"
+                                      className="capitalize text-[10px]"
                                     >
                                       {emailAnalysis.priority === 'urgent' && '🔥 '}
                                       {emailAnalysis.priority === 'high' && '⚠️ '}
@@ -964,14 +966,14 @@ export default function EmailsPage() {
                                 {/* Categories */}
                                 {emailAnalysis.categories && emailAnalysis.categories.length > 0 && (
                                   <Card className="col-span-full">
-                                    <CardContent className="p-4">
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <Tag className="w-4 h-4 text-green-600" />
-                                        <h5 className="font-semibold text-sm">Categories</h5>
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Tag className="w-3 h-3 text-green-600" />
+                                        <h5 className="font-semibold text-xs">Categories</h5>
                                       </div>
-                                      <div className="flex flex-wrap gap-2">
+                                      <div className="flex flex-wrap gap-1.5">
                                         {emailAnalysis.categories.map((category: string, idx: number) => (
-                                          <Badge key={idx} variant="outline" className="capitalize">
+                                          <Badge key={idx} variant="outline" className="capitalize text-[10px]">
                                             {category}
                                           </Badge>
                                         ))}
@@ -983,15 +985,15 @@ export default function EmailsPage() {
                                 {/* Action Items */}
                                 {emailAnalysis.actionItems && emailAnalysis.actionItems.length > 0 && (
                                   <Card className="col-span-full">
-                                    <CardContent className="p-4">
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <ListChecks className="w-4 h-4 text-blue-600" />
-                                        <h5 className="font-semibold text-sm">Action Items</h5>
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <ListChecks className="w-3 h-3 text-blue-600" />
+                                        <h5 className="font-semibold text-xs">Action Items</h5>
                                       </div>
-                                      <ul className="space-y-2">
+                                      <ul className="space-y-1.5">
                                         {emailAnalysis.actionItems.map((item: string, idx: number) => (
-                                          <li key={idx} className="flex items-start gap-2 text-sm">
-                                            <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+                                          <li key={idx} className="flex items-start gap-2 text-xs">
+                                            <CheckCircle2 className="w-3 h-3 text-green-600 mt-0.5 flex-shrink-0" />
                                             <span>{item}</span>
                                           </li>
                                         ))}
@@ -1003,14 +1005,14 @@ export default function EmailsPage() {
                                 {/* Key Points */}
                                 {emailAnalysis.keyPoints && emailAnalysis.keyPoints.length > 0 && (
                                   <Card className="col-span-full">
-                                    <CardContent className="p-4">
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <Lightbulb className="w-4 h-4 text-yellow-600" />
-                                        <h5 className="font-semibold text-sm">Key Points</h5>
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Lightbulb className="w-3 h-3 text-yellow-600" />
+                                        <h5 className="font-semibold text-xs">Key Points</h5>
                                       </div>
-                                      <ul className="space-y-2">
+                                      <ul className="space-y-1.5">
                                         {emailAnalysis.keyPoints.map((point: string, idx: number) => (
-                                          <li key={idx} className="flex items-start gap-2 text-sm">
+                                          <li key={idx} className="flex items-start gap-2 text-xs">
                                             <span className="text-muted-foreground">•</span>
                                             <span>{point}</span>
                                           </li>
