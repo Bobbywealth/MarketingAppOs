@@ -3785,20 +3785,29 @@ Examples:
       }
 
       // Save to push notification history
-      await storage.createPushNotificationHistory({
-        title,
-        body,
-        url: url || null,
-        targetType,
-        targetValue,
-        sentBy: user.id,
-        recipientCount,
-        successful: true,
-      });
+      try {
+        await storage.createPushNotificationHistory({
+          title,
+          body,
+          url: url || null,
+          targetType,
+          targetValue,
+          sentBy: user?.id || user?.claims?.sub || null,
+          recipientCount,
+          successful: true,
+        });
+      } catch (historyError) {
+        console.error('Failed to save push notification history (non-critical):', historyError);
+        // Don't fail the request if history saving fails
+      }
 
       res.json({ success: true, recipientCount });
-    } catch (error) {
-      console.error('Error sending push notification:', error);
+    } catch (error: any) {
+      console.error('❌ Error sending push notification:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+      });
       
       // Try to save failed notification to history
       try {
@@ -3814,7 +3823,7 @@ Examples:
           url: url || null,
           targetType,
           targetValue,
-          sentBy: user?.id || null,
+          sentBy: user?.id || user?.claims?.sub || null,
           recipientCount: 0,
           successful: false,
           errorMessage: error instanceof Error ? error.message : "Unknown error",
@@ -3823,7 +3832,11 @@ Examples:
         console.error('Failed to save push notification history:', historyError);
       }
       
-      res.status(500).json({ message: "Failed to send push notification" });
+      const errorMessage = error?.message || "Failed to send push notification";
+      res.status(500).json({ 
+        message: errorMessage,
+        error: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      });
     }
   });
 

@@ -11,6 +11,13 @@ if (vapidPublicKey && vapidPrivateKey) {
     vapidPublicKey,
     vapidPrivateKey
   );
+  console.log('✅ VAPID keys configured for push notifications');
+} else {
+  console.error('❌ VAPID keys not configured! Push notifications will not work.');
+  console.error('Missing:', {
+    VAPID_PUBLIC_KEY: !vapidPublicKey,
+    VAPID_PRIVATE_KEY: !vapidPrivateKey
+  });
 }
 
 interface PushSubscription {
@@ -35,6 +42,11 @@ export async function sendPushToUser(
   }
 ) {
   try {
+    // Check if VAPID keys are configured
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      throw new Error('VAPID keys not configured. Cannot send push notifications.');
+    }
+
     // Get all push subscriptions for this user
     const result = await pool.query(
       'SELECT * FROM push_subscriptions WHERE user_id = $1',
@@ -102,6 +114,11 @@ export async function sendPushToRole(
   }
 ) {
   try {
+    // Check if VAPID keys are configured
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      throw new Error('VAPID keys not configured. Cannot send push notifications.');
+    }
+
     // Get all users with this role
     const usersResult = await pool.query(
       'SELECT id FROM users WHERE role = $1',
@@ -115,6 +132,7 @@ export async function sendPushToRole(
     await Promise.all(promises);
   } catch (error) {
     console.error('Error sending push to role:', error);
+    throw error; // Re-throw to be caught by the API endpoint
   }
 }
 
@@ -142,6 +160,11 @@ export async function broadcastPush(payload: {
   url?: string;
 }) {
   try {
+    // Check if VAPID keys are configured
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      throw new Error('VAPID keys not configured. Cannot send push notifications.');
+    }
+
     // Get all subscriptions
     const result = await pool.query('SELECT DISTINCT user_id FROM push_subscriptions');
 
@@ -152,6 +175,7 @@ export async function broadcastPush(payload: {
     await Promise.all(promises);
   } catch (error) {
     console.error('Error broadcasting push:', error);
+    throw error; // Re-throw to be caught by the API endpoint
   }
 }
 
