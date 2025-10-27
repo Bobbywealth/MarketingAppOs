@@ -69,7 +69,7 @@ export default function ClientSecondMeDashboard() {
               </div>
               <h2 className="text-3xl font-bold mb-2">Create Your Second Me</h2>
               <p className="text-muted-foreground text-lg mb-6">
-                Upload 15-20+ professional photos to create your AI digital twin. Get weekly AI-generated content featuring your avatar!
+                Upload 15-20+ professional photos to create your AI digital twin. Get weekly AI-generated photos, videos, and multimedia content featuring your digital visual avatar!
               </p>
             </div>
 
@@ -87,7 +87,7 @@ export default function ClientSecondMeDashboard() {
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-green-500">✓</span>
-                    <span>4 AI-generated videos/images weekly</span>
+                    <span>4 AI-generated photos/videos weekly featuring your digital twin</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-green-500">✓</span>

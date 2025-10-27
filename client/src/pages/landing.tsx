@@ -756,7 +756,7 @@ export default function LandingPage() {
               Second Me: Your AI Marketing Assistant
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Clone your expertise and let AI handle the repetitive work. Available 24/7 to answer questions, create content, and engage with your audience.
+              Clone your expertise and let AI handle the repetitive work. Available 24/7 to answer questions, create content, and engage with your audience. Includes a digital visual version of you with AI-generated pictures, videos, and multimedia content.
             </p>
           </div>
 
@@ -798,6 +798,14 @@ export default function LandingPage() {
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
                   <span className="text-sm md:text-base">Email support</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">AI-generated photos & videos of your digital twin</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Weekly visual content delivery</span>
                 </li>
               </ul>
               <Link href="/signup">
@@ -851,6 +859,18 @@ export default function LandingPage() {
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
                   <span className="text-sm md:text-base">Priority support & dedicated account manager</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Advanced AI-generated photos, videos & multimedia content</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Custom visual content styles & branding</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Daily visual content delivery</span>
                 </li>
               </ul>
               <Link href="/signup">
