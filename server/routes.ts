@@ -2947,11 +2947,23 @@ Examples:
       // Create notification for recipient (don't let this fail the message creation)
       if (validatedData.recipientId) {
         try {
+          console.log("🔍 Creating notification for recipient:", validatedData.recipientId);
+          
           const sender = await storage.getUser(String(currentUserId));
           const senderName = sender?.firstName || sender?.username || 'Someone';
+          console.log("👤 Sender info:", { id: currentUserId, name: senderName, role: sender?.role });
+          
+          // Check if recipient exists
+          const recipient = await storage.getUser(String(validatedData.recipientId));
+          console.log("👤 Recipient info:", { id: validatedData.recipientId, name: recipient?.firstName || recipient?.username, role: recipient?.role });
+          
+          if (!recipient) {
+            console.error("❌ Recipient user not found:", validatedData.recipientId);
+            return res.status(201).json(message); // Still return success for message
+          }
           
           // In-app notification
-          await storage.createNotification({
+          const notification = await storage.createNotification({
             userId: validatedData.recipientId,
             type: 'info',
             title: '💬 New Message',
@@ -2960,7 +2972,7 @@ Examples:
             actionUrl: '/messages',
             isRead: false,
           });
-          console.log("📬 Notification created for message recipient");
+          console.log("📬 In-app notification created:", notification.id);
           
           // Push notification
           const { sendPushToUser } = await import('./push.js');
@@ -2969,10 +2981,18 @@ Examples:
             body: `${senderName}: ${validatedData.content?.substring(0, 100) || 'Sent you a message'}`,
             url: '/messages',
           }).catch(err => console.error('Failed to send push notification:', err));
+          console.log("📱 Push notification sent to:", validatedData.recipientId);
         } catch (notifError) {
           console.error("⚠️ Failed to create notification (non-critical):", notifError);
+          console.error("Notification error details:", {
+            message: notifError?.message,
+            stack: notifError?.stack,
+            recipientId: validatedData.recipientId
+          });
           // Don't fail the message creation if notification fails
         }
+      } else {
+        console.log("⚠️ No recipientId provided, skipping notification");
       }
       
       res.status(201).json(message);
