@@ -1,20 +1,40 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import mtaLogoBlue from "../../../attached_assets/mta-logo-blue.png";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function PaymentSuccessPage() {
   const [, setLocation] = useLocation();
+  const [isConverting, setIsConverting] = useState(false);
+  const [convertMessage, setConvertMessage] = useState<string | null>(null);
   
   // Get session_id from URL
   const urlParams = new URLSearchParams(window.location.search);
   const sessionId = urlParams.get('session_id');
 
   useEffect(() => {
-    // Optional: You could verify the payment with your backend here
-    console.log("Payment successful! Session ID:", sessionId);
+    async function confirmAndConvert() {
+      if (!sessionId) return;
+      try {
+        setIsConverting(true);
+        setConvertMessage("Activating your account...");
+        const resp = await apiRequest("POST", "/api/stripe/confirm", { sessionId });
+        const data = await resp.json();
+        if (data?.success) {
+          setConvertMessage("Your account is active. You can log in now.");
+        } else {
+          setConvertMessage(data?.message || "Account activation completed.");
+        }
+      } catch (e: any) {
+        setConvertMessage(e?.message || "Activation complete.");
+      } finally {
+        setIsConverting(false);
+      }
+    }
+    confirmAndConvert();
   }, [sessionId]);
 
   return (
@@ -47,13 +67,18 @@ export default function PaymentSuccessPage() {
               </ul>
             </div>
 
+            {convertMessage && (
+              <p className="text-sm text-gray-600">{convertMessage}</p>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-4 mt-8">
               <Button 
                 size="lg"
                 onClick={() => setLocation("/login")}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold"
+                disabled={isConverting}
               >
-                Go to Login
+                {isConverting ? "Activating..." : "Go to Login"}
               </Button>
               <Button 
                 size="lg"

@@ -171,6 +171,109 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Confirm Stripe payment and convert lead to client
+  app.post("/api/stripe/confirm", async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.body as { sessionId?: string };
+      if (!sessionId) {
+        return res.status(400).json({ success: false, message: "Missing sessionId" });
+      }
+
+      const { getStripeInstance } = await import("./stripeService.js");
+      const stripe = getStripeInstance();
+      if (!stripe) {
+        return res.status(500).json({ success: false, message: "Stripe not configured" });
+      }
+
+      // Retrieve the checkout session
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ["subscription", "customer"],
+      });
+
+      if (!session || (session.status !== "complete" && session.payment_status !== "paid")) {
+        return res.status(400).json({ success: false, message: "Payment not completed" });
+      }
+
+      // Pull metadata
+      const leadId = (session.metadata?.leadId || session.client_reference_id || "").toString() || null;
+      const packageId = session.metadata?.packageId || null;
+      const email = (session.customer_details?.email || (typeof session.customer === 'object' ? session.customer?.email : undefined) || "").toString();
+      const name = (session.metadata?.clientName || (typeof session.customer === 'object' ? session.customer?.name : undefined) || "New Client").toString();
+
+      // Attempt to find existing lead by id or email
+      let matchedLead: any = null;
+      try {
+        const allLeads = await storage.getLeads();
+        matchedLead = allLeads.find((l: any) => (leadId && l.id === leadId) || (email && l.email === email));
+      } catch (e) {
+        console.warn("⚠️ Unable to fetch leads while confirming Stripe payment:", e);
+      }
+
+      // Create client if one with same email doesn't already exist
+      let createdClient = null as any;
+      try {
+        const allClients = await storage.getClients();
+        const existing = allClients.find((c: any) => email && c.email === email);
+        if (existing) {
+          createdClient = existing;
+        } else {
+          createdClient = await storage.createClient({
+            name,
+            email: email || undefined,
+            status: "onboarding",
+            notes: `Created from Stripe session ${sessionId}${packageId ? ` for package ${packageId}` : ""}`,
+          } as any);
+        }
+      } catch (e) {
+        console.error("❌ Failed creating client from Stripe confirm:", e);
+        return res.status(500).json({ success: false, message: "Failed to create client" });
+      }
+
+      // Update lead as converted
+      if (matchedLead) {
+        try {
+          await storage.updateLead(matchedLead.id, {
+            stage: "converted",
+            notes: `${matchedLead.notes || ""}\nConverted via Stripe payment on ${new Date().toISOString()} (session ${sessionId})`,
+            value: createdClient?.id || null,
+          } as any);
+        } catch (e) {
+          console.warn("⚠️ Failed to update lead as converted:", e);
+        }
+      }
+
+      // Notify admins/managers
+      try {
+        const users = await storage.getUsers();
+        const notifyUsers = users.filter((u: any) => u.role === UserRole.ADMIN || u.role === UserRole.MANAGER);
+        const { sendPushToUser } = await import('./push.js');
+        for (const u of notifyUsers) {
+          await storage.createNotification({
+            userId: u.id,
+            type: 'success',
+            title: '🧾 Payment Successful - New Client',
+            message: `${name} just subscribed${packageId ? ` to package ${packageId}` : ""}.`,
+            category: 'general',
+            actionUrl: '/clients',
+            isRead: false,
+          });
+          await sendPushToUser(u.id, {
+            title: '🧾 New Paying Client',
+            body: `${name} completed checkout${packageId ? ` (${packageId})` : ''}`,
+            url: '/clients',
+          }).catch(() => {});
+        }
+      } catch (e) {
+        console.warn("⚠️ Failed sending notifications for Stripe confirm:", e);
+      }
+
+      return res.json({ success: true, clientId: createdClient?.id || null });
+    } catch (error: any) {
+      console.error('Stripe confirm error:', error);
+      return res.status(500).json({ success: false, message: error?.message || 'Stripe confirm failed' });
+    }
+  });
+
   // File download/serve endpoint
   app.get("/uploads/:filename", async (req: Request, res: Response) => {
     try {
