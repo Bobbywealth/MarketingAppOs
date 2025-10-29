@@ -124,6 +124,18 @@ export function setupAuth(app: Express) {
     passport.authenticate("local", async (err: any, user: SelectUser | false, info: any) => {
       if (err) return next(err);
       if (!user) {
+        // Track failed login attempt
+        try {
+          const { notifyAdminsAboutSecurityEvent } = await import('./routes.js');
+          await notifyAdminsAboutSecurityEvent(
+            '🚨 Failed Login Attempt',
+            `Failed login attempt from IP: ${req.ip} with username: ${req.body.username || 'unknown'}`,
+            'security'
+          );
+        } catch (notifError) {
+          console.error('Failed to send security notification:', notifError);
+        }
+        
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
       req.login(user, async (err) => {

@@ -99,6 +99,108 @@ const upload = multer({
   }
 });
 
+  // Helper function to notify admins about security events
+async function notifyAdminsAboutSecurityEvent(title: string, message: string, category: string = 'security') {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => u.role === UserRole.ADMIN);
+    const { sendPushToUser } = await import('./push.js');
+    
+    for (const admin of admins) {
+      await storage.createNotification({
+        userId: admin.id,
+        type: 'error',
+        title,
+        message,
+        category,
+        actionUrl: '/settings',
+        isRead: false,
+      });
+      
+      await sendPushToUser(admin.id, {
+        title,
+        body: message,
+        url: '/settings',
+      }).catch(err => console.error('Failed to send push notification:', err));
+    }
+    
+    console.log(`✅ Notified ${admins.length} admin(s) about security event: ${title}`);
+  } catch (error) {
+    console.error('Failed to send security notifications:', error);
+  }
+}
+
+// Helper function to check for overdue invoices and send reminders
+async function checkOverdueInvoices() {
+  try {
+    const invoices = await storage.getInvoices();
+    const now = new Date();
+    const overdueInvoices = invoices.filter(invoice => 
+      invoice.status === 'sent' && 
+      invoice.dueDate && 
+      new Date(invoice.dueDate) < now
+    );
+    
+    for (const invoice of overdueInvoices) {
+      // Notify client users about overdue invoice
+      if (invoice.clientId) {
+        const clientUsers = await storage.getUsersByClientId(invoice.clientId);
+        const { sendPushToUser } = await import('./push.js');
+        
+        for (const clientUser of clientUsers) {
+          await storage.createNotification({
+            userId: clientUser.id,
+            type: 'error',
+            title: '💰 Invoice Overdue',
+            message: `Invoice #${invoice.invoiceNumber} is overdue. Please pay immediately.`,
+            category: 'financial',
+            actionUrl: '/client-billing',
+            isRead: false,
+          });
+          
+          await sendPushToUser(clientUser.id, {
+            title: '💰 Invoice Overdue',
+            body: `Invoice #${invoice.invoiceNumber} is overdue. Please pay immediately.`,
+            url: '/client-billing',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+      }
+      
+      // Notify admins about overdue invoice
+      const users = await storage.getUsers();
+      const admins = users.filter(u => u.role === UserRole.ADMIN);
+      const { sendPushToUser: sendPushToAdmin } = await import('./push.js');
+      
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          type: 'warning',
+          title: '💰 Invoice Overdue',
+          message: `Invoice #${invoice.invoiceNumber} is overdue for client ${invoice.clientId}`,
+          category: 'financial',
+          actionUrl: '/invoices',
+          isRead: false,
+        });
+        
+        await sendPushToAdmin(admin.id, {
+          title: '💰 Invoice Overdue',
+          body: `Invoice #${invoice.invoiceNumber} is overdue for client ${invoice.clientId}`,
+          url: '/invoices',
+        }).catch(err => console.error('Failed to send push notification:', err));
+      }
+    }
+    
+    if (overdueInvoices.length > 0) {
+      console.log(`✅ Checked ${overdueInvoices.length} overdue invoices and sent notifications`);
+    }
+  } catch (error) {
+    console.error('Failed to check overdue invoices:', error);
+  }
+}
+
+// Run overdue invoice check every hour
+setInterval(checkOverdueInvoices, 60 * 60 * 1000); // 1 hour
+
 export function registerRoutes(app: Express) {
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
@@ -109,6 +211,51 @@ export function registerRoutes(app: Express) {
 
       // Generate URL for the uploaded file
       const fileUrl = `/uploads/${req.file.filename}`;
+      
+      // Notify user about successful file upload
+      try {
+        const currentUser = req.user as any;
+        const currentUserId = currentUser?.id || currentUser?.claims?.sub;
+        
+        await storage.createNotification({
+          userId: currentUserId,
+          type: 'success',
+          title: '📁 File Uploaded',
+          message: `File "${req.file.originalname}" has been uploaded successfully`,
+          category: 'file_management',
+          actionUrl: '/content',
+          isRead: false,
+        });
+        
+        // Notify admins about file upload
+        const users = await storage.getUsers();
+        const admins = users.filter(u => u.role === UserRole.ADMIN);
+        const { sendPushToUser } = await import('./push.js');
+        
+        for (const admin of admins) {
+          if (admin.id !== currentUserId) {
+            await storage.createNotification({
+              userId: admin.id,
+              type: 'info',
+              title: '📁 File Uploaded',
+              message: `User uploaded file: "${req.file.originalname}"`,
+              category: 'file_management',
+              actionUrl: '/content',
+              isRead: false,
+            });
+            
+            await sendPushToUser(admin.id, {
+              title: '📁 File Uploaded',
+              body: `User uploaded file: "${req.file.originalname}"`,
+              url: '/content',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        console.log(`✅ File upload notifications sent for: ${req.file.originalname}`);
+      } catch (notifError) {
+        console.error('Failed to send file upload notifications:', notifError);
+      }
       
       res.json({
         success: true,
@@ -3065,6 +3212,85 @@ Examples:
       });
       const validatedData = approvalSchema.parse(req.body);
       const post = await storage.updateContentPost(req.params.id, validatedData);
+      
+      // Enhanced content approval notifications
+      try {
+        const { sendPushToUser } = await import('./push.js');
+        const users = await storage.getUsers();
+        const currentUser = req.user as any;
+        const currentUserId = currentUser?.id || currentUser?.claims?.sub;
+        
+        // Notify content creator about approval status change
+        if (post.createdBy && post.createdBy !== currentUserId) {
+          const creator = users.find(u => u.id === post.createdBy);
+          if (creator) {
+            const statusMessages = {
+              'approved': '✅ Content Approved',
+              'rejected': '❌ Content Rejected',
+              'pending': '⏳ Content Pending Review'
+            };
+            
+            const statusMessage = statusMessages[validatedData.approvalStatus as keyof typeof statusMessages];
+            
+            await storage.createNotification({
+              userId: creator.id,
+              type: validatedData.approvalStatus === 'approved' ? 'success' : 
+                    validatedData.approvalStatus === 'rejected' ? 'error' : 'warning',
+              title: statusMessage,
+              message: `Your content "${post.title}" has been ${validatedData.approvalStatus}`,
+              category: 'content_approval',
+              actionUrl: '/client-content',
+              isRead: false,
+            });
+            
+            await sendPushToUser(creator.id, {
+              title: statusMessage,
+              body: `Your content "${post.title}" has been ${validatedData.approvalStatus}`,
+              url: '/client-content',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        // Notify client users if content is related to their client
+        if (post.clientId) {
+          const clientUsers = await storage.getUsersByClientId(post.clientId);
+          
+          for (const clientUser of clientUsers) {
+            // Skip if client user is the creator
+            if (clientUser.id === post.createdBy) continue;
+            
+            const statusMessages = {
+              'approved': '✅ Content Approved',
+              'rejected': '❌ Content Rejected',
+              'pending': '⏳ Content Pending Review'
+            };
+            
+            const statusMessage = statusMessages[validatedData.approvalStatus as keyof typeof statusMessages];
+            
+            await storage.createNotification({
+              userId: clientUser.id,
+              type: validatedData.approvalStatus === 'approved' ? 'success' : 
+                    validatedData.approvalStatus === 'rejected' ? 'error' : 'warning',
+              title: statusMessage,
+              message: `Content "${post.title}" for your project has been ${validatedData.approvalStatus}`,
+              category: 'content_approval',
+              actionUrl: '/client-content',
+              isRead: false,
+            });
+            
+            await sendPushToUser(clientUser.id, {
+              title: statusMessage,
+              body: `Content "${post.title}" for your project has been ${validatedData.approvalStatus}`,
+              url: '/client-content',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        console.log(`✅ Content approval notifications sent for: ${post.title}`);
+      } catch (notifError) {
+        console.error('Failed to send content approval notifications:', notifError);
+      }
+      
       res.json(post);
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -3905,6 +4131,37 @@ Examples:
       const user = await storage.createUser(userData);
       console.log("User created successfully:", user.id);
       
+      // Notify all admins about new user registration
+      try {
+        const users = await storage.getUsers();
+        const admins = users.filter(u => u.role === UserRole.ADMIN);
+        const { sendPushToUser } = await import('./push.js');
+        
+        for (const admin of admins) {
+          // In-app notification
+          await storage.createNotification({
+            userId: admin.id,
+            type: 'info',
+            title: '👤 New User Registered',
+            message: `New user "${user.username}" (${user.role}) has been created`,
+            category: 'user_management',
+            actionUrl: '/team',
+            isRead: false,
+          });
+          
+          // Push notification
+          await sendPushToUser(admin.id, {
+            title: '👤 New User Registered',
+            body: `New user "${user.username}" (${user.role}) has been created`,
+            url: '/team',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+        
+        console.log(`✅ Notified ${admins.length} admin(s) about new user registration`);
+      } catch (notifError) {
+        console.error('Failed to send user registration notifications:', notifError);
+      }
+      
       // Don't send password hash
       const { password, ...sanitizedUser } = user;
       res.status(201).json(sanitizedUser);
@@ -3969,6 +4226,46 @@ Examples:
       const updatedUser = await storage.getUsers();
       const user = updatedUser.find(u => u.id === currentUserId);
       
+      // Notify user about profile update
+      try {
+        await storage.createNotification({
+          userId: currentUserId,
+          type: 'success',
+          title: '👤 Profile Updated',
+          message: 'Your profile information has been successfully updated',
+          category: 'user_management',
+          actionUrl: '/settings',
+          isRead: false,
+        });
+        
+        // Notify all admins about profile update
+        const users = await storage.getUsers();
+        const admins = users.filter(u => u.role === UserRole.ADMIN);
+        const { sendPushToUser } = await import('./push.js');
+        
+        for (const admin of admins) {
+          await storage.createNotification({
+            userId: admin.id,
+            type: 'info',
+            title: '👤 Profile Updated',
+            message: `User "${user?.username}" updated their profile information`,
+            category: 'user_management',
+            actionUrl: '/team',
+            isRead: false,
+          });
+          
+          await sendPushToUser(admin.id, {
+            title: '👤 Profile Updated',
+            body: `User "${user?.username}" updated their profile information`,
+            url: '/team',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+        
+        console.log(`✅ Notified user and ${admins.length} admin(s) about profile update`);
+      } catch (notifError) {
+        console.error('Failed to send profile update notifications:', notifError);
+      }
+      
       res.json({ message: "Profile updated successfully", user });
     } catch (error) {
       console.error(error);
@@ -4022,6 +4319,46 @@ Examples:
       await storage.updateUser(currentUserId, { password: hashedPassword });
 
       console.log(`✅ Password changed successfully for user: ${user.username}`);
+
+      // Notify user about password change
+      try {
+        await storage.createNotification({
+          userId: currentUserId,
+          type: 'success',
+          title: '🔐 Password Changed',
+          message: 'Your password has been successfully changed',
+          category: 'user_management',
+          actionUrl: '/settings',
+          isRead: false,
+        });
+        
+        // Notify all admins about password change
+        const users = await storage.getUsers();
+        const admins = users.filter(u => u.role === UserRole.ADMIN);
+        const { sendPushToUser } = await import('./push.js');
+        
+        for (const admin of admins) {
+          await storage.createNotification({
+            userId: admin.id,
+            type: 'info',
+            title: '🔐 Password Changed',
+            message: `User "${user.username}" changed their password`,
+            category: 'user_management',
+            actionUrl: '/team',
+            isRead: false,
+          });
+          
+          await sendPushToUser(admin.id, {
+            title: '🔐 Password Changed',
+            body: `User "${user.username}" changed their password`,
+            url: '/team',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+        
+        console.log(`✅ Notified user and ${admins.length} admin(s) about password change`);
+      } catch (notifError) {
+        console.error('Failed to send password change notifications:', notifError);
+      }
 
       res.json({ message: "Password changed successfully" });
     } catch (error) {
