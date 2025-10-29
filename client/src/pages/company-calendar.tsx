@@ -259,7 +259,7 @@ export default function CompanyCalendarPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 overflow-x-hidden">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -567,28 +567,28 @@ export default function CompanyCalendarPage() {
         {/* Calendar View */}
         <Card className="lg:col-span-8">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={prevMonth}>
+                  <Button variant="outline" size="icon" onClick={prevMonth} className="h-8 w-8">
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <h2 className="text-xl font-semibold min-w-[200px] text-center">
+                  <h2 className="text-lg sm:text-xl font-semibold min-w-[160px] text-center">
                     {format(currentDate, "MMMM yyyy")}
                   </h2>
-                  <Button variant="outline" size="icon" onClick={nextMonth}>
+                  <Button variant="outline" size="icon" onClick={nextMonth} className="h-8 w-8">
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={goToToday}>
+                <Button variant="outline" size="sm" onClick={goToToday} className="h-8">
                   Today
                 </Button>
               </div>
-              <Tabs value={view} onValueChange={(v) => setView(v as any)}>
-                <TabsList>
-                  <TabsTrigger value="month">Month</TabsTrigger>
-                  <TabsTrigger value="week">Week</TabsTrigger>
-                  <TabsTrigger value="day">Day</TabsTrigger>
+              <Tabs value={view} onValueChange={(v) => setView(v as any)} className="self-start sm:self-auto">
+                <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+                  <TabsTrigger value="month" className="text-xs sm:text-sm">Month</TabsTrigger>
+                  <TabsTrigger value="week" className="text-xs sm:text-sm">Week</TabsTrigger>
+                  <TabsTrigger value="day" className="text-xs sm:text-sm">Day</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
