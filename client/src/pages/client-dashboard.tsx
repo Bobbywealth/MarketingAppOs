@@ -116,35 +116,35 @@ export default function ClientDashboard() {
   ];
 
   return (
-    <div className="min-h-full gradient-mesh">
-      <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12 space-y-8">
+    <div className="min-h-full gradient-mesh overflow-x-hidden">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 xl:p-12 space-y-6 sm:space-y-8">
         {/* Welcome Header */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-gradient-purple">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple">
             Welcome back{user?.username ? `, ${user.username}` : ''}!
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-base sm:text-lg text-muted-foreground">
             Here's an overview of your content and activity
           </p>
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {metrics.map((metric) => (
             <Link key={metric.title} href={metric.link}>
               <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift cursor-pointer">
                 <div className={`absolute inset-0 bg-gradient-to-br ${metric.gradient} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
                 
-                <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardHeader className="relative flex flex-row items-center justify-between pb-2 p-3 sm:p-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                     {metric.title}
                   </CardTitle>
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${metric.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                    <metric.icon className="w-5 h-5 text-white" />
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br ${metric.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
+                    <metric.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                 </CardHeader>
-                <CardContent className="relative">
-                  <div className="text-3xl font-bold tracking-tight">{metric.value}</div>
+                <CardContent className="relative p-3 sm:p-6 pt-0">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">{metric.value}</div>
                   <p className="text-xs text-muted-foreground mt-1">{metric.description}</p>
                 </CardContent>
               </Card>
@@ -173,8 +173,8 @@ export default function ClientDashboard() {
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="relative p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <CardContent className="relative p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Instagram */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -255,22 +255,22 @@ export default function ClientDashboard() {
             </div>
 
             {/* Summary Stats */}
-            <div className="mt-6 pt-6 border-t border-border/50">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border/50">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">32,499</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">32,499</div>
                   <div className="text-xs text-muted-foreground mt-1">Total Followers</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">23</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">23</div>
                   <div className="text-xs text-muted-foreground mt-1">Posts This Month</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">5.2%</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">5.2%</div>
                   <div className="text-xs text-muted-foreground mt-1">Avg Engagement</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-500">+12%</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-500">+12%</div>
                   <div className="text-xs text-muted-foreground mt-1">Growth Rate</div>
                 </div>
               </div>
@@ -300,17 +300,17 @@ export default function ClientDashboard() {
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="relative p-6">
-              <div className="flex items-center gap-4">
+            <CardContent className="relative p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 {secondMe.avatarUrl ? (
                   <img 
                     src={secondMe.avatarUrl} 
                     alt="AI Avatar" 
-                    className="w-20 h-20 rounded-full object-cover border-2 border-primary"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-primary"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <Sparkles className="w-10 h-10 text-white" />
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                   </div>
                 )}
                 <div className="flex-1">
@@ -328,7 +328,7 @@ export default function ClientDashboard() {
                       {secondMe.status === 'active' && '🌟 Active'}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                     <div>
                       <p className="text-xs text-muted-foreground">Setup Fee</p>
                       <Badge variant={secondMe.setupPaid ? "default" : "outline"} className="mt-1 text-xs">
@@ -392,7 +392,7 @@ export default function ClientDashboard() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Upcoming Content */}
           <Card className="glass-strong border-0 shadow-xl">
             <CardHeader className="border-b border-border/50">
@@ -411,7 +411,7 @@ export default function ClientDashboard() {
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
               {upcomingContent.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -464,7 +464,7 @@ export default function ClientDashboard() {
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
               {pendingApproval.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -515,9 +515,9 @@ export default function ClientDashboard() {
                 <Button variant="ghost" size="sm">View All</Button>
               </Link>
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {openTickets.length === 0 ? (
+            </CardHeader>
+            <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
+              {openTickets.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-20" />
                 <p>No open support tickets</p>
@@ -566,20 +566,20 @@ export default function ClientDashboard() {
                 <Button variant="ghost" size="sm">View All</Button>
               </Link>
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            </CardHeader>
+            <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">${(totalPaid / 100).toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Total Paid</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">${(totalPaid / 100).toLocaleString()}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Paid</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">${(pendingAmount / 100).toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">${(pendingAmount / 100).toLocaleString()}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-purple-600">{clientInvoices.length}</p>
-                <p className="text-sm text-muted-foreground">Invoices</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-600">{clientInvoices.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Invoices</p>
               </div>
             </div>
             
@@ -615,8 +615,8 @@ export default function ClientDashboard() {
                 </Link>
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {clientCampaigns.slice(0, 3).map((campaign: any) => (
                   <div key={campaign.id} className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className="flex items-start justify-between mb-2">
