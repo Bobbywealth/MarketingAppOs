@@ -3,9 +3,14 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2, Sparkles, Rocket, TrendingUp, Target, Users, Zap, BarChart3 } from "lucide-react";
-import mtaLogoBlue from "@assets/mta-logo-blue.png";
+import { HeaderLogo } from "@/components/Logo";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 export default function PWAHomePage() {
+  useDocumentMeta(
+    "Loading App | Marketing Team App",
+    "Launching Marketing Team App — your remote digital marketing team."
+  );
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -25,12 +30,7 @@ export default function PWAHomePage() {
         
         {/* Logo */}
         <div className="relative z-10 mb-8">
-          <img 
-            src={mtaLogoBlue} 
-            alt="Marketing Team App" 
-            className="h-24 w-auto mx-auto drop-shadow-2xl animate-pulse" 
-            style={{ animationDuration: '2s' }} 
-          />
+          <HeaderLogo className="mx-auto drop-shadow-2xl animate-pulse" style={{ animationDuration: '2s' }} />
         </div>
         
         {/* Loading Content */}
@@ -78,7 +78,7 @@ export default function PWAHomePage() {
         {/* Logo with glow effect */}
         <div className="mb-8 relative">
           <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full"></div>
-          <img src={mtaLogoBlue} alt="Marketing Team App" className="h-28 w-auto mx-auto relative z-10 drop-shadow-2xl animate-bounce" style={{ animationDuration: '3s' }} />
+          <HeaderLogo className="mx-auto relative z-10 drop-shadow-2xl animate-bounce" style={{ animationDuration: '3s' }} />
         </div>
 
         {/* Title with gradient text */}

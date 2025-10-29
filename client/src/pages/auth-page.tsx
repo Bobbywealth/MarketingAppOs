@@ -10,9 +10,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { LayoutDashboard, Users, TrendingUp, Calendar, Sparkles, BarChart3, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import mtaLogo from "@assets/mta-logo-blue.png";
+import { Logo } from "@/components/Logo";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 export default function AuthPage() {
+  useDocumentMeta(
+    "Login | Marketing Team App",
+    "Securely sign in to your Marketing Team App account to manage clients, campaigns, content and more."
+  );
   const { user, loginMutation, registerMutation } = useAuth();
   const { toast } = useToast();
   const [loginData, setLoginData] = useState({ username: "", password: "" });
@@ -73,7 +78,7 @@ export default function AuthPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <img src={mtaLogo} alt="MTA Logo" className="h-16 w-auto" />
+              <Logo size="lg" />
             </div>
             <h1 className="text-3xl font-bold mb-2 text-gray-900">
               Marketing Team App

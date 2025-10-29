@@ -25,8 +25,7 @@ import SignupPage from "@/pages/signup";
 import PaymentSuccessPage from "@/pages/payment-success";
 import ContactPage from "@/pages/contact";
 import BlogPage from "@/pages/blog";
-import mtaLogoBlue from "@assets/mta-logo-blue.png";
-import mtaLogoWhite from "@assets/mta-logo.png";
+import { Logo } from "@/components/Logo";
 import Dashboard from "@/pages/dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
 import ClientContent from "@/pages/client-content";
@@ -189,16 +188,7 @@ function AppContent() {
               {/* Left: Hamburger + Logo (logo only on mobile) */}
               <div className="flex items-center gap-3 md:gap-3">
                 <HamburgerMenu />
-                <img 
-                  src={mtaLogoBlue} 
-                  alt="Marketing Team App" 
-                  className="h-20 w-auto dark:hidden md:hidden"
-                />
-                <img 
-                  src={mtaLogoWhite} 
-                  alt="Marketing Team App" 
-                  className="h-20 w-auto hidden dark:block md:dark:hidden"
-                />
+                <Logo variant="auto" size="lg" className="md:hidden" />
               </div>
               
               {/* Center: Search Bar (all screens) */}

@@ -8,10 +8,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, Send, CheckCircle, ArrowLeft, Calendar } from "lucide-react";
-import mtaLogoBlue from "@assets/mta-logo-blue.png";
+import { HeaderLogo, FooterLogo } from "@/components/Logo";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { BookingModal } from "@/components/BookingModal";
 
 export default function ContactPage() {
+  useDocumentMeta(
+    "Contact Marketing Team App | Book a Strategy Call",
+    "Book a free 30-minute strategy call with the Marketing Team App. Get actionable insights and a clear growth plan for your business."
+  );
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
@@ -66,7 +71,7 @@ export default function ContactPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/">
-              <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto cursor-pointer" />
+              <HeaderLogo />
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/">
@@ -310,7 +315,7 @@ export default function ContactPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 mt-16">
         <div className="container mx-auto px-4 text-center">
-          <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto mx-auto mb-4 brightness-0 invert" />
+          <FooterLogo className="mx-auto mb-4" />
           <p className="text-gray-400">
             © {new Date().getFullYear()} Marketing Team App. All rights reserved.
           </p>

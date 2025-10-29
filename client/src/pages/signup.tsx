@@ -28,7 +28,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowRight, ArrowLeft, Building2, User, Target, CheckCircle, Star, TrendingUp, Users, Zap, Shield, Clock, Sparkles } from "lucide-react";
-import mtaLogoBlue from "@assets/mta-logo-blue.png";
+import { HeaderLogo } from "@/components/Logo";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 const signupSchema = z.object({
   // Company Information
@@ -65,6 +66,10 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
+  useDocumentMeta(
+    "Get Started | Marketing Team App",
+    "Start your journey with Marketing Team App. Tell us about your goals and we'll tailor a plan to grow your brand."
+  );
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
@@ -373,7 +378,7 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <header className="border-b bg-white/95 backdrop-blur shadow-sm">
         <div className="container mx-auto px-4 py-4">
-          <img src={mtaLogoBlue} alt="Marketing Team App" className="h-12 w-auto" data-testid="img-logo" />
+          <HeaderLogo />
         </div>
       </header>
 

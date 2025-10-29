@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import mtaLogoBlue from '@assets/mta-logo-blue.png';
+import { LoadingLogo } from '@/components/Logo';
 
 export function LoadingScreen() {
   const [progress, setProgress] = useState(0);
@@ -31,11 +31,7 @@ export function LoadingScreen() {
         {/* Logo */}
         <div className="relative">
           <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-          <img 
-            src={mtaLogoBlue} 
-            alt="Marketing Team App" 
-            className="relative h-32 w-auto animate-float drop-shadow-2xl"
-          />
+          <LoadingLogo className="relative animate-float drop-shadow-2xl" />
         </div>
 
         {/* App Name */}

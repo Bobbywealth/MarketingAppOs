@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
-import mtaLogoBlue from "../../../attached_assets/mta-logo-blue.png";
+import { HeaderLogo } from "@/components/Logo";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function PaymentSuccessPage() {
@@ -41,7 +41,7 @@ export default function PaymentSuccessPage() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         <div className="text-center mb-8">
-          <img src={mtaLogoBlue} alt="Marketing Team App" className="h-16 w-auto mx-auto mb-4" />
+          <HeaderLogo className="mx-auto mb-4" />
         </div>
 
         <Card className="border-2 border-green-500 shadow-2xl">

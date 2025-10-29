@@ -22,8 +22,7 @@ import {
   BookOpen,
   Bell
 } from "lucide-react";
-import mtaLogoWhite from "@assets/mta-logo.png";
-import mtaLogoBlue from "@assets/mta-logo-blue.png";
+import { SidebarLogo } from "@/components/Logo";
 import {
   Sidebar,
   SidebarContent,
@@ -247,18 +246,7 @@ export function AppSidebar() {
     return (
       <Sidebar>
         <SidebarHeader className="flex items-center justify-center py-4">
-          <img 
-            src={mtaLogoBlue} 
-            alt="Marketing Team App" 
-            className="h-32 w-auto dark:hidden"
-            data-testid="img-logo"
-          />
-          <img 
-            src={mtaLogoWhite} 
-            alt="Marketing Team App" 
-            className="h-32 w-auto hidden dark:block"
-            data-testid="img-logo-dark"
-          />
+          <SidebarLogo />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -329,18 +317,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="flex items-center justify-center py-4">
-        <img 
-          src={mtaLogoBlue} 
-          alt="Marketing Team App" 
-          className="h-32 w-auto dark:hidden"
-          data-testid="img-logo"
-        />
-        <img 
-          src={mtaLogoWhite} 
-          alt="Marketing Team App" 
-          className="h-32 w-auto hidden dark:block"
-          data-testid="img-logo-dark"
-        />
+          <SidebarLogo />
       </SidebarHeader>
       <SidebarContent>
         {/* Company Tools Section */}

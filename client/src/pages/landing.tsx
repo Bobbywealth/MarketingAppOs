@@ -17,7 +17,8 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot } from "lucide-react";
-import mtaLogoBlue from "@assets/mta-logo-blue.png";
+import { HeaderLogo, FooterLogo } from "@/components/Logo";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 import instagramLogo from "@assets/instagram-logo.png";
@@ -26,6 +27,10 @@ import linkedinLogo from "@assets/linkedin-logo.png";
 import googleAdsLogo from "@assets/google-ads-logo.png";
 
 export default function LandingPage() {
+  useDocumentMeta(
+    "Marketing Team App | Your Remote Digital Marketing Team",
+    "Stop wasting money on marketing that doesn't work. Marketing Team App is your remote digital marketing team for strategy, content, campaigns and growth."
+  );
   const { toast } = useToast();
   const [auditForm, setAuditForm] = useState({
     website: "",
@@ -89,7 +94,7 @@ export default function LandingPage() {
       <header className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={mtaLogoBlue} alt="Marketing Team App" className="h-14 md:h-20 w-auto" data-testid="img-logo" />
+            <HeaderLogo />
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -1173,7 +1178,7 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <img src={mtaLogoBlue} alt="Wolfpaq Marketing" className="h-12 w-auto mb-4" />
+              <FooterLogo className="mb-4" />
               <p className="text-sm text-muted-foreground">
                 Your go-to remote marketing team. We help businesses, influencers, and entrepreneurs grow with results-driven digital marketing.
               </p>
