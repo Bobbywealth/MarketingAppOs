@@ -1767,14 +1767,25 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Campaign routes
-  app.get("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (req: Request, res: Response) => {
+  app.get("/api/campaigns", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const currentUser = req.user;
       const allCampaigns = await storage.getCampaigns();
       
       // Filter campaigns based on user role
       let campaigns = allCampaigns;
-      if (currentUser?.role !== UserRole.ADMIN) {
+      
+      if (currentUser?.role === UserRole.CLIENT) {
+        // For clients: only show campaigns assigned to their client record
+        const clientId = currentUser?.clientId;
+        if (clientId) {
+          campaigns = allCampaigns.filter((c) => c.clientId === clientId);
+          console.log(`🔒 Campaigns filtered for client: ${campaigns.length} for clientId ${clientId} (out of ${allCampaigns.length} total)`);
+        } else {
+          campaigns = []; // No clientId means no campaigns
+          console.log(`🔒 Client has no clientId, showing 0 campaigns`);
+        }
+      } else if (currentUser?.role !== UserRole.ADMIN) {
         // For managers and staff: only show campaigns they created
         campaigns = allCampaigns.filter((c) => c.createdBy === currentUser?.id);
         console.log(`🔒 Campaigns filtered for ${currentUser?.role}: ${campaigns.length} created by user (out of ${allCampaigns.length} total)`);

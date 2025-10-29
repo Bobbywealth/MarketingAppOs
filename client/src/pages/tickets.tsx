@@ -107,7 +107,9 @@ export default function Tickets() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1 md:space-y-2">
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Support Tickets</h1>
-            <p className="text-sm md:text-base lg:text-lg text-muted-foreground">Admin ticket management dashboard</p>
+            <p className="text-sm md:text-base lg:text-lg text-muted-foreground">
+              {isClient ? "Get help and support from our team" : "Admin ticket management dashboard"}
+            </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
