@@ -374,6 +374,48 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ page_views indexes already exist or error:', e.message);
       }
+
+      // Create content_posts table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS content_posts (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            client_id VARCHAR NOT NULL REFERENCES clients(id),
+            platforms JSONB NOT NULL,
+            title VARCHAR NOT NULL,
+            content TEXT NOT NULL,
+            media_urls TEXT[],
+            scheduled_for TIMESTAMP,
+            approval_status VARCHAR NOT NULL DEFAULT 'pending',
+            platform_post_id VARCHAR,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created content_posts table');
+      } catch (e) {
+        console.log('⚠️ content_posts table already exists or error:', e.message);
+      }
+
+      // Create tickets table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS tickets (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            client_id VARCHAR NOT NULL REFERENCES clients(id),
+            assigned_to_id INTEGER REFERENCES users(id),
+            subject VARCHAR NOT NULL,
+            description TEXT NOT NULL,
+            status VARCHAR NOT NULL DEFAULT 'open',
+            priority VARCHAR NOT NULL DEFAULT 'normal',
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created tickets table');
+      } catch (e) {
+        console.log('⚠️ tickets table already exists or error:', e.message);
+      }
       
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
