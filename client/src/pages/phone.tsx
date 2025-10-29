@@ -240,36 +240,37 @@ export default function PhonePage() {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Phone & SMS</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Make calls, send messages via Dialpad</p>
+    <div className="min-h-full gradient-mesh overflow-x-hidden">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold">Phone & SMS</h1>
+            <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Make calls, send messages via Dialpad</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="mr-2 sm:mr-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="calls" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Calls
+                </TabsTrigger>
+                <TabsTrigger value="sms" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                  SMS
+                </TabsTrigger>
+                <TabsTrigger value="contacts" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Contacts
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+              <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Settings
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="mr-4">
-            <TabsList>
-              <TabsTrigger value="calls" className="gap-2">
-                <Phone className="w-4 h-4" />
-                Calls
-              </TabsTrigger>
-              <TabsTrigger value="sms" className="gap-2">
-                <MessageSquare className="w-4 h-4" />
-                SMS
-              </TabsTrigger>
-              <TabsTrigger value="contacts" className="gap-2">
-                <User className="w-4 h-4" />
-                Contacts
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Button variant="outline" size="sm">
-            <Settings className="w-4 h-4 mr-2" />
-            Settings
-          </Button>
-        </div>
-      </div>
 
       {/* Dialpad Setup Alert */}
       {!isDialpadConfigured && (
@@ -335,77 +336,77 @@ export default function PhonePage() {
         </Alert>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Calls</p>
-                <p className="text-2xl font-bold">{callStats.total}</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <Card className="hover-elevate">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Calls</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{callStats.total}</p>
+                </div>
+                <div className="p-2 sm:p-3 bg-blue-500/10 rounded-lg">
+                  <Phone className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
+                </div>
               </div>
-              <div className="p-3 bg-blue-500/10 rounded-lg">
-                <Phone className="w-6 h-6 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Incoming</p>
-                <p className="text-2xl font-bold">{callStats.incoming}</p>
+          <Card className="hover-elevate">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Incoming</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{callStats.incoming}</p>
+                </div>
+                <div className="p-2 sm:p-3 bg-green-500/10 rounded-lg">
+                  <PhoneIncoming className="w-4 h-4 sm:w-6 sm:h-6 text-green-500" />
+                </div>
               </div>
-              <div className="p-3 bg-green-500/10 rounded-lg">
-                <PhoneIncoming className="w-6 h-6 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Outgoing</p>
-                <p className="text-2xl font-bold">{callStats.outgoing}</p>
+          <Card className="hover-elevate">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Outgoing</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{callStats.outgoing}</p>
+                </div>
+                <div className="p-2 sm:p-3 bg-purple-500/10 rounded-lg">
+                  <PhoneOutgoing className="w-4 h-4 sm:w-6 sm:h-6 text-purple-500" />
+                </div>
               </div>
-              <div className="p-3 bg-purple-500/10 rounded-lg">
-                <PhoneOutgoing className="w-6 h-6 text-purple-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Missed</p>
-                <p className="text-2xl font-bold">{callStats.missed}</p>
+          <Card className="hover-elevate">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Missed</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{callStats.missed}</p>
+                </div>
+                <div className="p-2 sm:p-3 bg-red-500/10 rounded-lg">
+                  <PhoneMissed className="w-4 h-4 sm:w-6 sm:h-6 text-red-500" />
+                </div>
               </div>
-              <div className="p-3 bg-red-500/10 rounded-lg">
-                <PhoneMissed className="w-6 h-6 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Talk Time</p>
-                <p className="text-2xl font-bold">{Math.floor(callStats.totalDuration / 60)}m</p>
+          <Card className="hover-elevate">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Talk Time</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{Math.floor(callStats.totalDuration / 60)}m</p>
+                </div>
+                <div className="p-2 sm:p-3 bg-orange-500/10 rounded-lg">
+                  <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500" />
+                </div>
               </div>
-              <div className="p-3 bg-orange-500/10 rounded-lg">
-                <Clock className="w-6 h-6 text-orange-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
       </div>
 
       {/* Main Interface */}
@@ -840,6 +841,7 @@ export default function PhonePage() {
           </Card>
         </div>
       )}
+      </div>
     </div>
   );
 }
