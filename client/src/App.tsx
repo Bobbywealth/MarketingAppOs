@@ -10,6 +10,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
 // NotificationPermissionPrompt removed - using Native Web Push
 import { PWAInstallButton } from "@/components/PWAInstallButton";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -228,7 +229,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppContent />
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
       </AuthProvider>
     </QueryClientProvider>
   );
