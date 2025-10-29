@@ -565,6 +565,7 @@ export default function ClientContent() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
