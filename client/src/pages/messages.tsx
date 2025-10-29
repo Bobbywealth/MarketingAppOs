@@ -128,26 +128,26 @@ export default function Messages() {
   };
 
   return (
-    <div className="min-h-screen md:h-[calc(100vh-4rem)] flex flex-col">
-      <div className="p-4 md:p-6 border-b bg-white sticky top-0 z-10">
+    <div className="min-h-screen md:h-[calc(100vh-4rem)] flex flex-col overflow-x-hidden">
+      <div className="p-3 sm:p-4 md:p-6 border-b bg-white sticky top-0 z-10">
         <div className="space-y-1 md:space-y-2">
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Internal communication with admins and staff</p>
+          <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
+          <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Internal communication with admins and staff</p>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
         {/* Team Members Sidebar - Now visible on mobile */}
         <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col h-[calc(100vh-10rem)] md:h-auto`}>
-          <div className="p-4 border-b space-y-3">
-            <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="p-3 sm:p-4 border-b space-y-3">
+            <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
               <p className="text-xs font-medium text-blue-900">👆 Tap a team member to start messaging</p>
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
               <Input
                 placeholder="Search team members..."
-                className="pl-10"
+                className="pl-8 sm:pl-10 text-xs sm:text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -184,21 +184,21 @@ export default function Messages() {
                     <div
                       key={member.id}
                       onClick={() => setSelectedUserId(member.id)}
-                      className={`p-3 md:p-3 rounded-lg cursor-pointer transition-all active:scale-98 ${
+                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-all active:scale-98 ${
                         selectedUserId === member.id 
                           ? 'bg-accent border-l-4 border-primary' 
                           : 'hover:bg-accent hover:shadow-sm'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarFallback className="bg-primary/10 text-primary">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
                             {getInitials(member.username)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium truncate">{member.username}</p>
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <p className="font-medium truncate text-sm sm:text-base">{member.username}</p>
                             <Badge 
                               variant="secondary" 
                               className={`text-xs ${getRoleBadgeColor(member.role)} text-white`}
@@ -242,26 +242,26 @@ export default function Messages() {
           ) : (
             <>
               {/* Chat Header */}
-              <div className="p-3 md:p-4 border-b bg-white sticky top-0 z-10">
+              <div className="p-2 sm:p-3 md:p-4 border-b bg-white sticky top-0 z-10">
                 <div className="flex items-center gap-2 md:gap-3">
                   {/* Back button for mobile */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="md:hidden hover:bg-accent"
+                    className="md:hidden hover:bg-accent h-8 w-8"
                     onClick={() => setSelectedUserId(null)}
                   >
-                    <ArrowLeft className="w-5 h-5" />
+                    <ArrowLeft className="w-4 h-4" />
                   </Button>
-                  <Avatar className="w-10 h-10 md:w-12 md:h-12">
-                    <AvatarFallback className="bg-primary/10 text-primary">
+                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
                       {selectedUser && getInitials(selectedUser.username)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-sm md:text-base">{selectedUser?.username}</h3>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <h3 className="font-semibold text-xs sm:text-sm md:text-base">{selectedUser?.username}</h3>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500"></div>
                       <span className="text-xs text-muted-foreground">
                         {selectedUser?.role === 'admin' ? 'Admin' : selectedUser?.role === 'manager' ? 'Manager' : 'Staff'}
                       </span>
@@ -271,7 +271,7 @@ export default function Messages() {
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-3 md:p-4">
+              <ScrollArea className="flex-1 p-2 sm:p-3 md:p-4">
                 {messagesLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
@@ -291,10 +291,10 @@ export default function Messages() {
                       return (
                         <div
                           key={message.id}
-                          className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
+                          className={`flex gap-2 sm:gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
                           data-testid={`message-${message.id}`}
                         >
-                          <Avatar className="w-8 h-8">
+                          <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
                               {isOwnMessage 
                                 ? getInitials(user?.username || 'U')
@@ -302,20 +302,20 @@ export default function Messages() {
                               }
                             </AvatarFallback>
                           </Avatar>
-                          <div className={`flex-1 max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col`}>
-                            <div className="flex items-center gap-2 mb-1">
+                          <div className={`flex-1 max-w-[75%] sm:max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col`}>
+                            <div className="flex items-center gap-1 sm:gap-2 mb-1">
                               <span className="text-xs text-muted-foreground">
                                 {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                               </span>
                             </div>
                             <div
-                              className={`rounded-lg p-3 ${
+                              className={`rounded-lg p-2 sm:p-3 ${
                                 isOwnMessage
                                   ? 'bg-primary text-primary-foreground'
                                   : 'bg-muted'
                               }`}
                             >
-                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                              <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
                             </div>
                             {isOwnMessage && (
                               <div className="flex items-center gap-1 mt-1">
@@ -341,25 +341,25 @@ export default function Messages() {
               </ScrollArea>
 
               {/* Message Input */}
-              <div className="p-3 md:p-4 border-t bg-white sticky bottom-0">
-                <form onSubmit={handleSendMessage} className="flex gap-2">
+              <div className="p-2 sm:p-3 md:p-4 border-t bg-white sticky bottom-0">
+                <form onSubmit={handleSendMessage} className="flex gap-1 sm:gap-2">
                   <Input
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder={`Message ${selectedUser?.username}...`}
                     disabled={sendMessageMutation.isPending}
                     data-testid="input-message"
-                    className="flex-1"
+                    className="flex-1 text-xs sm:text-sm"
                   />
                   <Button
                     type="submit"
                     disabled={!messageText.trim() || sendMessageMutation.isPending}
                     data-testid="button-send-message"
-                    className="gap-2 shrink-0"
-                    size="default"
+                    className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
+                    size="sm"
                   >
-                    <Send className="w-4 h-4" />
-                    <span className="hidden sm:inline">Send</span>
+                    <Send className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline text-xs sm:text-sm">Send</span>
                   </Button>
                 </form>
               </div>
