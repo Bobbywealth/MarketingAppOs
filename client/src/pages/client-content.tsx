@@ -146,76 +146,80 @@ export default function ClientContent() {
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Your Content Calendar</h1>
-          <p className="text-muted-foreground mt-1">
-            View your scheduled content and upload your own
-          </p>
+    <div className="min-h-full gradient-mesh overflow-x-hidden">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Your Content Calendar</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              View your scheduled content and upload your own
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={() => setUploadDialogOpen(true)}
+              className="flex items-center gap-2 text-xs sm:text-sm"
+              size="sm"
+            >
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+              Upload Content
+            </Button>
+            <Button
+              variant={viewMode === "calendar" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("calendar")}
+              className="text-xs sm:text-sm"
+            >
+              <Grid3x3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Calendar
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="text-xs sm:text-sm"
+            >
+              <List className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              List
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setUploadDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Upload Content
-          </Button>
-          <Button
-            variant={viewMode === "calendar" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("calendar")}
-          >
-            <Grid3x3 className="w-4 h-4 mr-2" />
-            Calendar
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="w-4 h-4 mr-2" />
-            List
-          </Button>
-        </div>
-      </div>
 
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All Content ({contentPosts.length})</TabsTrigger>
-          <TabsTrigger value="pending">
-            Pending ({contentPosts.filter(p => p.approvalStatus === 'pending' || p.approvalStatus === 'draft').length})
-          </TabsTrigger>
-          <TabsTrigger value="approved">
-            Approved ({contentPosts.filter(p => p.approvalStatus === 'approved' || p.approvalStatus === 'published').length})
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="all" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">All Content ({contentPosts.length})</TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              Pending ({contentPosts.filter(p => p.approvalStatus === 'pending' || p.approvalStatus === 'draft').length})
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="text-xs sm:text-sm">
+              Approved ({contentPosts.filter(p => p.approvalStatus === 'approved' || p.approvalStatus === 'published').length})
+            </TabsTrigger>
+          </TabsList>
 
         <TabsContent value="all" className="space-y-4">
           {viewMode === "calendar" ? (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <CardTitle className="text-2xl font-bold">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-4">
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">
                   {format(currentDate, "MMMM yyyy")}
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={prevMonth}>
-                    <ChevronLeft className="w-4 h-4" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Button variant="outline" size="icon" onClick={prevMonth} className="h-8 w-8 sm:h-10 sm:w-10">
+                    <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} className="text-xs sm:text-sm">
                     Today
                   </Button>
-                  <Button variant="outline" size="icon" onClick={nextMonth}>
-                    <ChevronRight className="w-4 h-4" />
+                  <Button variant="outline" size="icon" onClick={nextMonth} className="h-8 w-8 sm:h-10 sm:w-10">
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {/* Day headers */}
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                    <div key={day} className="text-center font-semibold text-sm py-2 text-muted-foreground">
+                    <div key={day} className="text-center font-semibold text-xs sm:text-sm py-1 sm:py-2 text-muted-foreground">
                       {day}
                     </div>
                   ))}
@@ -229,11 +233,11 @@ export default function ClientContent() {
                     return (
                       <div
                         key={idx}
-                        className={`min-h-[100px] border rounded-lg p-2 ${
+                        className={`min-h-[60px] sm:min-h-[80px] lg:min-h-[100px] border rounded-lg p-1 sm:p-2 ${
                           isCurrentMonth ? "bg-background" : "bg-muted/30"
                         } ${isToday ? "ring-2 ring-primary" : ""}`}
                       >
-                        <div className={`text-sm font-medium mb-1 ${
+                        <div className={`text-xs sm:text-sm font-medium mb-1 ${
                           isToday ? "text-primary" : isCurrentMonth ? "" : "text-muted-foreground"
                         }`}>
                           {format(day, "d")}
@@ -247,8 +251,8 @@ export default function ClientContent() {
                                 className="text-xs p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer truncate flex items-center gap-1"
                                 onClick={() => setSelectedPost(post)}
                               >
-                                <Icon className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">{post.caption || "Untitled"}</span>
+                                <Icon className="w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0" />
+                                <span className="truncate text-xs">{post.caption || "Untitled"}</span>
                               </div>
                             );
                           })}
@@ -286,16 +290,16 @@ export default function ClientContent() {
                     const Icon = getPlatformIcon(post.platform);
                     return (
                       <Card key={post.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPost(post)}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              <div className="p-2 rounded-lg bg-primary/10">
-                                <Icon className="w-5 h-5" />
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex items-start justify-between gap-2 sm:gap-4">
+                            <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                              <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
+                                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{post.caption || "Untitled Post"}</p>
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  <Badge variant="secondary">{post.platform}</Badge>
+                                <p className="font-medium truncate text-sm sm:text-base">{post.caption || "Untitled Post"}</p>
+                                <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-2 flex-wrap">
+                                  <Badge variant="secondary" className="text-xs">{post.platform}</Badge>
                                   {getStatusBadge(post.approvalStatus)}
                                   {post.scheduledFor && (
                                     <span className="text-xs text-muted-foreground">
@@ -309,7 +313,7 @@ export default function ClientContent() {
                               <img 
                                 src={post.mediaUrl} 
                                 alt="Post preview" 
-                                className="w-16 h-16 rounded object-cover"
+                                className="w-12 h-12 sm:w-16 sm:h-16 rounded object-cover flex-shrink-0"
                               />
                             )}
                           </div>
