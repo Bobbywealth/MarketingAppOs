@@ -264,7 +264,7 @@ export default function Content() {
 
   if (isLoading) {
     return (
-      <div className="min-h-full gradient-mesh">
+      <div className="min-h-full gradient-mesh overflow-x-hidden">
         <div className="p-6 lg:p-8 xl:p-12">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
@@ -283,7 +283,7 @@ export default function Content() {
   }
 
   return (
-    <div className="min-h-full gradient-mesh">
+    <div className="min-h-full gradient-mesh overflow-x-hidden">
       <div className="p-4 md:p-6 lg:p-8 xl:p-12 space-y-4 md:space-y-6 lg:space-y-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1 md:space-y-2">

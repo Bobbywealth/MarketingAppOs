@@ -102,7 +102,7 @@ export default function PushNotifications() {
   };
 
   return (
-    <div className="min-h-full gradient-mesh p-4 md:p-8">
+    <div className="min-h-full gradient-mesh p-4 md:p-8 overflow-x-hidden">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
