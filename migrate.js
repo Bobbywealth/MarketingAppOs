@@ -416,6 +416,44 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ tickets table already exists or error:', e.message);
       }
+
+      // Create role_permissions table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS role_permissions (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            role VARCHAR NOT NULL UNIQUE,
+            permissions JSONB NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created role_permissions table');
+      } catch (e) {
+        console.log('⚠️ role_permissions table already exists or error:', e.message);
+      }
+
+      // Create push_notification_history table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS push_notification_history (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            title VARCHAR NOT NULL,
+            body TEXT NOT NULL,
+            url VARCHAR,
+            target_type VARCHAR NOT NULL,
+            target_value VARCHAR,
+            sent_by INTEGER REFERENCES users(id),
+            recipient_count INTEGER DEFAULT 0,
+            successful BOOLEAN DEFAULT true,
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Created push_notification_history table');
+      } catch (e) {
+        console.log('⚠️ push_notification_history table already exists or error:', e.message);
+      }
       
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
