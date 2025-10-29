@@ -49,6 +49,7 @@ export default function Content() {
     defaultValues: {
       clientId: "",
       platforms: [],
+      title: "",
       caption: "",
       scheduledFor: "",
     },
@@ -144,9 +145,10 @@ export default function Content() {
     const postData: InsertContentPost = {
       clientId: values.clientId,
       platforms: values.platforms,
-      caption: values.caption || "",
+      title: values.title || "Untitled Post",
+      content: values.caption || "",
+      mediaUrls: uploadedMediaUrl ? [uploadedMediaUrl] : (values.mediaUrl ? [values.mediaUrl] : []),
       scheduledFor: values.scheduledFor || null,
-      mediaUrl: uploadedMediaUrl || values.mediaUrl || null,
     };
 
     createPostMutation.mutate(postData);
@@ -443,6 +445,19 @@ export default function Content() {
                       <p className="text-xs text-muted-foreground">Upload an image or video for this post (max 50MB)</p>
                     </div>
 
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Title *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter post title" data-testid="input-title" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="caption"

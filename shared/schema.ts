@@ -303,11 +303,13 @@ export const contentPosts = pgTable("content_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
   platforms: jsonb("platforms").notNull(), // Array of: facebook, instagram, twitter, linkedin, tiktok, youtube
-  caption: text("caption"),
-  mediaUrl: varchar("media_url"),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  mediaUrls: text("media_urls").array(),
   scheduledFor: timestamp("scheduled_for"),
-  approvalStatus: varchar("approval_status").notNull().default("draft"), // draft, pending, approved, rejected, published
+  approvalStatus: varchar("approval_status").notNull().default("pending"), // draft, pending, approved, rejected, published
   approvedBy: varchar("approved_by"),
+  platformPostId: varchar("platform_post_id"),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -698,6 +700,7 @@ export const insertContentPostSchema = createInsertSchema(contentPosts)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
     platforms: z.array(z.enum(['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube'])).min(1, "Select at least one platform"),
+    mediaUrls: z.array(z.string()).optional(),
     scheduledFor: z.preprocess(
       (val) => {
         if (val === null || val === undefined || val === '') return null;
