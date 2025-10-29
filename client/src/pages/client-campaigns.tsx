@@ -60,43 +60,43 @@ export default function ClientCampaigns() {
   }
 
   return (
-    <div className="min-h-full gradient-mesh">
-      <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12 space-y-8">
+    <div className="min-h-full gradient-mesh overflow-x-hidden">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 xl:p-12 space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-gradient-purple">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple">
             My Campaigns
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-base sm:text-lg text-muted-foreground">
             Track the progress of your marketing campaigns
           </p>
         </div>
 
         {/* Campaign Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Megaphone className="w-5 h-5 text-blue-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Megaphone className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Total Campaigns</CardTitle>
-                  <p className="text-2xl font-bold mt-1">{clientCampaigns.length}</p>
+                  <CardTitle className="text-sm sm:text-lg">Total Campaigns</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">{clientCampaigns.length}</p>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Active</CardTitle>
-                  <p className="text-2xl font-bold mt-1">
+                  <CardTitle className="text-sm sm:text-lg">Active</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">
                     {clientCampaigns.filter((c: any) => c.status === 'active').length}
                   </p>
                 </div>
@@ -105,14 +105,14 @@ export default function ClientCampaigns() {
           </Card>
 
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-orange-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Planning</CardTitle>
-                  <p className="text-2xl font-bold mt-1">
+                  <CardTitle className="text-sm sm:text-lg">Planning</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">
                     {clientCampaigns.filter((c: any) => c.status === 'planning').length}
                   </p>
                 </div>
@@ -121,14 +121,14 @@ export default function ClientCampaigns() {
           </Card>
 
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-purple-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Completed</CardTitle>
-                  <p className="text-2xl font-bold mt-1">
+                  <CardTitle className="text-sm sm:text-lg">Completed</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">
                     {clientCampaigns.filter((c: any) => c.status === 'completed').length}
                   </p>
                 </div>
@@ -139,7 +139,7 @@ export default function ClientCampaigns() {
 
         {/* Campaigns List */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold">All Campaigns</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold">All Campaigns</h2>
           
           {clientCampaigns.length === 0 ? (
             <Card className="border-0 shadow-lg">
@@ -152,27 +152,27 @@ export default function ClientCampaigns() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {clientCampaigns.map((campaign: any) => (
                 <Card key={campaign.id} className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-3 p-4 sm:p-6">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
-                          <span className="text-2xl">{getTypeIcon(campaign.type)}</span>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+                          <span className="text-lg sm:text-2xl">{getTypeIcon(campaign.type)}</span>
                         </div>
-                        <div>
-                          <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                          <CardDescription className="capitalize">{campaign.type} Campaign</CardDescription>
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-base sm:text-lg truncate">{campaign.name}</CardTitle>
+                          <CardDescription className="capitalize text-xs sm:text-sm">{campaign.type} Campaign</CardDescription>
                         </div>
                       </div>
-                      <Badge className={`${getStatusColor(campaign.status)} border`}>
+                      <Badge className={`${getStatusColor(campaign.status)} border text-xs`}>
                         {campaign.status}
                       </Badge>
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
                     {campaign.description && (
                       <p className="text-sm text-muted-foreground line-clamp-2">
                         {campaign.description}
@@ -188,7 +188,7 @@ export default function ClientCampaigns() {
                       </div>
                     )}
                     
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
                       {campaign.budget && (
                         <div className="flex items-center gap-2">
                           <DollarSign className="w-4 h-4 text-muted-foreground" />
