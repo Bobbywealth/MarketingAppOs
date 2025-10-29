@@ -59,71 +59,71 @@ export default function ClientBilling() {
   const subscriptionInfo = getSubscriptionStatus();
 
   return (
-    <div className="min-h-full gradient-mesh">
-      <div className="max-w-7xl mx-auto p-6 lg:p-8 xl:p-12 space-y-8">
+    <div className="min-h-full gradient-mesh overflow-x-hidden">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 xl:p-12 space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-gradient-purple">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple">
             Billing & Invoices
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-base sm:text-lg text-muted-foreground">
             Manage your subscription and view payment history
           </p>
         </div>
 
         {/* Billing Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Total Paid</CardTitle>
-                  <p className="text-2xl font-bold mt-1">${(totalPaid / 100).toLocaleString()}</p>
+                  <CardTitle className="text-sm sm:text-lg">Total Paid</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">${(totalPaid / 100).toLocaleString()}</p>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-blue-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Pending</CardTitle>
-                  <p className="text-2xl font-bold mt-1">${(pendingAmount / 100).toLocaleString()}</p>
+                  <CardTitle className="text-sm sm:text-lg">Pending</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">${(pendingAmount / 100).toLocaleString()}</p>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                  <Receipt className="w-5 h-5 text-purple-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Invoices</CardTitle>
-                  <p className="text-2xl font-bold mt-1">{clientInvoices.length}</p>
+                  <CardTitle className="text-sm sm:text-lg">Invoices</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">{clientInvoices.length}</p>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
           <Card className="border-0 shadow-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-orange-500" />
+            <CardHeader className="pb-3 p-3 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Paid</CardTitle>
-                  <p className="text-2xl font-bold mt-1">
+                  <CardTitle className="text-sm sm:text-lg">Paid</CardTitle>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold mt-1">
                     {clientInvoices.filter((i: any) => i.status === 'paid').length}
                   </p>
                 </div>
@@ -150,10 +150,10 @@ export default function ClientBilling() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
             {subscription ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Plan</p>
                     <p className="text-lg font-semibold">{subscription.planName || 'Professional Plan'}</p>
@@ -187,13 +187,13 @@ export default function ClientBilling() {
                   </div>
                 )}
                 
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <CreditCard className="w-4 h-4 mr-2" />
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                    <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                     Update Payment Method
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Calendar className="w-4 h-4 mr-2" />
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                     View Billing History
                   </Button>
                 </div>
@@ -229,7 +229,7 @@ export default function ClientBilling() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
             {clientInvoices.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Receipt className="w-12 h-12 mx-auto mb-3 opacity-20" />
@@ -238,14 +238,14 @@ export default function ClientBilling() {
             ) : (
               <div className="space-y-3">
                 {clientInvoices.slice(0, 10).map((invoice: any) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                        <Receipt className="w-5 h-5 text-muted-foreground" />
+                  <div key={invoice.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                        <Receipt className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                       </div>
-                      <div>
-                        <p className="font-medium">{invoice.invoiceNumber}</p>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm sm:text-base truncate">{invoice.invoiceNumber}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">
                           {invoice.description || 'Monthly subscription'}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -253,15 +253,15 @@ export default function ClientBilling() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-semibold">${(invoice.amount / 100).toLocaleString()}</p>
+                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                      <div className="text-left sm:text-right">
+                        <p className="font-semibold text-sm sm:text-base">${(invoice.amount / 100).toLocaleString()}</p>
                         <Badge className={`${getStatusColor(invoice.status)} border text-xs`}>
                           {invoice.status}
                         </Badge>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        <Download className="w-4 h-4" />
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                     </div>
                   </div>
