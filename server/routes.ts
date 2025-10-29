@@ -1995,16 +1995,64 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       const { sendPushToUser } = await import('./push.js');
       
-      // Send push notification if task is assigned to someone
+      // Enhanced task creation notifications
+      const user = req.user as any;
+      const creatorName = user?.firstName || user?.username || 'Someone';
+      
+      // Notify assignee if task is assigned to someone
       if (task.assignedToId) {
-        const user = req.user as any;
-        const creatorName = user?.username || 'Someone';
+        // In-app notification
+        await storage.createNotification({
+          userId: task.assignedToId,
+          type: 'info',
+          title: '📋 New Task Assigned',
+          message: `${creatorName} assigned you: "${task.title}"`,
+          category: 'task',
+          actionUrl: '/tasks',
+          isRead: false,
+        });
         
+        // Push notification
         await sendPushToUser(task.assignedToId, {
           title: '📋 New Task Assigned',
           body: `${creatorName} assigned you: "${task.title}"`,
           url: '/tasks',
         }).catch(err => console.error('Failed to send push notification:', err));
+      }
+      
+      // Notify all team members (admin, manager, staff) about new task
+      try {
+        const users = await storage.getUsers();
+        const teamMembers = users.filter(u => 
+          u.role === 'admin' || u.role === 'manager' || u.role === 'staff'
+        );
+        
+        for (const teamMember of teamMembers) {
+          // Skip if team member is the creator or assignee
+          if (teamMember.id === user?.id || teamMember.id === task.assignedToId) {
+            continue;
+          }
+          
+          await storage.createNotification({
+            userId: teamMember.id,
+            type: 'info',
+            title: '📋 New Task Created',
+            message: `${creatorName} created: "${task.title}"`,
+            category: 'task',
+            actionUrl: '/tasks',
+            isRead: false,
+          });
+          
+          await sendPushToUser(teamMember.id, {
+            title: '📋 New Task Created',
+            body: `${creatorName} created: "${task.title}"`,
+            url: '/tasks',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+        
+        console.log(`📬 Notified ${teamMembers.length} team member(s) about new task`);
+      } catch (teamNotifError) {
+        console.error('Failed to notify team about task:', teamNotifError);
       }
       
       // Notify client users if task is related to their client
@@ -2013,21 +2061,26 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           const clientUsers = await storage.getUsersByClientId(task.clientId);
           
           for (const clientUser of clientUsers) {
+            // Skip if client user is the assignee
+            if (clientUser.id === task.assignedToId) {
+              continue;
+            }
+            
             // In-app notification
             await storage.createNotification({
               userId: clientUser.id,
-              type: 'info',
+              type: 'success',
               title: '📋 New Task Created',
-              message: `A new task "${task.title}" has been created for your account`,
-              category: 'general',
+              message: `New task "${task.title}" has been created for your project`,
+              category: 'task',
               actionUrl: '/client-dashboard',
               isRead: false,
             });
             
             // Push notification
             await sendPushToUser(clientUser.id, {
-              title: '📋 New Task',
-              body: `"${task.title}" has been created for your account`,
+              title: '📋 New Task Created',
+              body: `New task "${task.title}" has been created for your project`,
               url: '/client-dashboard',
             }).catch(err => console.error('Failed to send push notification:', err));
           }
@@ -2148,6 +2201,167 @@ Examples:
       }
 
       const task = await storage.updateTask(req.params.id, validatedData);
+      
+      // Enhanced task update notifications
+      const currentUser = req.user as any;
+      const currentUserId = currentUser?.id || currentUser?.claims?.sub;
+      const { sendPushToUser } = await import('./push.js');
+      
+      try {
+        // Notify about status changes
+        if (validatedData.status && validatedData.status !== existingTask.status) {
+          const statusMessages = {
+            'pending': '📋 Task Status: Pending',
+            'in_progress': '🔄 Task Status: In Progress', 
+            'completed': '✅ Task Completed!',
+            'cancelled': '❌ Task Cancelled',
+            'on_hold': '⏸️ Task On Hold'
+          };
+          
+          const statusMessage = statusMessages[validatedData.status as keyof typeof statusMessages] || '📋 Task Status Updated';
+          
+          // Notify assignee if different from updater
+          if (task.assignedToId && task.assignedToId !== currentUserId) {
+            await storage.createNotification({
+              userId: task.assignedToId,
+              type: validatedData.status === 'completed' ? 'success' : 'info',
+              title: statusMessage,
+              message: `"${task.title}" status changed to ${validatedData.status}`,
+              category: 'task',
+              actionUrl: '/tasks',
+              isRead: false,
+            });
+            
+            await sendPushToUser(task.assignedToId, {
+              title: statusMessage,
+              body: `"${task.title}" status changed to ${validatedData.status}`,
+              url: '/tasks',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+          
+          // Notify creator if different from updater and assignee
+          if (task.createdBy && task.createdBy !== currentUserId && task.createdBy !== task.assignedToId) {
+            await storage.createNotification({
+              userId: task.createdBy,
+              type: validatedData.status === 'completed' ? 'success' : 'info',
+              title: statusMessage,
+              message: `"${task.title}" status changed to ${validatedData.status}`,
+              category: 'task',
+              actionUrl: '/tasks',
+              isRead: false,
+            });
+            
+            await sendPushToUser(task.createdBy, {
+              title: statusMessage,
+              body: `"${task.title}" status changed to ${validatedData.status}`,
+              url: '/tasks',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        // Notify about priority changes
+        if (validatedData.priority && validatedData.priority !== existingTask.priority) {
+          const priorityMessages = {
+            'low': '🟢 Priority: Low',
+            'medium': '🟡 Priority: Medium',
+            'high': '🟠 Priority: High',
+            'urgent': '🔴 Priority: Urgent'
+          };
+          
+          const priorityMessage = priorityMessages[validatedData.priority as keyof typeof priorityMessages] || '📋 Priority Updated';
+          
+          if (task.assignedToId && task.assignedToId !== currentUserId) {
+            await storage.createNotification({
+              userId: task.assignedToId,
+              type: validatedData.priority === 'urgent' ? 'error' : 'warning',
+              title: priorityMessage,
+              message: `"${task.title}" priority changed to ${validatedData.priority}`,
+              category: 'task',
+              actionUrl: '/tasks',
+              isRead: false,
+            });
+            
+            await sendPushToUser(task.assignedToId, {
+              title: priorityMessage,
+              body: `"${task.title}" priority changed to ${validatedData.priority}`,
+              url: '/tasks',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        // Notify about due date changes
+        if (validatedData.dueDate && validatedData.dueDate !== existingTask.dueDate) {
+          const newDueDate = new Date(validatedData.dueDate).toLocaleDateString();
+          
+          if (task.assignedToId && task.assignedToId !== currentUserId) {
+            await storage.createNotification({
+              userId: task.assignedToId,
+              type: 'info',
+              title: '📅 Due Date Updated',
+              message: `"${task.title}" due date changed to ${newDueDate}`,
+              category: 'deadline',
+              actionUrl: '/tasks',
+              isRead: false,
+            });
+            
+            await sendPushToUser(task.assignedToId, {
+              title: '📅 Due Date Updated',
+              body: `"${task.title}" due date changed to ${newDueDate}`,
+              url: '/tasks',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        // Notify about assignment changes
+        if (validatedData.assignedToId && validatedData.assignedToId !== existingTask.assignedToId) {
+          const users = await storage.getUsers();
+          const newAssignee = users.find(u => u.id === validatedData.assignedToId);
+          const oldAssignee = users.find(u => u.id === existingTask.assignedToId);
+          
+          // Notify new assignee
+          if (newAssignee && newAssignee.id !== currentUserId) {
+            await storage.createNotification({
+              userId: newAssignee.id,
+              type: 'info',
+              title: '📋 Task Assigned to You',
+              message: `"${task.title}" has been assigned to you`,
+              category: 'task',
+              actionUrl: '/tasks',
+              isRead: false,
+            });
+            
+            await sendPushToUser(newAssignee.id, {
+              title: '📋 New Task Assigned',
+              body: `"${task.title}" has been assigned to you`,
+              url: '/tasks',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+          
+          // Notify old assignee if different from new assignee and updater
+          if (oldAssignee && oldAssignee.id !== validatedData.assignedToId && oldAssignee.id !== currentUserId) {
+            await storage.createNotification({
+              userId: oldAssignee.id,
+              type: 'info',
+              title: '📋 Task Reassigned',
+              message: `"${task.title}" has been reassigned from you`,
+              category: 'task',
+              actionUrl: '/tasks',
+              isRead: false,
+            });
+            
+            await sendPushToUser(oldAssignee.id, {
+              title: '📋 Task Reassigned',
+              body: `"${task.title}" has been reassigned from you`,
+              url: '/tasks',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        console.log(`✅ Task update notifications sent for task: ${task.title}`);
+      } catch (notifError) {
+        console.error('Failed to send task update notifications:', notifError);
+        // Don't fail the task update if notification fails
+      }
 
       // If task is recurring and was just completed, create next instance
       if (
@@ -2448,12 +2662,99 @@ Examples:
   app.post("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
+      const currentUserId = user?.id || user?.claims?.sub;
       const validatedData = insertTaskCommentSchema.parse({
         ...req.body,
         taskId: req.params.taskId,
-        userId: user.claims.sub,
+        userId: currentUserId,
       });
       const comment = await storage.createTaskComment(validatedData);
+      
+      // Enhanced task comment notifications
+      try {
+        const task = await storage.getTask(req.params.taskId);
+        if (!task) {
+          console.log('Task not found for comment notification');
+          return res.status(201).json(comment);
+        }
+        
+        const { sendPushToUser } = await import('./push.js');
+        const users = await storage.getUsers();
+        const commenter = users.find(u => u.id === currentUserId);
+        const commenterName = commenter?.firstName || commenter?.username || 'Someone';
+        
+        // Notify task assignee if different from commenter
+        if (task.assignedToId && task.assignedToId !== currentUserId) {
+          await storage.createNotification({
+            userId: task.assignedToId,
+            type: 'info',
+            title: '💬 New Task Comment',
+            message: `${commenterName} commented on "${task.title}"`,
+            category: 'task',
+            actionUrl: '/tasks',
+            isRead: false,
+          });
+          
+          await sendPushToUser(task.assignedToId, {
+            title: '💬 New Task Comment',
+            body: `${commenterName}: ${validatedData.content?.substring(0, 100) || 'Added a comment'}`,
+            url: '/tasks',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+        
+        // Notify task creator if different from commenter and assignee
+        if (task.createdBy && task.createdBy !== currentUserId && task.createdBy !== task.assignedToId) {
+          await storage.createNotification({
+            userId: task.createdBy,
+            type: 'info',
+            title: '💬 New Task Comment',
+            message: `${commenterName} commented on "${task.title}"`,
+            category: 'task',
+            actionUrl: '/tasks',
+            isRead: false,
+          });
+          
+          await sendPushToUser(task.createdBy, {
+            title: '💬 New Task Comment',
+            body: `${commenterName}: ${validatedData.content?.substring(0, 100) || 'Added a comment'}`,
+            url: '/tasks',
+          }).catch(err => console.error('Failed to send push notification:', err));
+        }
+        
+        // Notify client users if task is related to their client
+        if (task.clientId) {
+          const clientUsers = await storage.getUsersByClientId(task.clientId);
+          
+          for (const clientUser of clientUsers) {
+            // Skip if client user is the commenter, assignee, or creator
+            if (clientUser.id === currentUserId || clientUser.id === task.assignedToId || clientUser.id === task.createdBy) {
+              continue;
+            }
+            
+            await storage.createNotification({
+              userId: clientUser.id,
+              type: 'info',
+              title: '💬 Task Comment Added',
+              message: `${commenterName} commented on "${task.title}"`,
+              category: 'task',
+              actionUrl: '/client-dashboard',
+              isRead: false,
+            });
+            
+            await sendPushToUser(clientUser.id, {
+              title: '💬 Task Comment Added',
+              body: `${commenterName}: ${validatedData.content?.substring(0, 100) || 'Added a comment'}`,
+              url: '/client-dashboard',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+        }
+        
+        console.log(`✅ Task comment notifications sent for task: ${task.title}`);
+      } catch (notifError) {
+        console.error('Failed to send task comment notifications:', notifError);
+        // Don't fail the comment creation if notification fails
+      }
+      
       res.status(201).json(comment);
     } catch (error) {
       handleValidationError(error, res);
@@ -3758,8 +4059,12 @@ Examples:
       let notificationsCreated = 0;
 
       for (const task of tasks) {
-        // Only check tasks assigned to current user or created by them
-        if (task.assignedToId !== userId && task.clientId !== userId) continue;
+        // Check tasks assigned to current user, created by them, or related to their client
+        const isAssignedToUser = task.assignedToId === userId;
+        const isCreatedByUser = task.createdBy === userId;
+        const isClientTask = task.clientId && task.clientId === userId;
+        
+        if (!isAssignedToUser && !isCreatedByUser && !isClientTask) continue;
         
         // Skip completed tasks
         if (task.status === 'completed') continue;
