@@ -198,8 +198,183 @@ async function checkOverdueInvoices() {
   }
 }
 
+// Helper function to notify admins about analytics and performance events
+async function notifyAdminsAboutAnalytics(title: string, message: string, category: string = 'analytics') {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => u.role === UserRole.ADMIN);
+    const { sendPushToUser } = await import('./push.js');
+    
+    for (const admin of admins) {
+      await storage.createNotification({
+        userId: admin.id,
+        type: 'info',
+        title,
+        message,
+        category,
+        actionUrl: '/analytics',
+        isRead: false,
+      });
+      
+      await sendPushToUser(admin.id, {
+        title,
+        body: message,
+        url: '/analytics',
+      }).catch(err => console.error('Failed to send push notification:', err));
+    }
+    
+    console.log(`✅ Notified ${admins.length} admin(s) about analytics event: ${title}`);
+  } catch (error) {
+    console.error('Failed to send analytics notifications:', error);
+  }
+}
+
+// Helper function to check for significant metric changes
+async function checkSignificantMetricChanges() {
+  try {
+    const stats = await storage.getDashboardStats();
+    
+    // Check for significant changes (more than 50% increase/decrease)
+    const significantChanges = [];
+    
+    if (stats.clientsChange && Math.abs(stats.clientsChange) > 50) {
+      significantChanges.push({
+        metric: 'Clients',
+        change: stats.clientsChange,
+        message: `Client count ${stats.clientsChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.clientsChange)}%`
+      });
+    }
+    
+    if (stats.campaignsChange && Math.abs(stats.campaignsChange) > 50) {
+      significantChanges.push({
+        metric: 'Campaigns',
+        change: stats.campaignsChange,
+        message: `Campaign count ${stats.campaignsChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.campaignsChange)}%`
+      });
+    }
+    
+    if (stats.revenueChange && Math.abs(stats.revenueChange) > 50) {
+      significantChanges.push({
+        metric: 'Revenue',
+        change: stats.revenueChange,
+        message: `Revenue ${stats.revenueChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.revenueChange)}%`
+      });
+    }
+    
+    if (stats.pipelineChange && Math.abs(stats.pipelineChange) > 50) {
+      significantChanges.push({
+        metric: 'Pipeline',
+        change: stats.pipelineChange,
+        message: `Pipeline value ${stats.pipelineChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.pipelineChange)}%`
+      });
+    }
+    
+    // Send notifications for significant changes
+    for (const change of significantChanges) {
+      await notifyAdminsAboutAnalytics(
+        `📊 Significant ${change.metric} Change`,
+        change.message,
+        'analytics'
+      );
+    }
+    
+    if (significantChanges.length > 0) {
+      console.log(`✅ Detected ${significantChanges.length} significant metric changes`);
+    }
+  } catch (error) {
+    console.error('Failed to check metric changes:', error);
+  }
+}
+
 // Run overdue invoice check every hour
 setInterval(checkOverdueInvoices, 60 * 60 * 1000); // 1 hour
+
+// Helper function to notify admins about integration and external service events
+async function notifyAdminsAboutIntegration(title: string, message: string, category: string = 'integration') {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => u.role === UserRole.ADMIN);
+    const { sendPushToUser } = await import('./push.js');
+    
+    for (const admin of admins) {
+      await storage.createNotification({
+        userId: admin.id,
+        type: 'warning',
+        title,
+        message,
+        category,
+        actionUrl: '/settings',
+        isRead: false,
+      });
+      
+      await sendPushToUser(admin.id, {
+        title,
+        body: message,
+        url: '/settings',
+      }).catch(err => console.error('Failed to send push notification:', err));
+    }
+    
+    console.log(`✅ Notified ${admins.length} admin(s) about integration event: ${title}`);
+  } catch (error) {
+    console.error('Failed to send integration notifications:', error);
+  }
+}
+
+// Helper: meeting reminders for bookings/events in next 60 mins
+async function runMeetingReminders() {
+  const results: any[] = [];
+  try {
+    const now = new Date();
+    const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+    if (!('getCalendarEvents' in storage)) {
+      console.warn('Storage has no getCalendarEvents; skipping reminders');
+      return results;
+    }
+    // @ts-ignore - optional API on storage
+    const events = await storage.getCalendarEvents();
+    const upcoming = (events || []).filter((e: any) => {
+      const start = e.start || e.datetime || e.date;
+      if (!start) return false;
+      const when = new Date(start);
+      return when >= now && when <= inOneHour;
+    });
+    if (upcoming.length === 0) return results;
+
+    const users = await storage.getUsers();
+    const admins = users.filter(u => u.role === UserRole.ADMIN);
+    const { sendPushToUser } = await import('./push.js');
+
+    for (const ev of upcoming) {
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          type: 'warning',
+          title: '📅 Upcoming Meeting',
+          message: `${ev.title || 'Scheduled meeting'} at ${new Date(ev.start || ev.datetime).toLocaleTimeString()}`,
+          category: 'communication',
+          actionUrl: '/company-calendar',
+          isRead: false,
+        });
+        await sendPushToUser(admin.id, {
+          title: '📅 Upcoming Meeting',
+          body: `${ev.title || 'Scheduled meeting'} in less than 1 hour`,
+          url: '/company-calendar',
+        }).catch(err => console.error('Failed to send push notification:', err));
+      }
+      results.push({ id: ev.id, title: ev.title, notifiedAdmins: admins.length });
+    }
+    console.log(`✅ Meeting reminders sent for ${upcoming.length} event(s)`);
+  } catch (error) {
+    console.error('Meeting reminders error:', error);
+  }
+  return results;
+}
+
+// Schedule meeting reminders every 15 minutes
+setInterval(() => { runMeetingReminders().catch(() => {}); }, 15 * 60 * 1000);
+
+// Run analytics check every 6 hours
+setInterval(checkSignificantMetricChanges, 6 * 60 * 60 * 1000); // 6 hours
 
 export function registerRoutes(app: Express) {
   // File upload endpoint
@@ -271,6 +446,52 @@ export function registerRoutes(app: Express) {
         message: "Upload failed", 
         error: error.message 
       });
+    }
+  });
+
+  // Announcements (admin-only): send company-wide announcement
+  app.post("/api/announcements", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { title, message } = req.body as { title: string; message: string };
+      if (!title || !message) {
+        return res.status(400).json({ message: 'Title and message are required' });
+      }
+      const users = await storage.getUsers();
+      const { sendPushToUser } = await import('./push.js');
+      let count = 0;
+      for (const user of users) {
+        await storage.createNotification({
+          userId: user.id,
+          type: 'info',
+          title: `📣 ${title}`,
+          message,
+          category: 'announcement',
+          actionUrl: '/dashboard',
+          isRead: false,
+        });
+        await sendPushToUser(user.id, {
+          title: `📣 ${title}`,
+          body: message.substring(0, 120),
+          url: '/dashboard',
+        }).catch(err => console.error('Failed to send push notification:', err));
+        count++;
+      }
+      res.status(201).json({ message: 'Announcement sent', recipients: count });
+    } catch (error) {
+      console.error('Failed to send announcement:', error);
+      res.status(500).json({ message: 'Failed to send announcement' });
+    }
+  });
+
+  // Booking meeting reminders: notify admins for meetings in next 60 minutes
+  app.post("/api/system/run-meeting-reminders", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+    try {
+      // Optional manual trigger
+      const reminders = await runMeetingReminders();
+      res.json({ message: 'Meeting reminders processed', reminders });
+    } catch (error) {
+      console.error('Failed to run meeting reminders:', error);
+      res.status(500).json({ message: 'Failed to run meeting reminders' });
     }
   });
 
@@ -2896,7 +3117,57 @@ Examples:
           }
         }
         
-        console.log(`✅ Task comment notifications sent for task: ${task.title}`);
+              // Detect @mentions in comment content and notify mentioned users + admins
+              try {
+                const contentText = String(validatedData.content || "");
+                const mentionUsernames = Array.from(new Set((contentText.match(/@([a-zA-Z0-9_\.\-]+)/g) || []).map(m => m.slice(1))))
+                  .filter(Boolean);
+                if (mentionUsernames.length > 0) {
+                  const allUsers = await storage.getUsers();
+                  const mentionedUsers = allUsers.filter(u => mentionUsernames.includes(u.username));
+                  for (const mentioned of mentionedUsers) {
+                    if (mentioned.id === currentUserId) continue;
+                    await storage.createNotification({
+                      userId: mentioned.id,
+                      type: 'info',
+                      title: '🔔 You were mentioned',
+                      message: `${commenterName} mentioned you on "${task.title}"`,
+                      category: 'communication',
+                      actionUrl: '/tasks',
+                      isRead: false,
+                    });
+                    await sendPushToUser(mentioned.id, {
+                      title: '🔔 You were mentioned',
+                      body: `${commenterName}: ${contentText.substring(0, 100)}`,
+                      url: '/tasks',
+                    }).catch(err => console.error('Failed to send push notification:', err));
+                  }
+                  // Also notify admins about mentions
+                  const admins = allUsers.filter(u => u.role === UserRole.ADMIN);
+                  for (const admin of admins) {
+                    if (mentionedUsers.some(mu => mu.id === admin.id)) continue;
+                    await storage.createNotification({
+                      userId: admin.id,
+                      type: 'info',
+                      title: '💬 Team Mention',
+                      message: `${commenterName} mentioned ${mentionUsernames.join(', ')} on "${task.title}"`,
+                      category: 'communication',
+                      actionUrl: '/tasks',
+                      isRead: false,
+                    });
+                    await sendPushToUser(admin.id, {
+                      title: '💬 Team Mention',
+                      body: `${commenterName} mentioned ${mentionUsernames.join(', ')}`,
+                      url: '/tasks',
+                    }).catch(err => console.error('Failed to send push notification:', err));
+                  }
+                  console.log(`✅ Mention notifications sent for task comment: ${task.title}`);
+                }
+              } catch (mentionErr) {
+                console.error('Failed to process task comment mentions:', mentionErr);
+              }
+
+              console.log(`✅ Task comment notifications sent for task: ${task.title}`);
       } catch (notifError) {
         console.error('Failed to send task comment notifications:', notifError);
         // Don't fail the comment creation if notification fails
@@ -3585,6 +3856,65 @@ Examples:
       const message = await storage.createMessage(validatedData);
       console.log("✅ Message created successfully:", message.id);
       
+      // Detect @mentions in message content and notify mentioned users and admins
+      try {
+        const content = String(validatedData.content || "");
+        const mentionUsernames = Array.from(new Set((content.match(/@([a-zA-Z0-9_\.\-]+)/g) || []).map(m => m.slice(1))))
+          .filter(Boolean);
+        if (mentionUsernames.length > 0) {
+          const users = await storage.getUsers();
+          const mentionedUsers = users.filter(u => mentionUsernames.includes(u.username));
+          const { sendPushToUser } = await import('./push.js');
+          const sender = await storage.getUser(String(currentUserId));
+          const senderName = sender?.firstName || sender?.username || 'Someone';
+
+          for (const mentioned of mentionedUsers) {
+            // In-app notification for mentioned user
+            await storage.createNotification({
+              userId: mentioned.id,
+              type: 'info',
+              title: '🔔 You were mentioned',
+              message: `${senderName} mentioned you in a message`,
+              category: 'communication',
+              actionUrl: '/messages',
+              isRead: false,
+            });
+
+            await sendPushToUser(mentioned.id, {
+              title: '🔔 You were mentioned',
+              body: `${senderName}: ${content.substring(0, 100)}`,
+              url: '/messages',
+            }).catch(err => console.error('Failed to send push notification:', err));
+          }
+
+          // Also notify admins about mentions (admin-only visibility)
+          const admins = users.filter(u => u.role === UserRole.ADMIN);
+          for (const admin of admins) {
+            if (!mentionedUsers.some(mu => mu.id === admin.id)) {
+              await storage.createNotification({
+                userId: admin.id,
+                type: 'info',
+                title: '💬 Team Mention',
+                message: `${senderName} mentioned ${mentionUsernames.join(', ')} in messages`,
+                category: 'communication',
+                actionUrl: '/messages',
+                isRead: false,
+              });
+
+              await sendPushToUser(admin.id, {
+                title: '💬 Team Mention',
+                body: `${senderName} mentioned ${mentionUsernames.join(', ')}`,
+                url: '/messages',
+              }).catch(err => console.error('Failed to send push notification:', err));
+            }
+          }
+
+          console.log(`✅ Mention notifications sent for usernames: ${mentionUsernames.join(', ')}`);
+        }
+      } catch (mentionError) {
+        console.error('Failed to process mentions:', mentionError);
+      }
+
       // Create notification for recipient (don't let this fail the message creation)
       if (validatedData.recipientId) {
         try {
@@ -5483,6 +5813,18 @@ Examples:
 
       if (!response.ok) {
         console.error("❌ Dialpad connection failed:", response.status);
+        
+        // Notify admins about Dialpad connection failure
+        try {
+          await notifyAdminsAboutIntegration(
+            '📞 Dialpad Connection Failed',
+            `Dialpad API connection failed with status ${response.status}. ${response.status === 401 ? 'API Key may be invalid or expired.' : 'Unknown error occurred.'}`,
+            'integration'
+          );
+        } catch (notifError) {
+          console.error('Failed to send integration notification:', notifError);
+        }
+        
         return res.status(response.status).json({ 
           success: false,
           connected: false,
