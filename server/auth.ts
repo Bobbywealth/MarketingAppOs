@@ -52,6 +52,8 @@ export function setupAuth(app: Express) {
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      domain: process.env.COOKIE_DOMAIN || undefined, // e.g. .marketingteam.app
       maxAge: sessionTtl,
     },
   };
@@ -121,6 +123,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log('🔐 Login attempt', { origin: req.headers.origin, host: req.headers.host, cookieDomain: process.env.COOKIE_DOMAIN });
     passport.authenticate("local", async (err: any, user: SelectUser | false, info: any) => {
       if (err) return next(err);
       if (!user) {
