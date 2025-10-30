@@ -5173,6 +5173,22 @@ Examples:
         return res.status(400).json({ message: "Invalid subscription" });
       }
 
+      // Check if this endpoint is already registered to a DIFFERENT user
+      const existingSubscription = await pool.query(
+        'SELECT user_id FROM push_subscriptions WHERE endpoint = $1',
+        [subscription.endpoint]
+      );
+
+      if (existingSubscription.rows.length > 0) {
+        const existingUserId = existingSubscription.rows[0].user_id;
+        
+        if (existingUserId !== userId) {
+          // Account switch detected! Delete the old subscription first
+          console.log(`⚠️ Account switch detected: endpoint was for user ${existingUserId}, now subscribing for user ${userId}`);
+          await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [subscription.endpoint]);
+        }
+      }
+
       // Store subscription in database
       await pool.query(
         `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
@@ -5182,6 +5198,7 @@ Examples:
         [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
       );
 
+      console.log(`✅ Push subscription saved for user ${userId}`);
       res.json({ success: true });
     } catch (error) {
       console.error('Error saving push subscription:', error);
