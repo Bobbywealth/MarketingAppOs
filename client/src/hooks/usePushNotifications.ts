@@ -81,13 +81,30 @@ export function usePushNotifications() {
     setLoading(true);
 
     try {
+      // Check current permission state
+      const currentPermission = Notification.permission;
+      console.log('🔔 Current notification permission:', currentPermission);
+      
+      // If already denied, show helpful message
+      if (currentPermission === 'denied') {
+        toast({
+          title: "Notifications Blocked",
+          description: "Please enable notifications in your device settings: Settings → Notifications → Marketing Team App",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return false;
+      }
+      
       // Request notification permission
+      console.log('📱 Requesting notification permission...');
       const permission = await Notification.requestPermission();
+      console.log('✅ Permission result:', permission);
       
       if (permission !== 'granted') {
         toast({
           title: "Permission Denied",
-          description: "You need to allow notifications to receive push updates",
+          description: "You need to allow notifications to receive push updates. Check Settings → Notifications → Marketing Team App",
           variant: "destructive",
         });
         setLoading(false);
