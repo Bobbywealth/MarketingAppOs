@@ -22,6 +22,7 @@ export default function Messages() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const recordStartRef = useRef<number | null>(null);
   const [presenceOnline, setPresenceOnline] = useState<boolean>(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
 
@@ -157,15 +158,21 @@ export default function Messages() {
     if (!selectedUserId) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      // Pick a mime type compatible with the current browser (iOS prefers audio/mp4)
+      let preferredMime = '';
+      if ((window as any).MediaRecorder?.isTypeSupported?.('audio/mp4')) preferredMime = 'audio/mp4';
+      else if ((window as any).MediaRecorder?.isTypeSupported?.('audio/mpeg')) preferredMime = 'audio/mpeg';
+      else if ((window as any).MediaRecorder?.isTypeSupported?.('audio/webm;codecs=opus')) preferredMime = 'audio/webm;codecs=opus';
+      const recorder = preferredMime ? new MediaRecorder(stream, { mimeType: preferredMime }) : new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
       recorder.onstop = async () => {
         try {
           const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-          const durationMs = (blob as any).size ? undefined : undefined; // optional
+          const durationMs = recordStartRef.current ? Date.now() - recordStartRef.current : undefined;
           const form = new FormData();
-          form.append('file', blob, `voice-${Date.now()}.webm`);
+          const ext = (recorder.mimeType || '').includes('mp4') ? 'm4a' : (recorder.mimeType || '').includes('mpeg') ? 'mp3' : 'webm';
+          form.append('file', blob, `voice-${Date.now()}.${ext}`);
           const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' });
           if (!res.ok) throw new Error('Upload failed');
           const uploaded = await res.json();
@@ -175,7 +182,7 @@ export default function Messages() {
             isInternal: true,
             mediaUrl: uploaded.url,
             mediaType: blob.type,
-            durationMs: durationMs,
+            durationMs,
           });
         } catch (err: any) {
           toast({ title: 'Voice message failed', description: err?.message || 'Try again', variant: 'destructive' });
@@ -184,6 +191,7 @@ export default function Messages() {
       recorder.start();
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
+      recordStartRef.current = Date.now();
     } catch (err: any) {
       toast({ title: 'Microphone error', description: err?.message || 'Permission denied', variant: 'destructive' });
     }
@@ -196,6 +204,7 @@ export default function Messages() {
       r.stream.getTracks().forEach(t => t.stop());
     }
     setIsRecording(false);
+    recordStartRef.current = null;
   };
 
   const selectedUser = teamMembers.find(u => u.id === selectedUserId);
@@ -397,9 +406,16 @@ export default function Messages() {
                               }`}
                             >
                               {message.mediaUrl ? (
-                                <audio controls src={message.mediaUrl} className="w-full">
+                                <div className="space-y-1">
+                                  <audio controls preload="metadata" src={message.mediaUrl} className="w-full">
                                   Your browser does not support the audio element.
-                                </audio>
+                                  </audio>
+                                  {message.durationMs && (
+                                    <div className="text-[10px] opacity-80">
+                                      {Math.round((message.durationMs as any) / 1000)}s
+                                    </div>
+                                  )}
+                                </div>
                               ) : (
                                 <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
                               )}
