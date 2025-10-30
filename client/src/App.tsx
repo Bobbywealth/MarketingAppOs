@@ -58,6 +58,8 @@ import Training from "@/pages/training";
 import PushNotifications from "@/pages/push-notifications";
 import PWAHomePage from "@/pages/pwa-home";
 import NotFound from "@/pages/not-found";
+import AdminSocialOverview from "@/pages/admin-social-overview";
+import AdminSocialAccounts from "@/pages/admin-social-accounts";
 
 function Router() {
   const { user } = useAuth();
@@ -107,6 +109,8 @@ function Router() {
       {!isClient && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
       {!isClient && <ProtectedRoute path="/training" component={Training} />}
       {!isClient && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
+      {!isClient && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
+      {!isClient && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/settings" component={Settings} />

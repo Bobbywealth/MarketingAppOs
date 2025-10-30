@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign } from "lucide-react";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3 } from "lucide-react";
+import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -728,6 +729,17 @@ export default function Clients() {
                 </DialogHeader>
 
                 <div className="space-y-6 mt-4">
+                  {/* Quick Social analytics entry */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">Social analytics and connections</div>
+                    <Link href={`/social?clientId=${selectedClient.id}`}>
+                      <Button size="sm" className="gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        Open Social Overview
+                      </Button>
+                    </Link>
+                  </div>
+
                   {/* Contact Information */}
                   <div>
                     <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
