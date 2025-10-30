@@ -151,7 +151,6 @@ export default function Messages() {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/conversation", selectedUserId] });
       queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
       setMessageText("");
-      toast({ title: "✅ Message sent" });
     },
     onError: (error: any) => {
       console.error("❌ Message send error:", error);
