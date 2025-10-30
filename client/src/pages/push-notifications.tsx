@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
 
 interface PushNotificationHistoryItem {
   id: string;
@@ -29,6 +30,8 @@ interface PushNotificationHistoryItem {
 }
 
 export default function PushNotifications() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { toast } = useToast();
   const { isSupported, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
 
@@ -112,7 +115,7 @@ export default function PushNotifications() {
               Push Notifications
             </h1>
             <p className="text-muted-foreground mt-1">
-              Send instant push notifications to your team
+              {isAdmin ? 'Send and manage push notifications' : 'Manage push notifications for this device'}
             </p>
           </div>
         </div>
@@ -159,7 +162,8 @@ export default function PushNotifications() {
           </CardContent>
         </Card>
 
-        {/* Send Notification Card */}
+        {/* Send Notification Card (admins only) */}
+        {isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -278,8 +282,10 @@ export default function PushNotifications() {
             </Button>
           </CardContent>
         </Card>
+        )}
 
-        {/* Quick Send Templates */}
+        {/* Quick Send Templates (admins only) */}
+        {isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle>Quick Templates</CardTitle>
@@ -330,8 +336,10 @@ export default function PushNotifications() {
             </Button>
           </CardContent>
         </Card>
+        )}
 
-        {/* Notification History */}
+        {/* Notification History (admins only) */}
+        {isAdmin && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -419,6 +427,7 @@ export default function PushNotifications() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );
