@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon } from "lucide-react";
+import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -30,6 +30,7 @@ export default function Messages() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [presenceOnline, setPresenceOnline] = useState<boolean>(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Get all users (will be filtered to admin/staff only)
   const { data: allUsers } = useQuery<User[]>({
@@ -501,9 +502,12 @@ export default function Messages() {
                               {message.mediaUrl ? (
                                 <div className="space-y-1">
                                   {message.mediaType?.startsWith('image') ? (
-                                    <a href={message.mediaUrl} target="_blank" rel="noreferrer">
+                                    <div 
+                                      className="cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => setSelectedImage(message.mediaUrl)}
+                                    >
                                       <img src={message.mediaUrl} alt="image message" className="max-w-[240px] max-h-[240px] rounded-md shadow" />
-                                    </a>
+                                    </div>
                                   ) : (
                                     <>
                                       <audio controls preload="metadata" src={message.mediaUrl} className="w-full">
@@ -662,6 +666,31 @@ export default function Messages() {
           )}
         </div>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-full max-h-full">
+            <Button
+              onClick={() => setSelectedImage(null)}
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 right-2 z-10 bg-black bg-opacity-50 text-white hover:bg-opacity-75"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+            <img 
+              src={selectedImage} 
+              alt="Full size image" 
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
