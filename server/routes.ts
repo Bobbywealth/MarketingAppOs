@@ -204,7 +204,7 @@ async function checkOverdueInvoices() {
           title: '💰 Invoice Overdue',
           message: `Invoice #${invoice.invoiceNumber} is overdue for client ${invoice.clientId}`,
           category: 'financial',
-          actionUrl: '/invoices',
+          actionUrl: `/invoices?invoiceId=${invoice.id}`,
           isRead: false,
         });
         
@@ -658,7 +658,7 @@ export function registerRoutes(app: Express) {
             title: '🧾 Payment Successful - New Client',
             message: `${name} just subscribed${packageId ? ` to package ${packageId}` : ""}.`,
             category: 'general',
-            actionUrl: '/clients',
+            actionUrl: `/clients?search=${encodeURIComponent(name)}`,
             isRead: false,
           });
           await sendPushToUser(u.id, {
@@ -816,7 +816,7 @@ This lead will be updated if they complete the full signup process.`,
             title: '🎯 New Early Lead',
             message: `${lead.name}${lead.company ? ` from ${lead.company}` : ''} - Started signup process`,
             category: 'general',
-            actionUrl: '/leads',
+            actionUrl: `/leads?leadId=${lead.id}`,
             isRead: false,
           });
           
@@ -2123,7 +2123,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           title: '🎉 New Client Added',
           message: `${client.name} has been added to the system`,
           category: 'general',
-          actionUrl: '/clients',
+          actionUrl: `/clients?clientId=${client.id}`,
           isRead: false,
         });
         
@@ -2230,7 +2230,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
               title: '🎯 New Campaign Created',
               message: `A new campaign "${campaign.name}" has been created for you`,
               category: 'general',
-              actionUrl: '/client-campaigns',
+              actionUrl: `/client-campaigns?campaignId=${campaign.id}`,
               isRead: false,
             });
             
@@ -2476,7 +2476,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           title: '📋 New Task Assigned',
           message: `${creatorName} assigned you: "${task.title}"`,
           category: 'task',
-          actionUrl: '/tasks',
+          actionUrl: `/tasks?taskId=${task.id}`,
           isRead: false,
         });
         
@@ -2484,7 +2484,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         await sendPushToUser(task.assignedToId, {
           title: '📋 New Task Assigned',
           body: `${creatorName} assigned you: "${task.title}"`,
-          url: '/tasks',
+          url: `/tasks?taskId=${task.id}`,
         }).catch(err => console.error('Failed to send push notification:', err));
       }
       
@@ -2507,14 +2507,14 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
             title: '📋 New Task Created',
             message: `${creatorName} created: "${task.title}"`,
             category: 'task',
-            actionUrl: '/tasks',
+            actionUrl: `/tasks?taskId=${task.id}`,
             isRead: false,
           });
           
           await sendPushToUser(teamMember.id, {
             title: '📋 New Task Created',
             body: `${creatorName} created: "${task.title}"`,
-            url: '/tasks',
+            url: `/tasks?taskId=${task.id}`,
           }).catch(err => console.error('Failed to send push notification:', err));
         }
         
@@ -2696,14 +2696,14 @@ Examples:
               title: statusMessage,
               message: `"${task.title}" status changed to ${validatedData.status}`,
               category: 'task',
-              actionUrl: '/tasks',
+              actionUrl: `/tasks?taskId=${task.id}`,
               isRead: false,
             });
             
             await sendPushToUser(task.assignedToId, {
               title: statusMessage,
               body: `"${task.title}" status changed to ${validatedData.status}`,
-              url: '/tasks',
+              url: `/tasks?taskId=${task.id}`,
             }).catch(err => console.error('Failed to send push notification:', err));
           }
           
@@ -2715,14 +2715,14 @@ Examples:
               title: statusMessage,
               message: `"${task.title}" status changed to ${validatedData.status}`,
               category: 'task',
-              actionUrl: '/tasks',
+              actionUrl: `/tasks?taskId=${task.id}`,
               isRead: false,
             });
             
             await sendPushToUser(task.createdBy, {
               title: statusMessage,
               body: `"${task.title}" status changed to ${validatedData.status}`,
-              url: '/tasks',
+              url: `/tasks?taskId=${task.id}`,
             }).catch(err => console.error('Failed to send push notification:', err));
           }
         }
@@ -2745,14 +2745,14 @@ Examples:
               title: priorityMessage,
               message: `"${task.title}" priority changed to ${validatedData.priority}`,
               category: 'task',
-              actionUrl: '/tasks',
+              actionUrl: `/tasks?taskId=${task.id}`,
               isRead: false,
             });
             
             await sendPushToUser(task.assignedToId, {
               title: priorityMessage,
               body: `"${task.title}" priority changed to ${validatedData.priority}`,
-              url: '/tasks',
+              url: `/tasks?taskId=${task.id}`,
             }).catch(err => console.error('Failed to send push notification:', err));
           }
         }
@@ -2768,14 +2768,14 @@ Examples:
               title: '📅 Due Date Updated',
               message: `"${task.title}" due date changed to ${newDueDate}`,
               category: 'deadline',
-              actionUrl: '/tasks',
+              actionUrl: `/tasks?taskId=${task.id}`,
               isRead: false,
             });
             
             await sendPushToUser(task.assignedToId, {
               title: '📅 Due Date Updated',
               body: `"${task.title}" due date changed to ${newDueDate}`,
-              url: '/tasks',
+              url: `/tasks?taskId=${task.id}`,
             }).catch(err => console.error('Failed to send push notification:', err));
           }
         }
@@ -2794,14 +2794,14 @@ Examples:
               title: '📋 Task Assigned to You',
               message: `"${task.title}" has been assigned to you`,
               category: 'task',
-              actionUrl: '/tasks',
+              actionUrl: `/tasks?taskId=${task.id}`,
               isRead: false,
             });
             
             await sendPushToUser(newAssignee.id, {
               title: '📋 New Task Assigned',
               body: `"${task.title}" has been assigned to you`,
-              url: '/tasks',
+              url: `/tasks?taskId=${task.id}`,
             }).catch(err => console.error('Failed to send push notification:', err));
           }
           
@@ -2813,14 +2813,14 @@ Examples:
               title: '📋 Task Reassigned',
               message: `"${task.title}" has been reassigned from you`,
               category: 'task',
-              actionUrl: '/tasks',
+              actionUrl: `/tasks?taskId=${task.id}`,
               isRead: false,
             });
             
             await sendPushToUser(oldAssignee.id, {
               title: '📋 Task Reassigned',
               body: `"${task.title}" has been reassigned from you`,
-              url: '/tasks',
+              url: `/tasks?taskId=${task.id}`,
             }).catch(err => console.error('Failed to send push notification:', err));
           }
         }
@@ -3040,7 +3040,7 @@ Examples:
             })}`,
             type: "info",
             category: "general",
-            actionUrl: "/company-calendar",
+            actionUrl: `/company-calendar?date=${new Date(datetime).toISOString().split('T')[0]}`,
             isRead: false,
           });
           
@@ -3159,14 +3159,14 @@ Examples:
             title: '💬 New Task Comment',
             message: `${commenterName} commented on "${task.title}"`,
             category: 'task',
-            actionUrl: '/tasks',
+            actionUrl: `/tasks?taskId=${task.id}`,
             isRead: false,
           });
           
           await sendPushToUser(task.assignedToId, {
             title: '💬 New Task Comment',
             body: `${commenterName}: ${validatedData.content?.substring(0, 100) || 'Added a comment'}`,
-            url: '/tasks',
+            url: `/tasks?taskId=${task.id}`,
           }).catch(err => console.error('Failed to send push notification:', err));
         }
         
@@ -3178,14 +3178,14 @@ Examples:
             title: '💬 New Task Comment',
             message: `${commenterName} commented on "${task.title}"`,
             category: 'task',
-            actionUrl: '/tasks',
+            actionUrl: `/tasks?taskId=${task.id}`,
             isRead: false,
           });
           
           await sendPushToUser(task.createdBy, {
             title: '💬 New Task Comment',
             body: `${commenterName}: ${validatedData.content?.substring(0, 100) || 'Added a comment'}`,
-            url: '/tasks',
+            url: `/tasks?taskId=${task.id}`,
           }).catch(err => console.error('Failed to send push notification:', err));
         }
         
@@ -3233,13 +3233,13 @@ Examples:
                       title: '🔔 You were mentioned',
                       message: `${commenterName} mentioned you on "${task.title}"`,
                       category: 'communication',
-                      actionUrl: '/tasks',
+                      actionUrl: `/tasks?taskId=${task.id}`,
                       isRead: false,
                     });
                     await sendPushToUser(mentioned.id, {
                       title: '🔔 You were mentioned',
                       body: `${commenterName}: ${contentText.substring(0, 100)}`,
-                      url: '/tasks',
+                      url: `/tasks?taskId=${task.id}`,
                     }).catch(err => console.error('Failed to send push notification:', err));
                   }
                   // Also notify admins about mentions
@@ -3252,13 +3252,13 @@ Examples:
                       title: '💬 Team Mention',
                       message: `${commenterName} mentioned ${mentionUsernames.join(', ')} on "${task.title}"`,
                       category: 'communication',
-                      actionUrl: '/tasks',
+                      actionUrl: `/tasks?taskId=${task.id}`,
                       isRead: false,
                     });
                     await sendPushToUser(admin.id, {
                       title: '💬 Team Mention',
                       body: `${commenterName} mentioned ${mentionUsernames.join(', ')}`,
-                      url: '/tasks',
+                      url: `/tasks?taskId=${task.id}`,
                     }).catch(err => console.error('Failed to send push notification:', err));
                   }
                   console.log(`✅ Mention notifications sent for task comment: ${task.title}`);
@@ -3311,7 +3311,7 @@ Examples:
           title: '🎯 New Lead',
           message: `${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
           category: 'general',
-          actionUrl: '/leads',
+          actionUrl: `/leads?leadId=${lead.id}`,
           isRead: false,
         });
         
@@ -3520,7 +3520,7 @@ Examples:
               title: '📝 New Content Posted',
               message: `New content has been scheduled${post.scheduledFor ? ` for ${new Date(post.scheduledFor).toLocaleDateString()}` : ''}`,
               category: 'general',
-              actionUrl: '/client-content',
+              actionUrl: `/client-content?postId=${post.id}`,
               isRead: false,
             });
             
@@ -4966,7 +4966,7 @@ Examples:
             title: '⏰ Task Overdue!',
             message: `Task "${task.title}" is overdue!`,
             category: 'deadline',
-            actionUrl: '/tasks',
+            actionUrl: `/tasks?taskId=${task.id}`,
           });
           
           // Push notification
@@ -4974,7 +4974,7 @@ Examples:
           await sendPushToUser(targetUserId, {
             title: '🚨 Task Overdue!',
             body: `"${task.title}" is overdue!`,
-            url: '/tasks',
+            url: `/tasks?taskId=${task.id}`,
           }).catch(err => console.error('Failed to send push notification:', err));
           
           notificationsCreated++;
@@ -4990,7 +4990,7 @@ Examples:
             title: '⚠️ Task Due Soon',
             message: `Task "${task.title}" is due in ${Math.round(hoursDiff)} hours`,
             category: 'deadline',
-            actionUrl: '/tasks',
+            actionUrl: `/tasks?taskId=${task.id}`,
           });
           
           // Push notification
@@ -4998,7 +4998,7 @@ Examples:
           await sendPushToUser(targetUserId, {
             title: '⏰ Task Due Soon',
             body: `"${task.title}" is due in ${Math.round(hoursDiff)} hours`,
-            url: '/tasks',
+            url: `/tasks?taskId=${task.id}`,
           }).catch(err => console.error('Failed to send push notification:', err));
           
           notificationsCreated++;
