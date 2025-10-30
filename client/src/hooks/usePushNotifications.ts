@@ -23,11 +23,33 @@ export function usePushNotifications() {
       const existingSubscription = await registration.pushManager.getSubscription();
       
       if (existingSubscription) {
+        // Test if the subscription is still valid by checking the endpoint
+        console.log('Found existing subscription:', existingSubscription.endpoint);
         setIsSubscribed(true);
         setSubscription(existingSubscription);
       }
     } catch (error) {
       console.error('Error checking subscription:', error);
+    }
+  }
+
+  async function forceResubscribe() {
+    try {
+      // First unsubscribe completely
+      await unsubscribe();
+      
+      // Clear the state
+      setIsSubscribed(false);
+      setSubscription(null);
+      
+      // Wait a moment for cleanup
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Subscribe again
+      return await subscribe();
+    } catch (error) {
+      console.error('Error in force resubscribe:', error);
+      return false;
     }
   }
 
@@ -156,6 +178,7 @@ export function usePushNotifications() {
     loading,
     subscribe,
     unsubscribe,
+    forceResubscribe,
   };
 }
 

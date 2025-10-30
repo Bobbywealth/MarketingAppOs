@@ -33,7 +33,7 @@ export default function PushNotifications() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { toast } = useToast();
-  const { isSupported, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
+  const { isSupported, isSubscribed, loading, subscribe, unsubscribe, forceResubscribe } = usePushNotifications();
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -150,13 +150,25 @@ export default function PushNotifications() {
                 </p>
               </div>
               {isSupported && (
-                <Button
-                  onClick={isSubscribed ? unsubscribe : subscribe}
-                  disabled={loading}
-                  variant={isSubscribed ? "outline" : "default"}
-                >
-                  {loading ? "Processing..." : isSubscribed ? "Unsubscribe" : "Subscribe"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={isSubscribed ? unsubscribe : subscribe}
+                    disabled={loading}
+                    variant={isSubscribed ? "outline" : "default"}
+                  >
+                    {loading ? "Processing..." : isSubscribed ? "Unsubscribe" : "Subscribe"}
+                  </Button>
+                  {isSubscribed && (
+                    <Button
+                      onClick={forceResubscribe}
+                      disabled={loading}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Force Refresh
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </CardContent>
