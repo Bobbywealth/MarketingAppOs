@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
@@ -34,6 +34,34 @@ export default function PushNotifications() {
   const isAdmin = user?.role === 'admin';
   const { toast } = useToast();
   const { isSupported, isSubscribed, loading, subscribe, unsubscribe, forceResubscribe } = usePushNotifications();
+
+  // Emergency cleanup mutation
+  const emergencyCleanupMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("/api/push/emergency-cleanup", {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to cleanup subscriptions");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "🚨 Emergency Cleanup Complete",
+        description: `Deleted ${data.deletedSubscriptions} subscriptions. Please re-subscribe now.`,
+      });
+      // Force refresh the page to reset push notification state
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cleanup Failed",
+        description: error.message || "Could not cleanup subscriptions",
+        variant: "destructive",
+      });
+    },
+  });
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -165,14 +193,24 @@ export default function PushNotifications() {
                     {loading ? "Processing..." : isSubscribed ? "Unsubscribe" : "Subscribe"}
                   </Button>
                   {isSubscribed && (
-                    <Button
-                      onClick={forceResubscribe}
-                      disabled={loading}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      Force Refresh
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={forceResubscribe}
+                        disabled={loading || emergencyCleanupMutation.isPending}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        Force Refresh
+                      </Button>
+                      <Button
+                        onClick={() => emergencyCleanupMutation.mutate()}
+                        disabled={loading || emergencyCleanupMutation.isPending}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        🚨 Emergency Fix
+                      </Button>
+                    </div>
                   )}
                 </div>
               ) : (

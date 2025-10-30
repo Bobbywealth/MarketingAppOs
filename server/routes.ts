@@ -5128,6 +5128,41 @@ Examples:
     }
   });
 
+  // Emergency push subscription cleanup endpoint
+  app.post("/api/push/emergency-cleanup", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(String(userId));
+
+      console.log(`🚨 Emergency cleanup for user ${userId} (${user?.username})`);
+
+      // Delete ALL push subscriptions for this user
+      const deleteResult = await pool.query(
+        'DELETE FROM push_subscriptions WHERE user_id = $1',
+        [userId]
+      );
+
+      console.log(`🗑️ Deleted ${deleteResult.rowCount} subscriptions for user ${userId}`);
+
+      // Also clean up any orphaned subscriptions (optional - be careful)
+      const orphanedResult = await pool.query(
+        'DELETE FROM push_subscriptions WHERE user_id NOT IN (SELECT id FROM users)'
+      );
+
+      console.log(`🧹 Cleaned up ${orphanedResult.rowCount} orphaned subscriptions`);
+
+      res.json({
+        success: true,
+        deletedSubscriptions: deleteResult.rowCount,
+        cleanedOrphaned: orphanedResult.rowCount,
+        message: "All push subscriptions cleared. Please re-subscribe."
+      });
+    } catch (error) {
+      console.error('Emergency cleanup error:', error);
+      res.status(500).json({ message: "Failed to cleanup subscriptions", error: error.message });
+    }
+  });
+
   app.post("/api/push/subscribe", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
