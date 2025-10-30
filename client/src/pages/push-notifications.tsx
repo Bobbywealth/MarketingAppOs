@@ -148,8 +148,14 @@ export default function PushNotifications() {
                     ? "You'll receive notifications on this device"
                     : "Subscribe to receive push notifications"}
                 </p>
+                {!isSupported && (
+                  <p className="text-xs text-red-500 mt-2">
+                    ⚠️ Push notifications not supported on this device/browser. 
+                    Make sure you're using the PWA from your home screen.
+                  </p>
+                )}
               </div>
-              {isSupported && (
+              {isSupported ? (
                 <div className="flex gap-2">
                   <Button
                     onClick={isSubscribed ? unsubscribe : subscribe}
@@ -168,6 +174,18 @@ export default function PushNotifications() {
                       Force Refresh
                     </Button>
                   )}
+                </div>
+              ) : (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">
+                    Debug info:
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    ServiceWorker: {'serviceWorker' in navigator ? '✅' : '❌'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    PushManager: {'PushManager' in window ? '✅' : '❌'}
+                  </p>
                 </div>
               )}
             </div>
