@@ -36,6 +36,14 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ last_name column already exists or error:', e.message);
       }
+
+      // Presence: last_seen on users
+      try {
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`);
+        console.log('✅ Added last_seen to users');
+      } catch (e) {
+        console.log('⚠️ last_seen already exists or error:', e.message);
+      }
       
       // Add displayOrder to clients
       try {
@@ -364,6 +372,38 @@ async function runMigrations() {
         console.log('✅ Created page_views table');
       } catch (e) {
         console.log('⚠️ page_views table already exists or error:', e.message);
+      }
+
+      // Messaging enhancements: delivery/read receipts and media fields
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;`);
+        console.log('✅ Added delivered_at to messages');
+      } catch (e) {
+        console.log('⚠️ delivered_at already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;`);
+        console.log('✅ Added read_at to messages');
+      } catch (e) {
+        console.log('⚠️ read_at already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url VARCHAR;`);
+        console.log('✅ Added media_url to messages');
+      } catch (e) {
+        console.log('⚠️ media_url already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_type VARCHAR;`);
+        console.log('✅ Added media_type to messages');
+      } catch (e) {
+        console.log('⚠️ media_type already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
+        console.log('✅ Added duration_ms to messages');
+      } catch (e) {
+        console.log('⚠️ duration_ms already exists or error:', e.message);
       }
 
       // Create indexes for faster analytics queries

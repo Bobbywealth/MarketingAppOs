@@ -38,6 +38,7 @@ export const users = pgTable("users", {
   // googleAccessToken: text("google_access_token"),
   // googleRefreshToken: text("google_refresh_token"),
   // googleCalendarConnected: boolean("google_calendar_connected").default(false),
+  lastSeen: timestamp("last_seen"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -379,6 +380,11 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   isInternal: boolean("is_internal").notNull().default(true),
   isRead: boolean("is_read").notNull().default(false), // Track read status
+  deliveredAt: timestamp("delivered_at"),
+  readAt: timestamp("read_at"),
+  mediaUrl: varchar("media_url"),
+  mediaType: varchar("media_type"), // e.g. audio/webm, audio/mpeg
+  durationMs: integer("duration_ms"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -713,7 +719,13 @@ export const insertContentPostSchema = createInsertSchema(contentPosts)
   });
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
+export const insertMessageSchema = createInsertSchema(messages)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    mediaUrl: z.string().url().optional().nullable(),
+    mediaType: z.string().optional().nullable(),
+    durationMs: z.number().int().min(0).optional().nullable(),
+  });
 export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({ id: true, createdAt: true });
 export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({ id: true, createdAt: true });
 export const insertLeadActivitySchema = createInsertSchema(leadActivities).omit({ id: true, createdAt: true });

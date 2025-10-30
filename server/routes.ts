@@ -78,7 +78,7 @@ const upload = multer({
     fileSize: 200 * 1024 * 1024, // 200MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Accept images and videos
+    // Accept images, videos, and audio (for voice messages)
     const allowedMimes = [
       'image/jpeg',
       'image/jpg',
@@ -88,13 +88,20 @@ const upload = multer({
       'video/mp4',
       'video/webm',
       'video/ogg',
-      'video/quicktime'
+      'video/quicktime',
+      'audio/mpeg',
+      'audio/webm',
+      'audio/ogg',
+      'audio/wav',
+      'audio/mp4',
+      'audio/aac',
+      'audio/x-m4a'
     ];
     
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images and videos are allowed.'));
+      cb(new Error('Invalid file type. Only images, videos, and audio are allowed.'));
     }
   }
 });
@@ -3823,10 +3830,18 @@ Examples:
 
       const messages = await storage.getConversation(currentUserId, otherUserId);
       
+      // Mark messages delivered when fetched
+      await pool.query(
+        `UPDATE messages 
+         SET delivered_at = NOW() 
+         WHERE recipient_id = $1 AND user_id = $2 AND delivered_at IS NULL`,
+        [currentUserId, otherUserId]
+      );
+      
       // Mark all messages from this user as read
       await pool.query(
         `UPDATE messages 
-         SET is_read = true 
+         SET is_read = true, read_at = NOW() 
          WHERE recipient_id = $1 AND user_id = $2 AND is_read = false`,
         [currentUserId, otherUserId]
       );
@@ -4008,6 +4023,49 @@ Examples:
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete message" });
+    }
+  });
+
+  // Mark a single message as read (sets is_read and read_at)
+  app.post("/api/messages/:id/read", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const currentUserId = (req.user as any).id;
+      const messageId = req.params.id;
+      await pool.query(
+        `UPDATE messages SET is_read = true, read_at = NOW() WHERE id = $1 AND recipient_id = $2`,
+        [messageId, currentUserId]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Failed to mark as read' });
+    }
+  });
+
+  // Presence: heartbeat updates last_seen
+  app.post("/api/presence/heartbeat", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const currentUserId = (req.user as any).id;
+      await pool.query(`UPDATE users SET last_seen = NOW() WHERE id = $1`, [currentUserId]);
+      res.json({ success: true, lastSeen: new Date().toISOString() });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Failed to update presence' });
+    }
+  });
+
+  // Presence: get online/offline for a user
+  app.get("/api/presence/:userId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const result = await pool.query(`SELECT last_seen FROM users WHERE id = $1`, [userId]);
+      const lastSeen: Date | null = result.rows[0]?.last_seen ? new Date(result.rows[0].last_seen) : null;
+      const now = new Date();
+      const online = lastSeen ? (now.getTime() - lastSeen.getTime()) <= 2 * 60 * 1000 : false; // 2 minutes
+      res.json({ online, lastSeen });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Failed to fetch presence' });
     }
   });
 
