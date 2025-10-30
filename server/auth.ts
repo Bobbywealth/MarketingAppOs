@@ -7,6 +7,7 @@ import connectPg from "connect-pg-simple";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { User as SelectUser, insertUserSchema } from "@shared/schema";
 import { UserRole, rolePermissions } from "./rbac";
 
@@ -35,6 +36,11 @@ async function comparePasswords(supplied: string, stored: string) {
 export { comparePasswords };
 
 export function setupAuth(app: Express) {
+  // Ensure presence column exists to avoid login errors on upgraded schemas
+  pool
+    .query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`)
+    .then(() => console.log('✅ ensured users.last_seen exists'))
+    .catch((e) => console.error('⚠️ could not ensure users.last_seen:', e.message));
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({

@@ -4046,7 +4046,17 @@ Examples:
   app.post("/api/presence/heartbeat", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const currentUserId = (req.user as any).id;
-      await pool.query(`UPDATE users SET last_seen = NOW() WHERE id = $1`, [currentUserId]);
+      try {
+        await pool.query(`UPDATE users SET last_seen = NOW() WHERE id = $1`, [currentUserId]);
+      } catch (e: any) {
+        // Tolerate missing column on older DB, will be added by migration/bootstrapping
+        if (String(e?.message || '').includes('last_seen')) {
+          await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`).catch(() => {});
+          await pool.query(`UPDATE users SET last_seen = NOW() WHERE id = $1`, [currentUserId]).catch(() => {});
+        } else {
+          throw e;
+        }
+      }
       res.json({ success: true, lastSeen: new Date().toISOString() });
     } catch (error) {
       console.error(error);
@@ -4058,7 +4068,17 @@ Examples:
   app.get("/api/presence/:userId", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.userId);
-      const result = await pool.query(`SELECT last_seen FROM users WHERE id = $1`, [userId]);
+      let result;
+      try {
+        result = await pool.query(`SELECT last_seen FROM users WHERE id = $1`, [userId]);
+      } catch (e: any) {
+        if (String(e?.message || '').includes('last_seen')) {
+          await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`).catch(() => {});
+          result = await pool.query(`SELECT last_seen FROM users WHERE id = $1`, [userId]);
+        } else {
+          throw e;
+        }
+      }
       const lastSeen: Date | null = result.rows[0]?.last_seen ? new Date(result.rows[0].last_seen) : null;
       const now = new Date();
       const online = lastSeen ? (now.getTime() - lastSeen.getTime()) <= 2 * 60 * 1000 : false; // 2 minutes
