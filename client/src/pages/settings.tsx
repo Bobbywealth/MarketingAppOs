@@ -198,7 +198,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="flex flex-wrap gap-2 overflow-x-auto whitespace-nowrap">
+        <TabsList className="flex gap-2 overflow-x-auto whitespace-nowrap -mx-2 px-2">
           <TabsTrigger value="profile">
             <User className="w-4 h-4 mr-2" />
             Profile
