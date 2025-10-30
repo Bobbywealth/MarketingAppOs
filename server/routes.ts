@@ -36,6 +36,25 @@ import { existsSync } from "fs";
 
 const objectStorageService = new ObjectStorageService();
 
+// Ensure new message columns exist (safe to run multiple times)
+async function ensureMessageColumns() {
+  try {
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;`);
+  } catch {}
+  try {
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;`);
+  } catch {}
+  try {
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url VARCHAR;`);
+  } catch {}
+  try {
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_type VARCHAR;`);
+  } catch {}
+  try {
+    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
+  } catch {}
+}
+
 // Initialize Stripe if keys are present
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
@@ -3831,20 +3850,44 @@ Examples:
       const messages = await storage.getConversation(currentUserId, otherUserId);
       
       // Mark messages delivered when fetched
-      await pool.query(
-        `UPDATE messages 
-         SET delivered_at = NOW() 
-         WHERE recipient_id = $1 AND user_id = $2 AND delivered_at IS NULL`,
-        [currentUserId, otherUserId]
-      );
+      try {
+        await pool.query(
+          `UPDATE messages 
+           SET delivered_at = NOW() 
+           WHERE recipient_id = $1 AND user_id = $2 AND delivered_at IS NULL`,
+          [currentUserId, otherUserId]
+        );
+      } catch (e: any) {
+        if (String(e?.message || '').includes('delivered_at')) {
+          await ensureMessageColumns();
+          await pool.query(
+            `UPDATE messages SET delivered_at = NOW() WHERE recipient_id = $1 AND user_id = $2 AND delivered_at IS NULL`,
+            [currentUserId, otherUserId]
+          );
+        } else {
+          throw e;
+        }
+      }
       
       // Mark all messages from this user as read
-      await pool.query(
-        `UPDATE messages 
-         SET is_read = true, read_at = NOW() 
-         WHERE recipient_id = $1 AND user_id = $2 AND is_read = false`,
-        [currentUserId, otherUserId]
-      );
+      try {
+        await pool.query(
+          `UPDATE messages 
+           SET is_read = true, read_at = NOW() 
+           WHERE recipient_id = $1 AND user_id = $2 AND is_read = false`,
+          [currentUserId, otherUserId]
+        );
+      } catch (e: any) {
+        if (String(e?.message || '').includes('read_at')) {
+          await ensureMessageColumns();
+          await pool.query(
+            `UPDATE messages SET is_read = true, read_at = NOW() WHERE recipient_id = $1 AND user_id = $2 AND is_read = false`,
+            [currentUserId, otherUserId]
+          );
+        } else {
+          throw e;
+        }
+      }
       
       res.json(messages);
     } catch (error) {
@@ -3868,7 +3911,17 @@ Examples:
         userId: currentUserId, // Set sender as current user
       });
       
-      const message = await storage.createMessage(validatedData);
+      let message;
+      try {
+        message = await storage.createMessage(validatedData);
+      } catch (e: any) {
+        if (String(e?.message || '').includes('column') && String(e?.message || '').includes('does not exist')) {
+          await ensureMessageColumns();
+          message = await storage.createMessage(validatedData);
+        } else {
+          throw e;
+        }
+      }
       console.log("✅ Message created successfully:", message.id);
       
       // Detect @mentions in message content and notify mentioned users and admins
