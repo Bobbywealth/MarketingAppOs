@@ -370,6 +370,7 @@ export default function Invoices() {
 
       {/* Key Metrics - Admin Only */}
       {isAdmin && (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="hover-elevate">
           <CardContent className="pt-6">
@@ -669,6 +670,7 @@ export default function Invoices() {
           </div>
         </CardContent>
       </Card>
+      </>
       )}
     </div>
   );
