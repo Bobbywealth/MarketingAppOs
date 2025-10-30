@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play } from "lucide-react";
+import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,6 +23,7 @@ export default function Messages() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const recordStartRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [presenceOnline, setPresenceOnline] = useState<boolean>(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
 
@@ -205,6 +206,34 @@ export default function Messages() {
     }
     setIsRecording(false);
     recordStartRef.current = null;
+  };
+
+  // Image sending
+  const handlePickImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedUserId) return;
+    try {
+      const form = new FormData();
+      form.append('file', file, file.name);
+      const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' });
+      if (!res.ok) throw new Error('Upload failed');
+      const uploaded = await res.json();
+      sendMessageMutation.mutate({
+        recipientId: selectedUserId,
+        content: '(image)',
+        isInternal: true,
+        mediaUrl: uploaded.url,
+        mediaType: file.type,
+      });
+    } catch (err: any) {
+      toast({ title: 'Image send failed', description: err?.message || 'Try again', variant: 'destructive' });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const selectedUser = teamMembers.find(u => u.id === selectedUserId);
@@ -407,13 +436,21 @@ export default function Messages() {
                             >
                               {message.mediaUrl ? (
                                 <div className="space-y-1">
-                                  <audio controls preload="metadata" src={message.mediaUrl} className="w-full">
-                                  Your browser does not support the audio element.
-                                  </audio>
-                                  {message.durationMs && (
-                                    <div className="text-[10px] opacity-80">
-                                      {Math.round((message.durationMs as any) / 1000)}s
-                                    </div>
+                                  {message.mediaType?.startsWith('image') ? (
+                                    <a href={message.mediaUrl} target="_blank" rel="noreferrer">
+                                      <img src={message.mediaUrl} alt="image message" className="max-w-[240px] max-h-[240px] rounded-md shadow" />
+                                    </a>
+                                  ) : (
+                                    <>
+                                      <audio controls preload="metadata" src={message.mediaUrl} className="w-full">
+                                        Your browser does not support the audio element.
+                                      </audio>
+                                      {message.durationMs && (
+                                        <div className="text-[10px] opacity-80">
+                                          {Math.round((message.durationMs as any) / 1000)}s
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               ) : (
@@ -468,6 +505,11 @@ export default function Messages() {
                     data-testid="input-message"
                     className="flex-1 text-xs sm:text-sm"
                   />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
+                  <Button type="button" onClick={handlePickImage} variant="secondary" className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10" size="sm">
+                    <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline text-xs sm:text-sm">Image</span>
+                  </Button>
                   <Button
                     type="button"
                     onClick={isRecording ? handleStopRecording : handleStartRecording}
