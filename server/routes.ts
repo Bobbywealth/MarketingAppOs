@@ -5074,6 +5074,60 @@ Examples:
     res.json({ publicKey: publicKey || '' });
   });
 
+  // Debug endpoint for checking user's push notification status
+  app.get("/api/push/debug-status", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(String(userId));
+      
+      // Get push subscriptions
+      const subscriptions = await pool.query(
+        'SELECT id, endpoint, created_at FROM push_subscriptions WHERE user_id = $1',
+        [userId]
+      );
+      
+      // Get notification preferences
+      const preferences = await pool.query(
+        'SELECT * FROM user_notification_preferences WHERE user_id = $1',
+        [userId]
+      );
+      
+      // Get recent notifications
+      const recentNotifications = await pool.query(
+        `SELECT title, message, type, category, created_at, is_read 
+         FROM notifications 
+         WHERE user_id = $1 
+         ORDER BY created_at DESC 
+         LIMIT 5`,
+        [userId]
+      );
+      
+      res.json({
+        user: {
+          id: user?.id,
+          username: user?.username,
+          role: user?.role,
+          name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
+        },
+        pushSubscriptions: {
+          count: subscriptions.rows.length,
+          subscriptions: subscriptions.rows.map(sub => ({
+            id: sub.id,
+            endpoint: sub.endpoint.substring(0, 50) + '...',
+            created: sub.created_at
+          }))
+        },
+        notificationPreferences: preferences.rows[0] || 'using_defaults',
+        recentNotifications: recentNotifications.rows,
+        vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in debug-status:', error);
+      res.status(500).json({ error: 'Failed to get debug status' });
+    }
+  });
+
   app.post("/api/push/subscribe", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
