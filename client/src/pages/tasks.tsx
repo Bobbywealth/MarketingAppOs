@@ -67,6 +67,7 @@ export default function TasksPage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
   // Load showCompleted preference from localStorage, default to false (hide completed)
   const [showCompleted, setShowCompleted] = useState(() => {
     const saved = localStorage.getItem('tasks-show-completed');
@@ -848,6 +849,24 @@ export default function TasksPage() {
                 Task Management
               </h1>
               <p className="text-sm md:text-base text-muted-foreground mt-1">Organize and track your team's tasks</p>
+            </div>
+            {/* Mobile: open Spaces sidebar */}
+            <div className="md:hidden">
+              <Dialog open={spacesDialogOpen} onOpenChange={setSpacesDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">Spaces</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Spaces</DialogTitle>
+                    <DialogDescription>Select a space to filter tasks</DialogDescription>
+                  </DialogHeader>
+                  <TaskSpacesSidebar 
+                    selectedSpaceId={selectedSpaceId}
+                    onSpaceSelect={(id) => { setSelectedSpaceId(id); setSpacesDialogOpen(false); }}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
         
         <div className="flex flex-wrap items-center gap-3">

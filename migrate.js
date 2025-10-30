@@ -406,6 +406,36 @@ async function runMigrations() {
         console.log('⚠️ duration_ms already exists or error:', e.message);
       }
 
+      // Create user notification preferences table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS user_notification_preferences (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            email_notifications BOOLEAN DEFAULT true,
+            task_updates BOOLEAN DEFAULT true,
+            client_messages BOOLEAN DEFAULT true,
+            due_date_reminders BOOLEAN DEFAULT true,
+            project_updates BOOLEAN DEFAULT true,
+            system_alerts BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id)
+          );
+        `);
+        console.log('✅ Created user_notification_preferences table');
+      } catch (e) {
+        console.log('⚠️ user_notification_preferences table already exists or error:', e.message);
+      }
+
+      // Create index for user notification preferences
+      try {
+        await client.query('CREATE INDEX IF NOT EXISTS idx_user_notification_preferences_user_id ON user_notification_preferences(user_id);');
+        console.log('✅ Created index for user_notification_preferences');
+      } catch (e) {
+        console.log('⚠️ user_notification_preferences index already exists or error:', e.message);
+      }
+
       // Create indexes for faster analytics queries
       try {
         await client.query(`CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);`);

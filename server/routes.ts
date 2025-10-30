@@ -2369,6 +2369,67 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
+  // User notification preferences routes
+  app.get("/api/user/notification-preferences", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const preferences = await storage.getUserNotificationPreferences(userId);
+      
+      // Return default preferences if none exist
+      if (!preferences) {
+        return res.json({
+          emailNotifications: true,
+          taskUpdates: true,
+          clientMessages: true,
+          dueDateReminders: true,
+          projectUpdates: true,
+          systemAlerts: true,
+        });
+      }
+
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching notification preferences:", error);
+      res.status(500).json({ error: "Failed to fetch notification preferences" });
+    }
+  });
+
+  app.put("/api/user/notification-preferences", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const {
+        emailNotifications,
+        taskUpdates,
+        clientMessages,
+        dueDateReminders,
+        projectUpdates,
+        systemAlerts,
+      } = req.body;
+
+      const preferences = await storage.upsertUserNotificationPreferences(userId, {
+        emailNotifications,
+        taskUpdates,
+        clientMessages,
+        dueDateReminders,
+        projectUpdates,
+        systemAlerts,
+      });
+
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error updating notification preferences:", error);
+      res.status(500).json({ error: "Failed to update notification preferences" });
+    }
+  });
+
   // Task routes (admin, manager, and staff)
   app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {

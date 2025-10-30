@@ -5,6 +5,7 @@ import {
   tasks,
   taskSpaces,
   userViewPreferences,
+  userNotificationPreferences,
   taskComments,
   leads,
   leadActivities,
@@ -42,6 +43,8 @@ import {
   type InsertTaskSpace,
   type UserViewPreferences,
   type InsertUserViewPreferences,
+  type UserNotificationPreferences,
+  type InsertUserNotificationPreferences,
   type TaskComment,
   type InsertTaskComment,
   type Lead,
@@ -992,6 +995,37 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db
         .insert(userViewPreferences)
         .values({ userId, ...prefsData } as InsertUserViewPreferences)
+        .returning();
+      return created;
+    }
+  }
+
+  // User Notification Preferences operations
+  async getUserNotificationPreferences(userId: number): Promise<UserNotificationPreferences | undefined> {
+    const [preferences] = await db
+      .select()
+      .from(userNotificationPreferences)
+      .where(eq(userNotificationPreferences.userId, userId));
+    return preferences;
+  }
+
+  async upsertUserNotificationPreferences(userId: number, prefsData: Partial<InsertUserNotificationPreferences>): Promise<UserNotificationPreferences> {
+    // Check if preferences exist
+    const existing = await this.getUserNotificationPreferences(userId);
+    
+    if (existing) {
+      // Update existing
+      const [updated] = await db
+        .update(userNotificationPreferences)
+        .set({ ...prefsData, updatedAt: new Date() })
+        .where(eq(userNotificationPreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      // Create new
+      const [created] = await db
+        .insert(userNotificationPreferences)
+        .values({ userId, ...prefsData } as InsertUserNotificationPreferences)
         .returning();
       return created;
     }

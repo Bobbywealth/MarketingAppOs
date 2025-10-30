@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,56 @@ export default function SettingsPage() {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+  });
+
+  // Notification preferences state and queries
+  const { data: notificationPrefs, isLoading: prefsLoading } = useQuery({
+    queryKey: ["/api/user/notification-preferences"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/user/notification-preferences");
+      return response.json();
+    },
+  });
+
+  const [localPrefs, setLocalPrefs] = useState({
+    emailNotifications: true,
+    taskUpdates: true,
+    clientMessages: true,
+    dueDateReminders: true,
+    projectUpdates: true,
+    systemAlerts: true,
+  });
+
+  // Update local state when data loads
+  useEffect(() => {
+    if (notificationPrefs) {
+      setLocalPrefs(notificationPrefs);
+    }
+  }, [notificationPrefs]);
+
+  const saveNotificationPreferencesMutation = useMutation({
+    mutationFn: async (preferences: typeof localPrefs) => {
+      const response = await apiRequest("PUT", "/api/user/notification-preferences", preferences);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to save notification preferences");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "✅ Preferences saved",
+        description: "Your notification preferences have been updated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/notification-preferences"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "❌ Save failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // PWA Update functions
@@ -372,45 +422,98 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive email notifications for important updates
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Task Updates</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified when tasks are assigned to you
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Client Messages</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications for new client messages
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Due Date Reminders</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get reminded about upcoming deadlines
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
+              {prefsLoading ? (
+                <div className="text-center py-4">Loading preferences...</div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Email Notifications</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive email notifications for important updates
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={localPrefs.emailNotifications}
+                      onCheckedChange={(checked) => setLocalPrefs(prev => ({ ...prev, emailNotifications: checked }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Task Updates</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Get notified when tasks are assigned to you
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={localPrefs.taskUpdates}
+                      onCheckedChange={(checked) => setLocalPrefs(prev => ({ ...prev, taskUpdates: checked }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Client Messages</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive notifications for new client messages
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={localPrefs.clientMessages}
+                      onCheckedChange={(checked) => setLocalPrefs(prev => ({ ...prev, clientMessages: checked }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Due Date Reminders</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Get reminded about upcoming deadlines
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={localPrefs.dueDateReminders}
+                      onCheckedChange={(checked) => setLocalPrefs(prev => ({ ...prev, dueDateReminders: checked }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Project Updates</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Get notified about project milestones and changes
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={localPrefs.projectUpdates}
+                      onCheckedChange={(checked) => setLocalPrefs(prev => ({ ...prev, projectUpdates: checked }))}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>System Alerts</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive notifications about system updates and security
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={localPrefs.systemAlerts}
+                      onCheckedChange={(checked) => setLocalPrefs(prev => ({ ...prev, systemAlerts: checked }))}
+                    />
+                  </div>
+                  <div className="pt-4">
+                    <Button 
+                      onClick={() => saveNotificationPreferencesMutation.mutate(localPrefs)}
+                      disabled={saveNotificationPreferencesMutation.isPending}
+                      className="w-full"
+                    >
+                      {saveNotificationPreferencesMutation.isPending ? "Saving..." : "Save Preferences"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

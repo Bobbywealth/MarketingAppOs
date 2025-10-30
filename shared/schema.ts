@@ -560,6 +560,27 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+// User Notification Preferences table
+export const userNotificationPreferences = pgTable("user_notification_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").notNull().references(() => users.id),
+  emailNotifications: boolean("email_notifications").default(true),
+  taskUpdates: boolean("task_updates").default(true),
+  clientMessages: boolean("client_messages").default(true),
+  dueDateReminders: boolean("due_date_reminders").default(true),
+  projectUpdates: boolean("project_updates").default(true),
+  systemAlerts: boolean("system_alerts").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userNotificationPreferencesRelations = relations(userNotificationPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userNotificationPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
 // Push Notification History table (for tracking sent push notifications)
 export const pushNotificationHistory = pgTable("push_notification_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -753,6 +774,8 @@ export type InsertTaskSpace = z.infer<typeof insertTaskSpaceSchema>;
 export type TaskSpace = typeof taskSpaces.$inferSelect;
 
 export type InsertUserViewPreferences = z.infer<typeof insertUserViewPreferencesSchema>;
+export type UserNotificationPreferences = typeof userNotificationPreferences.$inferSelect;
+export type InsertUserNotificationPreferences = typeof userNotificationPreferences.$inferInsert;
 export type UserViewPreferences = typeof userViewPreferences.$inferSelect;
 
 export type InsertLead = z.infer<typeof insertLeadSchema>;
