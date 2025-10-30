@@ -5342,7 +5342,7 @@ Examples:
   });
 
   // Get push notification history (Admin only)
-  app.get("/api/push/history", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+  app.get("/api/push/history", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
       console.log('📋 Fetching push notification history...');
       const history = await storage.getPushNotificationHistory();
