@@ -212,7 +212,7 @@ const businessTools = [
     title: "Push Notifications",
     url: "/push-notifications",
     icon: Bell,
-    permission: "canManageUsers" as const, // Admin only
+    roles: ["admin", "manager", "staff"] as const, // Admin, managers, and staff only
   },
 ];
 
