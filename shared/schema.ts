@@ -722,7 +722,8 @@ export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, c
 export const insertMessageSchema = createInsertSchema(messages)
   .omit({ id: true, createdAt: true })
   .extend({
-    mediaUrl: z.string().url().optional().nullable(),
+    // Accept relative paths from our uploader or absolute URLs
+    mediaUrl: z.string().min(1).optional().nullable(),
     mediaType: z.string().optional().nullable(),
     durationMs: z.number().int().min(0).optional().nullable(),
   });
