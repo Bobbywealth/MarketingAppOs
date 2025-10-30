@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft } from "lucide-react";
+import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,10 @@ export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [presenceOnline, setPresenceOnline] = useState<boolean>(false);
+  const [lastSeen, setLastSeen] = useState<string | null>(null);
 
   // Get all users (will be filtered to admin/staff only)
   const { data: allUsers } = useQuery<User[]>({
@@ -66,6 +70,37 @@ export default function Messages() {
       queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
     },
   });
+
+  // Presence: heartbeat every 45s when page is open
+  useEffect(() => {
+    let timer: any;
+    const beat = async () => {
+      try {
+        await apiRequest("POST", "/api/presence/heartbeat", {});
+      } catch {}
+    };
+    beat();
+    timer = setInterval(beat, 45000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Presence: fetch selected user's status
+  useEffect(() => {
+    let isActive = true;
+    const fetchPresence = async () => {
+      if (!selectedUserId) return;
+      try {
+        const res = await apiRequest("GET", `/api/presence/${selectedUserId}`, undefined);
+        const data = await res.json();
+        if (!isActive) return;
+        setPresenceOnline(Boolean(data.online));
+        setLastSeen(data.lastSeen || null);
+      } catch {}
+    };
+    fetchPresence();
+    const t = setInterval(fetchPresence, 30000);
+    return () => { isActive = false; clearInterval(t); };
+  }, [selectedUserId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -115,6 +150,52 @@ export default function Messages() {
       content: messageText,
       isInternal: true,
     });
+  };
+
+  // Voice message recording
+  const handleStartRecording = async () => {
+    if (!selectedUserId) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = async () => {
+        try {
+          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+          const durationMs = (blob as any).size ? undefined : undefined; // optional
+          const form = new FormData();
+          form.append('file', blob, `voice-${Date.now()}.webm`);
+          const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' });
+          if (!res.ok) throw new Error('Upload failed');
+          const uploaded = await res.json();
+          sendMessageMutation.mutate({
+            recipientId: selectedUserId,
+            content: '(voice message)',
+            isInternal: true,
+            mediaUrl: uploaded.url,
+            mediaType: blob.type,
+            durationMs: durationMs,
+          });
+        } catch (err: any) {
+          toast({ title: 'Voice message failed', description: err?.message || 'Try again', variant: 'destructive' });
+        }
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch (err: any) {
+      toast({ title: 'Microphone error', description: err?.message || 'Permission denied', variant: 'destructive' });
+    }
+  };
+
+  const handleStopRecording = () => {
+    const r = mediaRecorderRef.current;
+    if (r && r.state !== 'inactive') {
+      r.stop();
+      r.stream.getTracks().forEach(t => t.stop());
+    }
+    setIsRecording(false);
   };
 
   const selectedUser = teamMembers.find(u => u.id === selectedUserId);
@@ -261,9 +342,9 @@ export default function Messages() {
                   <div>
                     <h3 className="font-semibold text-xs sm:text-sm md:text-base">{selectedUser?.username}</h3>
                     <div className="flex items-center gap-1 sm:gap-2">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500"></div>
+                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${presenceOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                       <span className="text-xs text-muted-foreground">
-                        {selectedUser?.role === 'admin' ? 'Admin' : selectedUser?.role === 'manager' ? 'Manager' : 'Staff'}
+                        {presenceOnline ? 'Online' : lastSeen ? `Last seen ${formatDistanceToNow(new Date(lastSeen), { addSuffix: true })}` : 'Offline'}
                       </span>
                     </div>
                   </div>
@@ -315,12 +396,32 @@ export default function Messages() {
                                   : 'bg-muted'
                               }`}
                             >
-                              <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
+                              {message.mediaUrl ? (
+                                <audio controls src={message.mediaUrl} className="w-full">
+                                  Your browser does not support the audio element.
+                                </audio>
+                              ) : (
+                                <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
+                              )}
                             </div>
                             {isOwnMessage && (
                               <div className="flex items-center gap-1 mt-1">
-                                <CheckCheck className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">Sent</span>
+                                {message.readAt ? (
+                                  <>
+                                    <CheckCheck className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">Read</span>
+                                  </>
+                                ) : message.deliveredAt ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">Delivered</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-3 h-3 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">Sent</span>
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>
@@ -351,6 +452,16 @@ export default function Messages() {
                     data-testid="input-message"
                     className="flex-1 text-xs sm:text-sm"
                   />
+                  <Button
+                    type="button"
+                    onClick={isRecording ? handleStopRecording : handleStartRecording}
+                    variant={isRecording ? 'destructive' : 'secondary'}
+                    className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
+                    size="sm"
+                  >
+                    {isRecording ? <StopCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4" />}
+                    <span className="hidden sm:inline text-xs sm:text-sm">{isRecording ? 'Stop' : 'Voice'}</span>
+                  </Button>
                   <Button
                     type="submit"
                     disabled={!messageText.trim() || sendMessageMutation.isPending}
