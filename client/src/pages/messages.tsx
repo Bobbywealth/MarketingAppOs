@@ -31,6 +31,7 @@ export default function Messages() {
   const [presenceOnline, setPresenceOnline] = useState<boolean>(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
 
   // Get all users (will be filtered to admin/staff only)
   const { data: allUsers } = useQuery<User[]>({
@@ -271,6 +272,34 @@ export default function Messages() {
         variant: 'destructive'
       });
     }
+  };
+
+  // Swipe gesture handlers for image modal
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    setTouchStart({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStart.x;
+    const deltaY = touch.clientY - touchStart.y;
+    
+    // Minimum swipe distance (50px)
+    const minSwipeDistance = 50;
+    
+    // Check if swipe distance is sufficient
+    if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
+      setSelectedImage(null);
+    }
+    
+    setTouchStart(null);
+  };
+
+  const handleTouchCancel = () => {
+    setTouchStart(null);
   };
 
   // Image sending
@@ -672,6 +701,9 @@ export default function Messages() {
         <div 
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
           onClick={() => setSelectedImage(null)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
         >
           <div className="relative max-w-full max-h-full">
             <Button
@@ -687,6 +719,8 @@ export default function Messages() {
               alt="Full size image" 
               className="max-w-full max-h-full object-contain rounded-lg"
               onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
             />
           </div>
         </div>
