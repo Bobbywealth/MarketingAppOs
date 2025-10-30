@@ -4727,11 +4727,25 @@ Examples:
   app.delete("/api/users/:id", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
+      const currentUserId = (req.user as any).id;
+      
+      // Prevent deleting yourself
+      if (userId === currentUserId) {
+        return res.status(400).json({ message: "You cannot delete your own account" });
+      }
+      
+      console.log(`🗑️ Attempting to delete user ${userId}`);
       await storage.deleteUser(userId);
+      console.log(`✅ User ${userId} deleted successfully`);
       res.status(204).send();
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to delete user" });
+    } catch (error: any) {
+      console.error('❌ Error deleting user:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        userId: req.params.id
+      });
+      res.status(500).json({ message: error.message || "Failed to delete user" });
     }
   });
 
