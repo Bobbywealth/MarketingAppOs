@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
 
 interface StripeDashboardData {
   activeSubscribers: number;
@@ -56,6 +57,8 @@ interface StripeCustomer {
 }
 
 export default function Invoices() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [invoiceItems, setInvoiceItems] = useState<Array<{ description: string; amount: string }>>([
@@ -66,7 +69,7 @@ export default function Invoices() {
   
   const { toast } = useToast();
 
-  // Fetch Stripe dashboard metrics
+  // Fetch Stripe dashboard metrics (admin only)
   const { data: stripeData, isLoading, refetch } = useQuery<StripeDashboardData>({
     queryKey: ["/api/stripe/dashboard", dateRange],
     queryFn: async () => {
@@ -78,6 +81,7 @@ export default function Invoices() {
       return response.json();
     },
     retry: false,
+    enabled: isAdmin, // Only fetch for admin
   });
 
   // Fetch Stripe customers
@@ -364,7 +368,8 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* Key Metrics */}
+      {/* Key Metrics - Admin Only */}
+      {isAdmin && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="hover-elevate">
           <CardContent className="pt-6">
@@ -664,6 +669,7 @@ export default function Invoices() {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
