@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Image as ImageIcon } from "lucide-react";
+import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,8 +22,12 @@ export default function Messages() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [recordedDuration, setRecordedDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const recordStartRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [presenceOnline, setPresenceOnline] = useState<boolean>(false);
   const [lastSeen, setLastSeen] = useState<string | null>(null);
 
@@ -170,23 +174,19 @@ export default function Messages() {
       recorder.onstop = async () => {
         try {
           const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
-          const durationMs = recordStartRef.current ? Date.now() - recordStartRef.current : undefined;
-          const form = new FormData();
-          const ext = (recorder.mimeType || '').includes('mp4') ? 'm4a' : (recorder.mimeType || '').includes('mpeg') ? 'mp3' : 'webm';
-          form.append('file', blob, `voice-${Date.now()}.${ext}`);
-          const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' });
-          if (!res.ok) throw new Error('Upload failed');
-          const uploaded = await res.json();
-          sendMessageMutation.mutate({
-            recipientId: selectedUserId,
-            content: '(voice message)',
-            isInternal: true,
-            mediaUrl: uploaded.url,
-            mediaType: blob.type,
-            durationMs,
-          });
+          const durationMs = recordStartRef.current ? Date.now() - recordStartRef.current : 0;
+          
+          // Store the recording for preview
+          setRecordedBlob(blob);
+          setRecordedDuration(durationMs);
+          
+          // Create audio URL for preview
+          if (audioRef.current) {
+            audioRef.current.src = URL.createObjectURL(blob);
+            audioRef.current.onended = () => setIsPlaying(false);
+          }
         } catch (err: any) {
-          toast({ title: 'Voice message failed', description: err?.message || 'Try again', variant: 'destructive' });
+          toast({ title: 'Recording failed', description: err?.message || 'Try again', variant: 'destructive' });
         }
       };
       recorder.start();
@@ -206,6 +206,70 @@ export default function Messages() {
     }
     setIsRecording(false);
     recordStartRef.current = null;
+  };
+
+  const handlePlayRecording = () => {
+    if (recordedBlob && audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const handleRewindRecording = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  const handleDeleteRecording = () => {
+    setRecordedBlob(null);
+    setRecordedDuration(0);
+    setIsPlaying(false);
+    if (audioRef.current) {
+      audioRef.current.src = '';
+    }
+  };
+
+  const handleSendVoiceMessage = async () => {
+    if (!recordedBlob || !selectedUserId) return;
+    
+    try {
+      const formData = new FormData();
+      const fileName = `voice_${Date.now()}.${recordedBlob.type.includes('mp4') ? 'mp4' : 'mp3'}`;
+      formData.append('file', recordedBlob, fileName);
+      
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!uploadRes.ok) throw new Error('Upload failed');
+      const uploaded = await uploadRes.json();
+      
+      sendMessageMutation.mutate({
+        recipientId: selectedUserId,
+        content: '(voice message)',
+        isInternal: true,
+        mediaUrl: uploaded.url,
+        mediaType: recordedBlob.type,
+        durationMs: recordedDuration,
+      });
+      
+      // Clear the recording after sending
+      handleDeleteRecording();
+    } catch (err: any) {
+      toast({
+        title: 'Voice message failed',
+        description: err?.message || 'Try again',
+        variant: 'destructive'
+      });
+    }
   };
 
   // Image sending
@@ -495,42 +559,104 @@ export default function Messages() {
               </ScrollArea>
 
               {/* Message Input */}
-              <div className="p-2 sm:p-3 md:p-4 border-t bg-white sticky bottom-0">
-                <form onSubmit={handleSendMessage} className="flex gap-1 sm:gap-2">
-                  <Input
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder={`Message ${selectedUser?.username}...`}
-                    disabled={sendMessageMutation.isPending}
-                    data-testid="input-message"
-                    className="flex-1 text-xs sm:text-sm"
-                  />
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
-                  <Button type="button" onClick={handlePickImage} variant="secondary" className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10" size="sm">
-                    <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline text-xs sm:text-sm">Image</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={isRecording ? handleStopRecording : handleStartRecording}
-                    variant={isRecording ? 'destructive' : 'secondary'}
-                    className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
-                    size="sm"
-                  >
-                    {isRecording ? <StopCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4" />}
-                    <span className="hidden sm:inline text-xs sm:text-sm">{isRecording ? 'Stop' : 'Voice'}</span>
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!messageText.trim() || sendMessageMutation.isPending}
-                    data-testid="button-send-message"
-                    className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
-                    size="sm"
-                  >
-                    <Send className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline text-xs sm:text-sm">Send</span>
-                  </Button>
-                </form>
+              <div className="p-2 sm:p-3 md:p-4 border-t bg-white sticky bottom-0 space-y-3">
+                {/* Voice Message Preview */}
+                {recordedBlob && (
+                  <div className="bg-gray-50 rounded-lg p-3 border">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        type="button"
+                        onClick={handlePlayRecording}
+                        variant="outline"
+                        size="sm"
+                        className="w-10 h-10 rounded-full p-0"
+                      >
+                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      </Button>
+                      
+                      <div className="flex-1">
+                        <div className="h-2 bg-gray-200 rounded-full relative">
+                          <div className="h-2 bg-blue-500 rounded-full w-0" style={{ width: isPlaying ? '100%' : '0%' }}></div>
+                          <div className="absolute top-0 left-0 w-3 h-3 bg-white border-2 border-blue-500 rounded-full -mt-0.5"></div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {Math.round(recordedDuration / 1000)}s
+                        </div>
+                      </div>
+                      
+                      <Button
+                        type="button"
+                        onClick={handleRewindRecording}
+                        variant="ghost"
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                      >
+                        <SkipBack className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        onClick={handleDeleteRecording}
+                        variant="ghost"
+                        size="sm"
+                        className="w-8 h-8 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        onClick={handleSendVoiceMessage}
+                        disabled={sendMessageMutation.isPending}
+                        size="sm"
+                        className="gap-1"
+                      >
+                        <Send className="w-4 h-4" />
+                        Send
+                      </Button>
+                    </div>
+                    <audio ref={audioRef} className="hidden" />
+                  </div>
+                )}
+
+                {/* Regular Message Input */}
+                {!recordedBlob && (
+                  <form onSubmit={handleSendMessage} className="flex gap-1 sm:gap-2">
+                    <Input
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      placeholder={`Message ${selectedUser?.username}...`}
+                      disabled={sendMessageMutation.isPending}
+                      data-testid="input-message"
+                      className="flex-1 text-xs sm:text-sm"
+                    />
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
+                    <Button type="button" onClick={handlePickImage} variant="secondary" className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10" size="sm">
+                      <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline text-xs sm:text-sm">Image</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={isRecording ? handleStopRecording : handleStartRecording}
+                      variant={isRecording ? 'destructive' : 'secondary'}
+                      className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
+                      size="sm"
+                    >
+                      {isRecording ? <StopCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4" />}
+                      <span className="hidden sm:inline text-xs sm:text-sm">{isRecording ? 'Stop' : 'Voice'}</span>
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={!messageText.trim() || sendMessageMutation.isPending}
+                      data-testid="button-send-message"
+                      className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
+                      size="sm"
+                    >
+                      <Send className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline text-xs sm:text-sm">Send</span>
+                    </Button>
+                  </form>
+                )}
               </div>
             </>
           )}
