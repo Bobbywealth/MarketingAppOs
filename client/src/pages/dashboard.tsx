@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: stats, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
@@ -71,6 +73,11 @@ export default function Dashboard() {
     },
   ];
 
+  // Hide financial metrics for managers
+  const visibleMetrics = (user?.role === 'manager')
+    ? metrics.filter(m => m.title !== 'Pipeline Value' && m.title !== 'Revenue (MTD)')
+    : metrics;
+
   if (isLoading) {
     return (
       <div className="min-h-full gradient-mesh">
@@ -105,7 +112,7 @@ export default function Dashboard() {
 
         {/* Premium Metric Cards with Stagger Animation */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
-          {metrics.map((metric) => (
+          {visibleMetrics.map((metric) => (
             <Card 
               key={metric.title} 
               className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift gradient-border"
