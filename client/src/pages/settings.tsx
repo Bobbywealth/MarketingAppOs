@@ -186,6 +186,7 @@ export default function SettingsPage() {
   };
 
   return (
+    <div className="min-h-screen overflow-x-hidden">
     <div className="flex-1 space-y-4 md:space-y-6 p-4 md:p-6 lg:p-8">
       <div>
         <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
@@ -197,7 +198,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex flex-wrap gap-2 overflow-x-auto whitespace-nowrap">
           <TabsTrigger value="profile">
             <User className="w-4 h-4 mr-2" />
             Profile
@@ -623,6 +624,7 @@ export default function SettingsPage() {
           </TabsContent>
         )}
       </Tabs>
+    </div>
     </div>
   );
 }
