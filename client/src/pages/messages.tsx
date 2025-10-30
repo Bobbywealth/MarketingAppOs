@@ -19,6 +19,20 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Handle deep linking from notifications
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userIdParam = urlParams.get('userId');
+    if (userIdParam) {
+      const userId = parseInt(userIdParam);
+      if (!isNaN(userId)) {
+        setSelectedUserId(userId);
+        // Clear the URL parameter after handling it
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);

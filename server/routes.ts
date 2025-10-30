@@ -4018,14 +4018,14 @@ Examples:
               title: '🔔 You were mentioned',
               message: `${senderName} mentioned you in a message`,
               category: 'communication',
-              actionUrl: '/messages',
+              actionUrl: `/messages?userId=${currentUserId}`,
               isRead: false,
             });
 
             await sendPushToUser(mentioned.id, {
               title: '🔔 You were mentioned',
               body: `${senderName}: ${content.substring(0, 100)}`,
-              url: '/messages',
+              url: `/messages?userId=${currentUserId}`,
             }).catch(err => console.error('Failed to send push notification:', err));
           }
 
@@ -4082,7 +4082,7 @@ Examples:
             title: '💬 New Message',
             message: `${senderName} sent you a message`,
             category: 'general',
-            actionUrl: '/messages',
+            actionUrl: `/messages?userId=${currentUserId}`,
             isRead: false,
           });
           console.log("📬 In-app notification created:", notification.id);
@@ -4092,7 +4092,7 @@ Examples:
           await sendPushToUser(validatedData.recipientId, {
             title: '💬 New Message',
             body: `${senderName}: ${validatedData.content?.substring(0, 100) || 'Sent you a message'}`,
-            url: '/messages',
+            url: `/messages?userId=${currentUserId}`,
           }).catch(err => console.error('Failed to send push notification:', err));
           console.log("📱 Push notification sent to:", validatedData.recipientId);
         } catch (notifError) {
