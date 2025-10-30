@@ -48,7 +48,7 @@ export default function Messages() {
       const response = await apiRequest("GET", "/api/messages/unread-counts", undefined);
       return response.json();
     },
-    refetchInterval: 3000, // Refresh every 3 seconds
+    refetchInterval: 2000, // Refresh every 2 seconds for faster unread badge updates
   });
 
   // Filter to only show admin, manager, and staff members (exclude clients and current user)
@@ -115,7 +115,7 @@ export default function Messages() {
       const response = await apiRequest("GET", `/api/messages/conversation/${selectedUserId}`, undefined);
       return response.json();
     },
-    refetchInterval: selectedUserId ? 3000 : false, // Auto-refresh every 3 seconds when conversation is open
+    refetchInterval: selectedUserId ? 1500 : false, // Auto-refresh every 1.5 seconds when conversation is open for faster messaging
     onSuccess: () => {
       // Invalidate unread counts after viewing a conversation
       queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
@@ -177,8 +177,11 @@ export default function Messages() {
       return response.json();
     },
     onSuccess: () => {
+      // Immediately invalidate and refetch for instant UI update
       queryClient.invalidateQueries({ queryKey: ["/api/messages/conversation", selectedUserId] });
       queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
+      // Refetch immediately instead of waiting for the interval
+      queryClient.refetchQueries({ queryKey: ["/api/messages/conversation", selectedUserId] });
       setMessageText("");
     },
     onError: (error: any) => {
