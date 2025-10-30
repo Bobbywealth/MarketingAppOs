@@ -5241,29 +5241,67 @@ Examples:
       // Determine target type and count recipients
       if (broadcast) {
         targetType = "broadcast";
-        // Count all users with push subscriptions
-        const result = await db.execute(sql`SELECT COUNT(DISTINCT user_id) as count FROM push_subscriptions`);
-        recipientCount = Number(result.rows[0]?.count || 0);
+        // Get all users
+        const allUsers = await storage.getUsers();
+        recipientCount = allUsers.length;
+        
+        // Send push notifications
         await broadcastPush({ title, body, url });
+        
+        // Create in-app notifications for all users
+        for (const targetUser of allUsers) {
+          await storage.createNotification({
+            userId: targetUser.id,
+            type: 'info',
+            title: title,
+            message: body,
+            category: 'general',
+            actionUrl: url || '/',
+            isRead: false,
+          });
+        }
       } else if (userId) {
         targetType = "user";
         targetValue = String(userId);
-        // Count subscriptions for this user
-        const result = await db.execute(sql`SELECT COUNT(*) as count FROM push_subscriptions WHERE user_id = ${userId}`);
-        recipientCount = Number(result.rows[0]?.count || 0);
+        recipientCount = 1;
+        
+        // Send push notification
         await sendPushToUser(userId, { title, body, url });
+        
+        // Create in-app notification
+        await storage.createNotification({
+          userId: userId,
+          type: 'info',
+          title: title,
+          message: body,
+          category: 'general',
+          actionUrl: url || '/',
+          isRead: false,
+        });
       } else if (role) {
         targetType = "role";
         targetValue = role;
-        // Count users with this role that have push subscriptions
-        const result = await db.execute(sql`
-          SELECT COUNT(DISTINCT ps.user_id) as count 
-          FROM push_subscriptions ps
-          JOIN users u ON u.id = ps.user_id
-          WHERE u.role = ${role}
-        `);
-        recipientCount = Number(result.rows[0]?.count || 0);
+        
+        // Get users with this role
+        const allUsers = await storage.getUsers();
+        const roleUsers = allUsers.filter(u => u.role === role);
+        recipientCount = roleUsers.length;
+        
+        // Send push notifications
         await sendPushToRole(role, { title, body, url });
+        
+        // Create in-app notifications for all users with this role
+        for (const targetUser of roleUsers) {
+          await storage.createNotification({
+            userId: targetUser.id,
+            type: 'info',
+            title: title,
+            message: body,
+            category: 'general',
+            actionUrl: url || '/',
+            isRead: false,
+          });
+        }
       } else {
         return res.status(400).json({ message: "Must specify userId, role, or broadcast" });
       }
