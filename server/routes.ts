@@ -475,6 +475,16 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Email config test endpoint
+  app.get("/api/email/test", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
+    try {
+      const ok = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+      res.json({ configured: ok, host: process.env.SMTP_HOST || null, from: process.env.SMTP_USER || null, secure: process.env.SMTP_SECURE === 'true' });
+    } catch (e: any) {
+      res.status(500).json({ configured: false, error: e?.message || 'Unknown error' });
+    }
+  });
+
   // Announcements (admin-only): send company-wide announcement
   app.post("/api/announcements", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
