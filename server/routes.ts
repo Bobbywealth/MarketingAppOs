@@ -2377,10 +2377,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       // Filter tasks based on user role
       let tasks = allTasks;
-      if (currentUser?.role !== UserRole.ADMIN) {
-        // For managers and staff: only show tasks assigned to them
+      if (currentUser?.role === UserRole.STAFF) {
+        // Staff: only tasks assigned to them
         tasks = allTasks.filter((t) => t.assignedToId === currentUser?.id);
-        console.log(`🔒 Tasks filtered for ${currentUser?.role}: ${tasks.length} assigned to user (out of ${allTasks.length} total)`);
+        console.log(`🔒 Tasks filtered for STAFF: ${tasks.length} assigned to user (out of ${allTasks.length} total)`);
+      } else if (currentUser?.role === UserRole.MANAGER) {
+        // Managers: see all team tasks
+        console.log(`🔓 Manager access: showing all ${allTasks.length} tasks`);
       }
       
       res.json(tasks);
