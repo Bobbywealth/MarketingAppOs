@@ -18,6 +18,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
@@ -139,6 +140,8 @@ function HamburgerMenu() {
 function AppContent() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications();
+  const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
   
   // Track page views automatically
   usePageTracking();
@@ -206,6 +209,17 @@ function AppContent() {
                 <ThemeToggle />
               </div>
             </header>
+            {shouldShowPushPrompt && (
+              <div className="px-3 md:px-6 py-3 bg-blue-50 dark:bg-blue-950/30 border-b text-sm flex items-center justify-between">
+                <div className="text-blue-900 dark:text-blue-100">Enable push notifications to get alerts on this device.</div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={async () => { await subscribe(); localStorage.setItem('pushPromptShownV2', '1'); }} disabled={loading}>
+                    {loading ? 'Enabling…' : 'Enable'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => localStorage.setItem('pushPromptShownV2', '1')}>Later</Button>
+                </div>
+              </div>
+            )}
             <main className="flex-1 overflow-auto">
               <Router />
             </main>
