@@ -6,6 +6,7 @@ import { createServer } from "http";
 import { initializeStripe } from "./stripeService";
 import { initializeEmailService } from "./emailService";
 import { initializeEmailParser } from "./emailParser";
+import { pool } from './db';
 
 const app = express();
 app.use(express.json());
@@ -48,6 +49,13 @@ app.use((req, res, next) => {
   initializeStripe();
   initializeEmailService();
   initializeEmailParser();
+  // Ensure new columns exist before auth/routes run
+  try {
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`);
+    log('ensured users.last_seen exists');
+  } catch (e: any) {
+    log(`could not ensure users.last_seen: ${e?.message || e}`);
+  }
   
   await setupAuth(app);
   registerRoutes(app);
