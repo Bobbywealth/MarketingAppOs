@@ -38,9 +38,7 @@ export default function PushNotifications() {
   // Emergency cleanup mutation
   const emergencyCleanupMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("/api/push/emergency-cleanup", {
-        method: "POST",
-      });
+      const response = await apiRequest("POST", "/api/push/emergency-cleanup");
       if (!response.ok) {
         throw new Error("Failed to cleanup subscriptions");
       }
