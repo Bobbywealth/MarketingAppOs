@@ -20,45 +20,8 @@ export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Handle deep linking from notifications
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const userIdParam = urlParams.get('userId');
-    if (userIdParam && allUsers) {
-      const userId = parseInt(userIdParam);
-      if (!isNaN(userId)) {
-        console.log('Deep linking to user ID:', userId);
-        console.log('Available users:', allUsers.map(u => ({ id: u.id, username: u.username, role: u.role })));
-        
-        // Check if the user exists in our available users
-        const targetUser = allUsers.find(u => u.id === userId);
-        if (targetUser) {
-          console.log('Found target user:', targetUser.username, 'role:', targetUser.role);
-          setSelectedUserId(userId);
-          
-          // Show a toast if the user is not normally visible in the team list
-          const isInTeamMembers = teamMembers.some(tm => tm.id === userId);
-          if (!isInTeamMembers) {
-            console.log('User not in normal team list, but opening conversation anyway');
-            toast({
-              title: `Opening conversation with ${targetUser.firstName || targetUser.username}`,
-              description: "This user may not normally appear in your team list",
-            });
-          }
-        } else {
-          console.warn('Target user not found in available users');
-          toast({
-            title: "User not found",
-            description: "Could not find the user for this notification",
-            variant: "destructive"
-          });
-        }
-        
-        // Clear the URL parameter after handling it
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-  }, [allUsers]); // Wait for allUsers to load
+  // Handle deep linking from notifications (moved after teamMembers definition)
+  // This will be defined later after teamMembers is available
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -97,6 +60,46 @@ export default function Messages() {
   // Debug logging
   console.log("📋 All users:", allUsers?.length || 0);
   console.log("👥 Team members:", teamMembers.length, teamMembers.map(u => ({ id: u.id, username: u.username, role: u.role })));
+
+  // Handle deep linking from notifications (now that teamMembers is defined)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userIdParam = urlParams.get('userId');
+    if (userIdParam && allUsers && teamMembers) {
+      const userId = parseInt(userIdParam);
+      if (!isNaN(userId)) {
+        console.log('Deep linking to user ID:', userId);
+        console.log('Available users:', allUsers.map(u => ({ id: u.id, username: u.username, role: u.role })));
+        
+        // Check if the user exists in our available users
+        const targetUser = allUsers.find(u => u.id === userId);
+        if (targetUser) {
+          console.log('Found target user:', targetUser.username, 'role:', targetUser.role);
+          setSelectedUserId(userId);
+          
+          // Show a toast if the user is not normally visible in the team list
+          const isInTeamMembers = teamMembers.some(tm => tm.id === userId);
+          if (!isInTeamMembers) {
+            console.log('User not in normal team list, but opening conversation anyway');
+            toast({
+              title: `Opening conversation with ${targetUser.firstName || targetUser.username}`,
+              description: "This user may not normally appear in your team list",
+            });
+          }
+        } else {
+          console.warn('Target user not found in available users');
+          toast({
+            title: "User not found",
+            description: "Could not find the user for this notification",
+            variant: "destructive"
+          });
+        }
+        
+        // Clear the URL parameter after handling it
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [allUsers, teamMembers]); // Wait for both to load
   console.log("👤 Current user:", user?.username, user?.role);
 
   // Filter by search query
