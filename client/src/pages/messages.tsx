@@ -155,8 +155,22 @@ export default function Messages() {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Use setTimeout to ensure DOM has updated
+    const scrollTimer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(scrollTimer);
   }, [messages]);
+
+  // Also scroll when conversation is first opened
+  useEffect(() => {
+    if (selectedUserId && messages) {
+      const scrollTimer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 100);
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [selectedUserId, messages?.length]);
 
   // Reset selected user when navigating away
   useEffect(() => {
