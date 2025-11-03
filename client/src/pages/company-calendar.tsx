@@ -574,7 +574,7 @@ export default function CompanyCalendarPage() {
                           <SelectItem value="reminder">⏰ Reminder</SelectItem>
                           <SelectItem value="event">🎉 Event</SelectItem>
                         </SelectContent>
-                      </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label>Description</Label>
