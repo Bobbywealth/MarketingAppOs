@@ -1278,5 +1278,7 @@ export default function Clients() {
         </AlertDialog>
       </div>
     </div>
+  </div>
   );
 }
+
