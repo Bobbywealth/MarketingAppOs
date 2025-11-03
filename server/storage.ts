@@ -94,7 +94,7 @@ import {
   type SecondMeContent,
   type InsertSecondMeContent,
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, desc, or, and, gte, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -308,7 +308,78 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: number): Promise<void> {
-    await db.delete(users).where(eq(users.id, userId));
+    // Delete all related records first to avoid foreign key constraint violations
+    try {
+      console.log(`🗑️ Starting deletion process for user ${userId}`);
+      
+      // Delete push notification history (sentBy references users)
+      const pushHistoryResult = await db.delete(pushNotificationHistory).where(eq(pushNotificationHistory.sentBy, userId));
+      console.log(`   Deleted push notification history records`);
+      
+      // Delete notifications
+      await db.delete(notifications).where(eq(notifications.userId, userId));
+      console.log(`   Deleted notifications`);
+      
+      // Delete messages (both as sender and recipient)
+      await db.delete(messages).where(or(eq(messages.userId, userId), eq(messages.recipientId, userId)));
+      console.log(`   Deleted messages`);
+      
+      // Update tasks - set assignedToId to null (tasks table doesn't have createdBy)
+      await db.update(tasks).set({ assignedToId: null }).where(eq(tasks.assignedToId, userId));
+      console.log(`   Updated tasks`);
+      
+      // Update tickets - set assignedToId to null (tickets doesn't have createdBy)
+      await db.update(tickets).set({ assignedToId: null }).where(eq(tickets.assignedToId, userId));
+      console.log(`   Updated tickets`);
+      
+      // Delete calendar events created by this user
+      await db.delete(calendarEvents).where(eq(calendarEvents.createdBy, userId));
+      console.log(`   Deleted calendar events`);
+      
+      // Delete email accounts
+      await db.delete(emailAccounts).where(eq(emailAccounts.userId, userId));
+      console.log(`   Deleted email accounts`);
+      
+      // Delete activity logs
+      await db.delete(activityLogs).where(eq(activityLogs.userId, userId));
+      console.log(`   Deleted activity logs`);
+      
+      // Delete user view preferences
+      await db.delete(userViewPreferences).where(eq(userViewPreferences.userId, userId));
+      console.log(`   Deleted user view preferences`);
+      
+      // Delete user notification preferences
+      await db.delete(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId));
+      console.log(`   Deleted user notification preferences`);
+      
+      // Delete push subscriptions (if table exists)
+      try {
+        await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]);
+        console.log(`   Deleted push subscriptions`);
+      } catch (err: any) {
+        // Ignore if table doesn't exist or column doesn't exist
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   Warning deleting push subscriptions:`, err.message);
+        }
+      }
+      
+      // Finally, delete the user
+      await db.delete(users).where(eq(users.id, userId));
+      console.log(`✅ User ${userId} deleted successfully`);
+    } catch (error: any) {
+      console.error(`❌ Error deleting user ${userId}:`, error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        stack: error.stack,
+      });
+      // If it's a foreign key constraint error, provide more details
+      if (error.code === '23503' || error.message?.includes('foreign key') || error.message?.includes('violates foreign key')) {
+        throw new Error(`Cannot delete user: This user has related records that prevent deletion. Details: ${error.detail || error.message}`);
+      }
+      throw error;
+    }
   }
 
   // Client operations
