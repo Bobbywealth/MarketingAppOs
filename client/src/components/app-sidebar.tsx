@@ -142,7 +142,7 @@ const companyTools = [
     permission: null,
   },
   {
-    title: "Company Calendar",
+    title: "My Calendar",
     url: "/company-calendar",
     icon: Calendar,
     permission: null,
