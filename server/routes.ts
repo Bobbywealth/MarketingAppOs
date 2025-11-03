@@ -1712,6 +1712,22 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
   });
 
   // Get emails from database
+  // Get unread email count
+  app.get("/api/emails/unread-count", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      const allEmails = await storage.getEmails(userId);
+      const unreadCount = allEmails.filter(email => !email.isRead).length;
+      
+      res.json(unreadCount);
+    } catch (error: any) {
+      console.error("Error fetching unread email count:", error);
+      res.json(0); // Return 0 on error to prevent UI issues
+    }
+  });
+
   app.get("/api/emails", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;

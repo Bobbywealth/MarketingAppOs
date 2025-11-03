@@ -44,6 +44,8 @@ import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,9 +53,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { Moon, Sun, Bell, User } from "lucide-react";
 
 // Client-specific navigation
 const clientTools = [
@@ -99,17 +107,12 @@ const clientTools = [
   },
 ];
 
+// Reordered for better workflow logic - Team communication tools together
 const companyTools = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
-    permission: null,
-  },
-  {
-    title: "Company Calendar",
-    url: "/company-calendar",
-    icon: Calendar,
     permission: null,
   },
   {
@@ -123,18 +126,25 @@ const companyTools = [
     url: "/messages",
     icon: MessageSquare,
     permission: null,
-    badge: null, // Can add unread count later
+    badgeKey: "messages", // Will fetch unread count
   },
   {
     title: "Emails",
     url: "/emails",
     icon: Mail,
     permission: null,
+    badgeKey: "emails", // Will fetch unread count
   },
   {
     title: "Phone",
     url: "/phone",
     icon: Phone,
+    permission: null,
+  },
+  {
+    title: "Company Calendar",
+    url: "/company-calendar",
+    icon: Calendar,
     permission: null,
   },
 ];
@@ -235,19 +245,22 @@ const businessTools = [
   },
 ];
 
-// Enhanced Navigation Item Component
+// Enhanced Navigation Item Component with Badge Support
 function NavItem({ 
   item, 
   isActive, 
   isCollapsed, 
-  onClick 
+  onClick,
+  badgeCount 
 }: { 
   item: typeof companyTools[0];
   isActive: boolean;
   isCollapsed: boolean;
   onClick: () => void;
+  badgeCount?: number | null;
 }) {
   const Icon = item.icon;
+  const showBadge = badgeCount !== undefined && badgeCount !== null && badgeCount > 0;
   
   const content = (
     <SidebarMenuButton 
@@ -257,26 +270,32 @@ function NavItem({
       data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}
     >
       <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full">
-        {/* Active Accent Bar */}
+        {/* Active Accent Bar with Gradient */}
         {isActive && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-primary to-primary/80 rounded-r-full shadow-sm" />
         )}
         
-        <div className={`transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`}>
+        <div className={`transition-all duration-200 ${isActive ? 'text-primary scale-110' : 'text-muted-foreground group-hover:text-primary group-hover:scale-105'}`}>
           <Icon className="w-4 h-4" />
         </div>
         
         {!isCollapsed && (
           <>
-            <span className={`font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
+            <span className={`font-medium transition-colors duration-200 ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
               {item.title}
             </span>
-            {item.badge && (
-              <Badge variant="destructive" className="ml-auto text-xs h-5 min-w-[20px]">
-                {item.badge}
+            {showBadge && (
+              <Badge 
+                variant="destructive" 
+                className="ml-auto text-xs h-5 min-w-[20px] flex items-center justify-center animate-pulse"
+              >
+                {badgeCount > 99 ? '99+' : badgeCount}
               </Badge>
             )}
           </>
+        )}
+        {isCollapsed && showBadge && (
+          <div className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full border-2 border-background animate-pulse" />
         )}
       </Link>
     </SidebarMenuButton>
@@ -290,7 +309,14 @@ function NavItem({
             {content}
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p>{item.title}</p>
+            <div className="flex items-center gap-2">
+              <p>{item.title}</p>
+              {showBadge && (
+                <Badge variant="destructive" className="text-xs h-4 min-w-[16px]">
+                  {badgeCount}
+                </Badge>
+              )}
+            </div>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -308,6 +334,36 @@ export function AppSidebar() {
   const isClient = (user as any)?.role === 'client';
   const isCollapsed = state === "collapsed" && !isMobile;
 
+  // Fetch unread message counts
+  const { data: unreadCounts } = useQuery<Record<number, number>>({
+    queryKey: ["/api/messages/unread-counts"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/messages/unread-counts", undefined);
+      return response.json();
+    },
+    enabled: !isClient && !isMobile, // Only fetch for staff/admin, not on mobile
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
+  // Calculate total unread messages
+  const totalUnreadMessages = unreadCounts ? Object.values(unreadCounts).reduce((sum, count) => sum + count, 0) : 0;
+
+  // Fetch unread email count (mock for now - would need email endpoint)
+  const { data: unreadEmails } = useQuery<number>({
+    queryKey: ["/api/emails/unread-count"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/emails/unread-count", undefined);
+        return response.json();
+      } catch {
+        return 0; // Return 0 if endpoint doesn't exist yet
+      }
+    },
+    enabled: !isClient && !isMobile,
+    refetchInterval: 10000, // Refresh every 10 seconds
+    meta: { returnNull: true },
+  });
+
   // Check if running as PWA (standalone mode)
   const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
                 (window.navigator as any).standalone === true;
@@ -324,6 +380,14 @@ export function AppSidebar() {
       return `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
     }
     return u?.email?.[0]?.toUpperCase() || "U";
+  };
+
+  // Helper to get badge count for a navigation item
+  const getBadgeCount = (badgeKey?: string) => {
+    if (!badgeKey) return null;
+    if (badgeKey === "messages") return totalUnreadMessages || null;
+    if (badgeKey === "emails") return unreadEmails || null;
+    return null;
   };
 
   // For clients, show client-specific menu
@@ -458,6 +522,7 @@ export function AppSidebar() {
                     isActive={location === item.url}
                     isCollapsed={isCollapsed}
                     onClick={handleLinkClick}
+                    badgeCount={getBadgeCount((item as any).badgeKey)}
                   />
                 </SidebarMenuItem>
               ))}
@@ -482,6 +547,7 @@ export function AppSidebar() {
                     isActive={location === item.url}
                     isCollapsed={isCollapsed}
                     onClick={handleLinkClick}
+                    badgeCount={getBadgeCount((item as any).badgeKey)}
                   />
                 </SidebarMenuItem>
               ))}
@@ -506,6 +572,7 @@ export function AppSidebar() {
                     isActive={location === item.url}
                     isCollapsed={isCollapsed}
                     onClick={handleLinkClick}
+                    badgeCount={getBadgeCount((item as any).badgeKey)}
                   />
                 </SidebarMenuItem>
               ))}
@@ -517,50 +584,89 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 border-t border-border/50">
         {!isCollapsed ? (
           <>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="relative">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={(user as any)?.profileImageUrl || ""} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background"></div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" data-testid="text-user-name">
-                  {(user as any)?.firstName && (user as any)?.lastName
-                    ? `${(user as any).firstName} ${(user as any).lastName}`
-                    : (user as any)?.email || "User"}
-                </p>
-                <p className="text-xs text-muted-foreground capitalize">{(user as any)?.role || "staff"}</p>
-              </div>
-            </div>
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center gap-3 mb-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                  <div className="relative">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={(user as any)?.profileImageUrl || ""} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background shadow-sm"></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" data-testid="text-user-name">
+                      {(user as any)?.firstName && (user as any)?.lastName
+                        ? `${(user as any).firstName} ${(user as any).lastName}`
+                        : (user as any)?.email || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize flex items-center gap-1">
+                      {(user as any)?.role || "staff"} | Marketing Team App
+                    </p>
+                  </div>
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-64 p-4" side="right" align="end">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={(user as any)?.profileImageUrl || ""} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">
+                        {(user as any)?.firstName && (user as any)?.lastName
+                          ? `${(user as any).firstName} ${(user as any).lastName}`
+                          : (user as any)?.email || "User"}
+                      </p>
+                      <p className="text-xs text-muted-foreground capitalize flex items-center gap-1">
+                        <Circle className="w-2 h-2 fill-emerald-500 text-emerald-500" />
+                        Online • {(user as any)?.role || "staff"}
+                      </p>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="space-y-1">
+                    <Link href="/settings" onClick={handleLinkClick}>
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">My Profile</span>
+                      </div>
+                    </Link>
+                    <Link href="/settings" onClick={handleLinkClick}>
+                      <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer">
+                        <Settings className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">Preferences</span>
+                      </div>
+                    </Link>
+                    <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer">
+                      <Bell className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">Notifications</span>
+                    </div>
+                  </div>
+                  <Separator />
+                  <a
+                    href={logoutUrl}
+                    className="flex items-center gap-2 text-sm text-destructive hover:bg-destructive/10 rounded-md px-2 py-1.5 transition-colors"
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out</span>
+                  </a>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
             <div className="space-y-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="w-full flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors cursor-pointer">
-                    <Settings className="w-4 h-4" />
-                    <span>Settings</span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" onClick={handleLinkClick}>
-                      My Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings" onClick={handleLinkClick}>
-                      Preferences
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <span>Help & Support</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Link href="/settings" onClick={handleLinkClick}>
+                <div className="w-full flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors cursor-pointer">
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </div>
+              </Link>
               <a
                 href={logoutUrl}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
