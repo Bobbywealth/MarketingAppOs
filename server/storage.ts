@@ -313,53 +313,93 @@ export class DatabaseStorage implements IStorage {
       console.log(`🗑️ Starting deletion process for user ${userId}`);
       
       // Delete push notification history (sentBy references users)
-      const pushHistoryResult = await db.delete(pushNotificationHistory).where(eq(pushNotificationHistory.sentBy, userId));
-      console.log(`   Deleted push notification history records`);
+      await db.delete(pushNotificationHistory).where(eq(pushNotificationHistory.sentBy, userId));
+      console.log(`   ✓ Deleted push notification history records`);
       
       // Delete notifications
       await db.delete(notifications).where(eq(notifications.userId, userId));
-      console.log(`   Deleted notifications`);
+      console.log(`   ✓ Deleted notifications`);
       
       // Delete messages (both as sender and recipient)
       await db.delete(messages).where(or(eq(messages.userId, userId), eq(messages.recipientId, userId)));
-      console.log(`   Deleted messages`);
+      console.log(`   ✓ Deleted messages`);
       
-      // Update tasks - set assignedToId to null (tasks table doesn't have createdBy)
+      // Delete task comments by this user
+      await db.delete(taskComments).where(eq(taskComments.userId, userId));
+      console.log(`   ✓ Deleted task comments`);
+      
+      // Update tasks - set assignedToId to null
       await db.update(tasks).set({ assignedToId: null }).where(eq(tasks.assignedToId, userId));
-      console.log(`   Updated tasks`);
+      console.log(`   ✓ Updated tasks (unassigned)`);
       
-      // Update tickets - set assignedToId to null (tickets doesn't have createdBy)
+      // Update tickets - set assignedToId to null
       await db.update(tickets).set({ assignedToId: null }).where(eq(tickets.assignedToId, userId));
-      console.log(`   Updated tickets`);
+      console.log(`   ✓ Updated tickets (unassigned)`);
+      
+      // Update clients - set assignedToId to null
+      await db.update(clients).set({ assignedToId: null }).where(eq(clients.assignedToId, userId));
+      console.log(`   ✓ Updated clients (unassigned)`);
+      
+      // Update leads - set assignedToId to null
+      await db.update(leads).set({ assignedToId: null }).where(eq(leads.assignedToId, userId));
+      console.log(`   ✓ Updated leads (unassigned)`);
+      
+      // Delete or update lead activities
+      await db.delete(leadActivities).where(eq(leadActivities.userId, userId));
+      console.log(`   ✓ Deleted lead activities`);
+      
+      // Update campaigns - set createdBy to null (or delete if preferred)
+      await db.update(campaigns).set({ createdBy: null }).where(eq(campaigns.createdBy, userId));
+      console.log(`   ✓ Updated campaigns`);
+      
+      // Update task spaces - set createdBy to null (or delete if preferred)
+      await db.update(taskSpaces).set({ createdBy: null }).where(eq(taskSpaces.createdBy, userId));
+      console.log(`   ✓ Updated task spaces`);
+      
+      // Delete or update project feedback
+      await db.delete(projectFeedback).where(eq(projectFeedback.userId, userId));
+      console.log(`   ✓ Deleted project feedback`);
       
       // Delete calendar events created by this user
       await db.delete(calendarEvents).where(eq(calendarEvents.createdBy, userId));
-      console.log(`   Deleted calendar events`);
+      console.log(`   ✓ Deleted calendar events`);
+      
+      // Delete emails
+      await db.delete(emails).where(eq(emails.userId, userId));
+      console.log(`   ✓ Deleted emails`);
       
       // Delete email accounts
       await db.delete(emailAccounts).where(eq(emailAccounts.userId, userId));
-      console.log(`   Deleted email accounts`);
+      console.log(`   ✓ Deleted email accounts`);
       
       // Delete activity logs
       await db.delete(activityLogs).where(eq(activityLogs.userId, userId));
-      console.log(`   Deleted activity logs`);
+      console.log(`   ✓ Deleted activity logs`);
       
       // Delete user view preferences
       await db.delete(userViewPreferences).where(eq(userViewPreferences.userId, userId));
-      console.log(`   Deleted user view preferences`);
+      console.log(`   ✓ Deleted user view preferences`);
       
       // Delete user notification preferences
       await db.delete(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId));
-      console.log(`   Deleted user notification preferences`);
+      console.log(`   ✓ Deleted user notification preferences`);
+      
+      // Update client documents - set uploadedBy to null (it's varchar, so we'll use SQL)
+      try {
+        await pool.query('UPDATE client_documents SET uploaded_by = NULL WHERE uploaded_by = $1', [String(userId)]);
+        console.log(`   ✓ Updated client documents`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning updating client documents:`, err.message);
+      }
       
       // Delete push subscriptions (if table exists)
       try {
         await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]);
-        console.log(`   Deleted push subscriptions`);
+        console.log(`   ✓ Deleted push subscriptions`);
       } catch (err: any) {
         // Ignore if table doesn't exist or column doesn't exist
         if (!err.message?.includes('does not exist')) {
-          console.warn(`   Warning deleting push subscriptions:`, err.message);
+          console.warn(`   ⚠ Warning deleting push subscriptions:`, err.message);
         }
       }
       
@@ -372,11 +412,13 @@ export class DatabaseStorage implements IStorage {
         message: error.message,
         code: error.code,
         detail: error.detail,
-        stack: error.stack,
+        constraint: error.constraint,
+        table: error.table,
+        stack: error.stack?.split('\n').slice(0, 5).join('\n'),
       });
       // If it's a foreign key constraint error, provide more details
       if (error.code === '23503' || error.message?.includes('foreign key') || error.message?.includes('violates foreign key')) {
-        throw new Error(`Cannot delete user: This user has related records that prevent deletion. Details: ${error.detail || error.message}`);
+        throw new Error(`Cannot delete user: This user has related records that prevent deletion. Table: ${error.table || 'unknown'}, Constraint: ${error.constraint || 'unknown'}. Details: ${error.detail || error.message}`);
       }
       throw error;
     }

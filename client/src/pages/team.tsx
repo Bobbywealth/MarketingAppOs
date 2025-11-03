@@ -112,7 +112,12 @@ export default function TeamPage() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/users/${id}`);
+      const response = await apiRequest("DELETE", `/api/users/${id}`);
+      // If response has error details, extract them
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to delete user (${response.status})`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -121,10 +126,11 @@ export default function TeamPage() {
         description: "Team member has been removed successfully.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      console.error("Delete user error:", error);
       toast({
         title: "Failed to delete user",
-        description: error.message,
+        description: error?.message || "An error occurred while deleting the user. Check server logs for details.",
         variant: "destructive",
       });
     },
