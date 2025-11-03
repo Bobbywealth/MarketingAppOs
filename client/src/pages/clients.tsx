@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3 } from "lucide-react";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,10 @@ export default function Clients() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>("none");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [showFilters, setShowFilters] = useState(false);
+  const [tagFilter, setTagFilter] = useState<string>("all");
   const { toast} = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
@@ -285,13 +289,46 @@ export default function Clients() {
     setDragOverClient(null);
   };
 
+  // Get all unique tags from clients
+  const allTags = Array.from(new Set(clients?.flatMap(c => c.serviceTags || []) || []));
+
+  // Enhanced filtering and sorting
   const filteredClients = clients
-    ?.filter((client) =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+    ?.filter((client) => {
+      // Search filter
+      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.company?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Status filter (mock data - you can add actual status field to schema)
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "active" && client.stripeSubscriptionId) ||
+        (statusFilter === "paused" && !client.stripeSubscriptionId) ||
+        (statusFilter === "prospect" && !client.email);
+      
+      // Tag filter
+      const matchesTag = tagFilter === "all" || 
+        client.serviceTags?.includes(tagFilter);
+      
+      return matchesSearch && matchesStatus && matchesTag;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "alphabetical":
+          return a.name.localeCompare(b.name);
+        case "active":
+          // Sort by subscription status
+          return (b.stripeSubscriptionId ? 1 : 0) - (a.stripeSubscriptionId ? 1 : 0);
+        case "displayOrder":
+          return (a.displayOrder || 0) - (b.displayOrder || 0);
+        default:
+          return 0;
+      }
+    });
 
   if (isLoading) {
     return (
@@ -313,22 +350,33 @@ export default function Clients() {
   return (
     <div className="min-h-full gradient-mesh">
       <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 xl:p-12 space-y-4 md:space-y-6 lg:space-y-8">
-        {/* Premium Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1 md:space-y-2">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient" data-testid="text-page-title">Clients</h1>
-            <p className="text-sm md:text-base lg:text-lg text-muted-foreground">Manage your client relationships</p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) setPaymentMethod("none");
-          }}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="shadow-lg hover:shadow-xl transition-all" data-testid="button-add-client">
-                <Plus className="w-5 h-5 mr-2" />
-                Add Client
-              </Button>
-            </DialogTrigger>
+        {/* Premium Header Section with Gradient */}
+        <div className="p-6 rounded-xl bg-gradient-to-r from-primary/10 via-purple-500/5 to-transparent border border-border/50 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Clients</h1>
+              <p className="text-sm md:text-base lg:text-lg text-muted-foreground">Manage your client relationships</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="secondary" className="text-xs">
+                  {filteredClients?.length || 0} clients
+                </Badge>
+                {statusFilter !== "all" && (
+                  <Badge variant="outline" className="text-xs">
+                    {statusFilter}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) setPaymentMethod("none");
+            }}>
+              <DialogTrigger asChild>
+                <Button size="lg" className="shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700" data-testid="button-add-client">
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Client
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl glass-strong">
               <DialogHeader>
                 <DialogTitle className="text-2xl">Create New Client</DialogTitle>
@@ -439,22 +487,108 @@ export default function Clients() {
           </Dialog>
         </div>
 
-        {/* Search Bar & Bulk Actions */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search clients..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 glass shadow-sm"
-              data-testid="input-search-clients"
-            />
+        {/* Status Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          <Button
+            variant={statusFilter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("all")}
+            className="whitespace-nowrap"
+          >
+            All
+          </Button>
+          <Button
+            variant={statusFilter === "active" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("active")}
+            className="whitespace-nowrap"
+          >
+            <Activity className="w-3 h-3 mr-1" />
+            Active
+          </Button>
+          <Button
+            variant={statusFilter === "paused" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("paused")}
+            className="whitespace-nowrap"
+          >
+            <Clock className="w-3 h-3 mr-1" />
+            Paused
+          </Button>
+          <Button
+            variant={statusFilter === "prospect" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("prospect")}
+            className="whitespace-nowrap"
+          >
+            Prospect
+          </Button>
+        </div>
+
+        {/* Enhanced Search Bar & Filters - Sticky on Scroll */}
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm p-4 rounded-xl border border-border/50 shadow-md space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Search Bar */}
+            <div className="relative flex-1 min-w-[250px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search clients by name, email, or company..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 shadow-sm"
+                data-testid="input-search-clients"
+              />
+            </div>
+            
+            {/* Sort Dropdown */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-[180px]">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                <SelectItem value="active">Most Active</SelectItem>
+                <SelectItem value="displayOrder">Custom Order</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Tag Filter */}
+            {allTags.length > 0 && (
+              <Select value={tagFilter} onValueChange={setTagFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Tag className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter by tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tags</SelectItem>
+                  {allTags.map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      {tag}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            {/* Filter Toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className={showFilters ? "bg-primary/10" : ""}
+            >
+              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
           </div>
           
+          {/* Bulk Actions */}
           {selectedClients.size > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
               <Badge variant="secondary" className="text-sm px-3 py-1">
                 {selectedClients.size} selected
               </Badge>
