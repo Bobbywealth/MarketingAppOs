@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon, X } from "lucide-react";
+import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon, X, Filter, ChevronDown, Smile, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,6 +17,8 @@ export default function Messages() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -103,10 +105,12 @@ export default function Messages() {
   }, [allUsers, teamMembers]); // Wait for both to load
   console.log("👤 Current user:", user?.username, user?.role);
 
-  // Filter by search query
-  const filteredTeamMembers = teamMembers.filter(member =>
-    member.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter by search query and role
+  const filteredTeamMembers = teamMembers.filter(member => {
+    const matchesSearch = member.username.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === "all" || member.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   // Get messages for selected conversation
   const { data: messages, isLoading: messagesLoading } = useQuery<Message[]>({
@@ -401,7 +405,16 @@ export default function Messages() {
   };
 
   const getRoleBadgeColor = (role: string) => {
-    return role === 'admin' ? 'bg-purple-500' : 'bg-blue-500';
+    const colors = {
+      admin: 'bg-purple-500',
+      manager: 'bg-blue-500',
+      staff: 'bg-green-500',
+    };
+    return colors[role as keyof typeof colors] || 'bg-gray-500';
+  };
+
+  const getStatusColor = (isOnline: boolean) => {
+    return isOnline ? 'bg-green-500' : 'bg-gray-400';
   };
 
   return (
@@ -415,19 +428,91 @@ export default function Messages() {
 
       <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
         {/* Team Members Sidebar - Now visible on mobile */}
-        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col h-[calc(100vh-10rem)] md:h-auto`}>
-          <div className="p-3 sm:p-4 border-b space-y-3">
+        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col h-[calc(100vh-10rem)] md:h-auto bg-gradient-to-b from-primary/5 via-transparent to-transparent`}>
+          <div className="p-3 sm:p-4 border-b space-y-3 bg-white/80 backdrop-blur-sm">
             <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
               <p className="text-xs font-medium text-blue-900">👆 Tap a team member to start messaging</p>
             </div>
+            
+            {/* Search Bar */}
             <div className="relative">
               <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
               <Input
                 placeholder="Search team members..."
-                className="pl-8 sm:pl-10 text-xs sm:text-sm"
+                className="pl-8 sm:pl-10 text-xs sm:text-sm shadow-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+            </div>
+            
+            {/* Filter Dropdown */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-between text-xs"
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-3 h-3" />
+                    <span>
+                      {roleFilter === "all" ? "All Roles" : 
+                       roleFilter === "admin" ? "Admins" :
+                       roleFilter === "manager" ? "Managers" : "Staff"}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+                
+                {showFilterDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 overflow-hidden">
+                    <button
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setRoleFilter("all");
+                        setShowFilterDropdown(false);
+                      }}
+                    >
+                      All Roles
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        setRoleFilter("admin");
+                        setShowFilterDropdown(false);
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      Admins
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        setRoleFilter("manager");
+                        setShowFilterDropdown(false);
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      Managers
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center gap-2"
+                      onClick={() => {
+                        setRoleFilter("staff");
+                        setShowFilterDropdown(false);
+                      }}
+                    >
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      Staff
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <Badge variant="secondary" className="text-xs">
+                {filteredTeamMembers.length}
+              </Badge>
             </div>
           </div>
 
@@ -456,44 +541,57 @@ export default function Messages() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {filteredTeamMembers.map((member) => (
                     <div
                       key={member.id}
                       onClick={() => setSelectedUserId(member.id)}
-                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-all active:scale-98 ${
+                      className={`p-3 rounded-xl cursor-pointer transition-all duration-300 group relative overflow-hidden ${
                         selectedUserId === member.id 
-                          ? 'bg-accent border-l-4 border-primary' 
-                          : 'hover:bg-accent hover:shadow-sm'
+                          ? 'bg-primary/10 border-2 border-primary shadow-md scale-[1.02]' 
+                          : 'hover:bg-white hover:shadow-lg border-2 border-transparent'
                       }`}
                     >
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {getInitials(member.username)}
-                          </AvatarFallback>
-                        </Avatar>
+                      {/* Gradient overlay on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      
+                      <div className="flex items-center gap-3 relative z-10">
+                        {/* Avatar with status dot */}
+                        <div className="relative">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12 ring-2 ring-white shadow-sm">
+                            <AvatarFallback className={`${getRoleBadgeColor(member.role)} text-white text-sm font-semibold`}>
+                              {getInitials(member.username)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {/* Status dot */}
+                          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(true)}`}></div>
+                        </div>
+                        
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1 sm:gap-2">
-                            <p className="font-medium truncate text-sm sm:text-base">{member.username}</p>
-                            <Badge 
-                              variant="secondary" 
-                              className={`text-xs ${getRoleBadgeColor(member.role)} text-white`}
-                            >
-                              {member.role}
-                            </Badge>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold truncate text-sm">{member.username}</p>
                             {unreadCounts?.[member.id] && (
                               <Badge 
                                 variant="destructive" 
-                                className="text-xs ml-auto animate-pulse"
+                                className="text-xs h-5 min-w-[20px] flex items-center justify-center animate-pulse shadow-lg"
                               >
                                 {unreadCounts[member.id]}
                               </Badge>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Active • Click to message
-                          </p>
+                          
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-[10px] px-1.5 py-0 ${getRoleBadgeColor(member.role)} text-white`}
+                            >
+                              {member.role}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(true)}`}></div>
+                              Online
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -518,37 +616,54 @@ export default function Messages() {
             </div>
           ) : (
             <>
-              {/* Chat Header */}
-              <div className="p-2 sm:p-3 md:p-4 border-b bg-white sticky top-0 z-10">
-                <div className="flex items-center gap-2 md:gap-3">
-                  {/* Back button for mobile */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="md:hidden hover:bg-accent h-8 w-8"
-                    onClick={() => setSelectedUserId(null)}
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {selectedUser && getInitials(selectedUser.username)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-xs sm:text-sm md:text-base">{selectedUser?.username}</h3>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${presenceOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                      <span className="text-xs text-muted-foreground">
-                        {presenceOnline ? 'Online' : lastSeen ? `Last seen ${formatDistanceToNow(new Date(lastSeen), { addSuffix: true })}` : 'Offline'}
-                      </span>
+              {/* Chat Header - Enhanced */}
+              <div className="p-3 sm:p-4 border-b bg-gradient-to-r from-white to-primary/5 sticky top-0 z-10 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {/* Back button for mobile */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="md:hidden hover:bg-accent h-8 w-8"
+                      onClick={() => setSelectedUserId(null)}
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                    
+                    {/* Avatar with status */}
+                    <div className="relative">
+                      <Avatar className="w-10 h-10 sm:w-12 sm:h-12 ring-2 ring-white shadow-md">
+                        <AvatarFallback className={`${selectedUser && getRoleBadgeColor(selectedUser.role)} text-white font-semibold`}>
+                          {selectedUser && getInitials(selectedUser.username)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${presenceOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-sm sm:text-base">{selectedUser?.username}</h3>
+                        {selectedUser && (
+                          <Badge 
+                            variant="secondary" 
+                            className={`text-[10px] ${getRoleBadgeColor(selectedUser.role)} text-white`}
+                          >
+                            {selectedUser.role}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${presenceOnline ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          {presenceOnline ? '🟢 Online' : lastSeen ? `Last seen ${formatDistanceToNow(new Date(lastSeen), { addSuffix: true })}` : 'Offline'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-2 sm:p-3 md:p-4">
+              <ScrollArea className="flex-1 p-2 sm:p-3 md:p-4 bg-gradient-to-b from-gray-50/50 to-transparent">
                 {messagesLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
@@ -586,10 +701,10 @@ export default function Messages() {
                               </span>
                             </div>
                             <div
-                              className={`rounded-lg p-2 sm:p-3 ${
+                              className={`rounded-2xl p-3 shadow-sm transition-all hover:shadow-md ${
                                 isOwnMessage
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted'
+                                  ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground'
+                                  : 'bg-white border border-gray-200'
                               }`}
                             >
                               {message.mediaUrl ? (
@@ -646,10 +761,18 @@ export default function Messages() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-2 opacity-50" />
-                      <p className="text-muted-foreground">No messages yet</p>
-                      <p className="text-sm text-muted-foreground">Start the conversation!</p>
+                    <div className="text-center p-8">
+                      <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center">
+                        <MessageSquare className="w-12 h-12 text-primary" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Start the conversation with {selectedUser?.username}!
+                      </p>
+                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <span>💬</span>
+                        <span>Send a message to get started</span>
+                      </div>
                     </div>
                   </div>
                 )}
