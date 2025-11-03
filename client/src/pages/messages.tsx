@@ -23,6 +23,7 @@ export default function Messages() {
   // Handle deep linking from notifications (moved after teamMembers definition)
   // This will be defined later after teamMembers is available
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -197,6 +198,10 @@ export default function Messages() {
       // Refetch immediately instead of waiting for the interval
       queryClient.refetchQueries({ queryKey: ["/api/messages/conversation", selectedUserId] });
       setMessageText("");
+      // Refocus the input so user can continue typing
+      setTimeout(() => {
+        messageInputRef.current?.focus();
+      }, 0);
     },
     onError: (error: any) => {
       console.error("❌ Message send error:", error);
@@ -715,12 +720,14 @@ export default function Messages() {
                 {!recordedBlob && (
                   <form onSubmit={handleSendMessage} className="flex gap-1 sm:gap-2">
                     <Input
+                      ref={messageInputRef}
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder={`Message ${selectedUser?.username}...`}
                       disabled={sendMessageMutation.isPending}
                       data-testid="input-message"
                       className="flex-1 text-xs sm:text-sm"
+                      autoFocus
                     />
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
                     <Button type="button" onClick={handlePickImage} variant="secondary" className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10" size="sm">
