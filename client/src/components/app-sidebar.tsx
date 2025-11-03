@@ -209,6 +209,12 @@ const businessTools = [
     permission: "canManageUsers" as const,
   },
   {
+    title: "AI Business Manager",
+    url: "/ai-manager",
+    icon: Sparkles,
+    roles: ["admin"] as const, // Admin only
+  },
+  {
     title: "Push Notifications",
     url: "/push-notifications",
     icon: Bell,

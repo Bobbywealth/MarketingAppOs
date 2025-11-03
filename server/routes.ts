@@ -402,6 +402,273 @@ setInterval(() => { runMeetingReminders().catch(() => {}); }, 15 * 60 * 1000);
 // Run analytics check every 6 hours
 setInterval(checkSignificantMetricChanges, 6 * 60 * 60 * 1000); // 6 hours
 
+// AI Business Manager - Intelligent command parser and router
+async function processAICommand(message: string, userId: number): Promise<{
+  success: boolean;
+  response: string;
+  actionTaken?: string;
+  error?: string;
+  errorDetails?: string;
+}> {
+  const lowerMessage = message.toLowerCase().trim();
+  
+  try {
+    // CLIENT MANAGEMENT
+    if (lowerMessage.includes('client') || lowerMessage.includes('customer')) {
+      // List clients
+      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
+        const clients = await storage.getClients();
+        return {
+          success: true,
+          response: `Found ${clients.length} clients. Here are a few: ${clients.slice(0, 5).map(c => c.name).join(', ')}${clients.length > 5 ? '...' : ''}`,
+        };
+      }
+      
+      // Create client
+      if (lowerMessage.includes('create') || lowerMessage.includes('add') || lowerMessage.includes('new')) {
+        const nameMatch = message.match(/(?:name|called|named)\s+(?:is\s+)?([A-Z][a-zA-Z\s]+?)(?:,|\s+(?:with|email|phone|company)|$)/i);
+        const emailMatch = message.match(/(?:email|e-mail)\s+(?:is\s+)?([\w\.-]+@[\w\.-]+\.\w+)/i);
+        const phoneMatch = message.match(/(?:phone|number)\s+(?:is\s+)?([\+\(\)\s\d-]+)/i);
+        const companyMatch = message.match(/(?:company|business)\s+(?:is\s+)?([A-Z][a-zA-Z\s&]+?)(?:,|\s+(?:with|email|phone)|$)/i);
+        
+        const clientData: any = {
+          name: nameMatch ? nameMatch[1].trim() : 'New Client',
+          email: emailMatch ? emailMatch[1] : null,
+          phone: phoneMatch ? phoneMatch[1] : null,
+          company: companyMatch ? companyMatch[1].trim() : null,
+        };
+        
+        if (!nameMatch) {
+          return {
+            success: false,
+            response: "I need a client name to create a client. Please provide a name like: 'Create a client named John Smith'",
+          };
+        }
+        
+        try {
+          const newClient = await storage.createClient({
+            ...clientData,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          return {
+            success: true,
+            response: `✅ Created client "${newClient.name}" successfully!`,
+            actionTaken: `Created client: ${newClient.name}`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to create client: ${error.message || 'Unknown error'}`,
+            error: error.message || 'Unknown error',
+            errorDetails: error.stack,
+          };
+        }
+      }
+      
+      // Delete client
+      if (lowerMessage.includes('delete') || lowerMessage.includes('remove')) {
+        const nameMatch = message.match(/(?:client|customer)\s+(?:named|called|is\s+)?([A-Z][a-zA-Z\s]+?)(?:$|,|\s+(?:from|in|the))/i) || 
+                         message.match(/delete\s+([A-Z][a-zA-Z\s]+)/i);
+        
+        if (!nameMatch) {
+          return {
+            success: false,
+            response: "I need to know which client to delete. Please provide a name like: 'Delete client John Smith'",
+          };
+        }
+        
+        try {
+          const clients = await storage.getClients();
+          const client = clients.find(c => c.name.toLowerCase().includes(nameMatch[1].toLowerCase()));
+          if (!client) {
+            return {
+              success: false,
+              response: `Could not find a client named "${nameMatch[1]}". Please check the name and try again.`,
+            };
+          }
+          await storage.deleteClient(String(client.id));
+          return {
+            success: true,
+            response: `✅ Deleted client "${client.name}" successfully!`,
+            actionTaken: `Deleted client: ${client.name}`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to delete client: ${error.message || 'Unknown error'}`,
+            error: error.message || 'Unknown error',
+            errorDetails: error.stack,
+          };
+        }
+      }
+    }
+    
+    // TASK MANAGEMENT
+    if (lowerMessage.includes('task') || lowerMessage.includes('todo')) {
+      // List tasks
+      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
+        try {
+          const tasks = await storage.getTasks();
+          return {
+            success: true,
+            response: `Found ${tasks.length} tasks. ${tasks.filter(t => t.status === 'pending').length} pending, ${tasks.filter(t => t.status === 'completed').length} completed.`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to fetch tasks: ${error.message}`,
+            error: error.message,
+          };
+        }
+      }
+      
+      // Create task
+      if (lowerMessage.includes('create') || lowerMessage.includes('add') || lowerMessage.includes('new')) {
+        const titleMatch = message.match(/(?:task|todo|reminder)\s+(?:named|called|is\s+)?(?:to\s+)?(.+?)(?:with|due|by|$)/i) ||
+                          message.match(/(?:create|add)\s+(?:a\s+)?(?:task|todo)\s+(?:named|called|to\s+)?(.+?)(?:with|due|by|$)/i);
+        
+        if (!titleMatch) {
+          return {
+            success: false,
+            response: "I need a task description. Please provide one like: 'Create a task to update the website'",
+          };
+        }
+        
+        try {
+          const newTask = await storage.createTask({
+            title: titleMatch[1].trim(),
+            description: null,
+            status: 'pending',
+            priority: 'medium',
+            assignedTo: String(userId),
+            createdBy: String(userId),
+            dueDate: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          return {
+            success: true,
+            response: `✅ Created task "${newTask.title}" successfully!`,
+            actionTaken: `Created task: ${newTask.title}`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to create task: ${error.message || 'Unknown error'}`,
+            error: error.message || 'Unknown error',
+            errorDetails: error.stack,
+          };
+        }
+      }
+    }
+    
+    // CALENDAR/EVENTS
+    if (lowerMessage.includes('calendar') || lowerMessage.includes('event') || lowerMessage.includes('meeting') || lowerMessage.includes('schedule')) {
+      // List events
+      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('today')) {
+        try {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          
+          const allEvents = await storage.getCalendarEvents();
+          const eventsToday = allEvents.filter(e => {
+            const eventDate = new Date(e.start);
+            return eventDate >= today && eventDate < tomorrow;
+          });
+          return {
+            success: true,
+            response: `Found ${eventsToday.length} events today. ${eventsToday.map(e => e.title).join(', ') || 'No events scheduled'}`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to fetch calendar events: ${error.message}`,
+            error: error.message,
+          };
+        }
+      }
+    }
+    
+    // MESSAGES
+    if (lowerMessage.includes('message') || lowerMessage.includes('send') || lowerMessage.includes('text')) {
+      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('recent')) {
+        try {
+          const allMessages = await storage.getMessages();
+          const recentMessages = allMessages.slice(-10);
+          return {
+            success: true,
+            response: `Found ${allMessages.length} total messages. Showing ${recentMessages.length} most recent.`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to fetch messages: ${error.message}`,
+            error: error.message,
+          };
+        }
+      }
+    }
+    
+    // CAMPAIGNS
+    if (lowerMessage.includes('campaign')) {
+      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
+        try {
+          const campaigns = await storage.getCampaigns();
+          const active = campaigns.filter(c => c.status === 'active');
+          return {
+            success: true,
+            response: `Found ${campaigns.length} campaigns total. ${active.length} are currently active.`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to fetch campaigns: ${error.message}`,
+            error: error.message,
+          };
+        }
+      }
+    }
+    
+    // INVOICES
+    if (lowerMessage.includes('invoice') || lowerMessage.includes('billing')) {
+      if (lowerMessage.includes('list') || lowerMessage.includes('show')) {
+        try {
+          const invoices = await storage.getInvoices();
+          const pending = invoices.filter(i => i.status === 'pending');
+          const paid = invoices.filter(i => i.status === 'paid');
+          return {
+            success: true,
+            response: `Found ${invoices.length} invoices. ${pending.length} pending, ${paid.length} paid.`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            response: `Failed to fetch invoices: ${error.message}`,
+            error: error.message,
+          };
+        }
+      }
+    }
+    
+    // DEFAULT: Ask for clarification
+    return {
+      success: false,
+      response: "I understand you want me to help, but I need more specific instructions. I can help you with:\n\n• Clients (create, list, delete)\n• Tasks (create, list)\n• Calendar events (show today's events)\n• Messages (show recent)\n• Campaigns (list all)\n• Invoices (list all)\n\nPlease be more specific, like: 'Create a client named John Smith' or 'Show me all tasks'",
+    };
+    
+  } catch (error: any) {
+    return {
+      success: false,
+      response: `An error occurred: ${error.message || 'Unknown error'}`,
+      error: error.message || 'Unknown error',
+      errorDetails: error.stack,
+    };
+  }
+}
+
 export function registerRoutes(app: Express) {
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
@@ -2978,6 +3245,36 @@ Examples:
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete calendar event" });
+    }
+  });
+
+  // AI Business Manager endpoint - Admin only
+  app.post("/api/ai-business-manager/chat", isAuthenticated, requireRole("admin"), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const { message, conversationHistory } = req.body;
+
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ 
+          success: false,
+          message: "Message is required" 
+        });
+      }
+
+      console.log(`🤖 AI Business Manager request from user ${userId}:`, message);
+
+      const result = await processAICommand(message, userId);
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("AI Business Manager error:", error);
+      res.status(500).json({
+        success: false,
+        response: `An error occurred: ${error.message || 'Unknown error'}`,
+        error: error.message || 'Unknown error',
+        errorDetails: error.stack,
+      });
     }
   });
 

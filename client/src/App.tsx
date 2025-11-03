@@ -61,6 +61,7 @@ import PWAHomePage from "@/pages/pwa-home";
 import NotFound from "@/pages/not-found";
 import AdminSocialOverview from "@/pages/admin-social-overview";
 import AdminSocialAccounts from "@/pages/admin-social-accounts";
+import AIBusinessManager from "@/pages/ai-business-manager";
 
 function Router() {
   const { user } = useAuth();
@@ -112,6 +113,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
       {!isClient && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
       {!isClient && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
+      {user?.role === "admin" && <ProtectedRoute path="/ai-manager" component={AIBusinessManager} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/settings" component={Settings} />
