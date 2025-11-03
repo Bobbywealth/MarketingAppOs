@@ -269,19 +269,19 @@ function NavItem({
       className="group relative transition-all duration-200 ease-in-out hover:bg-primary/8 rounded-md"
       data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}
     >
-      <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full">
+      <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full py-2">
         {/* Active Accent Bar with Gradient */}
         {isActive && (
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-primary to-primary/80 rounded-r-full shadow-sm" />
         )}
         
-        <div className={`transition-all duration-200 ${isActive ? 'text-primary scale-110' : 'text-muted-foreground group-hover:text-primary group-hover:scale-105'}`}>
-          <Icon className="w-4 h-4" />
+        <div className={`transition-all duration-200 ${isActive ? 'text-primary scale-125' : 'text-muted-foreground group-hover:text-primary group-hover:scale-125'}`}>
+          <Icon className={`transition-all duration-200 ${isActive ? 'w-5 h-5' : 'w-4 h-4 group-hover:w-5 group-hover:h-5'}`} />
         </div>
         
         {!isCollapsed && (
           <>
-            <span className={`font-medium transition-colors duration-200 ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
+            <span className={`font-medium transition-all duration-200 ${isActive ? 'text-foreground text-base' : 'text-muted-foreground group-hover:text-foreground group-hover:text-base'}`}>
               {item.title}
             </span>
             {showBadge && (
@@ -395,9 +395,26 @@ export function AppSidebar() {
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
         <SidebarHeader className="px-3 py-5 border-b border-border/50">
-          <Link href="/" className="flex items-center justify-center group">
-            <SidebarLogo />
-          </Link>
+          <div className={`flex items-center justify-center ${isCollapsed ? '' : ''}`}>
+            <Link href="/" className={`flex items-center justify-center group transition-opacity hover:opacity-80 ${isCollapsed ? 'w-full' : ''}`}>
+              {isCollapsed ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <SidebarLogo />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>Marketing Team App</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <SidebarLogo />
+              )}
+            </Link>
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -413,6 +430,7 @@ export function AppSidebar() {
                       isActive={location === item.url}
                       isCollapsed={isCollapsed}
                       onClick={handleLinkClick}
+                      badgeCount={getBadgeCount((item as any).badgeKey)}
                     />
                   </SidebarMenuItem>
                 ))}
@@ -478,28 +496,57 @@ export function AppSidebar() {
       style={{ "--sidebar-width": "200px" } as React.CSSProperties}
     >
       <SidebarHeader className="px-3 py-5 border-b border-border/50">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80">
-            <SidebarLogo />
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <Link href="/" className={`flex items-center justify-center group transition-opacity hover:opacity-80 ${isCollapsed ? 'w-full' : ''}`}>
+            {isCollapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <SidebarLogo />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Marketing Team App</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <SidebarLogo />
+            )}
           </Link>
-          {!isMobile && (
+          {!isMobile && !isCollapsed && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={toggleSidebar}
-                    className="p-1.5 rounded-md hover:bg-muted transition-colors opacity-100 group-hover/sidebar-wrapper:opacity-100"
-                    aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    className="p-1.5 rounded-md hover:bg-muted transition-colors opacity-100"
+                    aria-label="Collapse sidebar"
                   >
-                    {isCollapsed ? (
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                    )}
+                    <ChevronLeft className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  Collapse sidebar
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {!isMobile && isCollapsed && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={toggleSidebar}
+                    className="absolute top-4 right-2 p-1.5 rounded-md hover:bg-muted transition-colors opacity-0 group-hover/sidebar-wrapper:opacity-100"
+                    aria-label="Expand sidebar"
+                  >
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  Expand sidebar
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
