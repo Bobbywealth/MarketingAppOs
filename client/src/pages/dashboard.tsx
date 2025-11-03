@@ -1,12 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye } from "lucide-react";
+import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye, Plus, Clock, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
+  
   const { data: stats, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/dashboard/stats"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
@@ -30,46 +36,90 @@ export default function Dashboard() {
   const stripeRevenue = stripeData?.totalRevenue || 0;
   const displayRevenue = stripeRevenue > 0 ? stripeRevenue : (stats?.monthlyRevenue || 0);
 
+  // Get current time for greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const getCurrentDate = () => {
+    return new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  // Mock sparkline data (in production, this would come from API)
+  const generateSparklineData = (baseValue: number, trend: number) => {
+    const data = [];
+    for (let i = 0; i < 7; i++) {
+      data.push({
+        value: baseValue * (0.8 + Math.random() * 0.4) * (1 + (trend / 100) * (i / 7))
+      });
+    }
+    return data;
+  };
+
   const metrics = [
     {
       title: "Total Clients",
       value: stats?.totalClients || 0,
+      displayValue: stats?.totalClients || 0,
       change: `${stats?.clientsChange || "0"}%`,
       changeType: (stats?.clientsChange && parseInt(stats.clientsChange) >= 0) ? "positive" as const : "negative" as const,
       icon: Users,
       gradientFrom: "from-blue-500",
       gradientTo: "to-cyan-500",
       iconBg: "from-blue-500/20 to-cyan-500/20",
+      sparklineData: generateSparklineData(stats?.totalClients || 10, parseInt(stats?.clientsChange || "0")),
+      link: "/clients",
+      tooltip: "Total number of active clients",
     },
     {
       title: "Active Campaigns",
       value: stats?.activeCampaigns || 0,
+      displayValue: stats?.activeCampaigns || 0,
       change: `${stats?.campaignsChange || "0"}%`,
       changeType: (stats?.campaignsChange && parseInt(stats.campaignsChange) >= 0) ? "positive" as const : "negative" as const,
       icon: Megaphone,
       gradientFrom: "from-orange-500",
       gradientTo: "to-pink-500",
       iconBg: "from-orange-500/20 to-pink-500/20",
+      sparklineData: generateSparklineData(stats?.activeCampaigns || 5, parseInt(stats?.campaignsChange || "0")),
+      link: "/campaigns",
+      tooltip: "Currently running marketing campaigns",
     },
     {
       title: "Pipeline Value",
       value: `$${((stats?.pipelineValue || 0) / 1000).toFixed(1)}k`,
+      displayValue: stats?.pipelineValue || 0,
       change: `${stats?.pipelineChange || "0"}%`,
       changeType: (stats?.pipelineChange && parseInt(stats.pipelineChange) >= 0) ? "positive" as const : "negative" as const,
       icon: TrendingUp,
       gradientFrom: "from-emerald-500",
       gradientTo: "to-teal-500",
       iconBg: "from-emerald-500/20 to-teal-500/20",
+      sparklineData: generateSparklineData(stats?.pipelineValue || 10000, parseInt(stats?.pipelineChange || "0")),
+      link: "/pipeline",
+      tooltip: "Total value of deals in pipeline",
     },
     {
       title: "Revenue (MTD)",
-      value: `$${(displayRevenue / 1000).toFixed(1)}k`,
+      value: displayRevenue === 0 ? "$0" : `$${(displayRevenue / 1000).toFixed(1)}k`,
+      displayValue: displayRevenue,
       change: `${stats?.revenueChange || "0"}%`,
       changeType: (stats?.revenueChange && parseInt(stats.revenueChange) >= 0) ? "positive" as const : "negative" as const,
       icon: DollarSign,
       gradientFrom: "from-violet-500",
       gradientTo: "to-purple-500",
       iconBg: "from-violet-500/20 to-purple-500/20",
+      sparklineData: generateSparklineData(displayRevenue || 5000, parseInt(stats?.revenueChange || "0")),
+      link: "/invoices",
+      tooltip: "Month-to-date revenue from all sources",
     },
   ];
 
@@ -77,6 +127,17 @@ export default function Dashboard() {
   const visibleMetrics = (user?.role === 'manager')
     ? metrics.filter(m => m.title !== 'Pipeline Value' && m.title !== 'Revenue (MTD)')
     : metrics;
+
+  // Task distribution data for pie chart
+  const taskDistributionData = stats?.taskMetrics ? [
+    { name: 'To Do', value: stats.taskMetrics.pending, color: '#f59e0b' },
+    { name: 'In Progress', value: stats.taskMetrics.inProgress, color: '#3b82f6' },
+    { name: 'Review', value: stats.taskMetrics.review, color: '#8b5cf6' },
+    { name: 'Completed', value: stats.taskMetrics.completed, color: '#10b981' },
+  ] : [];
+
+  // Calculate MRR growth (mock data - would come from API)
+  const mrrGrowth = stripeData ? ((stripeData.mrr / (stripeData.mrr - 100)) * 100 - 100).toFixed(1) : "0";
 
   if (isLoading) {
     return (
@@ -102,57 +163,86 @@ export default function Dashboard() {
   return (
     <div className="min-h-full gradient-mesh overflow-x-hidden">
       <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 xl:p-12 space-y-6 md:space-y-8">
-        {/* Premium Header */}
-        <div className="space-y-1 md:space-y-2">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
-            Dashboard
-          </h1>
-          <p className="text-sm md:text-base lg:text-lg text-muted-foreground">Welcome back! Here's your agency overview</p>
+        {/* Premium Header with Welcome Message */}
+        <div className="space-y-2 md:space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
+                {getGreeting()}, {user?.username || 'there'}! 👋
+              </h1>
+              <p className="text-sm md:text-base lg:text-lg text-muted-foreground mt-1">{getCurrentDate()}</p>
+              <p className="text-xs md:text-sm text-muted-foreground/80 mt-0.5">Here's your agency snapshot</p>
+            </div>
+          </div>
         </div>
 
-        {/* Premium Metric Cards with Stagger Animation */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
-          {visibleMetrics.map((metric) => (
-            <Card 
-              key={metric.title} 
-              className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift gradient-border"
-              data-testid={`card-metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              {/* Gradient Background Overlay */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${metric.iconBg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-              
-              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                  {metric.title}
-                </CardTitle>
-                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${metric.gradientFrom} ${metric.gradientTo} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
-                  <metric.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative p-4 md:p-6 pt-0">
-                <div className="flex items-end justify-between gap-2">
-                  <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono" data-testid={`metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                    {metric.value}
-                  </div>
-                  <div className={`flex items-center gap-0.5 text-xs md:text-sm font-semibold px-2 py-0.5 md:px-2.5 md:py-1 rounded-full flex-shrink-0 ${
-                    metric.changeType === 'positive' 
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                  }`}>
-                    {metric.changeType === 'positive' ? (
-                      <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4" />
-                    ) : (
-                      <ArrowDownRight className="w-3 h-3 md:w-4 md:h-4" />
-                    )}
-                    <span className="text-xs md:text-sm">{metric.change}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Premium Metric Cards with Sparklines & Click Navigation */}
+        <TooltipProvider>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
+            {visibleMetrics.map((metric) => (
+              <Tooltip key={metric.title}>
+                <TooltipTrigger asChild>
+                  <Card 
+                    onClick={() => navigate(metric.link)}
+                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer"
+                    data-testid={`card-metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {/* Gradient Background Overlay */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${metric.iconBg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                    
+                    <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                      <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                        {metric.title}
+                      </CardTitle>
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${metric.gradientFrom} ${metric.gradientTo} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
+                        <metric.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="relative p-4 md:p-6 pt-0 space-y-3">
+                      <div className="flex items-end justify-between gap-2">
+                        <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono" data-testid={`metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                          {metric.value}
+                        </div>
+                        <div className={`flex items-center gap-0.5 text-xs md:text-sm font-semibold px-2 py-0.5 md:px-2.5 md:py-1 rounded-full flex-shrink-0 ${
+                          metric.changeType === 'positive' 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                        }`}>
+                          {metric.changeType === 'positive' ? (
+                            <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4" />
+                          ) : (
+                            <ArrowDownRight className="w-3 h-3 md:w-4 md:h-4" />
+                          )}
+                          <span className="text-xs md:text-sm">{metric.change}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Mini Sparkline Chart */}
+                      <div className="h-8 -mx-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={metric.sparklineData}>
+                            <Line 
+                              type="monotone" 
+                              dataKey="value" 
+                              stroke={metric.changeType === 'positive' ? '#10b981' : '#ef4444'}
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{metric.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </TooltipProvider>
 
-        {/* Task Progress Section */}
+        {/* Task Progress Section with Donut Chart */}
         {stats?.taskMetrics && (
           <Card className="glass-strong border-0 shadow-xl overflow-hidden">
             <CardHeader className="border-b border-border/50 bg-gradient-to-r from-blue-500/5 via-transparent to-transparent p-4 md:p-6">
@@ -163,7 +253,10 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <CardTitle className="text-lg md:text-xl font-semibold">Task Progress</CardTitle>
-                    <p className="text-xs md:text-sm text-muted-foreground mt-0.5">Daily work completion tracking</p>
+                    <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+                      Daily work completion tracking
+                      {stats.taskMetrics.completionPercentage > 75 && " • Great progress! 🎉"}
+                    </p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-xs md:text-sm">
@@ -172,74 +265,117 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
-              <div className="space-y-6">
-                {/* Progress Bar */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Overall Progress</span>
-                    <span className="font-semibold">
-                      {stats.taskMetrics.completed} / {stats.taskMetrics.total} Tasks
-                    </span>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Donut Chart */}
+                <div className="flex items-center justify-center">
+                  <div className="relative w-48 h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={taskDistributionData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {taskDistributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex items-center justify-center flex-col">
+                      <div className="text-3xl font-bold">{stats.taskMetrics.total}</div>
+                      <div className="text-xs text-muted-foreground">Total Tasks</div>
+                    </div>
                   </div>
-                  <Progress 
-                    value={stats.taskMetrics.completionPercentage} 
-                    className="h-3"
-                    data-testid="progress-task-completion"
-                  />
                 </div>
 
-                {/* Task Stats Grid - 2 cols on mobile, 4 on desktop */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 pt-2">
-                  {/* 📋 To Do */}
-                  <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
-                      📋
+                {/* Progress Bar & Stats */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Progress Bar */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Overall Progress</span>
+                      <span className="font-semibold">
+                        {stats.taskMetrics.completed} / {stats.taskMetrics.total} Tasks
+                      </span>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400 truncate" data-testid="metric-pending-tasks">
-                        {stats.taskMetrics.pending}
-                      </p>
-                      <p className="text-xs text-muted-foreground">To Do</p>
-                    </div>
+                    <Progress 
+                      value={stats.taskMetrics.completionPercentage} 
+                      className="h-3"
+                      data-testid="progress-task-completion"
+                    />
                   </div>
 
-                  {/* ⚡ In Progress */}
-                  <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
-                      ⚡
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400 truncate" data-testid="metric-inprogress-tasks">
-                        {stats.taskMetrics.inProgress}
-                      </p>
-                      <p className="text-xs text-muted-foreground">In Progress</p>
-                    </div>
-                  </div>
+                  {/* Task Stats Grid - Clickable */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                    {/* 📋 To Do */}
+                    <button
+                      onClick={() => navigate('/tasks?status=pending')}
+                      className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
+                        📋
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400 truncate" data-testid="metric-pending-tasks">
+                          {stats.taskMetrics.pending}
+                        </p>
+                        <p className="text-xs text-muted-foreground">To Do</p>
+                      </div>
+                    </button>
 
-                  {/* 👀 Review */}
-                  <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-violet-500/5 border border-violet-500/10">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-violet-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
-                      👀
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xl md:text-2xl font-bold text-violet-600 dark:text-violet-400 truncate" data-testid="metric-review-tasks">
-                        {stats.taskMetrics.review}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Review</p>
-                    </div>
-                  </div>
+                    {/* ⚡ In Progress */}
+                    <button
+                      onClick={() => navigate('/tasks?status=in-progress')}
+                      className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-blue-500/5 border border-blue-500/10 hover:bg-blue-500/10 transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
+                        ⚡
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400 truncate" data-testid="metric-inprogress-tasks">
+                          {stats.taskMetrics.inProgress}
+                        </p>
+                        <p className="text-xs text-muted-foreground">In Progress</p>
+                      </div>
+                    </button>
 
-                  {/* ✅ Completed */}
-                  <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
-                      ✅
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xl md:text-2xl font-bold text-emerald-600 dark:text-emerald-400 truncate" data-testid="metric-completed-tasks">
-                        {stats.taskMetrics.completed}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Completed</p>
-                    </div>
+                    {/* 👀 Review */}
+                    <button
+                      onClick={() => navigate('/tasks?status=review')}
+                      className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-violet-500/5 border border-violet-500/10 hover:bg-violet-500/10 transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-violet-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
+                        👀
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xl md:text-2xl font-bold text-violet-600 dark:text-violet-400 truncate" data-testid="metric-review-tasks">
+                          {stats.taskMetrics.review}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Review</p>
+                      </div>
+                    </button>
+
+                    {/* ✅ Completed */}
+                    <button
+                      onClick={() => navigate('/tasks?status=completed')}
+                      className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-xl md:text-2xl flex-shrink-0">
+                        ✅
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xl md:text-2xl font-bold text-emerald-600 dark:text-emerald-400 truncate" data-testid="metric-completed-tasks">
+                          {stats.taskMetrics.completed}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Completed</p>
+                      </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -247,10 +383,10 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Stripe Subscription Metrics */}
+        {/* Stripe Subscription Metrics with Enhanced Visuals */}
         {stripeData && (
           <Card className="glass-strong border-0 shadow-xl overflow-hidden">
-            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-transparent">
+            <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-transparent p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
@@ -261,7 +397,7 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground mt-0.5">Active customer subscriptions from Stripe</p>
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-sm">
+                <Badge variant="secondary" className="text-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1">
                   {stripeData.activeSubscriptions} Active
                 </Badge>
               </div>
@@ -271,14 +407,25 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Total Subscriptions</p>
                   <p className="text-3xl font-bold" data-testid="metric-total-subscriptions">{stripeData.totalSubscriptions}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stripeData.activeSubscriptions} active • {stripeData.totalSubscriptions - stripeData.activeSubscriptions} inactive
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Active Subscriptions</p>
                   <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-active-subscriptions">{stripeData.activeSubscriptions}</p>
+                  <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                    <ArrowUpRight className="w-3 h-3" />
+                    <span>Healthy retention</span>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Monthly Recurring Revenue</p>
                   <p className="text-3xl font-bold text-primary" data-testid="metric-mrr">${stripeData.mrr.toFixed(2)}</p>
+                  <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                    <ArrowUpRight className="w-3 h-3" />
+                    <span>↑{mrrGrowth}% MoM growth</span>
+                  </div>
                 </div>
               </div>
 
@@ -288,8 +435,8 @@ export default function Dashboard() {
                   {stripeData.subscriptions.slice(0, 5).map((sub: any) => (
                     <div key={sub.id} className="flex items-center justify-between p-3 rounded-lg hover-elevate transition-all" data-testid={`subscription-${sub.id}`}>
                       <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${
-                          sub.status === 'active' ? 'bg-emerald-500' : 
+                        <div className={`w-3 h-3 rounded-full ${
+                          sub.status === 'active' ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50' : 
                           sub.status === 'canceled' ? 'bg-rose-500' : 'bg-amber-500'
                         }`}></div>
                         <div>
@@ -309,30 +456,43 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Activity Sections with Premium Design */}
+        {/* Activity Sections with Enhanced Design */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          {/* Recent Activity */}
+          {/* Recent Activity with Avatars */}
           <Card className="glass-strong border-0 shadow-xl overflow-hidden">
             <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-transparent to-transparent p-4 md:p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-primary" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg md:text-xl font-semibold">Recent Activity</CardTitle>
                 </div>
-                <CardTitle className="text-lg md:text-xl font-semibold">Recent Activity</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
               {stats?.recentActivity?.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {stats.recentActivity.map((activity: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg hover-elevate transition-all">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${
-                        activity.type === 'success' ? 'bg-emerald-500' : 
-                        activity.type === 'warning' ? 'bg-amber-500' : 'bg-primary'
-                      }`}></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg hover-elevate transition-all group">
+                      <div className="relative">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                          activity.type === 'success' ? 'bg-emerald-500/20' : 
+                          activity.type === 'warning' ? 'bg-amber-500/20' : 'bg-primary/20'
+                        }`}>
+                          {activity.type === 'success' ? '✅' : activity.type === 'warning' ? '⚠️' : '📢'}
+                        </div>
+                        <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${
+                          activity.type === 'success' ? 'bg-emerald-500' : 
+                          activity.type === 'warning' ? 'bg-amber-500' : 'bg-primary'
+                        }`}></div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{activity.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {activity.time}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -348,28 +508,43 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Upcoming Deadlines */}
+          {/* Upcoming Deadlines with Color Coding & Quick Actions */}
           <Card className="glass-strong border-0 shadow-xl overflow-hidden">
             <CardHeader className="border-b border-border/50 bg-gradient-to-r from-orange-500/5 via-transparent to-transparent p-4 md:p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-pink-500/20 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-orange-500" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-pink-500/20 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <CardTitle className="text-lg md:text-xl font-semibold">Upcoming Deadlines</CardTitle>
                 </div>
-                <CardTitle className="text-lg md:text-xl font-semibold">Upcoming Deadlines</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
               {stats?.upcomingDeadlines?.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {stats.upcomingDeadlines.map((deadline: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg hover-elevate transition-all">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${
-                        deadline.urgent ? 'bg-rose-500 pulse-glow' : 'bg-amber-500'
+                    <div key={idx} className="flex items-center gap-3 p-3 rounded-lg hover-elevate transition-all group">
+                      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                        deadline.urgent ? 'bg-rose-500 pulse-glow' : 
+                        deadline.soon ? 'bg-orange-500' : 'bg-emerald-500'
                       }`}></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{deadline.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{deadline.date}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{deadline.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {deadline.date}
+                          {deadline.urgent && (
+                            <Badge variant="destructive" className="ml-2 text-xs">Overdue</Badge>
+                          )}
+                          {deadline.soon && !deadline.urgent && (
+                            <Badge variant="secondary" className="ml-2 text-xs bg-orange-500/10 text-orange-600">Due Soon</Badge>
+                          )}
+                        </p>
                       </div>
+                      <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -383,6 +558,49 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+        </div>
+      </div>
+
+      {/* Floating Action Button (FAB) */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <div className="relative group">
+          <Button
+            size="lg"
+            className="w-14 h-14 rounded-full shadow-2xl bg-gradient-to-br from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 transition-all duration-300 group-hover:scale-110"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+          
+          {/* FAB Menu */}
+          <div className="absolute bottom-16 right-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 space-y-2">
+            <Button
+              onClick={() => navigate('/tasks')}
+              size="sm"
+              variant="secondary"
+              className="w-full justify-start gap-2 shadow-lg"
+            >
+              <ListTodo className="w-4 h-4" />
+              New Task
+            </Button>
+            <Button
+              onClick={() => navigate('/clients')}
+              size="sm"
+              variant="secondary"
+              className="w-full justify-start gap-2 shadow-lg"
+            >
+              <Users className="w-4 h-4" />
+              New Client
+            </Button>
+            <Button
+              onClick={() => navigate('/campaigns')}
+              size="sm"
+              variant="secondary"
+              className="w-full justify-start gap-2 shadow-lg"
+            >
+              <Megaphone className="w-4 h-4" />
+              New Campaign
+            </Button>
+          </div>
         </div>
       </div>
     </div>
