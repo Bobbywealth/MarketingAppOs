@@ -266,22 +266,22 @@ function NavItem({
     <SidebarMenuButton 
       asChild 
       isActive={isActive}
-      className="group relative transition-all duration-200 ease-in-out hover:bg-primary/8 rounded-md"
+      className="group relative transition-all duration-200 ease-in-out rounded-md hover:bg-primary/10 hover:shadow-sm"
       data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}
     >
-      <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full py-2">
+      <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full py-2.5 px-2">
         {/* Active Accent Bar with Gradient */}
         {isActive && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b from-primary to-primary/80 rounded-r-full shadow-sm" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-primary to-primary/80 rounded-r-full shadow-sm" />
         )}
         
-        <div className={`transition-all duration-200 ${isActive ? 'text-primary scale-125' : 'text-muted-foreground group-hover:text-primary group-hover:scale-125'}`}>
-          <Icon className={`transition-all duration-200 ${isActive ? 'w-5 h-5' : 'w-4 h-4 group-hover:w-5 group-hover:h-5'}`} />
+        <div className={`transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`}>
+          <Icon className="w-4 h-4" />
         </div>
         
         {!isCollapsed && (
           <>
-            <span className={`font-medium transition-all duration-200 ${isActive ? 'text-foreground text-base' : 'text-muted-foreground group-hover:text-foreground group-hover:text-base'}`}>
+            <span className={`font-medium transition-colors duration-200 ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
               {item.title}
             </span>
             {showBadge && (
@@ -493,7 +493,7 @@ export function AppSidebar() {
     <Sidebar 
       collapsible="icon" 
       className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]"
-      style={{ "--sidebar-width": "200px" } as React.CSSProperties}
+      style={{ "--sidebar-width": "260px" } as React.CSSProperties}
     >
       <SidebarHeader className="px-3 py-5 border-b border-border/50">
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>

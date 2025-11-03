@@ -165,7 +165,7 @@ function AppContent() {
   }, [setLocation]);
 
   const sidebarStyle = {
-    "--sidebar-width": "12.5rem", // 200px - reduced for better dashboard spacing
+    "--sidebar-width": "16.25rem", // 260px - wider for better readability
     "--sidebar-width-icon": "3rem",
   };
 
