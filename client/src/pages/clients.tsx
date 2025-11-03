@@ -704,28 +704,45 @@ export default function Clients() {
 
                 <div className="space-y-2.5">
                   {client.email && (
-                    <div className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all">
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <a
+                      href={`mailto:${client.email}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all group/action hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover/action:bg-blue-500/20 transition-colors">
                         <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <span className="truncate text-muted-foreground">{client.email}</span>
-                    </div>
+                      <span className="truncate text-muted-foreground group-hover/action:text-blue-600 dark:group-hover/action:text-blue-400 transition-colors">{client.email}</span>
+                      <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/action:opacity-100 transition-opacity text-blue-600" />
+                    </a>
                   )}
                   {client.phone && (
-                    <div className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <a
+                      href={`tel:${client.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all group/action hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0 group-hover/action:bg-emerald-500/20 transition-colors">
                         <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <span className="truncate text-muted-foreground">{client.phone}</span>
-                    </div>
+                      <span className="truncate text-muted-foreground group-hover/action:text-emerald-600 dark:group-hover/action:text-emerald-400 transition-colors">{client.phone}</span>
+                      <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/action:opacity-100 transition-opacity text-emerald-600" />
+                    </a>
                   )}
                   {client.website && (
-                    <div className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                    <a
+                      href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all group/action hover:bg-purple-500/10 border border-transparent hover:border-purple-500/20 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 group-hover/action:bg-purple-500/20 transition-colors">
                         <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <span className="truncate text-muted-foreground">{client.website}</span>
-                    </div>
+                      <span className="truncate text-muted-foreground group-hover/action:text-purple-600 dark:group-hover/action:text-purple-400 transition-colors">{client.website}</span>
+                      <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/action:opacity-100 transition-opacity text-purple-600" />
+                    </a>
                   )}
 
                   {/* Social Media Links */}
