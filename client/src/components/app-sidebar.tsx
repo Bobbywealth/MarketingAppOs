@@ -25,7 +25,7 @@ import {
   ChevronRight,
   Circle
 } from "lucide-react";
-import { SidebarLogo } from "@/components/Logo";
+import { Logo } from "@/components/Logo";
 import {
   Sidebar,
   SidebarContent,
@@ -394,27 +394,25 @@ export function AppSidebar() {
   if (isClient) {
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
-        <SidebarHeader className="px-3 py-5 border-b border-border/50">
-          <div className={`flex items-center justify-center ${isCollapsed ? '' : ''}`}>
-            <Link href="/" className={`flex items-center justify-center group transition-opacity hover:opacity-80 ${isCollapsed ? 'w-full' : ''}`}>
-              {isCollapsed ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <SidebarLogo />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Marketing Team App</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <SidebarLogo />
-              )}
-            </Link>
-          </div>
+        <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
+          <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
+            {isCollapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-full flex justify-center">
+                      <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Marketing Team App</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Logo variant="auto" size="xl" className="!h-24 !w-auto mx-auto" />
+            )}
+          </Link>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -495,63 +493,61 @@ export function AppSidebar() {
       className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]"
       style={{ "--sidebar-width": "260px" } as React.CSSProperties}
     >
-      <SidebarHeader className="px-3 py-5 border-b border-border/50">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-          <Link href="/" className={`flex items-center justify-center group transition-opacity hover:opacity-80 ${isCollapsed ? 'w-full' : ''}`}>
-            {isCollapsed ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <SidebarLogo />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Marketing Team App</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              <SidebarLogo />
-            )}
-          </Link>
-          {!isMobile && !isCollapsed && (
+      <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center relative">
+        <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
+          {isCollapsed ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    onClick={toggleSidebar}
-                    className="p-1.5 rounded-md hover:bg-muted transition-colors opacity-100"
-                    aria-label="Collapse sidebar"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                  </button>
+                  <div className="w-full flex justify-center">
+                    <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  Collapse sidebar
+                  <p>Marketing Team App</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          ) : (
+            <Logo variant="auto" size="xl" className="!h-24 !w-auto mx-auto" />
           )}
-          {!isMobile && isCollapsed && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={toggleSidebar}
-                    className="absolute top-4 right-2 p-1.5 rounded-md hover:bg-muted transition-colors opacity-0 group-hover/sidebar-wrapper:opacity-100"
-                    aria-label="Expand sidebar"
-                  >
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  Expand sidebar
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
+        </Link>
+        {!isMobile && !isCollapsed && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleSidebar}
+                  className="absolute top-6 right-3 p-1.5 rounded-md hover:bg-muted transition-colors"
+                  aria-label="Collapse sidebar"
+                >
+                  <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                Collapse sidebar
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        {!isMobile && isCollapsed && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleSidebar}
+                  className="absolute top-6 right-2 p-1.5 rounded-md hover:bg-muted transition-colors opacity-0 group-hover/sidebar-wrapper:opacity-100"
+                  aria-label="Expand sidebar"
+                >
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                Expand sidebar
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </SidebarHeader>
       
       <SidebarContent className="data-[collapsible=icon]:overflow-hidden">
