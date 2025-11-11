@@ -109,6 +109,8 @@ export class DialpadService {
   }) {
     try {
       const url = `${DIALPAD_API_BASE}/call`;
+      console.log('📞 Making call with data:', JSON.stringify(data, null, 2));
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -116,7 +118,9 @@ export class DialpadService {
       });
 
       if (!response.ok) {
-        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(`❌ Dialpad Call API Error ${response.status}:`, errorText);
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
