@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,34 @@ export default function PhonePage() {
   const [activeTab, setActiveTab] = useState<"calls" | "sms" | "contacts">("calls");
   const [smsRecipient, setSmsRecipient] = useState("");
   const [smsMessage, setSmsMessage] = useState("");
+
+  // Handle URL parameters for pre-filling phone number from leads page
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const number = params.get('number');
+    const action = params.get('action');
+
+    if (number) {
+      if (action === 'sms') {
+        setSmsRecipient(number);
+        setActiveTab('sms');
+        toast({
+          title: "Ready to send SMS",
+          description: `Recipient: ${number}`,
+        });
+      } else if (action === 'call') {
+        setPhoneNumber(number);
+        setActiveTab('calls');
+        toast({
+          title: "Ready to call",
+          description: `Number: ${number}`,
+        });
+      }
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/phone');
+    }
+  }, [toast]);
 
   // Check Dialpad connection status
   const { data: dialpadStatus } = useQuery({

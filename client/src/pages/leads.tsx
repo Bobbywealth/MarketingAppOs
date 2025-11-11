@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { 
   UserPlus, 
   Search,
@@ -34,7 +35,8 @@ import {
   XCircle,
   Clock,
   Target,
-  Zap
+  Zap,
+  PhoneCall
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
@@ -59,6 +61,7 @@ function getStageBadge(stage: string): "default" | "secondary" | "outline" | "de
 
 export default function LeadsPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -413,21 +416,38 @@ export default function LeadsPage() {
                       }
                     }}
                     className="flex-1"
+                    disabled={!selectedLead.email}
                   >
                     <Mail className="w-4 h-4 mr-2" />
-                    Send Email
+                    Email
                   </Button>
                   <Button 
                     onClick={() => {
                       if (selectedLead.phone) {
-                        window.location.href = `tel:${selectedLead.phone}`;
+                        setSelectedLead(null);
+                        setLocation(`/phone?number=${encodeURIComponent(selectedLead.phone)}&action=call`);
                       }
                     }}
                     variant="outline"
                     className="flex-1"
+                    disabled={!selectedLead.phone}
                   >
-                    <Phone className="w-4 h-4 mr-2" />
+                    <PhoneCall className="w-4 h-4 mr-2" />
                     Call
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      if (selectedLead.phone) {
+                        setSelectedLead(null);
+                        setLocation(`/phone?number=${encodeURIComponent(selectedLead.phone)}&action=sms`);
+                      }
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={!selectedLead.phone}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    SMS
                   </Button>
                 </div>
               </div>
