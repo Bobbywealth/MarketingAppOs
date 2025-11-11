@@ -659,7 +659,7 @@ export default function PhonePage() {
                             <div className="flex items-center gap-3 flex-1">
                               <Avatar>
                                 <AvatarFallback>
-                                  {call.contactName?.charAt(0) || call.phoneNumber.charAt(0)}
+                                  {call.contactName?.charAt(0) || call.phoneNumber?.charAt(0) || '?'}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">

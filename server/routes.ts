@@ -6550,7 +6550,20 @@ Examples:
         offset: offset ? parseInt(offset as string) : undefined,
       });
 
-      res.json(callLogs);
+      // Transform Dialpad format to our CallLog format
+      const transformedCalls = callLogs.map((call: any) => ({
+        id: call.call_id || call.id,
+        type: call.direction === 'inbound' ? 'incoming' : 'outgoing',
+        contact: call.contact?.phone || call.contact?.name || 'Unknown',
+        contactName: call.contact?.name,
+        phoneNumber: call.contact?.phone || '',
+        duration: call.duration || 0,
+        timestamp: new Date(parseInt(call.date_start || call.date_connected || '0')).toISOString(),
+        notes: call.notes,
+        recordingUrl: call.recording_url
+      }));
+
+      res.json(transformedCalls);
     } catch (error: any) {
       console.error('Error fetching Dialpad calls:', error);
       res.status(500).json({ message: error.message || "Failed to fetch call logs" });
