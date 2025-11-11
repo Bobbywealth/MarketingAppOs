@@ -6651,9 +6651,20 @@ Examples:
         return res.status(400).json({ message: "text message is required" });
       }
 
+      // Get current Dialpad user ID (required for sending SMS)
+      let user_id: string | undefined;
+      try {
+        const userInfo = await dialpadService.getCurrentUser();
+        user_id = userInfo.id || userInfo.user_id;
+        console.log('📤 Sending SMS from user_id:', user_id);
+      } catch (err) {
+        return res.status(500).json({ message: "Could not get Dialpad user ID. Make sure your API key has user permissions." });
+      }
+
       const result = await dialpadService.sendSms({
         to_numbers,
         text,
+        from_user_id: user_id, // Changed from from_number to from_user_id
         from_number,
       });
 
