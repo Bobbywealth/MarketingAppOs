@@ -418,18 +418,18 @@ export default function Messages() {
   };
 
   return (
-    <div className="min-h-screen md:h-[calc(100vh-4rem)] flex flex-col overflow-x-hidden">
-      <div className="p-3 sm:p-4 md:p-6 border-b bg-white sticky top-0 z-10">
+    <div className="h-screen flex flex-col">
+      <div className="flex-shrink-0 p-3 sm:p-4 md:p-6 border-b bg-white">
         <div className="space-y-1 md:space-y-2">
           <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
           <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Internal communication with admins and staff</p>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
+      <div className="flex-1 flex flex-col md:grid md:grid-cols-12 min-h-0">
         {/* Team Members Sidebar - Now visible on mobile */}
-        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col h-[calc(100vh-10rem)] md:h-auto bg-gradient-to-b from-primary/5 via-transparent to-transparent`}>
-          <div className="p-3 sm:p-4 border-b space-y-3 bg-white/80 backdrop-blur-sm">
+        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col bg-gradient-to-b from-primary/5 via-transparent to-transparent`}>
+          <div className="flex-shrink-0 p-3 sm:p-4 border-b space-y-3 bg-white/80 backdrop-blur-sm">
             <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
               <p className="text-xs font-medium text-blue-900">👆 Tap a team member to start messaging</p>
             </div>
@@ -603,7 +603,7 @@ export default function Messages() {
         </div>
 
         {/* Messages Area - Now with back button on mobile */}
-        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col h-[calc(100vh-10rem)] md:h-auto`}>
+        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col`}>
           {!selectedUserId ? (
             <div className="flex-1 hidden md:flex items-center justify-center">
               <div className="text-center">
@@ -617,7 +617,7 @@ export default function Messages() {
           ) : (
             <>
               {/* Chat Header - Enhanced */}
-              <div className="p-3 sm:p-4 border-b bg-gradient-to-r from-white to-primary/5 sticky top-0 z-10 shadow-sm">
+              <div className="flex-shrink-0 p-3 sm:p-4 border-b bg-gradient-to-r from-white to-primary/5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {/* Back button for mobile */}
@@ -779,7 +779,7 @@ export default function Messages() {
               </ScrollArea>
 
               {/* Message Input */}
-              <div className="p-2 sm:p-3 md:p-4 border-t bg-white sticky bottom-0 space-y-3">
+              <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 border-t bg-white space-y-3">
                 {/* Voice Message Preview */}
                 {recordedBlob && (
                   <div className="bg-gray-50 rounded-lg p-3 border">
