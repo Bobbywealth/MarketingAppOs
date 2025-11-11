@@ -98,26 +98,21 @@ export default function PhonePage() {
     retry: false,
   });
 
-  // Fetch SMS messages from Dialpad API
-  const { data: smsMessages = [], isLoading: smsLoading } = useQuery<SmsMessage[]>({
-    queryKey: ["/api/dialpad/sms"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/dialpad/sms?limit=50", undefined);
-      return response.json();
-    },
-    refetchInterval: 15000, // Refresh every 15 seconds
-    enabled: false, // Temporarily disabled until we find correct endpoint
-    retry: false,
-  });
+  // SMS listing is not available via Dialpad REST API
+  // Only webhooks/events are supported for receiving SMS
+  // For now, SMS tab will show "send only" functionality
+  const smsMessages: SmsMessage[] = [];
+  const smsLoading = false;
 
   // Fetch contacts from Dialpad API
+  // Note: May require owner_id parameter or admin permissions for company contacts
   const { data: contacts = [], isLoading: contactsLoading } = useQuery<Contact[]>({
     queryKey: ["/api/dialpad/contacts"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/dialpad/contacts?limit=50", undefined);
       return response.json();
     },
-    enabled: false, // Temporarily disabled until we find correct endpoint  
+    enabled: isDialpadConfigured === true,
     retry: false,
   });
 

@@ -6599,25 +6599,14 @@ Examples:
   });
 
   // Get SMS messages
+  // NOTE: Dialpad does NOT provide a REST endpoint to list/retrieve SMS messages
+  // Only webhooks/events are supported for SMS received/sent notifications
+  // This endpoint returns 501 Not Implemented as SMS listing requires webhook integration
   app.get("/api/dialpad/sms", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      if (!dialpadService) {
-        return res.status(503).json({ message: "Dialpad API is not configured" });
-      }
-
-      const { start_time, end_time, limit, offset } = req.query;
-      const messages = await dialpadService.getSmsMessages({
-        start_time: start_time as string,
-        end_time: end_time as string,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
-      });
-
-      res.json(messages);
-    } catch (error: any) {
-      console.error('Error fetching SMS messages:', error);
-      res.status(500).json({ message: error.message || "Failed to fetch SMS messages" });
-    }
+    return res.status(501).json({ 
+      message: "SMS listing not supported by Dialpad REST API. Use webhooks/events instead.",
+      documentation: "https://developers.dialpad.com/docs/sms-events" 
+    });
   });
 
   // Send SMS
