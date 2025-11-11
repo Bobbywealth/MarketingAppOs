@@ -103,9 +103,9 @@ export class DialpadService {
   // Make an outbound call
   async makeCall(data: {
     phone_number: string;
+    user_id?: string; // Required by Dialpad API
     from_number?: string;
     from_extension_id?: string;
-    from_user_id?: string;
   }) {
     try {
       const url = `${DIALPAD_API_BASE}/call`;

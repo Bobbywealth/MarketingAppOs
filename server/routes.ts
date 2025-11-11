@@ -6598,9 +6598,20 @@ Examples:
         return res.status(400).json({ message: "to_number is required" });
       }
 
-      // Dialpad expects 'phone_number' not 'to_number'
+      // Get current Dialpad user ID (required for making calls)
+      let user_id: string | undefined;
+      try {
+        const userInfo = await dialpadService.getCurrentUser();
+        user_id = userInfo.id || userInfo.user_id;
+        console.log('📞 Making call from user_id:', user_id);
+      } catch (err) {
+        return res.status(500).json({ message: "Could not get Dialpad user ID. Make sure your API key has user permissions." });
+      }
+
+      // Dialpad expects 'phone_number' and 'user_id'
       const result = await dialpadService.makeCall({
         phone_number: to_number,
+        user_id,
         from_number,
         from_extension_id,
       });
