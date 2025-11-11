@@ -27,7 +27,7 @@ export default function AIBusinessManager() {
     {
       id: "1",
       role: "assistant",
-      content: "👋 Hello! I'm your AI Business Manager. I can help you manage everything across your Marketing Team App - from calendar events to clients, campaigns, messages, invoices, and more. What would you like me to do?",
+      content: `Hey there! 👋 I'm so excited to help you out today!\n\nThink of me as your personal assistant who never sleeps, never gets tired, and is ALWAYS ready to help. Whether you need to text a client, schedule a meeting, create an invoice, or just want to know what's on your plate today - I've got your back! 💪\n\nSo, what can I help you with? Just talk to me like you would a friend - no fancy commands needed! 😊`,
       timestamp: new Date(),
     },
   ]);
@@ -137,12 +137,12 @@ export default function AIBusinessManager() {
   };
 
   const quickActions = [
-    { label: "Show all clients", prompt: "Show me all clients" },
-    { label: "Create a task", prompt: "Create a new task" },
-    { label: "Check messages", prompt: "Show me recent messages" },
-    { label: "View calendar", prompt: "Show today's calendar events" },
-    { label: "List campaigns", prompt: "Show all active campaigns" },
-    { label: "Create invoice", prompt: "Create a new invoice" },
+    { label: "Show all clients", prompt: "Hey, can you show me all my clients?" },
+    { label: "Create a task", prompt: "I need to create a new task" },
+    { label: "Check messages", prompt: "Any new messages for me?" },
+    { label: "View calendar", prompt: "What's on my schedule today?" },
+    { label: "List campaigns", prompt: "Show me what campaigns are running" },
+    { label: "Create invoice", prompt: "Help me create an invoice" },
   ];
 
   if (!user || (user as any).role !== "admin") {
@@ -175,7 +175,7 @@ export default function AIBusinessManager() {
                 AI Business Manager
               </h1>
               <p className="text-sm md:text-base text-muted-foreground">
-                Your intelligent assistant for managing the entire platform
+                Your friendly AI sidekick - here to make your work life easier! ✨
               </p>
             </div>
           </div>
@@ -281,7 +281,7 @@ export default function AIBusinessManager() {
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask me to manage anything... (e.g., 'Create a client', 'Schedule a meeting', 'Send a message to Sarah')"
+                    placeholder="Just tell me what you need... try 'text Robert Laing' or 'what's my schedule today?' 💬"
                     disabled={isProcessing}
                     className="flex-1"
                   />
@@ -328,41 +328,44 @@ export default function AIBusinessManager() {
               </div>
 
               <div className="pt-4 border-t border-border/50 space-y-3">
-                <h3 className="font-semibold text-sm">What I Can Control:</h3>
+                <h3 className="font-semibold text-sm">Here's what I can help you with:</h3>
                 <div className="space-y-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Clients & Leads</span>
+                    <span>📞 Call or text your clients</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Calendar & Events</span>
+                    <span>📅 Manage your calendar</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Messages & Communication</span>
+                    <span>💬 Send team messages</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Campaigns & Content</span>
+                    <span>🚀 Launch campaigns</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Tasks & Projects</span>
+                    <span>✅ Create & track tasks</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Invoices & Billing</span>
+                    <span>💰 Generate invoices</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Subscriptions & Packages</span>
+                    <span>📊 Track analytics</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Team & Training</span>
+                    <span>👥 Manage your team</span>
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground italic pt-2">
+                  💡 Tip: Just ask naturally - I understand context!
+                </p>
               </div>
             </CardContent>
           </Card>
