@@ -441,7 +441,7 @@ export default function PhonePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {contacts
                       .filter(contact => 
-                        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         contact.company?.toLowerCase().includes(searchQuery.toLowerCase())
                       )
                       .map((contact) => (
@@ -450,7 +450,7 @@ export default function PhonePage() {
                             <div className="flex items-start gap-3">
                               <Avatar className="h-12 w-12">
                                 <AvatarFallback className="bg-primary/10 text-primary">
-                                  {contact.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                  {contact.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
