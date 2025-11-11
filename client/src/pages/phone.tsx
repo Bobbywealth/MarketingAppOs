@@ -101,6 +101,13 @@ export default function PhonePage() {
     }
   }, [toast]);
 
+  // Debug: Log SMS recipient changes
+  useEffect(() => {
+    if (smsRecipient) {
+      console.log('✅ SMS Recipient is set to:', smsRecipient);
+    }
+  }, [smsRecipient]);
+
   // Check Dialpad connection status
   const { data: dialpadStatus } = useQuery({
     queryKey: ["/api/test-dialpad"],
@@ -479,8 +486,13 @@ export default function PhonePage() {
                         placeholder="+1 (555) 123-4567"
                         value={smsRecipient}
                         onChange={(e) => setSmsRecipient(e.target.value)}
-                        className="font-mono"
+                        className={`font-mono ${smsRecipient ? 'ring-2 ring-primary/20 bg-primary/5' : ''}`}
                       />
+                      {smsRecipient && (
+                        <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                          ✓ Recipient ready
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -491,6 +503,7 @@ export default function PhonePage() {
                         onChange={(e) => setSmsMessage(e.target.value)}
                         rows={6}
                         className="resize-none"
+                        autoFocus={activeTab === "sms" && !!smsRecipient}
                       />
                       <p className="text-xs text-muted-foreground text-right">
                         {smsMessage.length} characters
