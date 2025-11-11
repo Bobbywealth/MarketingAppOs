@@ -6475,7 +6475,7 @@ Examples:
       console.log("🔑 API Key starts with:", process.env.DIALPAD_API_KEY.substring(0, 10) + "...");
 
       // Test with a simple calls endpoint (we know this exists)
-      const response = await fetch("https://www.dialpad.com/api/v2/calls?limit=1", {
+      const response = await fetch("https://dialpad.com/api/v2/call?limit=1", {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.DIALPAD_API_KEY}`,

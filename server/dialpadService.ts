@@ -59,7 +59,7 @@ export class DialpadService {
       };
       
       const queryString = this.buildQueryString(safeParams);
-      const url = `${DIALPAD_API_BASE}/calls${queryString}`;
+      const url = `${DIALPAD_API_BASE}/call${queryString}`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -83,7 +83,7 @@ export class DialpadService {
   // Get specific call details
   async getCallDetails(callId: string) {
     try {
-      const url = `${DIALPAD_API_BASE}/calls/${callId}`;
+      const url = `${DIALPAD_API_BASE}/call/${callId}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -108,7 +108,7 @@ export class DialpadService {
     from_user_id?: string;
   }) {
     try {
-      const url = `${DIALPAD_API_BASE}/calls`;
+      const url = `${DIALPAD_API_BASE}/call`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -143,7 +143,7 @@ export class DialpadService {
       };
       
       const queryString = this.buildQueryString(safeParams);
-      const url = `${DIALPAD_API_BASE}/messages${queryString}`;
+      const url = `${DIALPAD_API_BASE}/sms${queryString}`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -173,7 +173,7 @@ export class DialpadService {
     from_user_id?: string;
   }) {
     try {
-      const url = `${DIALPAD_API_BASE}/messages`;
+      const url = `${DIALPAD_API_BASE}/sms`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -340,7 +340,7 @@ export class DialpadService {
   async testConnection() {
     try {
       // Test by fetching a single call record
-      const url = `${DIALPAD_API_BASE}/calls?limit=1`;
+      const url = `${DIALPAD_API_BASE}/call?limit=1`;
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
