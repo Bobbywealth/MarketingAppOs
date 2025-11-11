@@ -33,8 +33,21 @@ async function syncEmailsForUser(storage: IStorage, userId: number) {
           tokenExpiresAt: refreshed.expiresOn,
         });
         console.log(`✓ Token refreshed for user ${userId}`);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         console.error(`❌ Failed to refresh token for user ${userId}:`, refreshError);
+        
+        // If token refresh failed due to invalid grant, mark account as inactive
+        if (refreshError.message && refreshError.message.includes('invalid_grant')) {
+          console.log(`⚠️  Marking email account as inactive for user ${userId} - requires re-authentication`);
+          try {
+            await storage.updateEmailAccount(account.id, {
+              isActive: false,
+            });
+          } catch (updateError) {
+            console.error(`Failed to update email account status:`, updateError);
+          }
+        }
+        
         return { success: false, reason: 'token_refresh_failed' };
       }
     }
