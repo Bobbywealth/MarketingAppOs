@@ -352,18 +352,32 @@ export class DialpadService {
   // Get current user info
   async getCurrentUser() {
     try {
-      const url = `${DIALPAD_API_BASE}/users/me`;
+      // Try to get users list (API key owner should be first)
+      const url = `${DIALPAD_API_BASE}/users?limit=1`;
+      console.log('🔍 Fetching Dialpad user from:', url);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Dialpad Users API Error ${response.status}:`, errorText);
         throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
       }
 
-      const user = await response.json();
-      console.log('✅ Got Dialpad user info:', user);
+      const data = await response.json();
+      console.log('✅ Got Dialpad users response:', JSON.stringify(data, null, 2));
+      
+      // Dialpad returns users in {items: [...]} format
+      const user = data.items?.[0] || data[0] || data;
+      
+      if (!user || !user.id) {
+        throw new Error('No user ID found in Dialpad response');
+      }
+      
+      console.log('✅ Using Dialpad user ID:', user.id);
       return user;
     } catch (error: any) {
       console.error('❌ Error fetching user info:', error.message);
