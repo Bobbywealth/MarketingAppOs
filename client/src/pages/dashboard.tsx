@@ -294,9 +294,36 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Progress Bar & Stats */}
+                  {/* Progress Bar & Stats */}
                 <div className="lg:col-span-2 space-y-6">
-                  {/* Progress Bar */}
+                  {/* Today's Completion Highlight */}
+                  {stats.completedTasksToday !== undefined && stats.completedTasksToday > 0 && (
+                    <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent rounded-lg p-4 border border-emerald-500/20">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                            <span className="text-2xl">🎯</span>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Completed Today</p>
+                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                              {stats.completedTasksToday} {stats.completedTasksToday === 1 ? 'Task' : 'Tasks'}
+                            </p>
+                          </div>
+                        </div>
+                        {stats.totalTasksToday > 0 && (
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Today's Progress</p>
+                            <p className="text-lg font-semibold">
+                              {Math.round((stats.completedTasksToday / stats.totalTasksToday) * 100)}%
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Overall Progress Bar */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Overall Progress</span>
