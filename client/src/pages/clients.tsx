@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare, PhoneCall } from "lucide-react";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare, PhoneCall, LayoutGrid, List } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,7 @@ export default function Clients() {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [showFilters, setShowFilters] = useState(false);
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { toast} = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
@@ -585,6 +586,28 @@ export default function Clients() {
               <SlidersHorizontal className="w-4 h-4 mr-2" />
               Filters
             </Button>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center border rounded-lg overflow-hidden">
+              <Button
+                variant={viewMode === "grid" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="rounded-none border-0"
+                title="Grid view"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="rounded-none border-0"
+                title="List view"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           
           {/* Bulk Actions */}
@@ -618,13 +641,13 @@ export default function Clients() {
         </div>
 
         {/* Premium Client Cards with Stagger Animation */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in">
+        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in" : "flex flex-col gap-3 stagger-fade-in"}>
           {filteredClients?.map((client) => (
             <Card 
               key={client.id}
               onDragOver={(e) => handleDragOver(e, client)}
               onDrop={(e) => handleDrop(e, client)}
-              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer ${
+              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 ${viewMode === "grid" ? "card-hover-lift" : ""} gradient-border cursor-pointer ${
                 draggedClient?.id === client.id ? 'opacity-50 scale-95' : ''
               } ${
                 dragOverClient?.id === client.id ? 'ring-2 ring-primary ring-offset-2' : ''
@@ -635,9 +658,9 @@ export default function Clients() {
               {/* Gradient Overlay on Hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               
-              <CardContent className="relative p-6">
+              <CardContent className={`relative ${viewMode === "grid" ? "p-6" : "p-4"}`}>
                 {/* Checkbox for selection */}
-                <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
+                <div className={`absolute z-10 ${viewMode === "grid" ? "top-4 left-4" : "top-4 left-4"}`} onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedClients.has(client.id)}
                     onCheckedChange={(checked) => {
@@ -653,7 +676,7 @@ export default function Clients() {
                 </div>
 
                 {/* Delete button */}
-                <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                <div className={`absolute z-10 opacity-0 group-hover:opacity-100 transition-opacity ${viewMode === "grid" ? "top-4 right-4" : "top-4 right-4"}`} onClick={(e) => e.stopPropagation()}>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -667,7 +690,7 @@ export default function Clients() {
                   </Button>
                 </div>
 
-                <div className="flex items-start gap-4 mb-4 mt-6">
+                <div className={`flex items-start gap-4 ${viewMode === "grid" ? "mb-4 mt-6" : "mt-6"}`}>
                   {/* Drag Handle - Only this triggers dragging */}
                   <div 
                     draggable
@@ -703,7 +726,7 @@ export default function Clients() {
                   </div>
                 </div>
 
-                <div className="space-y-2.5">
+                <div className={viewMode === "grid" ? "space-y-2.5" : "flex flex-wrap items-center gap-2"}>
                   {client.email && (
                     <a
                       href={`mailto:${client.email}`}
