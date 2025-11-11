@@ -31,7 +31,7 @@ import {
   TrendingDown,
   Minus
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format as formatDate } from "date-fns";
 
 interface CallLog {
   id: string;
@@ -218,8 +218,17 @@ export default function PhonePage() {
   };
 
   const formatDuration = (seconds: number) => {
+    if (!seconds || isNaN(seconds) || seconds < 0) return "0:00";
+    
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60);
+    
+    if (mins >= 60) {
+      const hours = Math.floor(mins / 60);
+      const remainingMins = mins % 60;
+      return `${hours}h ${remainingMins}m ${secs}s`;
+    }
+    
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -666,16 +675,19 @@ export default function PhonePage() {
                                 {getCallIcon(call.type)}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium">{call.contactName || call.phoneNumber}</p>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <p className="font-medium">{call.contactName || "Unknown"}</p>
+                                <p className="text-sm text-muted-foreground font-mono">{call.phoneNumber}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                   <span className="capitalize">{call.type}</span>
                                   <Minus className="w-3 h-3" />
                                   <span>{formatDuration(call.duration)}</span>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-xs text-muted-foreground">
-                                  {formatDistanceToNow(new Date(call.timestamp), { addSuffix: true })}
+                                <p className="text-sm font-medium">
+                                  {call.timestamp && !isNaN(new Date(call.timestamp).getTime())
+                                    ? formatDate(new Date(call.timestamp), "MMM d, h:mm a")
+                                    : "Invalid date"}
                                 </p>
                                 <Button
                                   variant="ghost"
