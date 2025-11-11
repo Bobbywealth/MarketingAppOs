@@ -106,7 +106,7 @@ export default function PhonePage() {
       return response.json();
     },
     refetchInterval: 15000, // Refresh every 15 seconds
-    enabled: isDialpadConfigured === true,
+    enabled: false, // Temporarily disabled until we find correct endpoint
     retry: false,
   });
 
@@ -117,7 +117,7 @@ export default function PhonePage() {
       const response = await apiRequest("GET", "/api/dialpad/contacts?limit=50", undefined);
       return response.json();
     },
-    enabled: isDialpadConfigured === true,
+    enabled: false, // Temporarily disabled until we find correct endpoint  
     retry: false,
   });
 
