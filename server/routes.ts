@@ -3749,6 +3749,34 @@ Examples:
   });
 
   // Content post routes
+  // Debug endpoint to check content_posts table structure
+  app.get("/api/debug/content-posts-table", async (_req: Request, res: Response) => {
+    try {
+      console.log("🔍 Checking content_posts table structure...");
+      
+      const tableCheck = await pool.query(`
+        SELECT column_name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_name = 'content_posts'
+        ORDER BY ordinal_position;
+      `);
+      
+      console.log("📊 Table structure:", tableCheck.rows);
+      
+      const hasmediaUrls = tableCheck.rows.some(r => r.column_name === 'media_urls');
+      
+      res.json({
+        exists: tableCheck.rows.length > 0,
+        columns: tableCheck.rows,
+        hasmediaUrls,
+        message: hasmediaUrls ? "✅ media_urls column exists!" : "❌ media_urls column is missing!"
+      });
+    } catch (error: any) {
+      console.error("❌ Debug check failed:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/content-posts", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
