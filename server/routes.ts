@@ -6698,13 +6698,23 @@ Examples:
         console.log('⚠️  Could not get user ID, fetching company contacts only');
       }
 
-      const contacts = await dialpadService.getContacts({
+      const rawContacts = await dialpadService.getContacts({
         limit: limit ? parseInt(limit as string) : undefined,
         offset: offset ? parseInt(offset as string) : undefined,
         search: search as string,
         owner_id,
       });
 
+      // Transform Dialpad contacts to match frontend interface
+      const contacts = (rawContacts || []).map((contact: any) => ({
+        id: contact.id || contact.contact_id || String(Math.random()),
+        name: contact.name || contact.full_name || contact.first_name || 'Unknown',
+        phones: contact.phones || contact.phone_numbers || [],
+        emails: contact.emails || contact.email_addresses || [],
+        company: contact.company || contact.organization || undefined,
+      }));
+
+      console.log('✅ Transformed contacts:', contacts.length);
       res.json(contacts);
     } catch (error: any) {
       console.error('Error fetching contacts:', error);
