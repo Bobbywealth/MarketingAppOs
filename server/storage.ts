@@ -350,9 +350,15 @@ export class DatabaseStorage implements IStorage {
       await db.update(leads).set({ assignedToId: null }).where(eq(leads.assignedToId, userId));
       console.log(`   ✓ Updated leads (unassigned)`);
       
-      // Delete or update lead activities
-      await db.delete(leadActivities).where(eq(leadActivities.userId, userId));
-      console.log(`   ✓ Deleted lead activities`);
+      // Delete or update lead activities (userId column might not exist in older databases)
+      try {
+        await db.delete(leadActivities).where(eq(leadActivities.userId, userId));
+        console.log(`   ✓ Deleted lead activities`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting lead activities:`, err.message);
+        }
+      }
       
       // Delete campaigns created by this user (since createdBy might not allow null)
       try {
