@@ -312,9 +312,15 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`🗑️ Starting deletion process for user ${userId}`);
       
-      // Delete push notification history (sentBy references users)
-      await db.delete(pushNotificationHistory).where(eq(pushNotificationHistory.sentBy, userId));
-      console.log(`   ✓ Deleted push notification history records`);
+      // Delete push notification history (sentBy references users) - optional table
+      try {
+        await db.delete(pushNotificationHistory).where(eq(pushNotificationHistory.sentBy, userId));
+        console.log(`   ✓ Deleted push notification history records`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting push notification history:`, err.message);
+        }
+      }
       
       // Delete notifications
       await db.delete(notifications).where(eq(notifications.userId, userId));
