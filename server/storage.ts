@@ -348,13 +348,27 @@ export class DatabaseStorage implements IStorage {
       await db.delete(leadActivities).where(eq(leadActivities.userId, userId));
       console.log(`   ✓ Deleted lead activities`);
       
-      // Update campaigns - set createdBy to null (or delete if preferred)
-      await db.update(campaigns).set({ createdBy: null }).where(eq(campaigns.createdBy, userId));
-      console.log(`   ✓ Updated campaigns`);
+      // Delete campaigns created by this user (since createdBy might not allow null)
+      try {
+        await db.delete(campaigns).where(eq(campaigns.createdBy, userId));
+        console.log(`   ✓ Deleted campaigns`);
+      } catch (err: any) {
+        // If delete fails, try to set to null (in case createdBy allows null)
+        try {
+          await db.update(campaigns).set({ createdBy: null }).where(eq(campaigns.createdBy, userId));
+          console.log(`   ✓ Updated campaigns (set createdBy to null)`);
+        } catch (err2: any) {
+          console.warn(`   ⚠ Warning handling campaigns:`, err2.message);
+        }
+      }
       
-      // Update task spaces - set createdBy to null (or delete if preferred)
-      await db.update(taskSpaces).set({ createdBy: null }).where(eq(taskSpaces.createdBy, userId));
-      console.log(`   ✓ Updated task spaces`);
+      // Delete task spaces created by this user (since createdBy is notNull)
+      try {
+        await db.delete(taskSpaces).where(eq(taskSpaces.createdBy, userId));
+        console.log(`   ✓ Deleted task spaces`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting task spaces:`, err.message);
+      }
       
       // Delete or update project feedback
       await db.delete(projectFeedback).where(eq(projectFeedback.userId, userId));
@@ -401,6 +415,15 @@ export class DatabaseStorage implements IStorage {
         if (!err.message?.includes('does not exist')) {
           console.warn(`   ⚠ Warning deleting push subscriptions:`, err.message);
         }
+      }
+      
+      // Delete sessions that might reference this user (sessions store user ID in JSON)
+      try {
+        await pool.query(`DELETE FROM sessions WHERE sess->>'passport'->>'user' = $1`, [String(userId)]);
+        console.log(`   ✓ Deleted user sessions`);
+      } catch (err: any) {
+        // Ignore if this fails - sessions will expire anyway
+        console.warn(`   ⚠ Warning deleting sessions:`, err.message);
       }
       
       // Finally, delete the user
