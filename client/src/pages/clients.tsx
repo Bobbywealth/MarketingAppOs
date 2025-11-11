@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare } from "lucide-react";
-import { Link } from "wouter";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare, PhoneCall } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function Clients() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -717,17 +718,38 @@ export default function Clients() {
                     </a>
                   )}
                   {client.phone && (
-                    <a
-                      href={`tel:${client.phone}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-2 text-sm p-2 rounded-lg hover-elevate transition-all group/action hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 cursor-pointer"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0 group-hover/action:bg-emerald-500/20 transition-colors">
+                    <div className="flex items-center gap-2 text-sm p-2 rounded-lg border border-transparent">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                         <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <span className="truncate text-muted-foreground group-hover/action:text-emerald-600 dark:group-hover/action:text-emerald-400 transition-colors">{client.phone}</span>
-                      <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/action:opacity-100 transition-opacity text-emerald-600" />
-                    </a>
+                      <span className="truncate text-muted-foreground flex-1">{client.phone}</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/phone?number=${encodeURIComponent(client.phone!)}&action=call`);
+                          }}
+                          title="Call this client"
+                        >
+                          <PhoneCall className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/phone?number=${encodeURIComponent(client.phone!)}&action=sms`);
+                          }}
+                          title="Send SMS"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
                   )}
                   {client.website && (
                     <a
@@ -915,9 +937,33 @@ export default function Clients() {
                             <Phone className="w-4 h-4 text-emerald-600" />
                             <span className="text-sm font-medium text-muted-foreground">Phone</span>
                           </div>
-                          <a href={`tel:${selectedClient.phone}`} className="text-foreground hover:text-primary transition-colors">
-                            {selectedClient.phone}
-                          </a>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-foreground">{selectedClient.phone}</span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedClient(null);
+                                  setLocation(`/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=call`);
+                                }}
+                              >
+                                <PhoneCall className="w-4 h-4 mr-1" />
+                                Call
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedClient(null);
+                                  setLocation(`/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=sms`);
+                                }}
+                              >
+                                <MessageSquare className="w-4 h-4 mr-1" />
+                                SMS
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       )}
                       {selectedClient.website && (
