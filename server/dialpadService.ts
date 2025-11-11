@@ -102,7 +102,7 @@ export class DialpadService {
 
   // Make an outbound call
   async makeCall(data: {
-    to_number: string;
+    phone_number: string;
     from_number?: string;
     from_extension_id?: string;
     from_user_id?: string;

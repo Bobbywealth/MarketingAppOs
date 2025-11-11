@@ -6598,8 +6598,9 @@ Examples:
         return res.status(400).json({ message: "to_number is required" });
       }
 
+      // Dialpad expects 'phone_number' not 'to_number'
       const result = await dialpadService.makeCall({
-        to_number,
+        phone_number: to_number,
         from_number,
         from_extension_id,
       });
