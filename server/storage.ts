@@ -406,6 +406,16 @@ export class DatabaseStorage implements IStorage {
         console.warn(`   ⚠ Warning updating client documents:`, err.message);
       }
       
+      // Delete SMS messages associated with this user
+      try {
+        await pool.query('DELETE FROM sms_messages WHERE user_id = $1', [userId]);
+        console.log(`   ✓ Deleted SMS messages`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting SMS messages:`, err.message);
+        }
+      }
+
       // Delete push subscriptions (if table exists)
       try {
         await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]);
