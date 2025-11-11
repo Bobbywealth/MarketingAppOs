@@ -3803,11 +3803,15 @@ Examples:
   });
 
   app.post("/api/content-posts", isAuthenticated, async (req: Request, res: Response) => {
+    console.log("=" .repeat(80));
+    console.log("🎨 POST /api/content-posts REQUEST RECEIVED");
+    console.log("=" .repeat(80));
     try {
       const user = req.user as any;
-      console.log("🎨 Creating content post");
-      console.log("👤 User:", user?.username, "Role:", user?.role);
-      console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+      console.log("👤 User:", user?.username, "Role:", user?.role, "ID:", user?.id);
+      console.log("📦 Request body:");
+      console.log(JSON.stringify(req.body, null, 2));
+      console.log("-".repeat(80));
       
       // If user is a client, they can only create content for themselves (pending approval)
       if (user.role === 'client') {
@@ -3880,13 +3884,17 @@ Examples:
       
       res.status(201).json(post);
     } catch (error: any) {
-      console.error("❌ Content post creation error:");
-      console.error("Error type:", error.constructor.name);
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+      console.error("=" .repeat(80));
+      console.error("❌ CONTENT POST CREATION ERROR");
+      console.error("=" .repeat(80));
+      console.error("Error type:", error?.constructor?.name || typeof error);
+      console.error("Error message:", error?.message || String(error));
+      console.error("Error stack:", error?.stack);
+      console.error("Full error object:", error);
+      console.error("=" .repeat(80));
       
       if (error instanceof ZodError) {
-        console.error("Validation errors:", error.errors);
+        console.error("📋 Validation errors:", JSON.stringify(error.errors, null, 2));
         return res.status(400).json({ 
           message: "Validation error", 
           errors: error.errors 
@@ -3894,8 +3902,8 @@ Examples:
       }
       
       return res.status(500).json({ 
-        message: "Internal server error",
-        error: error.message || "Unknown error"
+        message: error?.message || "Internal server error",
+        error: error?.message || "Unknown error"
       });
     }
   });
