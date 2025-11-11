@@ -6,6 +6,8 @@ import { createServer } from "http";
 import { initializeStripe } from "./stripeService";
 import { initializeEmailService } from "./emailService";
 import { initializeEmailParser } from "./emailParser";
+import { startEmailSyncService } from "./emailSyncService";
+import { storage } from "./storage";
 import { pool } from './db';
 
 const app = express();
@@ -59,6 +61,9 @@ app.use((req, res, next) => {
   
   await setupAuth(app);
   registerRoutes(app);
+
+  // Start background email sync service (syncs every 30 minutes)
+  startEmailSyncService(storage);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
