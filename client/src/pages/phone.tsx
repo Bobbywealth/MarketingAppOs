@@ -498,15 +498,23 @@ export default function PhonePage() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Message</label>
                       <Textarea
-                        placeholder="Type your message here..."
+                        placeholder="Type your message here... (Enter to send, Shift+Enter for new line)"
                         value={smsMessage}
                         onChange={(e) => setSmsMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (smsRecipient && smsMessage && !sendSmsMutation.isPending) {
+                              handleSendSms();
+                            }
+                          }
+                        }}
                         rows={6}
                         className="resize-none"
                         autoFocus={activeTab === "sms" && !!smsRecipient}
                       />
                       <p className="text-xs text-muted-foreground text-right">
-                        {smsMessage.length} characters
+                        {smsMessage.length} characters • Press Enter to send
                       </p>
                     </div>
 

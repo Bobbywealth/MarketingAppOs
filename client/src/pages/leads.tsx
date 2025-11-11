@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -66,6 +67,7 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -96,6 +98,29 @@ export default function LeadsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({ title: "Lead updated successfully" });
+    },
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/leads/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ 
+        title: "🗑️ Lead deleted", 
+        description: "The lead has been permanently removed" 
+      });
+      setSelectedLead(null);
+      setLeadToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete lead", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+      setLeadToDelete(null);
     },
   });
 
@@ -408,46 +433,56 @@ export default function LeadsPage() {
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-4 border-t">
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => {
+                        if (selectedLead.email) {
+                          window.location.href = `mailto:${selectedLead.email}`;
+                        }
+                      }}
+                      className="flex-1"
+                      disabled={!selectedLead.email}
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (selectedLead.phone) {
+                          setSelectedLead(null);
+                          setLocation(`/phone?number=${encodeURIComponent(selectedLead.phone)}&action=call`);
+                        }
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                      disabled={!selectedLead.phone}
+                    >
+                      <PhoneCall className="w-4 h-4 mr-2" />
+                      Call
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (selectedLead.phone) {
+                          setSelectedLead(null);
+                          setLocation(`/phone?number=${encodeURIComponent(selectedLead.phone)}&action=sms`);
+                        }
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                      disabled={!selectedLead.phone}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      SMS
+                    </Button>
+                  </div>
                   <Button 
-                    onClick={() => {
-                      if (selectedLead.email) {
-                        window.location.href = `mailto:${selectedLead.email}`;
-                      }
-                    }}
-                    className="flex-1"
-                    disabled={!selectedLead.email}
+                    onClick={() => setLeadToDelete(selectedLead)}
+                    variant="destructive"
+                    className="w-full"
                   >
-                    <Mail className="w-4 h-4 mr-2" />
-                    Email
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      if (selectedLead.phone) {
-                        setSelectedLead(null);
-                        setLocation(`/phone?number=${encodeURIComponent(selectedLead.phone)}&action=call`);
-                      }
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={!selectedLead.phone}
-                  >
-                    <PhoneCall className="w-4 h-4 mr-2" />
-                    Call
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      if (selectedLead.phone) {
-                        setSelectedLead(null);
-                        setLocation(`/phone?number=${encodeURIComponent(selectedLead.phone)}&action=sms`);
-                      }
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={!selectedLead.phone}
-                  >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    SMS
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Lead
                   </Button>
                 </div>
               </div>
@@ -750,6 +785,31 @@ export default function LeadsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!leadToDelete} onOpenChange={(open) => !open && setLeadToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{leadToDelete?.name}</strong>? This action cannot be undone and will permanently remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (leadToDelete) {
+                  deleteLeadMutation.mutate(leadToDelete.id);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLeadMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
