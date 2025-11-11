@@ -6652,6 +6652,21 @@ Examples:
     }
   });
 
+  // Get current Dialpad user info
+  app.get("/api/dialpad/user/me", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const userInfo = await dialpadService.getCurrentUser();
+      res.json(userInfo);
+    } catch (error: any) {
+      console.error('Error fetching Dialpad user info:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch user info" });
+    }
+  });
+
   // Get contacts
   app.get("/api/dialpad/contacts", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -6660,10 +6675,22 @@ Examples:
       }
 
       const { limit, offset, search } = req.query;
+      
+      // Try to get current user ID to fetch user-specific contacts
+      let owner_id: string | undefined;
+      try {
+        const userInfo = await dialpadService.getCurrentUser();
+        owner_id = userInfo.id || userInfo.user_id;
+        console.log('📇 Fetching contacts for owner_id:', owner_id);
+      } catch (err) {
+        console.log('⚠️  Could not get user ID, fetching company contacts only');
+      }
+
       const contacts = await dialpadService.getContacts({
         limit: limit ? parseInt(limit as string) : undefined,
         offset: offset ? parseInt(offset as string) : undefined,
         search: search as string,
+        owner_id,
       });
 
       res.json(contacts);

@@ -206,6 +206,7 @@ export class DialpadService {
     limit?: number;
     offset?: number;
     search?: string;
+    owner_id?: string;
   }) {
     try {
       // Cap limit at 50 (Dialpad API maximum)
@@ -217,12 +218,16 @@ export class DialpadService {
       const queryString = this.buildQueryString(safeParams);
       const url = `${DIALPAD_API_BASE}/contacts${queryString}`;
       
+      console.log('📇 Fetching contacts with params:', safeParams);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Dialpad Contacts API Error ${response.status}:`, errorText);
         throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
       }
 
@@ -341,6 +346,28 @@ export class DialpadService {
     } catch (error: any) {
       console.error('❌ Error fetching call stats:', error.message);
       throw new Error(error.message || 'Failed to fetch call stats');
+    }
+  }
+
+  // Get current user info
+  async getCurrentUser() {
+    try {
+      const url = `${DIALPAD_API_BASE}/users/me`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const user = await response.json();
+      console.log('✅ Got Dialpad user info:', user);
+      return user;
+    } catch (error: any) {
+      console.error('❌ Error fetching user info:', error.message);
+      throw error;
     }
   }
 
