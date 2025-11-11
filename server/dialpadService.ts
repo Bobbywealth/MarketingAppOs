@@ -174,7 +174,7 @@ export class DialpadService {
     to_number?: string;
     text: string;
     from_number?: string;
-    from_user_id?: string;
+    user_id?: string; // Dialpad expects 'user_id' not 'from_user_id'
   }) {
     try {
       const url = `${DIALPAD_API_BASE}/sms`;

@@ -6664,7 +6664,7 @@ Examples:
       const result = await dialpadService.sendSms({
         to_numbers,
         text,
-        from_user_id: user_id, // Changed from from_number to from_user_id
+        user_id, // Dialpad expects 'user_id' field for sender
         from_number,
       });
 
