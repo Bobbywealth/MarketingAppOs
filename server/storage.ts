@@ -382,33 +382,75 @@ export class DatabaseStorage implements IStorage {
         console.warn(`   ⚠ Warning deleting task spaces:`, err.message);
       }
       
-      // Delete or update project feedback
-      await db.delete(projectFeedback).where(eq(projectFeedback.userId, userId));
-      console.log(`   ✓ Deleted project feedback`);
+      // Delete or update project feedback (userId column might not exist in older databases)
+      try {
+        await db.delete(projectFeedback).where(eq(projectFeedback.userId, userId));
+        console.log(`   ✓ Deleted project feedback`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting project feedback:`, err.message);
+        }
+      }
       
-      // Delete calendar events created by this user
-      await db.delete(calendarEvents).where(eq(calendarEvents.createdBy, userId));
-      console.log(`   ✓ Deleted calendar events`);
+      // Delete calendar events created by this user (optional table)
+      try {
+        await db.delete(calendarEvents).where(eq(calendarEvents.createdBy, userId));
+        console.log(`   ✓ Deleted calendar events`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting calendar events:`, err.message);
+        }
+      }
       
-      // Delete emails
-      await db.delete(emails).where(eq(emails.userId, userId));
-      console.log(`   ✓ Deleted emails`);
+      // Delete emails (optional table)
+      try {
+        await db.delete(emails).where(eq(emails.userId, userId));
+        console.log(`   ✓ Deleted emails`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting emails:`, err.message);
+        }
+      }
       
-      // Delete email accounts
-      await db.delete(emailAccounts).where(eq(emailAccounts.userId, userId));
-      console.log(`   ✓ Deleted email accounts`);
+      // Delete email accounts (optional table)
+      try {
+        await db.delete(emailAccounts).where(eq(emailAccounts.userId, userId));
+        console.log(`   ✓ Deleted email accounts`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting email accounts:`, err.message);
+        }
+      }
       
-      // Delete activity logs
-      await db.delete(activityLogs).where(eq(activityLogs.userId, userId));
-      console.log(`   ✓ Deleted activity logs`);
+      // Delete activity logs (optional table)
+      try {
+        await db.delete(activityLogs).where(eq(activityLogs.userId, userId));
+        console.log(`   ✓ Deleted activity logs`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting activity logs:`, err.message);
+        }
+      }
       
-      // Delete user view preferences
-      await db.delete(userViewPreferences).where(eq(userViewPreferences.userId, userId));
-      console.log(`   ✓ Deleted user view preferences`);
+      // Delete user view preferences (optional table)
+      try {
+        await db.delete(userViewPreferences).where(eq(userViewPreferences.userId, userId));
+        console.log(`   ✓ Deleted user view preferences`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting user view preferences:`, err.message);
+        }
+      }
       
-      // Delete user notification preferences
-      await db.delete(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId));
-      console.log(`   ✓ Deleted user notification preferences`);
+      // Delete user notification preferences (optional table)
+      try {
+        await db.delete(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId));
+        console.log(`   ✓ Deleted user notification preferences`);
+      } catch (err: any) {
+        if (!err.message?.includes('does not exist')) {
+          console.warn(`   ⚠ Warning deleting user notification preferences:`, err.message);
+        }
+      }
       
       // Update client documents - set uploadedBy to null (it's varchar, so we'll use SQL)
       try {
