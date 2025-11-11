@@ -151,6 +151,30 @@ export default function PhonePage() {
     },
   });
 
+  // Format phone number to E.164 format (international format)
+  const formatPhoneNumber = (number: string): string => {
+    // Remove all non-digit characters except +
+    let cleaned = number.replace(/[^\d+]/g, '');
+    
+    // If it already starts with +, return as-is
+    if (cleaned.startsWith('+')) {
+      return cleaned;
+    }
+    
+    // If it starts with 1 and is 11 digits, prepend +
+    if (cleaned.startsWith('1') && cleaned.length === 11) {
+      return '+' + cleaned;
+    }
+    
+    // If it's 10 digits (US/Canada format), prepend +1
+    if (cleaned.length === 10) {
+      return '+1' + cleaned;
+    }
+    
+    // Otherwise, assume US/Canada and prepend +1
+    return '+1' + cleaned;
+  };
+
   const handleDialpadClick = (digit: string) => {
     setPhoneNumber(prev => prev + digit);
   };
@@ -163,7 +187,8 @@ export default function PhonePage() {
       });
       return;
     }
-    makeCallMutation.mutate(phoneNumber);
+    const formattedNumber = formatPhoneNumber(phoneNumber);
+    makeCallMutation.mutate(formattedNumber);
   };
 
   const handleHangup = () => {
@@ -180,8 +205,9 @@ export default function PhonePage() {
       });
       return;
     }
+    const formattedNumber = formatPhoneNumber(smsRecipient);
     sendSmsMutation.mutate({ 
-      to_numbers: [smsRecipient],
+      to_numbers: [formattedNumber],
       text: smsMessage 
     });
   };
