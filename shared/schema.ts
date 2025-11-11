@@ -659,6 +659,36 @@ export const emailAccountsRelations = relations(emailAccounts, ({ one }) => ({
   }),
 }));
 
+// SMS Messages table (for Dialpad webhook)
+export const smsMessages = pgTable("sms_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dialpadId: varchar("dialpad_id").unique(), // Unique ID from Dialpad
+  direction: varchar("direction").notNull(), // 'inbound' or 'outbound'
+  fromNumber: varchar("from_number").notNull(),
+  toNumber: varchar("to_number").notNull(),
+  text: text("text").notNull(),
+  status: varchar("status"), // 'sent', 'delivered', 'failed', etc.
+  userId: integer("user_id").references(() => users.id),
+  leadId: integer("lead_id").references(() => leads.id),
+  timestamp: timestamp("timestamp").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const smsMessagesRelations = relations(smsMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [smsMessages.userId],
+    references: [users.id],
+  }),
+  lead: one(leads, {
+    fields: [smsMessages.leadId],
+    references: [leads.id],
+  }),
+}));
+
+export const insertSmsMessageSchema = createInsertSchema(smsMessages);
+export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
+export type SmsMessage = typeof smsMessages.$inferSelect;
+
 // Role Permissions table
 export const rolePermissions = pgTable("role_permissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

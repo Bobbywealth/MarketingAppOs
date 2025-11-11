@@ -6623,15 +6623,28 @@ Examples:
     }
   });
 
-  // Get SMS messages
-  // NOTE: Dialpad does NOT provide a REST endpoint to list/retrieve SMS messages
-  // Only webhooks/events are supported for SMS received/sent notifications
-  // This endpoint returns 501 Not Implemented as SMS listing requires webhook integration
+  // Get SMS messages from database
   app.get("/api/dialpad/sms", isAuthenticated, async (req: Request, res: Response) => {
-    return res.status(501).json({ 
-      message: "SMS listing not supported by Dialpad REST API. Use webhooks/events instead.",
-      documentation: "https://developers.dialpad.com/docs/sms-events" 
-    });
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      // Fetch SMS messages from database
+      const { smsMessages: smsMessagesTable } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      
+      const messages = await db
+        .select()
+        .from(smsMessagesTable)
+        .where(sql`user_id = ${userId}`)
+        .orderBy(desc(smsMessagesTable.timestamp))
+        .limit(100);
+
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching SMS messages:', error);
+      res.status(500).json({ message: error.message || "Failed to fetch SMS messages" });
+    }
   });
 
   // Send SMS
@@ -6672,6 +6685,84 @@ Examples:
     } catch (error: any) {
       console.error('Error sending SMS:', error);
       res.status(500).json({ message: error.message || "Failed to send SMS" });
+    }
+  });
+
+  // Dialpad SMS Webhook (NO authentication - Dialpad will call this)
+  app.post("/webhooks/dialpad/sms", async (req: Request, res: Response) => {
+    try {
+      console.log('📨 Dialpad SMS Webhook received:', JSON.stringify(req.body, null, 2));
+      
+      const event = req.body;
+      
+      // Dialpad sends different event types:
+      // - sms.sent: When SMS is sent successfully
+      // - sms.received: When SMS is received
+      // - sms.delivery_status: When delivery status updates
+      
+      if (!event || !event.type) {
+        console.warn('⚠️  Invalid webhook payload - no event type');
+        return res.status(400).json({ error: 'Invalid webhook payload' });
+      }
+
+      const { smsMessages: smsMessagesTable } = await import("@shared/schema");
+      
+      // Handle SMS received
+      if (event.type === 'sms.received' || event.type === 'sms.sent') {
+        const smsData = event.data || event;
+        
+        // Check if this message already exists
+        if (smsData.id) {
+          const existing = await db
+            .select()
+            .from(smsMessagesTable)
+            .where(sql`dialpad_id = ${smsData.id}`)
+            .limit(1);
+            
+          if (existing.length > 0) {
+            console.log('⏭️  SMS message already exists, skipping');
+            return res.status(200).json({ success: true, message: 'Already processed' });
+          }
+        }
+        
+        // Store the SMS message
+        await db.insert(smsMessagesTable).values({
+          dialpadId: smsData.id || smsData.message_id,
+          direction: event.type === 'sms.received' ? 'inbound' : 'outbound',
+          fromNumber: smsData.from_number || smsData.from,
+          toNumber: smsData.to_number || smsData.to || (smsData.to_numbers && smsData.to_numbers[0]),
+          text: smsData.text || smsData.body || '',
+          status: smsData.status || 'delivered',
+          timestamp: smsData.timestamp ? new Date(smsData.timestamp) : new Date(),
+          userId: null, // We don't know the user from webhook - could be enhanced later
+        });
+        
+        console.log('✅ SMS message stored successfully');
+      }
+      
+      // Handle delivery status updates
+      if (event.type === 'sms.delivery_status') {
+        const smsData = event.data || event;
+        
+        // Update existing message status
+        if (smsData.id || smsData.message_id) {
+          await db
+            .update(smsMessagesTable)
+            .set({ 
+              status: smsData.status || 'delivered' 
+            })
+            .where(sql`dialpad_id = ${smsData.id || smsData.message_id}`);
+            
+          console.log('✅ SMS status updated');
+        }
+      }
+      
+      // Always respond with 200 OK to Dialpad
+      res.status(200).json({ success: true });
+    } catch (error: any) {
+      console.error('❌ Error processing Dialpad SMS webhook:', error);
+      // Still return 200 to prevent Dialpad from retrying
+      res.status(200).json({ success: false, error: error.message });
     }
   });
 

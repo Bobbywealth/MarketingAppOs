@@ -47,12 +47,14 @@ interface CallLog {
 
 interface SmsMessage {
   id: string;
+  dialpadId?: string;
   direction: "inbound" | "outbound";
-  from_number: string;
-  to_numbers: string[];
+  fromNumber: string;
+  toNumber: string;
   text: string;
   timestamp: string;
   status?: string;
+  createdAt?: string;
 }
 
 interface Contact {
@@ -119,8 +121,17 @@ export default function PhonePage() {
     retry: false,
   });
 
-  // SMS listing is not available via Dialpad REST API
-  const smsMessages: SmsMessage[] = [];
+  // Fetch SMS messages from database (populated by webhook)
+  const { data: smsMessages = [], isLoading: smsLoading } = useQuery<SmsMessage[]>({
+    queryKey: ["/api/dialpad/sms"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/dialpad/sms", undefined);
+      return response.json();
+    },
+    refetchInterval: 10000, // Refresh every 10 seconds
+    enabled: isDialpadConfigured === true,
+    retry: false,
+  });
 
   // Fetch contacts from Dialpad API
   const { data: contacts = [], isLoading: contactsLoading } = useQuery<Contact[]>({
@@ -684,14 +695,76 @@ export default function PhonePage() {
 
                   {/* SMS History */}
                   {activeTab === "sms" && (
-                    <div className="flex flex-col items-center justify-center h-64 text-center p-8">
-                      <MessageSquare className="w-16 h-16 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">SMS History Not Available</h3>
-                      <p className="text-sm text-muted-foreground max-w-md">
-                        Dialpad's REST API doesn't support listing SMS messages. 
-                        To view SMS history, you'll need to implement webhooks or check your Dialpad dashboard.
-                      </p>
-                    </div>
+                    smsLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <p className="text-sm text-muted-foreground">Loading SMS messages...</p>
+                      </div>
+                    ) : smsMessages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+                        <MessageSquare className="w-16 h-16 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No SMS Messages Yet</h3>
+                        <p className="text-sm text-muted-foreground max-w-md">
+                          SMS messages will appear here once you send or receive them via Dialpad.
+                          Make sure your webhook is configured in Dialpad settings.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {smsMessages
+                          .filter(msg => 
+                            msg.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            msg.fromNumber?.includes(searchQuery) ||
+                            msg.toNumber?.includes(searchQuery)
+                          )
+                          .map((msg) => (
+                            <div 
+                              key={msg.id}
+                              className={`p-4 rounded-lg border transition-colors ${
+                                msg.direction === 'inbound' 
+                                  ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-200' 
+                                  : 'bg-gray-50 dark:bg-gray-900 border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                                  msg.direction === 'inbound' 
+                                    ? 'bg-blue-100 text-blue-600' 
+                                    : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  <MessageSquare className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="font-medium">
+                                      {msg.direction === 'inbound' ? 'From' : 'To'}: {msg.direction === 'inbound' ? msg.fromNumber : msg.toNumber}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
+                                    </p>
+                                  </div>
+                                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                                  {msg.status && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Status: {msg.status}
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const number = msg.direction === 'inbound' ? msg.fromNumber : msg.toNumber;
+                                    setSmsRecipient(number);
+                                    setActiveTab("sms");
+                                  }}
+                                >
+                                  Reply
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )
                   )}
 
                   {/* Contacts List */}
