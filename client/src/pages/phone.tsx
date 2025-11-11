@@ -804,21 +804,27 @@ export default function PhonePage() {
                                       {contact.company}
                                     </p>
                                   )}
-                                  {contact.phones && contact.phones.length > 0 && (
+                                  {contact.phones && contact.phones.length > 0 ? (
                                     <div className="mt-2 space-y-1">
                                       {contact.phones.map((phone, idx) => (
                                         <div key={idx} className="flex items-center gap-2 text-sm">
                                           <Phone className="w-3 h-3 text-muted-foreground" />
-                                          <span className="text-muted-foreground font-mono">{phone.value}</span>
-                                          <div className="flex gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <span className="text-muted-foreground font-mono flex-1">{phone.value}</span>
+                                          <div className="flex gap-1">
                                             <Button
                                               variant="ghost"
                                               size="sm"
                                               className="h-7 px-2"
-                                              onClick={() => {
+                                              onClick={(e) => {
+                                                e.stopPropagation();
                                                 setPhoneNumber(phone.value);
                                                 setActiveTab("calls");
+                                                toast({
+                                                  title: "Ready to call",
+                                                  description: phone.value,
+                                                });
                                               }}
+                                              title="Call this number"
                                             >
                                               <PhoneCall className="w-3 h-3" />
                                             </Button>
@@ -826,10 +832,16 @@ export default function PhonePage() {
                                               variant="ghost"
                                               size="sm"
                                               className="h-7 px-2"
-                                              onClick={() => {
+                                              onClick={(e) => {
+                                                e.stopPropagation();
                                                 setSmsRecipient(phone.value);
                                                 setActiveTab("sms");
+                                                toast({
+                                                  title: "Ready to send SMS",
+                                                  description: phone.value,
+                                                });
                                               }}
+                                              title="Send SMS"
                                             >
                                               <MessageSquare className="w-3 h-3" />
                                             </Button>
@@ -837,6 +849,8 @@ export default function PhonePage() {
                                         </div>
                                       ))}
                                     </div>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground mt-2">No phone number</p>
                                   )}
                                   {contact.emails && contact.emails.length > 0 && (
                                     <div className="mt-2 space-y-1">
