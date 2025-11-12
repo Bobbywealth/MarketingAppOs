@@ -23,12 +23,13 @@ import { SimpleUploader } from "@/components/SimpleUploader";
 type ViewType = "day" | "week" | "month";
 
 // Form schema extending the insert schema
-const formSchema = insertContentPostSchema.extend({
+const formSchema = z.object({
+  clientId: z.string().min(1, "Client is required"),
+  platforms: z.array(z.string()).min(1, "Select at least one platform"),
+  title: z.string().optional(),
+  caption: z.string().optional(),
+  mediaUrl: z.string().optional(),
   scheduledFor: z.string().optional(),
-}).omit({
-  approvalStatus: true,
-  approvedBy: true,
-  publishedAt: true,
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -165,6 +166,26 @@ export default function Content() {
 
   const handleCreatePost = (values: FormValues) => {
     console.log("📝 Creating content post with values:", values);
+    
+    // Validate required fields
+    if (!values.clientId) {
+      toast({
+        title: "❌ Client Required",
+        description: "Please scroll up and select a client for this post",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!values.platforms || values.platforms.length === 0) {
+      toast({
+        title: "❌ Platform Required",
+        description: "Please select at least one platform",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const postData: InsertContentPost = {
       clientId: values.clientId,
       platforms: values.platforms,
@@ -366,6 +387,14 @@ export default function Content() {
                   <DialogTitle className="text-2xl">Create Content Post</DialogTitle>
                   <DialogDescription>Schedule a new social media post for your client</DialogDescription>
                 </DialogHeader>
+                
+                {/* Required Fields Notice */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                    ℹ️ Required: Select a <strong>Client</strong> and at least one <strong>Platform</strong>
+                  </p>
+                </div>
+                
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(handleCreatePost)} className="space-y-4 pb-4">
                     <FormField
@@ -535,7 +564,16 @@ export default function Content() {
                       <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={createPostMutation.isPending} data-testid="button-submit-post">
+                      <Button 
+                        type="submit" 
+                        disabled={createPostMutation.isPending} 
+                        data-testid="button-submit-post"
+                        onClick={(e) => {
+                          console.log("🔘 Create Post button clicked!");
+                          console.log("Form values:", form.getValues());
+                          console.log("Form errors:", form.formState.errors);
+                        }}
+                      >
                         {createPostMutation.isPending ? "Creating..." : "Create Post"}
                       </Button>
                     </div>
