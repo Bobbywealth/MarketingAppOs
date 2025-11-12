@@ -49,13 +49,16 @@ export default function ClientContent() {
 
   const createPostMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("🚀 Sending to API:", data);
       const response = await apiRequest("POST", "/api/content-posts", data);
-      return response.json();
+      const json = await response.json();
+      console.log("✅ API Response:", json);
+      return json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
       toast({
-        title: "Content Uploaded!",
+        title: "✅ Content Uploaded!",
         description: "Your content has been submitted for approval.",
       });
       setUploadDialogOpen(false);
@@ -67,16 +70,19 @@ export default function ClientContent() {
         scheduledTime: "",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("❌ Upload error:", error);
       toast({
-        title: "Error",
-        description: "Failed to upload content. Please try again.",
+        title: "❌ Upload Failed",
+        description: error?.message || "Failed to upload content. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const handleUploadSubmit = () => {
+    console.log("📤 Client uploading content:", uploadForm);
+    
     if (!uploadForm.platform || !uploadForm.caption) {
       toast({
         title: "Missing Fields",
@@ -90,13 +96,18 @@ export default function ClientContent() {
       ? `${uploadForm.scheduledFor}T${uploadForm.scheduledTime}:00Z`
       : null;
 
-    createPostMutation.mutate({
-      platform: uploadForm.platform,
-      caption: uploadForm.caption,
-      mediaUrl: uploadForm.mediaUrl || null,
+    // Format data to match backend schema
+    const postData = {
+      platforms: [uploadForm.platform], // Backend expects array
+      title: uploadForm.caption.substring(0, 50) || "Client Upload", // Use first part of caption as title
+      content: uploadForm.caption, // Backend expects 'content' not 'caption'
+      mediaUrls: uploadForm.mediaUrl ? [uploadForm.mediaUrl] : [], // Backend expects array
       scheduledFor: scheduledDateTime,
       approvalStatus: "pending", // Client-uploaded content starts as pending
-    });
+    };
+
+    console.log("📤 Formatted post data:", postData);
+    createPostMutation.mutate(postData);
   };
 
   const getPlatformIcon = (platform: string) => {
