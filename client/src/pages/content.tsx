@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Download } from "lucide-react";
+import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Download, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function Content() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<ContentPost | null>(null);
   const [view, setView] = useState<ViewType>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 0 }));
@@ -128,6 +129,35 @@ export default function Content() {
     },
   });
 
+  const updatePostMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertContentPost> }) => {
+      console.log("🔄 Updating post:", id, data);
+      const response = await apiRequest("PATCH", `/api/content-posts/${id}`, data);
+      const json = await response.json();
+      console.log("✅ Update response:", json);
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
+      setDialogOpen(false);
+      setEditingPost(null);
+      form.reset();
+      setUploadedMediaUrl(null);
+      toast({ 
+        title: "✅ Post updated successfully",
+        description: "Your changes have been saved"
+      });
+    },
+    onError: (error: any) => {
+      console.error("❌ Update error:", error);
+      toast({ 
+        title: "Error updating post", 
+        description: error?.message || "Failed to update post",
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Drag and drop handlers
   const handleDragStart = (post: ContentPost) => {
     setDraggedPost(post);
@@ -165,7 +195,7 @@ export default function Content() {
   };
 
   const handleCreatePost = (values: FormValues) => {
-    console.log("📝 Creating content post with values:", values);
+    console.log(editingPost ? "✏️ Updating post" : "📝 Creating post", "with values:", values);
     
     // Validate required fields
     if (!values.clientId) {
@@ -193,11 +223,37 @@ export default function Content() {
       content: values.caption || "",
       mediaUrls: uploadedMediaUrl ? [uploadedMediaUrl] : (values.mediaUrl ? [values.mediaUrl] : []),
       scheduledFor: values.scheduledFor || null,
-      approvalStatus: "draft", // Add default approval status
+      approvalStatus: editingPost?.approvalStatus || "draft",
     };
 
-    console.log("📤 Submitting post data:", postData);
-    createPostMutation.mutate(postData);
+    if (editingPost) {
+      console.log("📤 Updating post:", editingPost.id, postData);
+      updatePostMutation.mutate({ id: editingPost.id, data: postData });
+    } else {
+      console.log("📤 Creating new post:", postData);
+      createPostMutation.mutate(postData);
+    }
+  };
+
+  const handleEditPost = (post: ContentPost) => {
+    console.log("📝 Editing post:", post);
+    setEditingPost(post);
+    
+    // Populate form with post data
+    form.reset({
+      clientId: post.clientId,
+      platforms: Array.isArray(post.platforms) ? post.platforms : [],
+      title: post.title || "",
+      caption: post.content || "",
+      scheduledFor: post.scheduledFor ? format(new Date(post.scheduledFor), "yyyy-MM-dd'T'HH:mm") : "",
+    });
+    
+    // Set media URL if exists
+    if (post.mediaUrl) {
+      setUploadedMediaUrl(post.mediaUrl);
+    }
+    
+    setDialogOpen(true);
   };
 
   const getStatusGradient = (status: string) => {
@@ -384,8 +440,12 @@ export default function Content() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl">Create Content Post</DialogTitle>
-                  <DialogDescription>Schedule a new social media post for your client</DialogDescription>
+                  <DialogTitle className="text-2xl">
+                    {editingPost ? "Edit Content Post" : "Create Content Post"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingPost ? "Update your social media post" : "Schedule a new social media post for your client"}
+                  </DialogDescription>
                 </DialogHeader>
                 
                 {/* Required Fields Notice */}
@@ -561,20 +621,32 @@ export default function Content() {
                     />
 
                     <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          setDialogOpen(false);
+                          setEditingPost(null);
+                          form.reset();
+                          setUploadedMediaUrl(null);
+                        }}
+                      >
                         Cancel
                       </Button>
                       <Button 
                         type="submit" 
-                        disabled={createPostMutation.isPending} 
+                        disabled={createPostMutation.isPending || updatePostMutation.isPending} 
                         data-testid="button-submit-post"
                         onClick={(e) => {
-                          console.log("🔘 Create Post button clicked!");
+                          console.log("🔘 Button clicked!", editingPost ? "Editing" : "Creating");
                           console.log("Form values:", form.getValues());
                           console.log("Form errors:", form.formState.errors);
                         }}
                       >
-                        {createPostMutation.isPending ? "Creating..." : "Create Post"}
+                        {editingPost 
+                          ? (updatePostMutation.isPending ? "Updating..." : "Update Post")
+                          : (createPostMutation.isPending ? "Creating..." : "Create Post")
+                        }
                       </Button>
                     </div>
                   </form>
@@ -746,27 +818,46 @@ export default function Content() {
                           </p>
                         )}
 
-                        {post.approvalStatus === "pending" && (
-                          <div className="flex gap-1 pt-1">
-                            <Button
-                              size="sm"
-                              className="flex-1 h-6 text-xs"
-                              onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "approved" })}
-                              data-testid={`button-approve-${post.id}`}
-                            >
-                              <Check className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="flex-1 h-6 text-xs"
-                              onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "rejected" })}
-                              data-testid={`button-reject-${post.id}`}
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
+                        {/* Action buttons */}
+                        <div className="flex gap-1 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-xs flex items-center gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditPost(post);
+                            }}
+                            title="Edit post"
+                          >
+                            <Edit className="w-3 h-3" />
+                            Edit
+                          </Button>
+
+                          {post.approvalStatus === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="flex-1 h-6 text-xs"
+                                onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "approved" })}
+                                data-testid={`button-approve-${post.id}`}
+                                title="Approve post"
+                              >
+                                <Check className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="flex-1 h-6 text-xs"
+                                onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "rejected" })}
+                                data-testid={`button-reject-${post.id}`}
+                                title="Reject post"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
