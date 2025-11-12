@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import { pool, db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
@@ -11,6 +11,7 @@ import { createCheckoutSession } from "./stripeService";
 import { dialpadService } from "./dialpadService";
 import {
   insertClientSchema,
+  insertClientSocialStatsSchema,
   insertCampaignSchema,
   insertTaskSchema,
   insertTaskCommentSchema,
@@ -25,6 +26,7 @@ import {
   insertAnalyticsMetricSchema,
   insertLeadActivitySchema,
   insertLeadAutomationSchema,
+  clientSocialStats,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import Stripe from "stripe";
@@ -2503,6 +2505,74 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
+
+  // Client Social Media Stats routes (Manual Entry)
+  app.get("/api/clients/:clientId/social-stats", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const stats = await db.select().from(clientSocialStats).where(eq(clientSocialStats.clientId, req.params.clientId));
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching social stats:", error);
+      res.status(500).json({ message: "Failed to fetch social stats" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/social-stats", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const validatedData = insertClientSocialStatsSchema.parse({
+        ...req.body,
+        clientId: req.params.clientId,
+        updatedBy: user.id,
+        lastUpdated: new Date(),
+      });
+
+      // Check if stats already exist for this platform
+      const existing = await db.select().from(clientSocialStats)
+        .where(
+          and(
+            eq(clientSocialStats.clientId, req.params.clientId),
+            eq(clientSocialStats.platform, validatedData.platform)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update existing
+        const [updated] = await db.update(clientSocialStats)
+          .set({
+            ...validatedData,
+            lastUpdated: new Date(),
+          })
+          .where(eq(clientSocialStats.id, existing[0].id))
+          .returning();
+        return res.json(updated);
+      }
+
+      // Create new
+      const [created] = await db.insert(clientSocialStats).values(validatedData).returning();
+      res.status(201).json(created);
+    } catch (error) {
+      console.error("Error upserting social stats:", error);
+      handleValidationError(error, res);
+    }
+  });
+
+  app.delete("/api/clients/:clientId/social-stats/:platform", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      await db.delete(clientSocialStats)
+        .where(
+          and(
+            eq(clientSocialStats.clientId, req.params.clientId),
+            eq(clientSocialStats.platform, req.params.platform)
+          )
+        );
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting social stats:", error);
+      res.status(500).json({ message: "Failed to delete social stats" });
     }
   });
 

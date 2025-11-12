@@ -83,6 +83,34 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   onboardingTasks: many(onboardingTasks),
 }));
 
+// Client Social Media Stats (Manual Entry)
+export const clientSocialStats = pgTable("client_social_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  platform: varchar("platform").notNull(), // instagram, facebook, tiktok, youtube, twitter, linkedin
+  followers: integer("followers"),
+  posts: integer("posts"),
+  engagement: decimal("engagement", { precision: 5, scale: 2 }), // percentage like 3.2%
+  reach: integer("reach"),
+  views: integer("views"),
+  growthRate: decimal("growth_rate", { precision: 5, scale: 2 }), // percentage like +12%
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  updatedBy: integer("updated_by").references(() => users.id),
+  notes: text("notes"), // Any additional context
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const clientSocialStatsRelations = relations(clientSocialStats, ({ one }) => ({
+  client: one(clients, {
+    fields: [clientSocialStats.clientId],
+    references: [clients.id],
+  }),
+  updater: one(users, {
+    fields: [clientSocialStats.updatedBy],
+    references: [users.id],
+  }),
+}));
+
 // Campaigns table
 export const campaigns = pgTable("campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -723,6 +751,7 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertClientSocialStatsSchema = createInsertSchema(clientSocialStats).omit({ id: true, createdAt: true });
 export const insertCampaignSchema = createInsertSchema(campaigns)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
@@ -793,6 +822,9 @@ export type User = typeof users.$inferSelect;
 
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
+
+export type InsertClientSocialStats = z.infer<typeof insertClientSocialStatsSchema>;
+export type ClientSocialStats = typeof clientSocialStats.$inferSelect;
 
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
