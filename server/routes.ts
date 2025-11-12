@@ -2521,15 +2521,24 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/clients/:clientId/social-stats", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      console.log("📊 POST /api/clients/:clientId/social-stats");
+      console.log("   Client ID:", req.params.clientId);
+      console.log("   Request body:", JSON.stringify(req.body, null, 2));
+      
       const user = req.user as any;
+      console.log("   User ID:", user?.id);
+      
       const validatedData = insertClientSocialStatsSchema.parse({
         ...req.body,
         clientId: req.params.clientId,
         updatedBy: user.id,
         lastUpdated: new Date(),
       });
+      
+      console.log("   Validated data:", JSON.stringify(validatedData, null, 2));
 
       // Check if stats already exist for this platform
+      console.log("   Checking for existing stats...");
       const existing = await db.select().from(clientSocialStats)
         .where(
           and(
@@ -2540,6 +2549,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         .limit(1);
 
       if (existing.length > 0) {
+        console.log("   Found existing stats, updating...");
         // Update existing
         const [updated] = await db.update(clientSocialStats)
           .set({
@@ -2548,14 +2558,21 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           })
           .where(eq(clientSocialStats.id, existing[0].id))
           .returning();
+        console.log("   ✅ Updated successfully");
         return res.json(updated);
       }
 
       // Create new
+      console.log("   No existing stats, creating new...");
       const [created] = await db.insert(clientSocialStats).values(validatedData).returning();
+      console.log("   ✅ Created successfully");
       res.status(201).json(created);
-    } catch (error) {
-      console.error("Error upserting social stats:", error);
+    } catch (error: any) {
+      console.error("❌ Error upserting social stats:");
+      console.error("   Error name:", error?.name);
+      console.error("   Error message:", error?.message);
+      console.error("   Error stack:", error?.stack);
+      console.error("   Full error:", error);
       handleValidationError(error, res);
     }
   });
@@ -2579,16 +2596,22 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // AI Extract Social Stats from Screenshot
   app.post("/api/ai/extract-social-stats", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      console.log("🤖 POST /api/ai/extract-social-stats");
       const { imageUrl, platform } = req.body;
+      console.log("   Image URL:", imageUrl);
+      console.log("   Platform:", platform);
 
       if (!imageUrl) {
+        console.log("   ❌ No image URL provided");
         return res.status(400).json({ message: "Image URL is required" });
       }
 
       if (!process.env.OPENAI_API_KEY) {
+        console.log("   ❌ OPENAI_API_KEY not configured");
         return res.status(501).json({ message: "AI service not configured. Please set OPENAI_API_KEY." });
       }
 
+      console.log("   ✅ OpenAI configured, calling API...");
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -2643,13 +2666,19 @@ Example output:
 
       const content = response.choices[0]?.message?.content;
       if (content) {
+        console.log("   📝 OpenAI response:", content);
         const extracted = JSON.parse(content);
+        console.log("   ✅ Extracted data:", extracted);
         res.json({ extracted: true, ...extracted });
       } else {
+        console.log("   ❌ No content in OpenAI response");
         res.status(500).json({ message: "Failed to extract data from screenshot" });
       }
     } catch (error: any) {
-      console.error("AI extraction error:", error);
+      console.error("❌ AI extraction error:");
+      console.error("   Error name:", error?.name);
+      console.error("   Error message:", error?.message);
+      console.error("   Error stack:", error?.stack);
       res.status(500).json({ message: error?.message || "Failed to extract data" });
     }
   });
