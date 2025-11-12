@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Instagram, Facebook, Twitter, Youtube, TrendingUp, Users, BarChart3, Eye, FileImage } from "lucide-react";
+import { Instagram, Facebook, Twitter, Youtube, TrendingUp, Users, BarChart3, Eye, FileImage, Upload, Loader2 } from "lucide-react";
 import type { Client } from "@shared/schema";
+import { SimpleUploader } from "@/components/SimpleUploader";
 
 interface SocialStat {
   id: string;
@@ -37,6 +39,8 @@ const PLATFORMS = [
 export default function AdminSocialStats() {
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
+  const [uploadedScreenshot, setUploadedScreenshot] = useState<string>("");
+  const [isExtractingFromAI, setIsExtractingFromAI] = useState(false);
   const [formData, setFormData] = useState({
     followers: "",
     posts: "",
@@ -119,6 +123,53 @@ export default function AdminSocialStats() {
     loadPlatformStats(platform);
   };
 
+  const extractFromScreenshot = async () => {
+    if (!uploadedScreenshot) {
+      toast({
+        title: "⚠️ No Screenshot",
+        description: "Please upload a screenshot first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExtractingFromAI(true);
+
+    try {
+      const response = await apiRequest("POST", "/api/ai/extract-social-stats", {
+        imageUrl: uploadedScreenshot,
+        platform: selectedPlatform,
+      });
+      
+      const data = await response.json();
+
+      if (data.extracted) {
+        setFormData({
+          followers: data.followers?.toString() || "",
+          posts: data.posts?.toString() || "",
+          engagement: data.engagement || "",
+          reach: data.reach?.toString() || "",
+          views: data.views?.toString() || "",
+          growthRate: data.growthRate || "",
+          notes: formData.notes || `Extracted from screenshot on ${new Date().toLocaleDateString()}`,
+        });
+
+        toast({
+          title: "✅ Data Extracted!",
+          description: "Review the extracted data and click Save Stats",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "❌ Extraction Failed",
+        description: error?.message || "Failed to extract data from screenshot",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExtractingFromAI(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -142,6 +193,7 @@ export default function AdminSocialStats() {
       notes: formData.notes || null,
     };
 
+    console.log("💾 Saving stats:", data);
     updateStatsMutation.mutate(data);
   };
 
@@ -248,7 +300,75 @@ export default function AdminSocialStats() {
                 <p className="text-sm text-muted-foreground mt-1">Choose a client from the left to update their social media stats</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Screenshot Upload Section */}
+                <Card className="bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-900/10 dark:to-purple-900/10 border-2 border-dashed border-primary/30">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <FileImage className="w-5 h-5 text-primary" />
+                        <Label className="text-base font-semibold">Upload Screenshot (Recommended)</Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Upload a screenshot of the social media stats page - AI will automatically extract the numbers!
+                      </p>
+                      
+                      <div className="flex items-center gap-3">
+                        <SimpleUploader
+                          onUploadComplete={(url) => {
+                            setUploadedScreenshot(url);
+                            toast({
+                              title: "✅ Screenshot Uploaded!",
+                              description: "Click 'Extract Data' to auto-fill the form",
+                            });
+                          }}
+                          buttonText={uploadedScreenshot ? "Change Screenshot" : "Upload Screenshot"}
+                          accept="image/*"
+                        />
+                        
+                        {uploadedScreenshot && (
+                          <Button
+                            type="button"
+                            onClick={extractFromScreenshot}
+                            disabled={isExtractingFromAI}
+                            className="gap-2"
+                          >
+                            {isExtractingFromAI ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Extracting...
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-4 h-4" />
+                                Extract Data with AI
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {uploadedScreenshot && (
+                        <div className="relative mt-2">
+                          <img 
+                            src={uploadedScreenshot} 
+                            alt="Screenshot" 
+                            className="w-full max-h-48 object-contain rounded border"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Separator />
+
+                {/* Manual Entry Section */}
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Or Enter Manually</Label>
+                  <p className="text-sm text-muted-foreground">Fill in the stats below if you prefer manual entry</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Followers</Label>

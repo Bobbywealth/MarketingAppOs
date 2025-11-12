@@ -2576,6 +2576,84 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
+  // AI Extract Social Stats from Screenshot
+  app.post("/api/ai/extract-social-stats", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const { imageUrl, platform } = req.body;
+
+      if (!imageUrl) {
+        return res.status(400).json({ message: "Image URL is required" });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(501).json({ message: "AI service not configured. Please set OPENAI_API_KEY." });
+      }
+
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const systemPrompt = `You are a social media analytics extraction assistant. Analyze the screenshot and extract the following metrics:
+- followers (total follower count)
+- posts (total post count)
+- engagement (engagement rate as percentage, e.g., "6.5")
+- reach (total reach)
+- views (total views)
+- growthRate (growth rate as percentage, e.g., "+12" or "+12%")
+
+Return ONLY a JSON object with these fields. If a field is not visible in the image, omit it or set to null.
+Platform context: ${platform || 'unknown'}
+
+Example output:
+{
+  "followers": 23567,
+  "posts": 432,
+  "engagement": "6.5",
+  "reach": 28500,
+  "views": 125000,
+  "growthRate": "+12"
+}`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract all social media statistics from this screenshot:"
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl,
+                  detail: "high"
+                }
+              }
+            ]
+          }
+        ],
+        temperature: 0.1,
+        response_format: { type: "json_object" }
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (content) {
+        const extracted = JSON.parse(content);
+        res.json({ extracted: true, ...extracted });
+      } else {
+        res.status(500).json({ message: "Failed to extract data from screenshot" });
+      }
+    } catch (error: any) {
+      console.error("AI extraction error:", error);
+      res.status(500).json({ message: error?.message || "Failed to extract data" });
+    }
+  });
+
   // Campaign routes
   app.get("/api/campaigns", isAuthenticated, async (req: Request, res: Response) => {
     try {
