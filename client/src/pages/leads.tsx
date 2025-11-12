@@ -455,6 +455,7 @@ export default function LeadsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Lead Detail Dialog */}
