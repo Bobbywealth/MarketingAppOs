@@ -55,28 +55,50 @@ export default function Content() {
     },
   });
 
-  const { data: posts, isLoading } = useQuery<ContentPost[]>({
+  const { data: posts, isLoading, error } = useQuery<ContentPost[]>({
     queryKey: ["/api/content-posts"],
+    onSuccess: (data) => {
+      console.log("📊 Loaded content posts:", data?.length || 0);
+    },
+    onError: (error: any) => {
+      console.error("❌ Failed to load content posts:", error);
+    },
   });
 
   const { data: clients } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
+    onSuccess: (data) => {
+      console.log("👥 Loaded clients:", data?.length || 0);
+    },
   });
 
   const createPostMutation = useMutation({
     mutationFn: async (data: InsertContentPost) => {
-      return await apiRequest("POST", "/api/content-posts", data);
+      console.log("🚀 Mutation: Sending data to API:", data);
+      const response = await apiRequest("POST", "/api/content-posts", data);
+      const json = await response.json();
+      console.log("✅ Mutation: API response:", json);
+      return json;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("🎉 Mutation success:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] });
       setDialogOpen(false);
       form.reset();
       setUploadedMediaUrl(null);
-      toast({ title: "Content post created successfully" });
+      toast({ 
+        title: "✅ Content post created successfully",
+        description: "Your content has been added to the calendar"
+      });
     },
     onError: (error: any) => {
+      console.error("❌ Mutation error:", error);
       const errorMessage = error?.message || "Failed to create post";
-      toast({ title: errorMessage, variant: "destructive" });
+      toast({ 
+        title: "Error creating post", 
+        description: errorMessage,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -142,6 +164,7 @@ export default function Content() {
   };
 
   const handleCreatePost = (values: FormValues) => {
+    console.log("📝 Creating content post with values:", values);
     const postData: InsertContentPost = {
       clientId: values.clientId,
       platforms: values.platforms,
@@ -149,8 +172,10 @@ export default function Content() {
       content: values.caption || "",
       mediaUrls: uploadedMediaUrl ? [uploadedMediaUrl] : (values.mediaUrl ? [values.mediaUrl] : []),
       scheduledFor: values.scheduledFor || null,
+      approvalStatus: "draft", // Add default approval status
     };
 
+    console.log("📤 Submitting post data:", postData);
     createPostMutation.mutate(postData);
   };
 
@@ -280,6 +305,26 @@ export default function Content() {
             ))}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error("💥 Content calendar error:", error);
+    return (
+      <div className="min-h-full gradient-mesh overflow-x-hidden flex items-center justify-center">
+        <Card className="max-w-md p-6">
+          <div className="text-center space-y-4">
+            <div className="text-4xl">⚠️</div>
+            <h2 className="text-xl font-bold">Error Loading Content</h2>
+            <p className="text-muted-foreground">
+              {error instanceof Error ? error.message : "Failed to load content posts"}
+            </p>
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/content-posts"] })}>
+              Try Again
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
