@@ -446,7 +446,7 @@ async function processAICommand(message: string, userId: number): Promise<{
         
         if (!nameMatch) {
           return {
-            success: false,
+            success: true,
             response: "I'd love to create a client for you! But I need a name first 😊 Try something like: 'Create a client named John Smith' or 'Add a new client called Sarah Johnson'",
           };
         }
@@ -479,7 +479,7 @@ async function processAICommand(message: string, userId: number): Promise<{
         
         if (!nameMatch) {
           return {
-            success: false,
+            success: true,
             response: "I need to know which client to delete. Please provide a name like: 'Delete client John Smith'",
           };
         }
@@ -489,8 +489,8 @@ async function processAICommand(message: string, userId: number): Promise<{
           const client = clients.find(c => c.name.toLowerCase().includes(nameMatch[1].toLowerCase()));
           if (!client) {
             return {
-              success: false,
-              response: `Could not find a client named "${nameMatch[1]}". Please check the name and try again.`,
+              success: true,
+              response: `Hmm, I couldn't find a client named "${nameMatch[1]}" 🤔 Could you double-check the name? Or would you like me to show you all your clients?`,
             };
           }
           await storage.deleteClient(String(client.id));
@@ -546,7 +546,7 @@ async function processAICommand(message: string, userId: number): Promise<{
         
         if (!titleMatch) {
           return {
-            success: false,
+            success: true,
             response: "What do you need to get done? 🤔 Just tell me like: 'Create a task to update the website' or 'Add a reminder to call Mike tomorrow'",
           };
         }
@@ -708,7 +708,7 @@ async function processAICommand(message: string, userId: number): Promise<{
 
     // DEFAULT: Ask for clarification in a friendly way
     return {
-      success: false,
+      success: true,
       response: "Hmm, I'm not quite sure what you need help with! 🤔\n\nI can help you with things like:\n\n💼 **Clients** - \"Show me all clients\" or \"Create a client named Sarah\"\n✅ **Tasks** - \"What tasks do I have?\" or \"Create a task to call Mike\"\n📅 **Calendar** - \"What's on my schedule today?\"\n💬 **Messages** - \"Show recent messages\"\n🚀 **Campaigns** - \"List all campaigns\"\n💰 **Invoices** - \"Show me pending invoices\"\n\nJust ask me naturally - like you're talking to a friend! 😊",
     };
     
