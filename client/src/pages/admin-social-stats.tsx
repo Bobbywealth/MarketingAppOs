@@ -65,12 +65,14 @@ export default function AdminSocialStats() {
 
   const updateStatsMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest(
-        "POST",
-        `/api/clients/${selectedClient}/social-stats`,
-        data
-      );
-      return response.json();
+      const url = `/api/clients/${selectedClient}/social-stats`;
+      console.log("💾 Saving to URL:", url);
+      console.log("💾 Data:", data);
+      
+      const response = await apiRequest("POST", url, data);
+      const result = await response.json();
+      console.log("✅ Save response:", result);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/clients/${selectedClient}/social-stats`] });
@@ -81,9 +83,10 @@ export default function AdminSocialStats() {
       resetForm();
     },
     onError: (error: any) => {
+      console.error("❌ Save error:", error);
       toast({
         title: "❌ Update Failed",
-        description: error?.message || "Failed to update stats",
+        description: error?.message || "Server error. Please try again later.",
         variant: "destructive",
       });
     },
@@ -136,12 +139,18 @@ export default function AdminSocialStats() {
     setIsExtractingFromAI(true);
 
     try {
-      const response = await apiRequest("POST", "/api/ai/extract-social-stats", {
+      const url = "/api/ai/extract-social-stats";
+      console.log("🤖 Extracting from URL:", url);
+      console.log("🤖 Image:", uploadedScreenshot);
+      console.log("🤖 Platform:", selectedPlatform);
+      
+      const response = await apiRequest("POST", url, {
         imageUrl: uploadedScreenshot,
         platform: selectedPlatform,
       });
       
       const data = await response.json();
+      console.log("✅ Extracted data:", data);
 
       if (data.extracted) {
         setFormData({
@@ -160,6 +169,7 @@ export default function AdminSocialStats() {
         });
       }
     } catch (error: any) {
+      console.error("❌ Extraction error:", error);
       toast({
         title: "❌ Extraction Failed",
         description: error?.message || "Failed to extract data from screenshot",
