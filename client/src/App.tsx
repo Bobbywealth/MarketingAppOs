@@ -34,6 +34,7 @@ import ClientCampaigns from "@/pages/client-campaigns";
 import ClientBilling from "@/pages/client-billing";
 import ClientAnalytics from "@/pages/client-analytics";
 import Clients from "@/pages/clients";
+import AdminSocialStats from "@/pages/admin-social-stats";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
 import Leads from "@/pages/leads";
@@ -93,6 +94,7 @@ function Router() {
       {/* Admin/Manager/Staff routes */}
       {!isClient && <ProtectedRoute path="/" component={Dashboard} />}
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
+      {!isClient && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
       {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
       {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
       {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
