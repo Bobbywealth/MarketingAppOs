@@ -37,7 +37,10 @@ import {
   Clock,
   Target,
   Zap,
-  PhoneCall
+  PhoneCall,
+  Square,
+  CheckSquare,
+  X
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
@@ -68,6 +71,8 @@ export default function LeadsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -123,6 +128,55 @@ export default function LeadsPage() {
       setLeadToDelete(null);
     },
   });
+
+  const bulkDeleteLeadsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      return Promise.all(ids.map(id => apiRequest("DELETE", `/api/leads/${id}`)));
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ 
+        title: `🗑️ ${ids.length} leads deleted`, 
+        description: "The selected leads have been permanently removed" 
+      });
+      setSelectedLeads(new Set());
+      setShowBulkActions(false);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete leads", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const toggleLeadSelection = (leadId: string) => {
+    const newSelection = new Set(selectedLeads);
+    if (newSelection.has(leadId)) {
+      newSelection.delete(leadId);
+    } else {
+      newSelection.add(leadId);
+    }
+    setSelectedLeads(newSelection);
+    setShowBulkActions(newSelection.size > 0);
+  };
+
+  const selectAllLeads = () => {
+    if (selectedLeads.size === filteredLeads.length) {
+      setSelectedLeads(new Set());
+      setShowBulkActions(false);
+    } else {
+      setSelectedLeads(new Set(filteredLeads.map(l => l.id)));
+      setShowBulkActions(true);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLeads.size > 0) {
+      bulkDeleteLeadsMutation.mutate(Array.from(selectedLeads));
+    }
+  };
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = !searchQuery || 
@@ -613,10 +667,62 @@ export default function LeadsPage() {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Toolbar */}
+      {showBulkActions && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setSelectedLeads(new Set());
+                    setShowBulkActions(false);
+                  }}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Clear
+                </Button>
+                <span className="text-sm font-medium">
+                  {selectedLeads.size} lead{selectedLeads.size !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteLeadsMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {bulkDeleteLeadsMutation.isPending ? "Deleting..." : "Delete Selected"}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Leads List */}
       <Card>
         <CardHeader>
-          <CardTitle>All Leads ({filteredLeads.length})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-3">
+              <button
+                onClick={selectAllLeads}
+                className="p-1 hover:bg-accent rounded transition-colors"
+                title={selectedLeads.size === filteredLeads.length ? "Deselect all" : "Select all"}
+              >
+                {selectedLeads.size === filteredLeads.length && filteredLeads.length > 0 ? (
+                  <CheckSquare className="w-5 h-5 text-primary" />
+                ) : (
+                  <Square className="w-5 h-5" />
+                )}
+              </button>
+              All Leads ({filteredLeads.length})
+            </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -642,10 +748,30 @@ export default function LeadsPage() {
           ) : (
             <div className="space-y-3">
               {filteredLeads.map((lead) => (
-                <Card key={lead.id} className="hover-elevate group cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                <Card 
+                  key={lead.id} 
+                  className={`hover-elevate group cursor-pointer transition-all ${
+                    selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''
+                  }`}
+                  onClick={() => setSelectedLead(lead)}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLeadSelection(lead.id);
+                          }}
+                          className="mt-1 p-1 hover:bg-accent rounded transition-colors"
+                          title={selectedLeads.has(lead.id) ? "Deselect" : "Select"}
+                        >
+                          {selectedLeads.has(lead.id) ? (
+                            <CheckSquare className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Square className="w-5 h-5 text-muted-foreground" />
+                          )}
+                        </button>
                         <Avatar className="w-12 h-12">
                           <AvatarFallback className="bg-primary/10 text-primary">
                             {lead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
