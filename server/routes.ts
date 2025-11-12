@@ -3723,6 +3723,168 @@ Examples:
     }
   });
 
+  // Parse CSV or PDF file for lead import
+  app.post("/api/leads/parse-file", isAuthenticated, requirePermission("canManageLeads"), upload.single('file'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const file = req.file;
+      const leads: any[] = [];
+
+      if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+        // Parse CSV file
+        const content = file.buffer.toString('utf-8');
+        const lines = content.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) {
+          return res.status(400).json({ message: "CSV file is empty" });
+        }
+
+        // Parse header
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        
+        // Parse data rows
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
+          const lead: any = {
+            stage: 'prospect',
+            score: 'warm',
+            source: 'import'
+          };
+
+          headers.forEach((header, index) => {
+            const value = values[index];
+            if (!value) return;
+
+            // Map CSV headers to lead fields
+            if (header.includes('name') || header.includes('contact')) {
+              lead.name = value;
+            } else if (header.includes('email') || header.includes('e-mail')) {
+              lead.email = value;
+            } else if (header.includes('phone') || header.includes('mobile') || header.includes('tel')) {
+              lead.phone = value;
+            } else if (header.includes('company') || header.includes('organization')) {
+              lead.company = value;
+            } else if (header.includes('website') || header.includes('url')) {
+              lead.website = value;
+            } else if (header.includes('address') || header.includes('location')) {
+              lead.address = value;
+            } else if (header.includes('city')) {
+              lead.city = value;
+            } else if (header.includes('state') || header.includes('province')) {
+              lead.state = value;
+            } else if (header.includes('zip') || header.includes('postal')) {
+              lead.zipCode = value;
+            } else if (header.includes('value') || header.includes('amount')) {
+              lead.estimatedValue = parseFloat(value) || 0;
+            } else if (header.includes('note') || header.includes('description')) {
+              lead.notes = value;
+            }
+          });
+
+          if (lead.name || lead.email) {
+            leads.push(lead);
+          }
+        }
+
+      } else if (file.mimetype === 'application/pdf') {
+        // Use AI to extract leads from PDF
+        if (!openai) {
+          return res.status(500).json({ message: "AI service not configured. Please set OPENAI_API_KEY." });
+        }
+
+        const pdfText = file.buffer.toString('utf-8'); // In production, use proper PDF parser like pdf-parse
+        
+        const systemPrompt = `You are a lead extraction assistant. Extract contact/lead information from the provided text.
+        
+Return a JSON array of leads with these fields:
+- name (required)
+- email
+- phone
+- company
+- website
+- address
+- city
+- state
+- zipCode
+- estimatedValue (number)
+- notes
+
+Only extract actual leads/contacts. Skip headers, footers, and non-contact information.`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Extract leads from this text:\n\n${pdfText}` }
+          ],
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          leads.push(...(parsed.leads || []));
+        }
+      } else {
+        return res.status(400).json({ message: "Invalid file type. Please upload CSV or PDF." });
+      }
+
+      res.json({ leads, count: leads.length });
+    } catch (error: any) {
+      console.error("File parsing error:", error);
+      res.status(500).json({ message: "Failed to parse file", error: error.message });
+    }
+  });
+
+  // Bulk import leads
+  app.post("/api/leads/bulk-import", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const { leads } = req.body;
+      
+      if (!Array.isArray(leads) || leads.length === 0) {
+        return res.status(400).json({ message: "No leads provided" });
+      }
+
+      let imported = 0;
+      let skipped = 0;
+      const existingLeads = await storage.getLeads();
+
+      for (const leadData of leads) {
+        try {
+          // Check for duplicates by email
+          if (leadData.email && existingLeads.some(l => l.email === leadData.email)) {
+            skipped++;
+            continue;
+          }
+
+          // Validate and create lead
+          const validatedData = insertLeadSchema.parse({
+            ...leadData,
+            stage: leadData.stage || 'prospect',
+            score: leadData.score || 'warm',
+            source: leadData.source || 'import',
+            createdAt: new Date(),
+          });
+          
+          await storage.createLead(validatedData);
+          imported++;
+        } catch (error) {
+          console.error("Failed to import lead:", leadData, error);
+          skipped++;
+        }
+      }
+
+      res.json({ imported, skipped, total: leads.length });
+    } catch (error: any) {
+      console.error("Bulk import error:", error);
+      res.status(500).json({ message: "Failed to import leads", error: error.message });
+    }
+  });
+
   // Lead activity routes
   app.get("/api/leads/:leadId/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {

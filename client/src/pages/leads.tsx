@@ -40,7 +40,10 @@ import {
   PhoneCall,
   Square,
   CheckSquare,
-  X
+  X,
+  Upload,
+  FileText,
+  Download
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
@@ -73,6 +76,10 @@ export default function LeadsPage() {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [parsedLeads, setParsedLeads] = useState<any[]>([]);
+  const [isParsingFile, setIsParsingFile] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -178,6 +185,69 @@ export default function LeadsPage() {
     }
   };
 
+  const parseFileMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await apiRequest("POST", "/api/leads/parse-file", formData);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setParsedLeads(data.leads || []);
+      toast({ 
+        title: `✅ Found ${data.leads?.length || 0} leads`, 
+        description: "Review and confirm to import" 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to parse file", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const bulkImportLeadsMutation = useMutation({
+    mutationFn: async (leads: any[]) => {
+      const response = await apiRequest("POST", "/api/leads/bulk-import", { leads });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ 
+        title: `🎉 ${data.imported || 0} leads imported successfully!`, 
+        description: data.skipped ? `${data.skipped} duplicates skipped` : undefined
+      });
+      setIsImportDialogOpen(false);
+      setImportFile(null);
+      setParsedLeads([]);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to import leads", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleFileSelect = async (file: File) => {
+    setImportFile(file);
+    setIsParsingFile(true);
+    try {
+      await parseFileMutation.mutateAsync(file);
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  const handleImportConfirm = () => {
+    if (parsedLeads.length > 0) {
+      bulkImportLeadsMutation.mutate(parsedLeads);
+    }
+  };
+
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = !searchQuery || 
       lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -250,13 +320,18 @@ export default function LeadsPage() {
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Leads Management</h1>
           <p className="text-sm md:text-base text-muted-foreground">Track and manage your sales leads</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <UserPlus className="w-4 h-4" />
-              Add Lead
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
+            <Upload className="w-4 h-4" />
+            Import Leads
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <UserPlus className="w-4 h-4" />
+                Add Lead
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Lead</DialogTitle>
@@ -936,6 +1011,143 @@ export default function LeadsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Leads Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Import Leads</DialogTitle>
+            <DialogDescription>
+              Upload a CSV or PDF file to import multiple leads at once. AI will automatically extract lead information from PDFs.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!importFile && !parsedLeads.length ? (
+            <div 
+              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => document.getElementById('file-input')?.click()}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-primary'); }}
+              onDragLeave={(e) => { e.currentTarget.classList.remove('border-primary'); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-primary');
+                const file = e.dataTransfer.files[0];
+                if (file && (file.type === 'text/csv' || file.type === 'application/pdf')) {
+                  handleFileSelect(file);
+                } else {
+                  toast({ title: "Invalid file type", description: "Please upload a CSV or PDF file", variant: "destructive" });
+                }
+              }}
+            >
+              <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Drop your file here, or click to browse</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Supports CSV and PDF files (max 10MB)
+              </p>
+              <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <FileText className="w-4 h-4" />
+                  CSV
+                </div>
+                <div className="flex items-center gap-1">
+                  <FileText className="w-4 h-4" />
+                  PDF
+                </div>
+              </div>
+              <input
+                id="file-input"
+                type="file"
+                accept=".csv,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
+                }}
+              />
+            </div>
+          ) : isParsingFile ? (
+            <div className="py-12 text-center">
+              <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-lg font-medium mb-2">Parsing your file...</p>
+              <p className="text-sm text-muted-foreground">
+                {importFile?.type === 'application/pdf' ? 'Using AI to extract lead information from PDF' : 'Processing CSV data'}
+              </p>
+            </div>
+          ) : parsedLeads.length > 0 ? (
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <h4 className="font-semibold text-green-900 dark:text-green-100">
+                    {parsedLeads.length} lead{parsedLeads.length !== 1 ? 's' : ''} found!
+                  </h4>
+                </div>
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  Review the leads below and click "Import All" to add them to your pipeline.
+                </p>
+              </div>
+
+              <ScrollArea className="flex-1 -mx-6 px-6">
+                <div className="space-y-3">
+                  {parsedLeads.map((lead, index) => (
+                    <Card key={index}>
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Name</Label>
+                            <p className="font-medium">{lead.name || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Email</Label>
+                            <p className="font-medium">{lead.email || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Phone</Label>
+                            <p className="font-medium">{lead.phone || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Company</Label>
+                            <p className="font-medium">{lead.company || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setImportFile(null);
+                    setParsedLeads([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleImportConfirm}
+                  disabled={bulkImportLeadsMutation.isPending}
+                  className="gap-2"
+                >
+                  {bulkImportLeadsMutation.isPending ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Import All {parsedLeads.length} Lead{parsedLeads.length !== 1 ? 's' : ''}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
