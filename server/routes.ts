@@ -418,9 +418,15 @@ async function processAICommand(message: string, userId: number): Promise<{
       // List clients
       if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
         const clients = await storage.getClients();
+        if (clients.length === 0) {
+          return {
+            success: true,
+            response: "You don't have any clients yet! Ready to add your first one? Just say something like 'Create a client named John Smith' 🎉",
+          };
+        }
         return {
           success: true,
-          response: `Found ${clients.length} clients. Here are a few: ${clients.slice(0, 5).map(c => c.name).join(', ')}${clients.length > 5 ? '...' : ''}`,
+          response: `You've got ${clients.length} client${clients.length === 1 ? '' : 's'}! Here's a quick look: ${clients.slice(0, 5).map(c => c.name).join(', ')}${clients.length > 5 ? ' and more!' : '! 😊'}`,
         };
       }
       
@@ -441,7 +447,7 @@ async function processAICommand(message: string, userId: number): Promise<{
         if (!nameMatch) {
           return {
             success: false,
-            response: "I need a client name to create a client. Please provide a name like: 'Create a client named John Smith'",
+            response: "I'd love to create a client for you! But I need a name first 😊 Try something like: 'Create a client named John Smith' or 'Add a new client called Sarah Johnson'",
           };
         }
         
@@ -453,7 +459,7 @@ async function processAICommand(message: string, userId: number): Promise<{
           });
           return {
             success: true,
-            response: `✅ Created client "${newClient.name}" successfully!`,
+            response: `Awesome! 🎉 I just added "${newClient.name}" to your client list!${emailMatch ? ` I saved their email too: ${emailMatch[1]}` : ''}`,
             actionTaken: `Created client: ${newClient.name}`,
           };
         } catch (error: any) {
@@ -510,14 +516,24 @@ async function processAICommand(message: string, userId: number): Promise<{
       if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
         try {
           const tasks = await storage.getTasks();
+          const pending = tasks.filter(t => t.status === 'pending').length;
+          const completed = tasks.filter(t => t.status === 'completed').length;
+          
+          if (tasks.length === 0) {
+            return {
+              success: true,
+              response: "Your task list is empty! 🎉 Want me to create one? Just tell me what needs to be done!",
+            };
+          }
+          
           return {
             success: true,
-            response: `Found ${tasks.length} tasks. ${tasks.filter(t => t.status === 'pending').length} pending, ${tasks.filter(t => t.status === 'completed').length} completed.`,
+            response: `You have ${tasks.length} task${tasks.length === 1 ? '' : 's'} total! 📋 ${pending > 0 ? `${pending} still to do` : 'All done! ✅'}${completed > 0 ? ` and ${completed} completed! 🎉` : ''}`,
           };
         } catch (error: any) {
           return {
             success: false,
-            response: `Failed to fetch tasks: ${error.message}`,
+            response: `Oops! Had trouble getting your tasks: ${error.message}`,
             error: error.message,
           };
         }
@@ -531,7 +547,7 @@ async function processAICommand(message: string, userId: number): Promise<{
         if (!titleMatch) {
           return {
             success: false,
-            response: "I need a task description. Please provide one like: 'Create a task to update the website'",
+            response: "What do you need to get done? 🤔 Just tell me like: 'Create a task to update the website' or 'Add a reminder to call Mike tomorrow'",
           };
         }
         
@@ -549,7 +565,7 @@ async function processAICommand(message: string, userId: number): Promise<{
           });
           return {
             success: true,
-            response: `✅ Created task "${newTask.title}" successfully!`,
+            response: `Got it! ✅ I added "${newTask.title}" to your task list. You got this! 💪`,
             actionTaken: `Created task: ${newTask.title}`,
           };
         } catch (error: any) {
@@ -578,9 +594,17 @@ async function processAICommand(message: string, userId: number): Promise<{
             const eventDate = new Date(e.start);
             return eventDate >= today && eventDate < tomorrow;
           });
+          
+          if (eventsToday.length === 0) {
+            return {
+              success: true,
+              response: "Your calendar is clear today! 🎉 Perfect time to catch up or take a breather! ☕",
+            };
+          }
+          
           return {
             success: true,
-            response: `Found ${eventsToday.length} events today. ${eventsToday.map(e => e.title).join(', ') || 'No events scheduled'}`,
+            response: `You've got ${eventsToday.length} thing${eventsToday.length === 1 ? '' : 's'} on your calendar today! 📅 Here's what's coming up: ${eventsToday.map(e => e.title).join(', ')}`,
           };
         } catch (error: any) {
           return {
@@ -653,10 +677,39 @@ async function processAICommand(message: string, userId: number): Promise<{
       }
     }
     
-    // DEFAULT: Ask for clarification
+    // Handle greetings naturally
+    if (lowerMessage.match(/^(hi|hello|hey|heya|sup|yo|howdy|greetings)$/)) {
+      const greetings = [
+        "Hey! 👋 Great to hear from you! What can I help you with today?",
+        "Hi there! 😊 I'm all ears! What do you need?",
+        "Hello! Ready to knock some tasks off your list? What's up?",
+        "Hey hey! 🙌 What can I help you accomplish today?",
+        "Hi! I'm here and ready to help! What's on your mind?",
+      ];
+      return {
+        success: true,
+        response: greetings[Math.floor(Math.random() * greetings.length)],
+      };
+    }
+
+    // Handle "thanks" and appreciation
+    if (lowerMessage.match(/thanks|thank you|thx|ty|appreciate/)) {
+      const responses = [
+        "You're very welcome! 😊 Anything else I can help with?",
+        "Happy to help! That's what I'm here for! 💪",
+        "No problem at all! Let me know if you need anything else!",
+        "Anytime! I'm always here when you need me! ✨",
+      ];
+      return {
+        success: true,
+        response: responses[Math.floor(Math.random() * responses.length)],
+      };
+    }
+
+    // DEFAULT: Ask for clarification in a friendly way
     return {
       success: false,
-      response: "I understand you want me to help, but I need more specific instructions. I can help you with:\n\n• Clients (create, list, delete)\n• Tasks (create, list)\n• Calendar events (show today's events)\n• Messages (show recent)\n• Campaigns (list all)\n• Invoices (list all)\n\nPlease be more specific, like: 'Create a client named John Smith' or 'Show me all tasks'",
+      response: "Hmm, I'm not quite sure what you need help with! 🤔\n\nI can help you with things like:\n\n💼 **Clients** - \"Show me all clients\" or \"Create a client named Sarah\"\n✅ **Tasks** - \"What tasks do I have?\" or \"Create a task to call Mike\"\n📅 **Calendar** - \"What's on my schedule today?\"\n💬 **Messages** - \"Show recent messages\"\n🚀 **Campaigns** - \"List all campaigns\"\n💰 **Invoices** - \"Show me pending invoices\"\n\nJust ask me naturally - like you're talking to a friend! 😊",
     };
     
   } catch (error: any) {
