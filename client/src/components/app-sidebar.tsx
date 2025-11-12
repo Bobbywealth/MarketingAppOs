@@ -23,7 +23,8 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Circle
+  Circle,
+  LineChart
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
@@ -154,6 +155,12 @@ const operationsTools = [
     title: "Clients",
     url: "/clients",
     icon: Users,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Social Stats",
+    url: "/admin/social-stats",
+    icon: LineChart,
     permission: "canManageClients" as const,
   },
   {
