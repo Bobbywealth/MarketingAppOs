@@ -117,7 +117,7 @@ export default function ClientContent() {
       twitter: Twitter,
       linkedin: Linkedin,
     };
-    return iconMap[platform.toLowerCase()] || CalendarIcon;
+    return iconMap[platform?.toLowerCase()] || CalendarIcon;
   };
 
   const getStatusBadge = (status: string) => {
