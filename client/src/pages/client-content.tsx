@@ -17,9 +17,10 @@ import { SimpleUploader } from "@/components/SimpleUploader";
 
 interface ContentPost {
   id: string;
-  platform: string;
-  caption: string;
-  mediaUrl?: string;
+  platforms: string[];
+  title?: string;
+  content: string;
+  mediaUrls?: string[];
   scheduledFor: string;
   approvalStatus: string;
   approvedBy?: string;
@@ -255,7 +256,7 @@ export default function ClientContent() {
                         </div>
                         <div className="space-y-1">
                           {postsForDay.slice(0, 2).map(post => {
-                            const Icon = getPlatformIcon(post.platform);
+                            const Icon = getPlatformIcon(post.platforms?.[0]);
                             return (
                               <div
                                 key={post.id}
@@ -263,7 +264,7 @@ export default function ClientContent() {
                                 onClick={() => setSelectedPost(post)}
                               >
                                 <Icon className="w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0" />
-                                <span className="truncate text-xs">{post.caption || "Untitled"}</span>
+                                <span className="truncate text-xs">{post.content || post.title || "Untitled"}</span>
                               </div>
                             );
                           })}
@@ -298,7 +299,7 @@ export default function ClientContent() {
                 contentPosts
                   .sort((a, b) => new Date(b.scheduledFor || b.createdAt).getTime() - new Date(a.scheduledFor || a.createdAt).getTime())
                   .map(post => {
-                    const Icon = getPlatformIcon(post.platform);
+                    const Icon = getPlatformIcon(post.platforms?.[0]);
                     return (
                       <Card key={post.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPost(post)}>
                         <CardContent className="p-3 sm:p-4">
@@ -308,9 +309,11 @@ export default function ClientContent() {
                                 <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate text-sm sm:text-base">{post.caption || "Untitled Post"}</p>
+                                <p className="font-medium truncate text-sm sm:text-base">{post.content || post.title || "Untitled Post"}</p>
                                 <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-2 flex-wrap">
-                                  <Badge variant="secondary" className="text-xs">{post.platform}</Badge>
+                                  {post.platforms?.map(p => (
+                                    <Badge key={p} variant="secondary" className="text-xs">{p}</Badge>
+                                  ))}
                                   {getStatusBadge(post.approvalStatus)}
                                   {post.scheduledFor && (
                                     <span className="text-xs text-muted-foreground">
@@ -320,9 +323,9 @@ export default function ClientContent() {
                                 </div>
                               </div>
                             </div>
-                            {post.mediaUrl && (
+                            {post.mediaUrls && post.mediaUrls.length > 0 && (
                               <img 
-                                src={post.mediaUrl} 
+                                src={post.mediaUrls[0]} 
                                 alt="Post preview" 
                                 className="w-12 h-12 sm:w-16 sm:h-16 rounded object-cover flex-shrink-0"
                               />
@@ -342,7 +345,7 @@ export default function ClientContent() {
             {contentPosts
               .filter(p => p.approvalStatus === 'pending' || p.approvalStatus === 'draft')
               .map(post => {
-                const Icon = getPlatformIcon(post.platform);
+                const Icon = getPlatformIcon(post.platforms?.[0]);
                 return (
                   <Card key={post.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPost(post)}>
                     <CardContent className="p-4">
@@ -352,9 +355,11 @@ export default function ClientContent() {
                             <Icon className="w-5 h-5 text-orange-600" />
                           </div>
                           <div>
-                            <p className="font-medium">{post.caption || "Untitled Post"}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge variant="secondary">{post.platform}</Badge>
+                            <p className="font-medium">{post.content || post.title || "Untitled Post"}</p>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              {post.platforms?.map(p => (
+                                <Badge key={p} variant="secondary">{p}</Badge>
+                              ))}
                               {getStatusBadge(post.approvalStatus)}
                               {post.scheduledFor && (
                                 <span className="text-xs text-muted-foreground">
@@ -364,8 +369,8 @@ export default function ClientContent() {
                             </div>
                           </div>
                         </div>
-                        {post.mediaUrl && (
-                          <img src={post.mediaUrl} alt="Post preview" className="w-16 h-16 rounded object-cover" />
+                        {post.mediaUrls && post.mediaUrls.length > 0 && (
+                          <img src={post.mediaUrls[0]} alt="Post preview" className="w-16 h-16 rounded object-cover" />
                         )}
                       </div>
                     </CardContent>
@@ -380,7 +385,7 @@ export default function ClientContent() {
             {contentPosts
               .filter(p => p.approvalStatus === 'approved' || p.approvalStatus === 'published')
               .map(post => {
-                const Icon = getPlatformIcon(post.platform);
+                const Icon = getPlatformIcon(post.platforms?.[0]);
                 return (
                   <Card key={post.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPost(post)}>
                     <CardContent className="p-4">
@@ -390,9 +395,11 @@ export default function ClientContent() {
                             <Icon className="w-5 h-5 text-green-600" />
                           </div>
                           <div>
-                            <p className="font-medium">{post.caption || "Untitled Post"}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Badge variant="secondary">{post.platform}</Badge>
+                            <p className="font-medium">{post.content || post.title || "Untitled Post"}</p>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              {post.platforms?.map(p => (
+                                <Badge key={p} variant="secondary">{p}</Badge>
+                              ))}
                               {getStatusBadge(post.approvalStatus)}
                               {post.scheduledFor && (
                                 <span className="text-xs text-muted-foreground">
@@ -402,8 +409,8 @@ export default function ClientContent() {
                             </div>
                           </div>
                         </div>
-                        {post.mediaUrl && (
-                          <img src={post.mediaUrl} alt="Post preview" className="w-16 h-16 rounded object-cover" />
+                        {post.mediaUrls && post.mediaUrls.length > 0 && (
+                          <img src={post.mediaUrls[0]} alt="Post preview" className="w-16 h-16 rounded object-cover" />
                         )}
                       </div>
                     </CardContent>
@@ -425,9 +432,9 @@ export default function ClientContent() {
           </DialogHeader>
           {selectedPost && (
             <div className="space-y-4">
-              {selectedPost.mediaUrl && (
+              {selectedPost.mediaUrls && selectedPost.mediaUrls.length > 0 && (
                 <img 
-                  src={selectedPost.mediaUrl} 
+                  src={selectedPost.mediaUrls[0]} 
                   alt="Post preview" 
                   className="w-full rounded-lg object-cover max-h-96"
                 />
@@ -435,13 +442,17 @@ export default function ClientContent() {
               <div>
                 <h4 className="font-semibold mb-2">Caption</h4>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {selectedPost.caption || "No caption"}
+                  {selectedPost.content || selectedPost.title || "No caption"}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-semibold mb-2">Platform</h4>
-                  <Badge variant="secondary">{selectedPost.platform}</Badge>
+                  <div className="flex gap-1 flex-wrap">
+                    {selectedPost.platforms?.map(p => (
+                      <Badge key={p} variant="secondary">{p}</Badge>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-2">Status</h4>
