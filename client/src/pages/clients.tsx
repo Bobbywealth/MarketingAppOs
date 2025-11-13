@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare, PhoneCall, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare, PhoneCall, LayoutGrid, List, Eye, ArrowRight, Info } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -489,6 +489,23 @@ export default function Clients() {
           </Dialog>
         </div>
 
+        {/* Info Banner - Click to View Details */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
+              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                💡 Pro Tip: Click Any Client Card
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Click on any client card to open their <strong>full profile page</strong> with tabs for Tasks, Content, Social Analytics, Billing, and more! Hover over a card to see the "View Full Profile" button.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Status Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           <Button
@@ -657,6 +674,15 @@ export default function Clients() {
             >
               {/* Gradient Overlay on Hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* View Details Overlay - Appears on Hover */}
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-6 pointer-events-none z-20">
+                <div className="flex items-center gap-2 text-white font-semibold text-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                  <Eye className="w-5 h-5" />
+                  <span>View Full Profile</span>
+                  <ArrowRight className="w-5 h-5 animate-pulse" />
+                </div>
+              </div>
               
               <CardContent className={`relative ${viewMode === "grid" ? "p-6" : "p-4"}`}>
                 {/* Checkbox for selection */}
@@ -858,6 +884,15 @@ export default function Clients() {
                     ))}
                   </div>
                 )}
+
+                {/* Click to View Profile Indicator - Always Visible */}
+                <div className={`${client.serviceTags && client.serviceTags.length > 0 ? 'mt-3' : 'mt-4 pt-4 border-t border-border/50'} flex items-center justify-center text-xs text-muted-foreground group-hover:text-primary transition-colors`}>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 group-hover:bg-primary/10 transition-all">
+                    <Eye className="w-3 h-3" />
+                    <span className="font-medium">Click to view full profile</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
