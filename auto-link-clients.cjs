@@ -15,13 +15,14 @@ const manualMappings = {
   'eiandaniels': 'Eian Daniels',
   'hroyalfamily': 'H Royal Family',
   'lk1634': 'Luke Kornblatt',
-  'pgkd2012': 'Michelle Bowens',
+  'pgkd2012': 'Jason',
+  'kendranice': 'Michelle Bowens',
   'phamefashioninc': 'Withney Phame',
   'princewonda': 'Jerry Wonda',
   'smokingclassicsinc': 'AJ SmokingClassics',
   'tachina': 'Tachina',
   'info.suzibookings': 'Suzi',
-  'rszn.jerkcenter': 'Jason',
+  'rszn.jerkcenter': 'Robert Laing',
   'testclient': 'AJ SmokingClassics',
 };
 
