@@ -9,6 +9,7 @@ import { AuditService } from "./auditService";
 import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
 import { dialpadService } from "./dialpadService";
+import { processAIChat } from "./aiManager";
 import {
   insertClientSchema,
   insertClientSocialStatsSchema,
@@ -3494,8 +3495,8 @@ Examples:
     }
   });
 
-  // AI Business Manager endpoint - Admin only
-  app.post("/api/ai-business-manager/chat", isAuthenticated, requireRole("admin"), async (req: Request, res: Response) => {
+  // AI Business Manager endpoint - GPT-4 Powered! 🚀
+  app.post("/api/ai-business-manager/chat", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
@@ -3508,18 +3509,18 @@ Examples:
         });
       }
 
-      console.log(`🤖 AI Business Manager request from user ${userId}:`, message);
+      console.log(`🤖 GPT-4 AI Business Manager from user ${userId}:`, message);
 
-      const result = await processAICommand(message, userId);
+      // Use the new GPT-4 powered AI system!
+      const result = await processAIChat(message, userId, conversationHistory || []);
       
       res.json(result);
     } catch (error: any) {
       console.error("AI Business Manager error:", error);
       res.status(500).json({
         success: false,
-        response: `An error occurred: ${error.message || 'Unknown error'}`,
+        response: `Oops! Something went wrong 😅 ${error.message || 'Unknown error'}`,
         error: error.message || 'Unknown error',
-        errorDetails: error.stack,
       });
     }
   });
