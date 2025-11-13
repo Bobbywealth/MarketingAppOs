@@ -8,7 +8,7 @@ import { useLocation } from "wouter";
 
 export default function AdminSocialOverview() {
   const [, setLocation] = useLocation();
-  const [clientId, setClientId] = useState<string>("");
+  const [clientId, setClientId] = useState<string>("all");
   const [platform, setPlatform] = useState<string>("all");
   const [range, setRange] = useState<string>("30d");
 
@@ -35,7 +35,7 @@ export default function AdminSocialOverview() {
               <SelectValue placeholder="All clients" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All clients</SelectItem>
+              <SelectItem value="all">All clients</SelectItem>
               {clients.map((c: any) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
