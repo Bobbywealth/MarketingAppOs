@@ -652,7 +652,7 @@ export default function Clients() {
               } ${
                 dragOverClient?.id === client.id ? 'ring-2 ring-primary ring-offset-2' : ''
               }`}
-              onClick={() => setSelectedClient(client)}
+              onClick={() => setLocation(`/clients/${client.id}`)}
               data-testid={`card-client-${client.id}`}
             >
               {/* Gradient Overlay on Hover */}

@@ -34,6 +34,7 @@ import ClientCampaigns from "@/pages/client-campaigns";
 import ClientBilling from "@/pages/client-billing";
 import ClientAnalytics from "@/pages/client-analytics";
 import Clients from "@/pages/clients";
+import ClientDetail from "@/pages/client-detail";
 import AdminSocialStats from "@/pages/admin-social-stats";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
@@ -93,6 +94,7 @@ function Router() {
       {isClient && <ProtectedRoute path="/second-me/onboarding" component={SecondMeOnboarding} />}
       {/* Admin/Manager/Staff routes */}
       {!isClient && <ProtectedRoute path="/" component={Dashboard} />}
+      {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
       {!isClient && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
       {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
