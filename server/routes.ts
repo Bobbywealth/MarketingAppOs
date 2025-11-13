@@ -5450,14 +5450,18 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
 
   app.patch("/api/users/:id", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
-      const { role } = req.body;
+      const { role, clientId } = req.body;
       const userId = parseInt(req.params.id);
       
-      if (!role) {
-        return res.status(400).json({ message: "Role is required" });
+      const updates: any = {};
+      if (role) updates.role = role;
+      if (clientId !== undefined) updates.clientId = clientId; // Allow null to unlink
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
       }
 
-      await storage.updateUser(userId, { role });
+      await storage.updateUser(userId, updates);
       res.json({ message: "User updated successfully" });
     } catch (error) {
       console.error(error);
