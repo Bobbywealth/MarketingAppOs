@@ -1274,164 +1274,293 @@ export default function LeadsPage() {
               {filteredLeads.map((lead) => (
                 <Card 
                   key={lead.id} 
-                  className={`hover-elevate group cursor-pointer transition-all ${
+                  className={`group cursor-pointer transition-all hover:shadow-md ${
                     selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''
                   }`}
                   onClick={() => setSelectedLead(lead)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLeadSelection(lead.id);
-                          }}
-                          className="mt-1 p-1 hover:bg-accent rounded transition-colors"
-                          title={selectedLeads.has(lead.id) ? "Deselect" : "Select"}
-                        >
-                          {selectedLeads.has(lead.id) ? (
-                            <CheckSquare className="w-5 h-5 text-primary" />
-                          ) : (
-                            <Square className="w-5 h-5 text-muted-foreground" />
-                          )}
-                        </button>
-                        <Avatar className="w-12 h-12">
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {lead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">{lead.name}</h3>
-                            <Badge variant={getStageBadge(lead.stage)}>
-                              {lead.stage.replace('_', ' ')}
-                            </Badge>
-                            {lead.score === "hot" && (
-                              <Badge variant="outline" className="gap-1">
-                                <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                                Hot Lead
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                            {lead.email && (
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Mail className="w-3 h-3" />
-                                <span className="truncate">{lead.email}</span>
-                              </div>
-                            )}
-                            {lead.phone && (
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Phone className="w-3 h-3" />
-                                <span>{lead.phone}</span>
-                              </div>
-                            )}
-                            {lead.company && (
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Building2 className="w-3 h-3" />
-                                <span>{lead.company}</span>
-                              </div>
-                            )}
-                            {lead.value && (
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <DollarSign className="w-3 h-3" />
-                                <span>${lead.value.toLocaleString()}</span>
-                              </div>
-                            )}
-                          </div>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
+                      {/* Checkbox */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleLeadSelection(lead.id);
+                        }}
+                        className="p-1 hover:bg-accent rounded transition-colors flex-shrink-0"
+                      >
+                        {selectedLeads.has(lead.id) ? (
+                          <CheckSquare className="w-4 h-4 text-primary" />
+                        ) : (
+                          <Square className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
 
+                      {/* Avatar */}
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-sm font-semibold">
+                          {(lead.company || lead.name)?.substring(0, 2).toUpperCase() || "??"}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      {/* Lead Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h3 className="font-semibold text-base truncate">{lead.company || lead.name}</h3>
+                          <Badge variant={getStageBadge(lead.stage)} className="flex-shrink-0 text-xs">
+                            {lead.stage.replace('_', ' ')}
+                          </Badge>
                           {lead.score && (
-                            <div className="mt-2">
-                              <Badge 
-                                variant="outline" 
-                                className={`gap-1 ${
-                                  lead.score === 'hot' ? 'border-red-500 text-red-700 bg-red-50' :
-                                  lead.score === 'warm' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
-                                  'border-blue-500 text-blue-700 bg-blue-50'
-                                }`}
-                              >
-                                {lead.score === 'hot' && '🔥'}
-                                {lead.score === 'warm' && '☀️'}
-                                {lead.score === 'cold' && '❄️'}
-                                <span className="ml-1 capitalize">{lead.score} Lead</span>
-                              </Badge>
-                            </div>
+                            <Badge 
+                              variant={lead.score === 'hot' ? 'destructive' : lead.score === 'warm' ? 'default' : 'secondary'}
+                              className="flex-shrink-0 text-xs"
+                            >
+                              {lead.score === 'hot' && '🔥'}
+                              {lead.score === 'warm' && '☀️'}
+                              {lead.score === 'cold' && '❄️'}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Inline Contact Info */}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          {lead.name && lead.company && (
+                            <span className="flex items-center gap-1">
+                              👤 {lead.name}
+                            </span>
+                          )}
+                          {lead.email && (
+                            <span className="flex items-center gap-1 truncate max-w-[200px]">
+                              <Mail className="w-3 h-3 flex-shrink-0" />
+                              {lead.email}
+                            </span>
+                          )}
+                          {lead.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3 flex-shrink-0" />
+                              {lead.phone}
+                            </span>
+                          )}
+                          {lead.value && (
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3 flex-shrink-0" />
+                              ${(lead.value / 100).toLocaleString()}
+                            </span>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            if (lead.email) {
-                              window.location.href = `mailto:${lead.email}`;
-                            }
-                          }}
-                          title="Send Email"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            if (lead.phone) {
-                              window.location.href = `tel:${lead.phone}`;
-                            }
-                          }}
-                          title="Call"
-                        >
-                          <Phone className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setEditingLead(lead);
-                            setIsEditDialogOpen(true);
-                          }}
-                          title="Edit Lead"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setSelectedLead(lead);
-                          }}
-                          title="More Options"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      {/* Actions Dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLead(lead);
+                            }}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (lead.phone) {
+                                setLocation(`/phone?number=${encodeURIComponent(lead.phone)}&action=call`);
+                              }
+                            }}
+                            disabled={!lead.phone}
+                          >
+                            <PhoneCall className="w-4 h-4 mr-2" />
+                            Call
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (lead.email) {
+                                window.location.href = `mailto:${lead.email}`;
+                              }
+                            }}
+                            disabled={!lead.email}
+                          >
+                            <Mail className="w-4 h-4 mr-2" />
+                            Email
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingLead(lead);
+                              setIsEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLeadToDelete(lead);
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-
-                    {lead.source && (
-                      <div className="mt-3 pt-3 border-t">
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>Source: {lead.source.replace('_', ' ')}</span>
-                          {lead.createdAt && (
-                            <>
-                              <span>•</span>
-                              <span>Added {format(new Date(lead.createdAt), 'MMM d, yyyy')}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          ) : (
+            /* List/Table View */
+            <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="text-left p-3 text-xs font-semibold w-[40px]">
+                        <button onClick={selectAllLeads} className="p-1 hover:bg-accent rounded transition-colors">
+                          {selectedLeads.size === filteredLeads.length && filteredLeads.length > 0 ? (
+                            <CheckSquare className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="text-left p-3 text-xs font-semibold">Company</th>
+                      <th className="text-left p-3 text-xs font-semibold">Contact</th>
+                      <th className="text-left p-3 text-xs font-semibold">Email</th>
+                      <th className="text-left p-3 text-xs font-semibold">Phone</th>
+                      <th className="text-left p-3 text-xs font-semibold">Stage</th>
+                      <th className="text-left p-3 text-xs font-semibold">Score</th>
+                      <th className="text-left p-3 text-xs font-semibold">Value</th>
+                      <th className="text-right p-3 text-xs font-semibold w-[60px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLeads.map((lead) => (
+                      <tr 
+                        key={lead.id}
+                        className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
+                          selectedLeads.has(lead.id) ? 'bg-primary/5' : ''
+                        }`}
+                        onClick={() => setSelectedLead(lead)}
+                      >
+                        <td className="p-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleLeadSelection(lead.id);
+                            }}
+                            className="p-1 hover:bg-accent rounded transition-colors"
+                          >
+                            {selectedLeads.has(lead.id) ? (
+                              <CheckSquare className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Square className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary text-xs font-semibold">
+                                {(lead.company || lead.name)?.substring(0, 2).toUpperCase() || "??"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-sm">{lead.company || lead.name || "N/A"}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-sm">{(lead.company && lead.name) ? lead.name : "-"}</td>
+                        <td className="p-3 text-sm text-muted-foreground truncate max-w-[200px]">
+                          {lead.email || "-"}
+                        </td>
+                        <td className="p-3 text-sm">{lead.phone || "-"}</td>
+                        <td className="p-3">
+                          <Badge variant={getStageBadge(lead.stage)} className="text-xs">
+                            {lead.stage.replace('_', ' ')}
+                          </Badge>
+                        </td>
+                        <td className="p-3">
+                          {lead.score && (
+                            <Badge 
+                              variant={lead.score === 'hot' ? 'destructive' : lead.score === 'warm' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {lead.score === 'hot' && '🔥 '}
+                              {lead.score === 'warm' && '☀️ '}
+                              {lead.score === 'cold' && '❄️ '}
+                              {lead.score}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3 text-sm font-medium">
+                          {lead.value ? `$${(lead.value / 100).toLocaleString()}` : "-"}
+                        </td>
+                        <td className="p-3 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (lead.phone) setLocation(`/phone?number=${encodeURIComponent(lead.phone)}&action=call`);
+                                }}
+                                disabled={!lead.phone}
+                              >
+                                <PhoneCall className="w-4 h-4 mr-2" />
+                                Call
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (lead.email) window.location.href = `mailto:${lead.email}`;
+                                }}
+                                disabled={!lead.email}
+                              >
+                                <Mail className="w-4 h-4 mr-2" />
+                                Email
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingLead(lead); setIsEditDialogOpen(true); }}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={(e) => { e.stopPropagation(); setLeadToDelete(lead); }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>
