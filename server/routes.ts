@@ -3925,16 +3925,49 @@ Examples:
         const content = await fs.readFile(file.path, 'utf-8');
         const lines = content.split('\n').filter(line => line.trim());
         
+        console.log(`📊 CSV Parsing: Found ${lines.length} lines`);
+        
         if (lines.length === 0) {
           return res.status(400).json({ message: "CSV file is empty" });
         }
 
+        // Helper function to parse CSV row properly (handles quoted values)
+        function parseCSVLine(line: string): string[] {
+          const result: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const nextChar = line[i + 1];
+            
+            if (char === '"' && nextChar === '"') {
+              // Escaped quote
+              current += '"';
+              i++; // Skip next quote
+            } else if (char === '"') {
+              // Toggle quote mode
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              // Field separator
+              result.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          result.push(current.trim()); // Add last field
+          return result;
+        }
+
         // Parse header
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+        const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+        console.log(`📋 Headers found:`, headers);
         
         // Parse data rows
         for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''));
+          const values = parseCSVLine(lines[i]);
+          console.log(`📄 Row ${i}:`, values);
           const lead: any = {
             stage: 'prospect',
             score: 'warm',
@@ -3959,8 +3992,11 @@ Examples:
             } else if (header.includes('industry') || header.includes('vertical') || header.includes('sector')) {
               lead.industry = value;
             } else if (header.includes('tag') || header.includes('categor') || header.includes('label')) {
-              // Parse tags - support comma-separated values
-              lead.tags = value.split(',').map((t: string) => t.trim()).filter((t: string) => t);
+              // Parse tags - the value has already been extracted from quotes if present
+              // Just split on commas and trim
+              if (value) {
+                lead.tags = value.split(',').map((t: string) => t.trim()).filter((t: string) => t);
+              }
             } else if (header.includes('address') || header.includes('location')) {
               lead.address = value;
             } else if (header.includes('city')) {
@@ -3977,10 +4013,17 @@ Examples:
           });
 
           // Company is required, name is optional
+          console.log(`🔍 Parsed lead:`, { company: lead.company, name: lead.name, email: lead.email });
+          
           if (lead.company) {
             leads.push(lead);
+            console.log(`✅ Added lead: ${lead.company}`);
+          } else {
+            console.log(`❌ Skipped lead (no company): Row ${i}`);
           }
         }
+        
+        console.log(`📊 Total leads parsed: ${leads.length}`);
 
       } else if (file.mimetype === 'application/pdf') {
         // Use AI to extract leads from PDF
