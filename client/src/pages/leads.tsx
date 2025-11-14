@@ -1269,8 +1269,8 @@ export default function LeadsPage() {
                 </Button>
               )}
             </div>
-          ) : (
-            <div className="space-y-3">
+          ) : viewMode === "card" ? (
+            <div className="space-y-2">
               {filteredLeads.map((lead) => (
                 <Card 
                   key={lead.id} 
