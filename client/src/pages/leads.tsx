@@ -366,38 +366,40 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Leads Management</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Track and manage your sales leads</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            className="gap-2" 
-            onClick={() => {
-              const link = document.createElement('a');
-              link.href = '/lead-import-template.csv';
-              link.download = 'lead-import-template.csv';
-              link.click();
-            }}
-          >
-            <Download className="w-4 h-4" />
-            Download Template
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
-            <Upload className="w-4 h-4" />
-            Import Leads
-          </Button>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <UserPlus className="w-4 h-4" />
-                Add Lead
-              </Button>
-            </DialogTrigger>
+    <div className="flex flex-col min-h-screen">
+      {/* Compact Sticky Header */}
+      <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between px-4 md:px-6 py-3">
+          <div>
+            <h1 className="text-2xl font-bold">Leads</h1>
+            <p className="text-sm text-muted-foreground">Track your sales pipeline</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="gap-2 hidden md:flex" 
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = '/lead-import-template.csv';
+                link.download = 'lead-import-template.csv';
+                link.click();
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Template
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="w-4 h-4" />
+              <span className="hidden md:inline">Import</span>
+            </Button>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  <span className="hidden md:inline">Add Lead</span>
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Lead</DialogTitle>
@@ -972,9 +974,135 @@ export default function LeadsPage() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      {/* Modern Horizontal Filter Bar */}
+      <div className="border-b bg-muted/30 sticky top-[73px] z-10">
+        <div className="px-4 md:px-6 py-3">
+          <div className="flex flex-col md:flex-row items-center gap-3">
+            {/* Search */}
+            <div className="relative flex-1 w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search leads..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            {/* Filters */}
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full md:w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="prospect">Prospect</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="qualified">Qualified</SelectItem>
+                  <SelectItem value="proposal">Proposal</SelectItem>
+                  <SelectItem value="closed_won">Won</SelectItem>
+                  <SelectItem value="closed_lost">Lost</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterIndustry} onValueChange={setFilterIndustry}>
+                <SelectTrigger className="w-full md:w-[140px]">
+                  <SelectValue placeholder="Industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Industries</SelectItem>
+                  <SelectItem value="technology">Technology</SelectItem>
+                  <SelectItem value="healthcare">Healthcare</SelectItem>
+                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="retail">Retail</SelectItem>
+                  <SelectItem value="construction">Construction</SelectItem>
+                  <SelectItem value="hospitality">Hospitality</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* View Mode Toggle */}
+              <div className="flex border rounded-lg overflow-hidden ml-auto">
+                <Button
+                  variant={viewMode === "card" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("card")}
+                  className="rounded-none"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-none"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Filter Chips */}
+          <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+            <Badge
+              variant={quickFilterStage === "prospect" ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              onClick={() => setQuickFilterStage(q => q === "prospect" ? null : "prospect")}
+            >
+              🎯 Prospect
+            </Badge>
+            <Badge
+              variant={quickFilterStage === "qualified" ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              onClick={() => setQuickFilterStage(q => q === "qualified" ? null : "qualified")}
+            >
+              ✅ Qualified
+            </Badge>
+            <Badge
+              variant={quickFilterScore === "hot" ? "destructive" : "outline"}
+              className="cursor-pointer hover:bg-destructive/80 transition-colors"
+              onClick={() => setQuickFilterScore(q => q === "hot" ? null : "hot")}
+            >
+              🔥 Hot
+            </Badge>
+            <Badge
+              variant={quickFilterScore === "warm" ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              onClick={() => setQuickFilterScore(q => q === "warm" ? null : "warm")}
+            >
+              ☀️ Warm
+            </Badge>
+            <Badge
+              variant={quickFilterScore === "cold" ? "secondary" : "outline"}
+              className="cursor-pointer hover:bg-secondary/80 transition-colors"
+              onClick={() => setQuickFilterScore(q => q === "cold" ? null : "cold")}
+            >
+              ❄️ Cold
+            </Badge>
+            <Badge
+              variant={quickFilterSource === "website" ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              onClick={() => setQuickFilterSource(q => q === "website" ? null : "website")}
+            >
+              🌐 Website
+            </Badge>
+            <Badge
+              variant={quickFilterSource === "referral" ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              onClick={() => setQuickFilterSource(q => q === "referral" ? null : "referral")}
+            >
+              👥 Referral
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards - 6 Column Grid */}
+      <div className="px-4 md:px-6 py-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="hover-elevate">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -1058,79 +1186,47 @@ export default function LeadsPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
 
-      {/* Filters & Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search leads by name, email, or company..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="contacted">Contacted</SelectItem>
-                <SelectItem value="qualified">Qualified</SelectItem>
-                <SelectItem value="proposal">Proposal</SelectItem>
-                <SelectItem value="negotiation">Negotiation</SelectItem>
-                <SelectItem value="converted">Converted</SelectItem>
-                <SelectItem value="lost">Lost</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon">
-              <Filter className="w-4 h-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Bulk Actions Toolbar */}
-      {showBulkActions && (
-        <Card className="border-primary/50 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    setSelectedLeads(new Set());
-                    setShowBulkActions(false);
-                  }}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Clear
-                </Button>
-                <span className="text-sm font-medium">
-                  {selectedLeads.size} lead{selectedLeads.size !== 1 ? 's' : ''} selected
-                </span>
+      {/* Leads Content Area */}
+      <div className="flex-1 px-4 md:px-6 py-4 space-y-4">
+        {/* Bulk Actions Toolbar */}
+        {showBulkActions && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedLeads(new Set());
+                      setShowBulkActions(false);
+                    }}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Clear
+                  </Button>
+                  <span className="text-sm font-medium">
+                    {selectedLeads.size} lead{selectedLeads.size !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleteLeadsMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {bulkDeleteLeadsMutation.isPending ? "Deleting..." : "Delete Selected"}
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleteLeadsMutation.isPending}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  {bulkDeleteLeadsMutation.isPending ? "Deleting..." : "Delete Selected"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )}
 
       {/* Leads List */}
       <Card>
@@ -1365,6 +1461,7 @@ export default function LeadsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
 
       {/* Import Leads Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
