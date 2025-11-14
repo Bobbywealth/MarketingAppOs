@@ -314,10 +314,14 @@ export default function LeadsPage() {
 
   const leadStats = {
     total: leads.length,
+    new: leads.filter(l => l.stage === "prospect" || l.stage === "new").length,
     prospect: leads.filter(l => l.stage === "prospect").length,
+    contacted: leads.filter(l => l.stage === "contacted").length,
     qualified: leads.filter(l => l.stage === "qualified").length,
     proposal: leads.filter(l => l.stage === "proposal").length,
+    converted: leads.filter(l => l.stage === "closed_won" || l.stage === "converted").length,
     closedWon: leads.filter(l => l.stage === "closed_won").length,
+    lost: leads.filter(l => l.stage === "closed_lost" || l.stage === "lost").length,
     closedLost: leads.filter(l => l.stage === "closed_lost").length,
     // Temperature stats
     hot: leads.filter(l => l.score === "hot").length,
@@ -1306,10 +1310,12 @@ export default function LeadsPage() {
                       {/* Lead Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-semibold text-base truncate">{lead.company || lead.name}</h3>
-                          <Badge variant={getStageBadge(lead.stage)} className="flex-shrink-0 text-xs">
-                            {lead.stage.replace('_', ' ')}
-                          </Badge>
+                          <h3 className="font-semibold text-base truncate">{lead.company || lead.name || 'Unnamed Lead'}</h3>
+                          {lead.stage && (
+                            <Badge variant={getStageBadge(lead.stage)} className="flex-shrink-0 text-xs">
+                              {lead.stage.replace('_', ' ')}
+                            </Badge>
+                          )}
                           {lead.score && (
                             <Badge 
                               variant={lead.score === 'hot' ? 'destructive' : lead.score === 'warm' ? 'default' : 'secondary'}
@@ -1489,9 +1495,13 @@ export default function LeadsPage() {
                         </td>
                         <td className="p-3 text-sm">{lead.phone || "-"}</td>
                         <td className="p-3">
-                          <Badge variant={getStageBadge(lead.stage)} className="text-xs">
-                            {lead.stage.replace('_', ' ')}
-                          </Badge>
+                          {lead.stage ? (
+                            <Badge variant={getStageBadge(lead.stage)} className="text-xs">
+                              {lead.stage.replace('_', ' ')}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
                         </td>
                         <td className="p-3">
                           {lead.score && (
