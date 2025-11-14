@@ -171,91 +171,98 @@
   --opaque-button-border-intensity: 9;  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255,255,255, .06);
+  --elevate-2: rgba(255,255,255, .12);
 
-  --background: 220 13% 18%;
+  /* Enhanced Dark Mode - Deeper Contrast & Better Depth */
+  --background: 222 47% 11%;  /* #0f172a - Deeper, richer background */
 
-  --foreground: 0 0% 98%;
+  --foreground: 210 20% 92%;  /* #e5e7eb - Softer white for better readability */
 
-  --border: 220 13% 28%;
+  --border: 220 13% 15%;  /* Subtle, almost invisible borders */
 
-  --card: 220 13% 21%;
+  --card: 217 33% 17%;  /* #1e293b - Cards stand out more from background */
 
-  --card-foreground: 0 0% 98%;
+  --card-foreground: 210 20% 92%;  /* #e5e7eb */
 
-  --card-border: 220 13% 25%;
+  --card-border: 220 10% 12%;  /* Very subtle card borders */
 
-  --sidebar: 220 13% 23%;
+  --sidebar: 220 26% 14%;  /* #111827 - Darker sidebar for depth */
 
-  --sidebar-foreground: 0 0% 98%;
+  --sidebar-foreground: 210 20% 92%;
 
-  --sidebar-border: 220 13% 30%;
+  --sidebar-border: 220 13% 20%;
 
-  --sidebar-primary: 217 91% 60%;
+  --sidebar-primary: 217 91% 68%;  /* #60a5fa - Slightly muted for dark mode */
 
   --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 220 13% 28%;
+  --sidebar-accent: 220 13% 22%;
 
-  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-accent-foreground: 210 20% 92%;
 
-  --sidebar-ring: 217 91% 60%;
+  --sidebar-ring: 217 91% 68%;
 
-  --popover: 220 13% 25%;
+  --popover: 217 33% 17%;
 
-  --popover-foreground: 0 0% 98%;
+  --popover-foreground: 210 20% 92%;
 
-  --popover-border: 220 13% 32%;
+  --popover-border: 220 13% 15%;
 
-  --primary: 217 91% 60%;
+  --primary: 217 91% 68%;  /* #60a5fa - Softer blue that pops without straining eyes */
 
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 220 13% 30%;
+  --secondary: 220 17% 22%;
 
-  --secondary-foreground: 0 0% 98%;
+  --secondary-foreground: 210 20% 92%;
 
-  --muted: 220 9% 27%;
+  --muted: 220 17% 20%;
 
-  --muted-foreground: 0 0% 75%;
+  --muted-foreground: 220 9% 58%;  /* #94a3b8 - Better contrast for secondary text */
 
-  --accent: 220 12% 29%;
+  --accent: 262 83% 70%;  /* #a78bfa - Vibrant purple accent */
 
-  --accent-foreground: 0 0% 98%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
 
   --destructive-foreground: 0 0% 100%;
 
-  --input: 220 13% 42%;
-  --ring: 217 91% 60%;
-  --chart-1: 217 91% 70%;
-  --chart-2: 25 95% 65%;
-  --chart-3: 142 71% 60%;
-  --chart-4: 38 92% 65%;
-  --chart-5: 199 89% 65%;
+  --input: 220 13% 35%;
+  --ring: 217 91% 68%;
+  
+  /* Enhanced Chart Colors - Neon-style for dark mode */
+  --chart-1: 217 91% 70%;  /* Soft blue */
+  --chart-2: 25 95% 65%;   /* Orange */
+  --chart-3: 142 71% 58%;  /* Green */
+  --chart-4: 38 92% 65%;   /* Yellow */
+  --chart-5: 199 89% 65%;  /* Cyan */
 
-  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.20);
-  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.25);
-  --shadow-sm: 0px 2px 4px 0px hsl(0 0% 0% / 0.22), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
-  --shadow: 0px 4px 6px -1px hsl(0 0% 0% / 0.28), 0px 2px 4px -2px hsl(0 0% 0% / 0.20);
-  --shadow-md: 0px 6px 12px -2px hsl(0 0% 0% / 0.32), 0px 3px 7px -3px hsl(0 0% 0% / 0.24);
-  --shadow-lg: 0px 10px 20px -4px hsl(0 0% 0% / 0.38), 0px 6px 12px -6px hsl(0 0% 0% / 0.28);
-  --shadow-xl: 0px 20px 25px -5px hsl(0 0% 0% / 0.42), 0px 10px 15px -7px hsl(0 0% 0% / 0.32);
-  --shadow-2xl: 0px 25px 50px -12px hsl(0 0% 0% / 0.50);
+  /* Enhanced Shadows - Deeper, more dramatic for dark mode */
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.30);
+  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.35);
+  --shadow-sm: 0px 2px 4px 0px hsl(0 0% 0% / 0.32), 0px 1px 2px -1px hsl(0 0% 0% / 0.28);
+  --shadow: 0px 4px 6px -1px hsl(0 0% 0% / 0.38), 0px 2px 4px -2px hsl(0 0% 0% / 0.30);
+  --shadow-md: 0px 6px 12px -2px hsl(0 0% 0% / 0.42), 0px 3px 7px -3px hsl(0 0% 0% / 0.34);
+  --shadow-lg: 0px 10px 20px -4px hsl(0 0% 0% / 0.48), 0px 6px 12px -6px hsl(0 0% 0% / 0.38);
+  --shadow-xl: 0px 20px 25px -5px hsl(0 0% 0% / 0.52), 0px 10px 15px -7px hsl(0 0% 0% / 0.42);
+  --shadow-2xl: 0px 25px 50px -12px hsl(0 0% 0% / 0.60);
 
-  /* Premium Visual Effects - Dark Mode */
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 70% / 0.15) 0px, transparent 50%),
-                   radial-gradient(at 100% 100%, hsl(25 95% 65% / 0.1) 0px, transparent 50%);
-  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  /* Premium Visual Effects - Dark Mode Enhanced */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 68% / 0.12) 0px, transparent 50%),
+                   radial-gradient(at 100% 100%, hsl(262 83% 70% / 0.08) 0px, transparent 50%),
+                   radial-gradient(at 50% 50%, hsl(0 0% 0% / 0.3) 0px, transparent 100%);
+  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
 }
 
 @layer base {
   * {
     @apply border-border;
+    /* Smooth transitions for dark mode toggle */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
 
   body {
@@ -702,5 +709,196 @@
 
   .email-content *[class*="MsoNormal"] {
     margin: 0.25rem 0 !important;
+  }
+
+  /* =====================================================
+     ENHANCED DARK MODE EFFECTS 🌙
+     ===================================================== */
+
+  /* Card Floating with Glow Effect */
+  .dark .card-hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 
+      0 10px 20px -4px hsl(217 91% 68% / 0.25),
+      0 6px 12px -6px hsl(217 91% 68% / 0.15),
+      0 0 30px hsl(217 91% 68% / 0.10);
+  }
+
+  /* Enhanced Card with Subtle Border Glow */
+  .dark-card-border {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .dark-card-border:hover {
+    border-color: rgba(96, 165, 250, 0.3);
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.15);
+  }
+
+  /* Metric Glow Effects - Positive/Negative Numbers */
+  .metric-positive {
+    color: hsl(142 71% 58%);  /* Green */
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  }
+
+  .metric-negative {
+    color: hsl(0 84% 60%);  /* Red */
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+  }
+
+  .metric-neutral {
+    color: hsl(217 91% 68%);  /* Blue */
+    text-shadow: 0 0 6px rgba(96, 165, 250, 0.3);
+  }
+
+  /* Enhanced Gradient Text with Glow */
+  .text-gradient-glow {
+    background: linear-gradient(135deg, hsl(217 91% 68%), hsl(262 83% 70%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.3));
+  }
+
+  /* Logo Glow Effect (Dark Mode Only) */
+  .dark .logo-glow {
+    filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.5));
+    transition: filter 0.3s ease;
+  }
+
+  .dark .logo-glow:hover {
+    filter: drop-shadow(0 0 16px rgba(96, 165, 250, 0.7));
+  }
+
+  /* Sidebar Item Hover Glow */
+  .dark .sidebar-item-glow {
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  .dark .sidebar-item-glow:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 2px solid hsl(217 91% 68%);
+  }
+
+  .dark .sidebar-item-glow.active {
+    background: rgba(96, 165, 250, 0.1);
+    border-left: 2px solid hsl(217 91% 68%);
+    box-shadow: inset 0 0 10px rgba(96, 165, 250, 0.1);
+  }
+
+  /* Neon Grid Lines for Charts/Graphs */
+  .dark .chart-grid-line {
+    stroke: rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .chart-accent-line {
+    stroke: hsl(199 89% 65%);  /* Cyan */
+    filter: drop-shadow(0 0 4px rgba(6, 182, 212, 0.5));
+  }
+
+  /* Enhanced Button Glow on Hover */
+  .dark button:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.2);
+    transition: box-shadow 0.3s ease;
+  }
+
+  /* Radial Background Texture */
+  .dark-radial-bg {
+    background: radial-gradient(circle at top left, hsl(215 28% 17%) 0%, hsl(222 47% 11%) 100%);
+  }
+
+  /* Floating Card Effect with Depth */
+  .dark-floating-card {
+    background: hsl(217 33% 17%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(96, 165, 250, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+  }
+
+  .dark-floating-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 8px 24px rgba(0, 0, 0, 0.4),
+      0 0 30px rgba(96, 165, 250, 0.15),
+      0 0 0 1px rgba(96, 165, 250, 0.2);
+  }
+
+  /* Glowing Accent Border */
+  .glow-border {
+    position: relative;
+  }
+
+  .dark .glow-border::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.3), rgba(167, 139, 250, 0.2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .dark .glow-border:hover::after {
+    opacity: 1;
+  }
+
+  /* Enhanced Stat Card with Glow */
+  .dark-stat-card {
+    background: linear-gradient(135deg, hsl(217 33% 17%), hsl(220 26% 14%));
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+  }
+
+  .dark-stat-card:hover {
+    border-color: rgba(96, 165, 250, 0.2);
+    box-shadow: 
+      0 6px 16px rgba(0, 0, 0, 0.4),
+      0 0 24px rgba(96, 165, 250, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* Pulsing Notification Dot */
+  .dark-pulse-dot {
+    animation: darkPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes darkPulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(96, 165, 250, 0);
+    }
+  }
+
+  /* Icon with Soft Glow */
+  .dark-icon-glow {
+    filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.3));
+  }
+
+  /* Enhanced Input Focus Glow */
+  .dark input:focus,
+  .dark textarea:focus {
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+  }
+
+  /* Gradient Heading with Glow */
+  .dark-gradient-heading {
+    background: linear-gradient(90deg, hsl(217 91% 68%), hsl(262 83% 70%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 8px rgba(96, 165, 250, 0.2));
   }
 }
