@@ -483,6 +483,7 @@ export default function LeadsPage() {
                       <SelectItem value="manufacturing">🏭 Manufacturing</SelectItem>
                       <SelectItem value="real_estate">🏠 Real Estate</SelectItem>
                       <SelectItem value="hospitality">🏨 Hospitality</SelectItem>
+                      <SelectItem value="restaurant">🍽️ Restaurant</SelectItem>
                       <SelectItem value="media">📺 Media & Entertainment</SelectItem>
                       <SelectItem value="legal">⚖️ Legal</SelectItem>
                       <SelectItem value="consulting">💼 Consulting</SelectItem>
@@ -679,6 +680,7 @@ export default function LeadsPage() {
                         <SelectItem value="manufacturing">🏭 Manufacturing</SelectItem>
                         <SelectItem value="real_estate">🏠 Real Estate</SelectItem>
                         <SelectItem value="hospitality">🏨 Hospitality</SelectItem>
+                        <SelectItem value="restaurant">🍽️ Restaurant</SelectItem>
                         <SelectItem value="media">📺 Media & Entertainment</SelectItem>
                         <SelectItem value="legal">⚖️ Legal</SelectItem>
                         <SelectItem value="consulting">💼 Consulting</SelectItem>
@@ -1024,6 +1026,7 @@ export default function LeadsPage() {
                   <SelectItem value="retail">Retail</SelectItem>
                   <SelectItem value="construction">Construction</SelectItem>
                   <SelectItem value="hospitality">Hospitality</SelectItem>
+                  <SelectItem value="restaurant">Restaurant</SelectItem>
                 </SelectContent>
               </Select>
 
