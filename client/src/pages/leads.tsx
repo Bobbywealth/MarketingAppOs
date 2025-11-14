@@ -346,6 +346,19 @@ export default function LeadsPage() {
           <p className="text-sm md:text-base text-muted-foreground">Track and manage your sales leads</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="gap-2" 
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = '/lead-import-template.csv';
+              link.download = 'lead-import-template.csv';
+              link.click();
+            }}
+          >
+            <Download className="w-4 h-4" />
+            Download Template
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="w-4 h-4" />
             Import Leads
@@ -1334,6 +1347,36 @@ export default function LeadsPage() {
               Upload a CSV or PDF file to import multiple leads at once. AI will automatically extract lead information from PDFs.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Template Download Banner */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div>
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  First time importing? Download our template!
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  Includes all required fields and example data
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300"
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = '/lead-import-template.csv';
+                link.download = 'lead-import-template.csv';
+                link.click();
+                toast({ title: "✅ Template Downloaded", description: "Open the file, add your leads, and upload it back here!" });
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Download Template
+            </Button>
+          </div>
 
           {!importFile && !parsedLeads.length ? (
             <div 
