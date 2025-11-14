@@ -4012,14 +4012,22 @@ Examples:
             }
           });
 
-          // Company is required, name is optional
+          // Smart mapping: If no company but has name, use name as company
+          // (Common for restaurants where name IS the company)
+          if (!lead.company && lead.name) {
+            lead.company = lead.name;
+            lead.name = null; // Clear name since it's now the company
+            console.log(`🔄 Mapped name to company: ${lead.company}`);
+          }
+          
+          // Company is required
           console.log(`🔍 Parsed lead:`, { company: lead.company, name: lead.name, email: lead.email });
           
           if (lead.company) {
             leads.push(lead);
             console.log(`✅ Added lead: ${lead.company}`);
           } else {
-            console.log(`❌ Skipped lead (no company): Row ${i}`);
+            console.log(`❌ Skipped lead (no company or name): Row ${i}`);
           }
         }
         
