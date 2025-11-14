@@ -3956,6 +3956,11 @@ Examples:
               lead.company = value;
             } else if (header.includes('website') || header.includes('url')) {
               lead.website = value;
+            } else if (header.includes('industry') || header.includes('vertical') || header.includes('sector')) {
+              lead.industry = value;
+            } else if (header.includes('tag') || header.includes('categor') || header.includes('label')) {
+              // Parse tags - support comma-separated values
+              lead.tags = value.split(',').map((t: string) => t.trim()).filter((t: string) => t);
             } else if (header.includes('address') || header.includes('location')) {
               lead.address = value;
             } else if (header.includes('city')) {
@@ -3965,13 +3970,14 @@ Examples:
             } else if (header.includes('zip') || header.includes('postal')) {
               lead.zipCode = value;
             } else if (header.includes('value') || header.includes('amount')) {
-              lead.estimatedValue = parseFloat(value) || 0;
-            } else if (header.includes('note') || header.includes('description')) {
+              lead.value = Math.round(parseFloat(value) * 100) || null; // Convert to cents
+            } else if (header.includes('note') || header.includes('description') || header.includes('comment')) {
               lead.notes = value;
             }
           });
 
-          if (lead.name || lead.email) {
+          // Company is required, name is optional
+          if (lead.company) {
             leads.push(lead);
           }
         }
