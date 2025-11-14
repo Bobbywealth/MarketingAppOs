@@ -100,30 +100,39 @@ const upload = multer({
     fileSize: 200 * 1024 * 1024, // 200MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Accept images, videos, and audio (for voice messages)
+    // Accept images, videos, audio, PDFs, and CSVs
     const allowedMimes = [
+      // Images
       'image/jpeg',
       'image/jpg',
       'image/png',
       'image/gif',
       'image/webp',
+      // Videos
       'video/mp4',
       'video/webm',
       'video/ogg',
       'video/quicktime',
+      // Audio
       'audio/mpeg',
       'audio/webm',
       'audio/ogg',
       'audio/wav',
       'audio/mp4',
       'audio/aac',
-      'audio/x-m4a'
+      'audio/x-m4a',
+      // Documents (for lead imports)
+      'text/csv',
+      'application/csv',
+      'application/pdf',
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // .xlsx
     ];
     
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images, videos, and audio are allowed.'));
+      cb(new Error('Invalid file type. Allowed: images, videos, audio, PDF, CSV'));
     }
   }
 });
