@@ -70,6 +70,8 @@ export default function LeadsPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -109,7 +111,17 @@ export default function LeadsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      toast({ title: "Lead updated successfully" });
+      toast({ title: "✅ Lead updated successfully!" });
+      setIsEditDialogOpen(false);
+      setEditingLead(null);
+      setSelectedLead(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to update lead", 
+        description: error?.message,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -455,6 +467,133 @@ export default function LeadsPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Lead Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Lead</DialogTitle>
+              <DialogDescription>Update lead information</DialogDescription>
+            </DialogHeader>
+            {editingLead && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const data: Partial<InsertLead> = {
+                  name: formData.get("name") as string,
+                  email: formData.get("email") as string || null,
+                  phone: formData.get("phone") as string || null,
+                  company: formData.get("company") as string || null,
+                  website: formData.get("website") as string || null,
+                  stage: formData.get("stage") as string,
+                  score: formData.get("score") as string,
+                  source: formData.get("source") as string,
+                  value: formData.get("value") ? parseInt(formData.get("value") as string) * 100 : null,
+                  notes: formData.get("notes") as string || null,
+                };
+                updateLeadMutation.mutate({ id: editingLead.id, data });
+              }} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Name *</Label>
+                    <Input name="name" defaultValue={editingLead.name} placeholder="John Doe" required />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input name="email" type="email" defaultValue={editingLead.email || ""} placeholder="john@example.com" />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Phone</Label>
+                    <Input name="phone" type="tel" defaultValue={editingLead.phone || ""} placeholder="+1 (555) 123-4567" />
+                  </div>
+                  <div>
+                    <Label>Company</Label>
+                    <Input name="company" defaultValue={editingLead.company || ""} placeholder="Acme Inc" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Website</Label>
+                    <Input name="website" type="url" defaultValue={editingLead.website || ""} placeholder="https://example.com" />
+                  </div>
+                  <div>
+                    <Label>Lead Value ($)</Label>
+                    <Input name="value" type="number" defaultValue={editingLead.value ? editingLead.value / 100 : ""} placeholder="5000" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Stage *</Label>
+                    <Select name="stage" defaultValue={editingLead.stage} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prospect">Prospect</SelectItem>
+                        <SelectItem value="qualified">Qualified</SelectItem>
+                        <SelectItem value="proposal">Proposal</SelectItem>
+                        <SelectItem value="closed_won">Closed Won</SelectItem>
+                        <SelectItem value="closed_lost">Closed Lost</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Temperature *</Label>
+                    <Select name="score" defaultValue={editingLead.score || "warm"} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hot">🔥 Hot</SelectItem>
+                        <SelectItem value="warm">☀️ Warm</SelectItem>
+                        <SelectItem value="cold">❄️ Cold</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Lead Source *</Label>
+                    <Select name="source" defaultValue={editingLead.source} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="website">Website</SelectItem>
+                        <SelectItem value="referral">Referral</SelectItem>
+                        <SelectItem value="social">Social Media</SelectItem>
+                        <SelectItem value="ads">Advertising</SelectItem>
+                        <SelectItem value="call">Phone Call</SelectItem>
+                        <SelectItem value="form">Lead Form</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Notes</Label>
+                  <Textarea name="notes" defaultValue={editingLead.notes || ""} placeholder="Additional information about this lead..." rows={3} />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingLead(null);
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateLeadMutation.isPending}>
+                    {updateLeadMutation.isPending ? "Updating..." : "Update Lead"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
         </div>
       </div>
 
@@ -606,6 +745,18 @@ export default function LeadsPage() {
                       SMS
                     </Button>
                   </div>
+                  <Button 
+                    onClick={() => {
+                      setEditingLead(selectedLead);
+                      setIsEditDialogOpen(true);
+                      setSelectedLead(null);
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Lead
+                  </Button>
                   <Button 
                     onClick={() => setLeadToDelete(selectedLead)}
                     variant="destructive"
@@ -947,7 +1098,8 @@ export default function LeadsPage() {
                           size="icon" 
                           onClick={(e) => { 
                             e.stopPropagation(); 
-                            setSelectedLead(lead);
+                            setEditingLead(lead);
+                            setIsEditDialogOpen(true);
                           }}
                           title="Edit Lead"
                         >
