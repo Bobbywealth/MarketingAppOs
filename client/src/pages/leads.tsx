@@ -347,16 +347,16 @@ export default function LeadsPage() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Lead</DialogTitle>
-              <DialogDescription>Create a new lead in your pipeline</DialogDescription>
+              <DialogDescription>Create a new lead in your pipeline (Company name is required)</DialogDescription>
             </DialogHeader>
             <form onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               const data: InsertLead = {
-                name: formData.get("name") as string,
+                name: formData.get("name") as string || null,
                 email: formData.get("email") as string || null,
                 phone: formData.get("phone") as string || null,
-                company: formData.get("company") as string || null,
+                company: formData.get("company") as string,
                 website: formData.get("website") as string || null,
                 stage: formData.get("stage") as string,
                 score: formData.get("score") as string,
@@ -372,8 +372,8 @@ export default function LeadsPage() {
             }} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Name *</Label>
-                  <Input name="name" placeholder="John Doe" required />
+                  <Label>Name</Label>
+                  <Input name="name" placeholder="John Doe" />
                 </div>
                 <div>
                   <Label>Email</Label>
@@ -387,8 +387,8 @@ export default function LeadsPage() {
                   <Input name="phone" type="tel" placeholder="+1 (555) 123-4567" />
                 </div>
                 <div>
-                  <Label>Company</Label>
-                  <Input name="company" placeholder="Acme Inc" />
+                  <Label>Company *</Label>
+                  <Input name="company" placeholder="Acme Inc" required />
                 </div>
               </div>
 
@@ -480,10 +480,10 @@ export default function LeadsPage() {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const data: Partial<InsertLead> = {
-                  name: formData.get("name") as string,
+                  name: formData.get("name") as string || null,
                   email: formData.get("email") as string || null,
                   phone: formData.get("phone") as string || null,
-                  company: formData.get("company") as string || null,
+                  company: formData.get("company") as string,
                   website: formData.get("website") as string || null,
                   stage: formData.get("stage") as string,
                   score: formData.get("score") as string,
@@ -495,8 +495,8 @@ export default function LeadsPage() {
               }} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Name *</Label>
-                    <Input name="name" defaultValue={editingLead.name} placeholder="John Doe" required />
+                    <Label>Name</Label>
+                    <Input name="name" defaultValue={editingLead.name} placeholder="John Doe" />
                   </div>
                   <div>
                     <Label>Email</Label>
@@ -510,8 +510,8 @@ export default function LeadsPage() {
                     <Input name="phone" type="tel" defaultValue={editingLead.phone || ""} placeholder="+1 (555) 123-4567" />
                   </div>
                   <div>
-                    <Label>Company</Label>
-                    <Input name="company" defaultValue={editingLead.company || ""} placeholder="Acme Inc" />
+                    <Label>Company *</Label>
+                    <Input name="company" defaultValue={editingLead.company || ""} placeholder="Acme Inc" required />
                   </div>
                 </div>
 

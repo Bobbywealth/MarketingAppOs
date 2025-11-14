@@ -254,10 +254,10 @@ export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id),
   assignedToId: integer("assigned_to_id").references(() => users.id),
-  name: varchar("name").notNull(),
+  name: varchar("name"), // Optional - person's name
   email: varchar("email"),
   phone: varchar("phone"),
-  company: varchar("company"),
+  company: varchar("company").notNull(), // Required - company name
   website: varchar("website"),
   stage: varchar("stage").notNull().default("prospect"), // prospect, qualified, proposal, closed_won, closed_lost
   score: varchar("score").notNull().default("warm"), // hot, warm, cold
