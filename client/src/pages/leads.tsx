@@ -43,8 +43,24 @@ import {
   X,
   Upload,
   FileText,
-  Download
+  Download,
+  LayoutGrid,
+  List,
+  Eye,
+  Globe,
+  Flame,
+  Snowflake,
+  SlidersHorizontal,
+  ChevronDown,
+  ExternalLink
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
 
@@ -86,6 +102,12 @@ export default function LeadsPage() {
   const [newTagInput, setNewTagInput] = useState("");
   const [newTags, setNewTags] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<string[]>([]);
+  
+  // New state for modern UI
+  const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  const [quickFilterStage, setQuickFilterStage] = useState<string | null>(null);
+  const [quickFilterScore, setQuickFilterScore] = useState<string | null>(null);
+  const [quickFilterSource, setQuickFilterSource] = useState<string | null>(null);
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -275,13 +297,19 @@ export default function LeadsPage() {
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = !searchQuery || 
-      lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = filterStatus === "all" || lead.stage === filterStatus;
+    const matchesIndustry = filterIndustry === "all" || !filterIndustry || lead.industry === filterIndustry;
     
-    return matchesSearch && matchesStatus;
+    // Quick filters
+    const matchesQuickStage = !quickFilterStage || lead.stage === quickFilterStage;
+    const matchesQuickScore = !quickFilterScore || lead.score === quickFilterScore;
+    const matchesQuickSource = !quickFilterSource || lead.source === quickFilterSource;
+    
+    return matchesSearch && matchesStatus && matchesIndustry && matchesQuickStage && matchesQuickScore && matchesQuickSource;
   });
 
   const leadStats = {
