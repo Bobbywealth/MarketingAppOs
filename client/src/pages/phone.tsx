@@ -108,10 +108,12 @@ export default function PhonePage() {
     }
   }, [smsRecipient]);
 
-  // Check Dialpad connection status
-  const { data: dialpadStatus } = useQuery({
+  // Check Dialpad connection status with loading state
+  const { data: dialpadStatus, isLoading: dialpadStatusLoading } = useQuery({
     queryKey: ["/api/test-dialpad"],
     retry: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   const isDialpadConfigured = dialpadStatus?.connected;
@@ -126,6 +128,7 @@ export default function PhonePage() {
     refetchInterval: 30000,
     enabled: isDialpadConfigured === true,
     retry: false,
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
   // Fetch SMS messages from database (populated by webhook)
@@ -138,6 +141,7 @@ export default function PhonePage() {
     refetchInterval: 10000, // Refresh every 10 seconds
     enabled: isDialpadConfigured === true,
     retry: false,
+    staleTime: 30 * 1000, // Cache for 30 seconds
   });
 
   // Fetch contacts from Dialpad API
@@ -298,7 +302,23 @@ export default function PhonePage() {
         </div>
 
         {/* Dialpad Setup Alert */}
-        {!isDialpadConfigured && (
+        {/* Loading Skeleton - No more flash! */}
+        {dialpadStatusLoading && (
+          <Card className="mb-6 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 border-2 border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-2 animate-pulse">Connecting to Dialpad...</h3>
+                  <p className="text-sm text-muted-foreground">Please wait while we establish connection 📞</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Not Connected Alert - Only shows after loading is done */}
+        {!dialpadStatusLoading && !isDialpadConfigured && (
           <Alert className="mb-6 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
             <AlertCircle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="flex flex-col gap-3">

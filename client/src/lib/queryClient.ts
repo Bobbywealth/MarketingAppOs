@@ -73,13 +73,21 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Optimized Query Client for BLAZING FAST performance! 🚀
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
+      // Smart caching - data is considered fresh for 2 minutes
+      staleTime: 2 * 60 * 1000,
+      // Keep inactive queries in cache for 5 minutes
+      cacheTime: 5 * 60 * 1000,
+      // Auto-refresh when you switch back to the tab (for real-time updates)
+      refetchOnWindowFocus: true,
+      // Don't refetch on component mount if data is fresh
+      refetchOnMount: false,
+      // Don't auto-refresh by interval (we use manual refresh buttons)
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
       retry: (failureCount, error) => {
         // Don't retry on client errors (4xx) or auth errors
         if (error instanceof Error && error.message.includes('401')) return false;

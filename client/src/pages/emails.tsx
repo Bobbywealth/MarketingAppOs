@@ -95,14 +95,16 @@ export default function EmailsPage() {
     }
   }, []);
 
-  // Check if email account is connected
+  // Check if email account is connected (with caching for instant load!)
   const { data: emailAccounts = [], isLoading: accountsLoading } = useQuery({
     queryKey: ["/api/email-accounts"],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    cacheTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
   });
 
   const isConnected = emailAccounts.length > 0 && emailAccounts[0].isActive;
 
-  // Fetch emails from database
+  // Fetch emails from database (with smart caching for instant load!)
   const { data: emails = [], isLoading } = useQuery<Email[]>({
     queryKey: ["/api/emails", selectedFolder],
     queryFn: async () => {
@@ -111,6 +113,10 @@ export default function EmailsPage() {
       return await response.json();
     },
     enabled: isConnected,
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes (emails don't change that often)
+    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: true, // Auto-refresh when you come back to the tab
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes when page is open
   });
 
   const [isManualSync, setIsManualSync] = useState(false);
