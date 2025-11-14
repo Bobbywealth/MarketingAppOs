@@ -93,6 +93,43 @@ async function fixAllMissingColumns() {
     // 3. LEADS TABLE
     console.log('🎯 Leads table:');
     await addColumnIfNotExists('leads', 'client_id', 'VARCHAR REFERENCES clients(id)');
+    await addColumnIfNotExists('leads', 'industry', 'VARCHAR');
+    await addColumnIfNotExists('leads', 'tags', 'JSONB DEFAULT \'[]\'::jsonb');
+    
+    // Make name nullable and company required
+    try {
+      await client.query('ALTER TABLE leads ALTER COLUMN name DROP NOT NULL');
+      console.log('   ✅ Made leads.name nullable');
+      fixedCount++;
+    } catch (err) {
+      if (!err.message?.includes('does not exist')) {
+        console.log('   ⏭️  leads.name already nullable or constraint doesn\'t exist');
+        skippedCount++;
+      }
+    }
+    
+    try {
+      await client.query('UPDATE leads SET company = \'Not Provided\' WHERE company IS NULL OR company = \'\'');
+      await client.query('ALTER TABLE leads ALTER COLUMN company SET NOT NULL');
+      console.log('   ✅ Made leads.company required');
+      fixedCount++;
+    } catch (err) {
+      if (!err.message?.includes('does not exist')) {
+        console.log('   ⏭️  leads.company already required');
+        skippedCount++;
+      }
+    }
+    
+    // Add indexes
+    try {
+      await client.query('CREATE INDEX IF NOT EXISTS idx_leads_industry ON leads(industry)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_leads_tags ON leads USING GIN (tags)');
+      console.log('   ✅ Added leads indexes (industry, tags)');
+      fixedCount++;
+    } catch (err) {
+      console.log('   ⏭️  leads indexes already exist');
+      skippedCount++;
+    }
     console.log('');
     
     // 4. LEAD_ACTIVITIES TABLE
@@ -155,19 +192,35 @@ async function fixAllMissingColumns() {
     
     await createTableIfNotExists('sms_messages', `
       CREATE TABLE sms_messages (
-        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        id SERIAL PRIMARY KEY,
         dialpad_id VARCHAR UNIQUE,
-        direction VARCHAR NOT NULL,
+        direction VARCHAR NOT NULL CHECK (direction IN ('inbound', 'outbound')),
         from_number VARCHAR NOT NULL,
         to_number VARCHAR NOT NULL,
         text TEXT NOT NULL,
         status VARCHAR,
-        user_id INTEGER REFERENCES users(id),
-        lead_id INTEGER,
-        timestamp TIMESTAMP NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        lead_id VARCHAR REFERENCES leads(id) ON DELETE SET NULL,
+        timestamp TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    
+    // Add SMS indexes
+    try {
+      await client.query('CREATE INDEX IF NOT EXISTS idx_sms_messages_user_id ON sms_messages(user_id)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_sms_messages_lead_id ON sms_messages(lead_id)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_sms_messages_direction ON sms_messages(direction)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_sms_messages_from_number ON sms_messages(from_number)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_sms_messages_to_number ON sms_messages(to_number)');
+      await client.query('CREATE INDEX IF NOT EXISTS idx_sms_messages_timestamp ON sms_messages(timestamp)');
+      console.log('   ✅ Added SMS messages indexes');
+      fixedCount++;
+    } catch (err) {
+      console.log('   ⏭️  SMS messages indexes already exist');
+      skippedCount++;
+    }
     
     await createTableIfNotExists('page_views', `
       CREATE TABLE page_views (
