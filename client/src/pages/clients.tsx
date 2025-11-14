@@ -379,12 +379,12 @@ export default function Clients() {
                   Add Client
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-2xl glass-strong">
-              <DialogHeader>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col glass-strong">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle className="text-2xl">Create New Client</DialogTitle>
                 <DialogDescription>Add a new client to your CRM system</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreateClient} className="space-y-4">
+              <form id="create-client-form" onSubmit={handleCreateClient} className="space-y-4 overflow-y-auto flex-1 px-1">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Client Name *</Label>
@@ -476,15 +476,15 @@ export default function Clients() {
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createClientMutation.isPending} data-testid="button-submit-client" className="shadow-md">
-                    {createClientMutation.isPending ? "Creating..." : "Create Client"}
-                  </Button>
-                </div>
               </form>
+              <div className="flex justify-end gap-2 pt-4 border-t border-border/50 mt-4 flex-shrink-0">
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" form="create-client-form" disabled={createClientMutation.isPending} data-testid="button-submit-client" className="shadow-md">
+                  {createClientMutation.isPending ? "Creating..." : "Create Client"}
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
