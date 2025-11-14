@@ -416,6 +416,7 @@ export default function LeadsPage() {
                 name: formData.get("name") as string || null,
                 email: formData.get("email") as string || null,
                 phone: formData.get("phone") as string || null,
+                phoneType: formData.get("phoneType") as string || "business",
                 company: formData.get("company") as string,
                 website: formData.get("website") as string || null,
                 industry: formData.get("industry") as string || null,
@@ -447,7 +448,19 @@ export default function LeadsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Phone</Label>
-                  <Input name="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                  <div className="flex gap-2">
+                    <Input name="phone" type="tel" placeholder="+1 (555) 123-4567" className="flex-1" />
+                    <Select name="phoneType" defaultValue="business">
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="business">💼 Business</SelectItem>
+                        <SelectItem value="personal">👤 Personal</SelectItem>
+                        <SelectItem value="mobile">📱 Mobile</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label>Company *</Label>
@@ -618,6 +631,7 @@ export default function LeadsPage() {
                   name: formData.get("name") as string || null,
                   email: formData.get("email") as string || null,
                   phone: formData.get("phone") as string || null,
+                  phoneType: formData.get("phoneType") as string || "business",
                   company: formData.get("company") as string,
                   website: formData.get("website") as string || null,
                   industry: formData.get("industry") as string || null,
@@ -644,7 +658,19 @@ export default function LeadsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Phone</Label>
-                    <Input name="phone" type="tel" defaultValue={editingLead.phone || ""} placeholder="+1 (555) 123-4567" />
+                    <div className="flex gap-2">
+                      <Input name="phone" type="tel" defaultValue={editingLead.phone || ""} placeholder="+1 (555) 123-4567" className="flex-1" />
+                      <Select name="phoneType" defaultValue={editingLead.phoneType || "business"}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="business">💼 Business</SelectItem>
+                          <SelectItem value="personal">👤 Personal</SelectItem>
+                          <SelectItem value="mobile">📱 Mobile</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
                     <Label>Company *</Label>

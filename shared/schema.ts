@@ -257,6 +257,7 @@ export const leads = pgTable("leads", {
   name: varchar("name"), // Optional - person's name
   email: varchar("email"),
   phone: varchar("phone"),
+  phoneType: varchar("phone_type").default("business"), // business, personal, mobile
   company: varchar("company").notNull(), // Required - company name
   website: varchar("website"),
   industry: varchar("industry"), // Industry vertical (Technology, Healthcare, Finance, etc.)
