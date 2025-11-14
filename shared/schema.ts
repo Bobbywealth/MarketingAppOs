@@ -259,6 +259,8 @@ export const leads = pgTable("leads", {
   phone: varchar("phone"),
   company: varchar("company").notNull(), // Required - company name
   website: varchar("website"),
+  industry: varchar("industry"), // Industry vertical (Technology, Healthcare, Finance, etc.)
+  tags: jsonb("tags").$type<string[]>().default([]), // Flexible tags for custom organization
   stage: varchar("stage").notNull().default("prospect"), // prospect, qualified, proposal, closed_won, closed_lost
   score: varchar("score").notNull().default("warm"), // hot, warm, cold
   value: integer("value"), // potential deal value in cents

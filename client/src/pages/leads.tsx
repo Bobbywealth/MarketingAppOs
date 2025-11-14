@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,7 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterIndustry, setFilterIndustry] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -82,10 +83,22 @@ export default function LeadsPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [parsedLeads, setParsedLeads] = useState<any[]>([]);
   const [isParsingFile, setIsParsingFile] = useState(false);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [newTags, setNewTags] = useState<string[]>([]);
+  const [editTags, setEditTags] = useState<string[]>([]);
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
   });
+
+  // Populate editTags when editing a lead
+  useEffect(() => {
+    if (editingLead && editingLead.tags) {
+      setEditTags(Array.isArray(editingLead.tags) ? editingLead.tags : []);
+    } else {
+      setEditTags([]);
+    }
+  }, [editingLead]);
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
@@ -358,6 +371,8 @@ export default function LeadsPage() {
                 phone: formData.get("phone") as string || null,
                 company: formData.get("company") as string,
                 website: formData.get("website") as string || null,
+                industry: formData.get("industry") as string || null,
+                tags: newTags,
                 stage: formData.get("stage") as string,
                 score: formData.get("score") as string,
                 source: formData.get("source") as string,
@@ -369,6 +384,7 @@ export default function LeadsPage() {
                 nextFollowUp: null,
               };
               createLeadMutation.mutate(data);
+              setNewTags([]); // Reset tags after submission
             }} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -400,6 +416,77 @@ export default function LeadsPage() {
                 <div>
                   <Label>Lead Value ($)</Label>
                   <Input name="value" type="number" placeholder="5000" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Industry</Label>
+                  <Select name="industry">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select industry" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="technology">💻 Technology</SelectItem>
+                      <SelectItem value="healthcare">🏥 Healthcare</SelectItem>
+                      <SelectItem value="finance">🏦 Finance</SelectItem>
+                      <SelectItem value="retail">🛒 Retail</SelectItem>
+                      <SelectItem value="construction">🏗️ Construction</SelectItem>
+                      <SelectItem value="education">📚 Education</SelectItem>
+                      <SelectItem value="manufacturing">🏭 Manufacturing</SelectItem>
+                      <SelectItem value="real_estate">🏠 Real Estate</SelectItem>
+                      <SelectItem value="hospitality">🏨 Hospitality</SelectItem>
+                      <SelectItem value="media">📺 Media & Entertainment</SelectItem>
+                      <SelectItem value="legal">⚖️ Legal</SelectItem>
+                      <SelectItem value="consulting">💼 Consulting</SelectItem>
+                      <SelectItem value="other">🏢 Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tags</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newTagInput.trim() && !newTags.includes(newTagInput.trim())) {
+                            setNewTags([...newTags, newTagInput.trim()]);
+                            setNewTagInput("");
+                          }
+                        }
+                      }}
+                      placeholder="Type and press Enter"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (newTagInput.trim() && !newTags.includes(newTagInput.trim())) {
+                          setNewTags([...newTags, newTagInput.trim()]);
+                          setNewTagInput("");
+                        }
+                      }}
+                    >
+                      + Add
+                    </Button>
+                  </div>
+                  {newTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {newTags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="gap-1">
+                          {tag}
+                          <X 
+                            className="w-3 h-3 cursor-pointer hover:text-destructive" 
+                            onClick={() => setNewTags(newTags.filter(t => t !== tag))}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -485,6 +572,8 @@ export default function LeadsPage() {
                   phone: formData.get("phone") as string || null,
                   company: formData.get("company") as string,
                   website: formData.get("website") as string || null,
+                  industry: formData.get("industry") as string || null,
+                  tags: editTags,
                   stage: formData.get("stage") as string,
                   score: formData.get("score") as string,
                   source: formData.get("source") as string,
@@ -523,6 +612,77 @@ export default function LeadsPage() {
                   <div>
                     <Label>Lead Value ($)</Label>
                     <Input name="value" type="number" defaultValue={editingLead.value ? editingLead.value / 100 : ""} placeholder="5000" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Industry</Label>
+                    <Select name="industry" defaultValue={editingLead.industry || ""}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select industry" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="technology">💻 Technology</SelectItem>
+                        <SelectItem value="healthcare">🏥 Healthcare</SelectItem>
+                        <SelectItem value="finance">🏦 Finance</SelectItem>
+                        <SelectItem value="retail">🛒 Retail</SelectItem>
+                        <SelectItem value="construction">🏗️ Construction</SelectItem>
+                        <SelectItem value="education">📚 Education</SelectItem>
+                        <SelectItem value="manufacturing">🏭 Manufacturing</SelectItem>
+                        <SelectItem value="real_estate">🏠 Real Estate</SelectItem>
+                        <SelectItem value="hospitality">🏨 Hospitality</SelectItem>
+                        <SelectItem value="media">📺 Media & Entertainment</SelectItem>
+                        <SelectItem value="legal">⚖️ Legal</SelectItem>
+                        <SelectItem value="consulting">💼 Consulting</SelectItem>
+                        <SelectItem value="other">🏢 Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Tags</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={newTagInput}
+                        onChange={(e) => setNewTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (newTagInput.trim() && !editTags.includes(newTagInput.trim())) {
+                              setEditTags([...editTags, newTagInput.trim()]);
+                              setNewTagInput("");
+                            }
+                          }
+                        }}
+                        placeholder="Type and press Enter"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (newTagInput.trim() && !editTags.includes(newTagInput.trim())) {
+                            setEditTags([...editTags, newTagInput.trim()]);
+                            setNewTagInput("");
+                          }
+                        }}
+                      >
+                        + Add
+                      </Button>
+                    </div>
+                    {editTags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {editTags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="gap-1">
+                            {tag}
+                            <X 
+                              className="w-3 h-3 cursor-pointer hover:text-destructive" 
+                              onClick={() => setEditTags(editTags.filter(t => t !== tag))}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
