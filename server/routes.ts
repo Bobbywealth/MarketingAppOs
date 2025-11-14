@@ -3920,9 +3920,9 @@ Examples:
       const file = req.file;
       const leads: any[] = [];
 
-      if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
-        // Parse CSV file
-        const content = file.buffer.toString('utf-8');
+      if (file.mimetype === 'text/csv' || file.mimetype === 'application/csv' || file.originalname.endsWith('.csv')) {
+        // Parse CSV file - Read from disk since we're using diskStorage
+        const content = await fs.readFile(file.path, 'utf-8');
         const lines = content.split('\n').filter(line => line.trim());
         
         if (lines.length === 0) {
@@ -3982,7 +3982,9 @@ Examples:
           return res.status(500).json({ message: "AI service not configured. Please set OPENAI_API_KEY." });
         }
 
-        const pdfText = file.buffer.toString('utf-8'); // In production, use proper PDF parser like pdf-parse
+        // Read PDF from disk - using basic text extraction (for full PDF support, install pdf-parse)
+        const pdfBuffer = await fs.readFile(file.path);
+        const pdfText = pdfBuffer.toString('utf-8'); // Basic extraction - may not work for all PDFs
         
         const systemPrompt = `You are a lead extraction assistant. Extract contact/lead information from the provided text.
         
@@ -4020,9 +4022,26 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
         return res.status(400).json({ message: "Invalid file type. Please upload CSV or PDF." });
       }
 
+      // Clean up uploaded file after processing
+      try {
+        await fs.unlink(file.path);
+      } catch (cleanupError) {
+        console.error("Failed to delete uploaded file:", cleanupError);
+      }
+
       res.json({ leads, count: leads.length });
     } catch (error: any) {
       console.error("File parsing error:", error);
+      
+      // Clean up file on error too
+      if (req.file?.path) {
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.error("Failed to delete uploaded file after error:", cleanupError);
+        }
+      }
+      
       res.status(500).json({ message: "Failed to parse file", error: error.message });
     }
   });
