@@ -539,9 +539,9 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Compact Sticky Header */}
-      <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Compact Sticky Header - Fixed at top */}
+      <div className="flex-shrink-0 border-b bg-background shadow-sm">
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
         <div>
             <h1 className="text-2xl font-bold">Leads</h1>
@@ -1588,8 +1588,8 @@ export default function LeadsPage() {
       </Dialog>
       </div>
 
-      {/* Modern Horizontal Filter Bar */}
-      <div className="border-b bg-muted/30 sticky top-[73px] z-10">
+      {/* Modern Horizontal Filter Bar - Fixed below header */}
+      <div className="flex-shrink-0 border-b bg-muted/30">
         <div className="px-4 md:px-6 py-3">
           <div className="flex flex-col md:flex-row items-center gap-3">
             {/* Search */}
@@ -1713,8 +1713,10 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Stats Cards - 6 Column Grid */}
-      <div className="px-4 md:px-6 py-4">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Stats Cards - 6 Column Grid */}
+        <div className="px-4 md:px-6 py-4">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="hover-elevate">
           <CardContent className="p-6">
@@ -2466,6 +2468,7 @@ export default function LeadsPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+      </div> {/* End Scrollable Content Area */}
     </div>
   );
 }
