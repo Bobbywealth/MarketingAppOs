@@ -269,6 +269,8 @@ export const leads = pgTable("leads", {
   sourceMetadata: jsonb("source_metadata"), // {campaign_id, ad_id, form_name, etc.}
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
+  convertedToClientId: varchar("converted_to_client_id").references(() => clients.id), // Links to client if converted
+  convertedAt: timestamp("converted_at"), // When the lead was converted to client
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

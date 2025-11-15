@@ -88,6 +88,8 @@ export default function LeadsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterIndustry, setFilterIndustry] = useState<string>("all");
@@ -199,6 +201,40 @@ export default function LeadsPage() {
     onError: (error: any) => {
       toast({ 
         title: "Failed to delete leads", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const convertToClientMutation = useMutation({
+    mutationFn: async ({ leadId, clientData }: { leadId: string; clientData: any }) => {
+      // First, create the client
+      const clientResponse = await apiRequest("POST", "/api/clients", clientData);
+      const client = await clientResponse.json();
+      
+      // Then, update the lead to link to the client
+      await apiRequest("PATCH", `/api/leads/${leadId}`, {
+        convertedToClientId: client.id,
+        convertedAt: new Date().toISOString(),
+      });
+      
+      return client;
+    },
+    onSuccess: (client) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      toast({ 
+        title: "✅ Lead converted to client!", 
+        description: `${client.name} is now a client.` 
+      });
+      setIsConvertDialogOpen(false);
+      setConvertingLead(null);
+      setSelectedLead(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to convert lead", 
         description: error?.message,
         variant: "destructive" 
       });
@@ -829,6 +865,154 @@ export default function LeadsPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Convert to Client Dialog */}
+        <Dialog open={isConvertDialogOpen} onOpenChange={setIsConvertDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                Convert Lead to Client
+              </DialogTitle>
+              <DialogDescription>
+                Review and confirm the client information below. This will create a new client and mark the lead as converted.
+              </DialogDescription>
+            </DialogHeader>
+            {convertingLead && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const clientData = {
+                  name: formData.get("name") as string,
+                  email: formData.get("email") as string || null,
+                  phone: formData.get("phone") as string || null,
+                  company: formData.get("company") as string || null,
+                  website: formData.get("website") as string || null,
+                  status: formData.get("status") as string || "onboarding",
+                  notes: formData.get("notes") as string || null,
+                };
+                convertToClientMutation.mutate({ 
+                  leadId: convertingLead.id, 
+                  clientData 
+                });
+              }} className="space-y-4">
+                {/* Success Banner */}
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">🎉 Lead Won!</h4>
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1">
+                        Convert <strong>{convertingLead.company || convertingLead.name}</strong> to a client to start managing projects, invoices, and content.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Client Name *</Label>
+                    <Input 
+                      name="name" 
+                      defaultValue={convertingLead.company || convertingLead.name || ""} 
+                      placeholder="Client name" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <Label>Company</Label>
+                    <Input 
+                      name="company" 
+                      defaultValue={convertingLead.company || ""} 
+                      placeholder="Company name" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Email</Label>
+                    <Input 
+                      name="email" 
+                      type="email" 
+                      defaultValue={convertingLead.email || ""} 
+                      placeholder="email@example.com" 
+                    />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input 
+                      name="phone" 
+                      type="tel" 
+                      defaultValue={convertingLead.phone || ""} 
+                      placeholder="+1 (555) 123-4567" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Website</Label>
+                  <Input 
+                    name="website" 
+                    type="url" 
+                    defaultValue={convertingLead.website || ""} 
+                    placeholder="https://example.com" 
+                  />
+                </div>
+
+                <div>
+                  <Label>Initial Status</Label>
+                  <Select name="status" defaultValue="onboarding">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="onboarding">🚀 Onboarding</SelectItem>
+                      <SelectItem value="active">✅ Active</SelectItem>
+                      <SelectItem value="inactive">💤 Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Notes</Label>
+                  <Textarea 
+                    name="notes" 
+                    defaultValue={convertingLead.notes || `Converted from lead.\nOriginal lead value: $${convertingLead.value ? (convertingLead.value / 100).toFixed(2) : '0.00'}`}
+                    placeholder="Additional notes about this client..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => {
+                    setIsConvertDialogOpen(false);
+                    setConvertingLead(null);
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={convertToClientMutation.isPending}
+                    className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
+                  >
+                    {convertToClientMutation.isPending ? (
+                      <>
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                        Converting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Create Client
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
         </div>
       </div>
 
@@ -858,6 +1042,12 @@ export default function LeadsPage() {
                           {selectedLead.score === 'warm' && '☀️'}
                           {selectedLead.score === 'cold' && '❄️'}
                           <span className="ml-1 capitalize">{selectedLead.score} Lead</span>
+                        </Badge>
+                      )}
+                      {selectedLead.convertedToClientId && (
+                        <Badge className="gap-1 bg-gradient-to-r from-emerald-600 to-green-600 text-white border-0">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Converted to Client
                         </Badge>
                       )}
                     </DialogDescription>
@@ -992,6 +1182,22 @@ export default function LeadsPage() {
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Lead
                   </Button>
+                  
+                  {/* Convert to Client Button - Only show for closed_won leads that haven't been converted */}
+                  {selectedLead.stage === 'closed_won' && !selectedLead.convertedToClientId && (
+                    <Button 
+                      onClick={() => {
+                        setConvertingLead(selectedLead);
+                        setIsConvertDialogOpen(true);
+                        setSelectedLead(null);
+                      }}
+                      className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Convert to Client
+                    </Button>
+                  )}
+                  
                   <Button 
                     onClick={() => setLeadToDelete(selectedLead)}
                     variant="destructive"
