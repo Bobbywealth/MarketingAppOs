@@ -3910,6 +3910,51 @@ Examples:
     }
   });
 
+  // Lead Activities Routes
+  app.post("/api/leads/:id/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const leadId = req.params.id;
+      const { type, subject, description, outcome } = req.body;
+
+      // Create activity
+      const activity = await storage.createLeadActivity({
+        leadId,
+        userId,
+        type,
+        subject,
+        description,
+        outcome,
+        metadata: {},
+      });
+
+      // Update lead's last contact info if it's a contact activity
+      if (['call', 'email', 'sms', 'meeting'].includes(type)) {
+        await storage.updateLead(leadId, {
+          lastContactMethod: type,
+          lastContactDate: new Date().toISOString(),
+          lastContactNotes: description?.substring(0, 500) || null,
+        });
+      }
+
+      res.status(201).json(activity);
+    } catch (error) {
+      console.error("Error creating lead activity:", error);
+      res.status(500).json({ message: "Failed to create activity" });
+    }
+  });
+
+  app.get("/api/leads/:id/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const activities = await storage.getLeadActivities(req.params.id);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching lead activities:", error);
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
   // Parse CSV or PDF file for lead import
   app.post("/api/leads/parse-file", isAuthenticated, requirePermission("canManageLeads"), upload.single('file'), async (req: Request, res: Response) => {
     try {
@@ -7198,6 +7243,54 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
         user_id, // Dialpad expects 'user_id' field for sender
         from_number,
       });
+
+      // Auto-log activity for leads (Phase 3 feature)
+      try {
+        const user = req.user as any;
+        const userId = user?.id || user?.claims?.sub;
+        
+        // Try to find leads with these phone numbers
+        for (const phoneNumber of to_numbers) {
+          const { leads } = await import("@shared/schema");
+          const { eq, or } = await import("drizzle-orm");
+          
+          const matchingLeads = await db
+            .select()
+            .from(leads)
+            .where(or(
+              eq(leads.phone, phoneNumber),
+              eq(leads.phone, phoneNumber.replace(/\D/g, '')), // Try without formatting
+            ))
+            .limit(1);
+          
+          if (matchingLeads.length > 0) {
+            const lead = matchingLeads[0];
+            
+            // Create activity
+            await storage.createLeadActivity({
+              leadId: lead.id,
+              userId,
+              type: 'sms',
+              subject: 'SMS Sent',
+              description: text,
+              outcome: 'positive',
+              metadata: { dialpad_id: result?.id },
+            });
+            
+            // Update last contact
+            await storage.updateLead(lead.id, {
+              lastContactMethod: 'sms',
+              lastContactDate: new Date() as any, // Type workaround for Date
+              lastContactNotes: text.substring(0, 500),
+            });
+            
+            console.log(`✅ Auto-logged SMS activity for lead: ${lead.company || lead.name}`);
+          }
+        }
+      } catch (activityError) {
+        // Don't fail the SMS send if activity logging fails
+        console.error('⚠️  Failed to auto-log SMS activity:', activityError);
+      }
 
       res.json(result);
     } catch (error: any) {

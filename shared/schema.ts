@@ -269,6 +269,14 @@ export const leads = pgTable("leads", {
   sourceMetadata: jsonb("source_metadata"), // {campaign_id, ad_id, form_name, etc.}
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
+  // Contact tracking fields
+  lastContactMethod: varchar("last_contact_method"), // email, sms, call, meeting, social, other
+  lastContactDate: timestamp("last_contact_date"),
+  lastContactNotes: text("last_contact_notes"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
+  nextFollowUpType: varchar("next_follow_up_type"), // call, email, meeting, proposal
+  contactStatus: varchar("contact_status").default("not_contacted"), // not_contacted, contacted, in_discussion, proposal_sent, follow_up_needed, no_response
+  // Conversion tracking
   convertedToClientId: varchar("converted_to_client_id").references(() => clients.id), // Links to client if converted
   convertedAt: timestamp("converted_at"), // When the lead was converted to client
   createdAt: timestamp("created_at").defaultNow(),
@@ -293,10 +301,11 @@ export const leadActivities = pgTable("lead_activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   leadId: varchar("lead_id").references(() => leads.id).notNull(),
   userId: integer("user_id").references(() => users.id),
-  type: varchar("type").notNull(), // note, call, email, sms, meeting, stage_change
+  type: varchar("type").notNull(), // call, email, sms, meeting, note, stage_change, status_change
   subject: varchar("subject"),
   description: text("description"),
-  metadata: jsonb("metadata"), // {duration, email_id, sms_id, previous_stage, new_stage}
+  outcome: varchar("outcome"), // positive, neutral, negative, no_answer, left_voicemail
+  metadata: jsonb("metadata"), // {duration, email_id, sms_id, previous_stage, new_stage, call_duration}
   createdAt: timestamp("created_at").defaultNow(),
 });
 

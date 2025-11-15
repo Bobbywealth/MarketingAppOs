@@ -82,6 +82,114 @@ function getStageBadge(stage: string): "default" | "secondary" | "outline" | "de
   }
 }
 
+// Activity Timeline Component
+function LeadActivityTimeline({ leadId }: { leadId: string }) {
+  const { toast } = useToast();
+
+  const { data: activities, isLoading } = useQuery({
+    queryKey: [`/api/leads/${leadId}/activities`],
+    enabled: !!leadId,
+  });
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'call':
+        return <PhoneCall className="w-4 h-4 text-blue-600" />;
+      case 'email':
+        return <Mail className="w-4 h-4 text-purple-600" />;
+      case 'sms':
+        return <MessageSquare className="w-4 h-4 text-green-600" />;
+      case 'meeting':
+        return <Calendar className="w-4 h-4 text-orange-600" />;
+      case 'note':
+        return <FileText className="w-4 h-4 text-gray-600" />;
+      case 'stage_change':
+        return <TrendingUp className="w-4 h-4 text-indigo-600" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  const getOutcomeBadge = (outcome: string | null) => {
+    if (!outcome) return null;
+    
+    switch (outcome) {
+      case 'positive':
+        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">✅ Positive</Badge>;
+      case 'neutral':
+        return <Badge variant="secondary">➖ Neutral</Badge>;
+      case 'negative':
+        return <Badge variant="destructive">❌ Negative</Badge>;
+      case 'no_answer':
+        return <Badge variant="secondary">📵 No Answer</Badge>;
+      case 'left_voicemail':
+        return <Badge variant="secondary">📞 Voicemail</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (!activities || activities.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Clock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+        <h3 className="font-semibold text-lg mb-2">No Activities Yet</h3>
+        <p className="text-sm text-muted-foreground">
+          Start tracking interactions by logging calls, emails, or meetings.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-[400px]">
+      <div className="space-y-4">
+        {activities.map((activity: any, index: number) => (
+          <div key={activity.id} className="flex gap-4 relative">
+            {/* Timeline Line */}
+            {index < activities.length - 1 && (
+              <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-border"></div>
+            )}
+
+            {/* Icon */}
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center relative z-10">
+              {getActivityIcon(activity.type)}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 pb-4">
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <h4 className="font-semibold text-sm">
+                    {activity.subject || activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(activity.createdAt), 'MMM d, yyyy • h:mm a')}
+                  </p>
+                </div>
+                {getOutcomeBadge(activity.outcome)}
+              </div>
+              {activity.description && (
+                <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+                  {activity.description}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
+
 export default function LeadsPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -90,6 +198,8 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
+  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
+  const [activityType, setActivityType] = useState<'call' | 'email' | 'sms' | 'meeting' | 'note'>('call');
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterIndustry, setFilterIndustry] = useState<string>("all");
@@ -201,6 +311,29 @@ export default function LeadsPage() {
     onError: (error: any) => {
       toast({ 
         title: "Failed to delete leads", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const logActivityMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", `/api/leads/${data.leadId}/activities`, data);
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/leads/${variables.leadId}/activities`] });
+      toast({ 
+        title: "✅ Activity Logged", 
+        description: `${variables.type.charAt(0).toUpperCase() + variables.type.slice(1)} activity has been recorded` 
+      });
+      setIsActivityDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to log activity", 
         description: error?.message,
         variant: "destructive" 
       });
@@ -410,10 +543,10 @@ export default function LeadsPage() {
       {/* Compact Sticky Header */}
       <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
-          <div>
+        <div>
             <h1 className="text-2xl font-bold">Leads</h1>
             <p className="text-sm text-muted-foreground">Track your sales pipeline</p>
-          </div>
+        </div>
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
@@ -433,13 +566,13 @@ export default function LeadsPage() {
               <Upload className="w-4 h-4" />
               <span className="hidden md:inline">Import</span>
             </Button>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
                 <Button size="sm" className="gap-2">
-                  <UserPlus className="w-4 h-4" />
+              <UserPlus className="w-4 h-4" />
                   <span className="hidden md:inline">Add Lead</span>
-                </Button>
-              </DialogTrigger>
+            </Button>
+          </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Lead</DialogTitle>
@@ -462,6 +595,13 @@ export default function LeadsPage() {
                 source: formData.get("source") as string,
                 value: formData.get("value") ? parseInt(formData.get("value") as string) * 100 : null, // Convert to cents
                 notes: formData.get("notes") as string || null,
+                // Contact tracking fields
+                contactStatus: formData.get("contactStatus") as string || "not_contacted",
+                lastContactMethod: formData.get("lastContactMethod") as string || null,
+                lastContactDate: null, // Will be set when activity is logged
+                lastContactNotes: null,
+                nextFollowUpType: formData.get("nextFollowUpType") as string || null,
+                nextFollowUpDate: formData.get("nextFollowUpDate") ? new Date(formData.get("nextFollowUpDate") as string).toISOString() : null,
                 clientId: null,
                 assignedToId: null,
                 sourceMetadata: null,
@@ -635,6 +775,69 @@ export default function LeadsPage() {
                 </div>
               </div>
 
+              {/* Contact Tracking Section */}
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  📞 Contact Tracking
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Contact Status</Label>
+                    <Select name="contactStatus" defaultValue="not_contacted">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="not_contacted">⚫ Not Contacted</SelectItem>
+                        <SelectItem value="contacted">🟢 Contacted</SelectItem>
+                        <SelectItem value="in_discussion">🔵 In Discussion</SelectItem>
+                        <SelectItem value="proposal_sent">🟡 Proposal Sent</SelectItem>
+                        <SelectItem value="follow_up_needed">🟠 Follow-up Needed</SelectItem>
+                        <SelectItem value="no_response">🔴 No Response</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Last Contact Method</Label>
+                    <Select name="lastContactMethod">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">📧 Email</SelectItem>
+                        <SelectItem value="sms">💬 SMS</SelectItem>
+                        <SelectItem value="call">📞 Phone Call</SelectItem>
+                        <SelectItem value="meeting">🤝 Meeting</SelectItem>
+                        <SelectItem value="social">📱 Social Media</SelectItem>
+                        <SelectItem value="other">📋 Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Next Follow-up Type</Label>
+                    <Select name="nextFollowUpType">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="call">📞 Call</SelectItem>
+                        <SelectItem value="email">📧 Email</SelectItem>
+                        <SelectItem value="meeting">🤝 Meeting</SelectItem>
+                        <SelectItem value="proposal">📄 Send Proposal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Next Follow-up Date</Label>
+                    <Input name="nextFollowUpDate" type="datetime-local" />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <Label>Notes</Label>
                 <Textarea name="notes" placeholder="Additional information about this lead..." rows={3} />
@@ -677,6 +880,11 @@ export default function LeadsPage() {
                   source: formData.get("source") as string,
                   value: formData.get("value") ? parseInt(formData.get("value") as string) * 100 : null,
                   notes: formData.get("notes") as string || null,
+                  // Contact tracking fields
+                  contactStatus: formData.get("contactStatus") as string || "not_contacted",
+                  lastContactMethod: formData.get("lastContactMethod") as string || null,
+                  nextFollowUpType: formData.get("nextFollowUpType") as string || null,
+                  nextFollowUpDate: formData.get("nextFollowUpDate") ? new Date(formData.get("nextFollowUpDate") as string).toISOString() : null,
                 };
                 updateLeadMutation.mutate({ id: editingLead.id, data });
               }} className="space-y-4">
@@ -842,6 +1050,73 @@ export default function LeadsPage() {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Contact Tracking Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="font-semibold text-sm flex items-center gap-2">
+                    📞 Contact Tracking
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Contact Status</Label>
+                      <Select name="contactStatus" defaultValue={editingLead.contactStatus || "not_contacted"}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="not_contacted">⚫ Not Contacted</SelectItem>
+                          <SelectItem value="contacted">🟢 Contacted</SelectItem>
+                          <SelectItem value="in_discussion">🔵 In Discussion</SelectItem>
+                          <SelectItem value="proposal_sent">🟡 Proposal Sent</SelectItem>
+                          <SelectItem value="follow_up_needed">🟠 Follow-up Needed</SelectItem>
+                          <SelectItem value="no_response">🔴 No Response</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Last Contact Method</Label>
+                      <Select name="lastContactMethod" defaultValue={editingLead.lastContactMethod || ""}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="email">📧 Email</SelectItem>
+                          <SelectItem value="sms">💬 SMS</SelectItem>
+                          <SelectItem value="call">📞 Phone Call</SelectItem>
+                          <SelectItem value="meeting">🤝 Meeting</SelectItem>
+                          <SelectItem value="social">📱 Social Media</SelectItem>
+                          <SelectItem value="other">📋 Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Next Follow-up Type</Label>
+                      <Select name="nextFollowUpType" defaultValue={editingLead.nextFollowUpType || ""}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="call">📞 Call</SelectItem>
+                          <SelectItem value="email">📧 Email</SelectItem>
+                          <SelectItem value="meeting">🤝 Meeting</SelectItem>
+                          <SelectItem value="proposal">📄 Send Proposal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Next Follow-up Date</Label>
+                      <Input 
+                        name="nextFollowUpDate" 
+                        type="datetime-local"
+                        defaultValue={editingLead.nextFollowUpDate ? new Date(editingLead.nextFollowUpDate).toISOString().slice(0, 16) : ""}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1013,6 +1288,94 @@ export default function LeadsPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Log Activity Dialog */}
+        <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {activityType === 'call' && <PhoneCall className="w-5 h-5 text-blue-600" />}
+                {activityType === 'email' && <Mail className="w-5 h-5 text-purple-600" />}
+                {activityType === 'sms' && <MessageSquare className="w-5 h-5 text-green-600" />}
+                {activityType === 'meeting' && <Calendar className="w-5 h-5 text-orange-600" />}
+                {activityType === 'note' && <FileText className="w-5 h-5 text-gray-600" />}
+                Log {activityType.charAt(0).toUpperCase() + activityType.slice(1)}
+              </DialogTitle>
+              <DialogDescription>
+                Record a {activityType} activity for {selectedLead?.company || selectedLead?.name}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedLead && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const data = {
+                  leadId: selectedLead.id,
+                  type: activityType,
+                  subject: formData.get("subject") as string || null,
+                  description: formData.get("description") as string,
+                  outcome: formData.get("outcome") as string || null,
+                };
+                logActivityMutation.mutate(data);
+              }} className="space-y-4">
+                <div>
+                  <Label>Subject</Label>
+                  <Input 
+                    name="subject" 
+                    placeholder={
+                      activityType === 'call' ? "e.g., Discovery call" :
+                      activityType === 'email' ? "e.g., Proposal sent" :
+                      activityType === 'sms' ? "e.g., Follow-up text" :
+                      activityType === 'meeting' ? "e.g., Initial consultation" :
+                      "e.g., General note"
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label>Description *</Label>
+                  <Textarea 
+                    name="description" 
+                    placeholder="What happened during this interaction?"
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                {(activityType === 'call' || activityType === 'email' || activityType === 'sms' || activityType === 'meeting') && (
+                  <div>
+                    <Label>Outcome</Label>
+                    <Select name="outcome">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select outcome" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="positive">✅ Positive</SelectItem>
+                        <SelectItem value="neutral">➖ Neutral</SelectItem>
+                        <SelectItem value="negative">❌ Negative</SelectItem>
+                        {activityType === 'call' && (
+                          <>
+                            <SelectItem value="no_answer">📵 No Answer</SelectItem>
+                            <SelectItem value="left_voicemail">📞 Left Voicemail</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsActivityDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={logActivityMutation.isPending}>
+                    {logActivityMutation.isPending ? "Logging..." : "Log Activity"}
+                  </Button>
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
         </div>
       </div>
 
@@ -1055,10 +1418,16 @@ export default function LeadsPage() {
                 </div>
               </DialogHeader>
 
-              <div className="space-y-6 mt-4">
-                {/* Contact Information */}
-                <div>
-                  <h3 className="font-semibold text-lg mb-3">Contact Information</h3>
+              <Tabs defaultValue="details" className="mt-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="activity">Activity Timeline</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details" className="space-y-6 mt-4">
+                  {/* Contact Information */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3">Contact Information</h3>
                   <div className="grid grid-cols-2 gap-4">
                     {selectedLead.email && (
                       <div className="flex items-center gap-2">
@@ -1129,27 +1498,27 @@ export default function LeadsPage() {
                 {/* Actions */}
                 <div className="space-y-2 pt-4 border-t">
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={() => {
-                        if (selectedLead.email) {
-                          window.location.href = `mailto:${selectedLead.email}`;
-                        }
-                      }}
-                      className="flex-1"
+                  <Button 
+                    onClick={() => {
+                      if (selectedLead.email) {
+                        window.location.href = `mailto:${selectedLead.email}`;
+                      }
+                    }}
+                    className="flex-1"
                       disabled={!selectedLead.email}
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
                       Email
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        if (selectedLead.phone) {
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      if (selectedLead.phone) {
                           setSelectedLead(null);
                           setLocation(`/phone?number=${encodeURIComponent(selectedLead.phone)}&action=call`);
-                        }
-                      }}
-                      variant="outline"
-                      className="flex-1"
+                      }
+                    }}
+                    variant="outline"
+                    className="flex-1"
                       disabled={!selectedLead.phone}
                     >
                       <PhoneCall className="w-4 h-4 mr-2" />
@@ -1207,7 +1576,12 @@ export default function LeadsPage() {
                     Delete Lead
                   </Button>
                 </div>
-              </div>
+              </TabsContent>
+
+              <TabsContent value="activity" className="mt-4">
+                <LeadActivityTimeline leadId={selectedLead.id} />
+              </TabsContent>
+            </Tabs>
             </>
           )}
         </DialogContent>
@@ -1433,9 +1807,9 @@ export default function LeadsPage() {
         {/* Bulk Actions Toolbar */}
         {showBulkActions && (
           <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="p-4">
+        <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -1450,7 +1824,7 @@ export default function LeadsPage() {
                   <span className="text-sm font-medium">
                     {selectedLeads.size} lead{selectedLeads.size !== 1 ? 's' : ''} selected
                   </span>
-                </div>
+            </div>
                 <div className="flex items-center gap-2">
                   <Button 
                     variant="destructive" 
@@ -1460,11 +1834,11 @@ export default function LeadsPage() {
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     {bulkDeleteLeadsMutation.isPending ? "Deleting..." : "Delete Selected"}
-                  </Button>
+            </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+        </CardContent>
+      </Card>
         )}
 
       {/* Leads List */}
@@ -1539,11 +1913,11 @@ export default function LeadsPage() {
                       <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-sm font-semibold">
                           {(lead.company || lead.name)?.substring(0, 2).toUpperCase() || "??"}
-                        </AvatarFallback>
-                      </Avatar>
-
+                          </AvatarFallback>
+                        </Avatar>
+                        
                       {/* Lead Info */}
-                      <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-semibold text-base truncate">{lead.company || lead.name || 'Unnamed Lead'}</h3>
                           {lead.stage && (
@@ -1559,10 +1933,10 @@ export default function LeadsPage() {
                               {lead.score === 'hot' && '🔥'}
                               {lead.score === 'warm' && '☀️'}
                               {lead.score === 'cold' && '❄️'}
-                            </Badge>
-                          )}
-                        </div>
-                        
+                              </Badge>
+                            )}
+                          </div>
+                          
                         {/* Inline Contact Info */}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           {lead.name && lead.company && (
@@ -1570,33 +1944,76 @@ export default function LeadsPage() {
                               👤 {lead.name}
                             </span>
                           )}
-                          {lead.email && (
+                            {lead.email && (
                             <span className="flex items-center gap-1 truncate max-w-[200px]">
                               <Mail className="w-3 h-3 flex-shrink-0" />
                               {lead.email}
                             </span>
-                          )}
-                          {lead.phone && (
+                            )}
+                            {lead.phone && (
                             <span className="flex items-center gap-1">
                               <Phone className="w-3 h-3 flex-shrink-0" />
                               {lead.phone}
                             </span>
-                          )}
-                          {lead.value && (
+                            )}
+                            {lead.value && (
                             <span className="flex items-center gap-1">
                               <DollarSign className="w-3 h-3 flex-shrink-0" />
                               ${(lead.value / 100).toLocaleString()}
                             </span>
                           )}
                         </div>
+
+                        {/* Contact Status & Last Contact - NEW! */}
+                        {(lead.contactStatus !== 'not_contacted' || lead.lastContactMethod) && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {lead.contactStatus && lead.contactStatus !== 'not_contacted' && (
+                              <Badge 
+                                variant="secondary" 
+                                className={`text-xs ${
+                                  lead.contactStatus === 'contacted' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                  lead.contactStatus === 'in_discussion' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                  lead.contactStatus === 'proposal_sent' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                  lead.contactStatus === 'follow_up_needed' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                  lead.contactStatus === 'no_response' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                  ''
+                                }`}
+                              >
+                                {lead.contactStatus === 'contacted' && '🟢'}
+                                {lead.contactStatus === 'in_discussion' && '🔵'}
+                                {lead.contactStatus === 'proposal_sent' && '🟡'}
+                                {lead.contactStatus === 'follow_up_needed' && '🟠'}
+                                {lead.contactStatus === 'no_response' && '🔴'}
+                                {' '}{lead.contactStatus.replace(/_/g, ' ')}
+                              </Badge>
+                            )}
+                            {lead.lastContactMethod && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                {lead.lastContactMethod === 'email' && '📧'}
+                                {lead.lastContactMethod === 'sms' && '💬'}
+                                {lead.lastContactMethod === 'call' && '📞'}
+                                {lead.lastContactMethod === 'meeting' && '🤝'}
+                                {lead.lastContactMethod === 'social' && '📱'}
+                                {lead.lastContactMethod === 'other' && '📋'}
+                                Last: {lead.lastContactMethod}
+                                {lead.lastContactDate && ` • ${new Date(lead.lastContactDate).toLocaleDateString()}`}
+                              </span>
+                            )}
+                            {lead.nextFollowUpDate && (
+                              <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                                ⏰ Next: {new Date(lead.nextFollowUpDate).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Actions Dropdown */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
                             className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                           >
                             <MoreVertical className="w-4 h-4" />
@@ -1625,21 +2042,67 @@ export default function LeadsPage() {
                             Call
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (lead.email) {
-                                window.location.href = `mailto:${lead.email}`;
-                              }
-                            }}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (lead.email) {
+                              window.location.href = `mailto:${lead.email}`;
+                            }
+                          }}
                             disabled={!lead.email}
                           >
                             <Mail className="w-4 h-4 mr-2" />
                             Email
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
+                          {/* Quick Activity Logging */}
                           <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setSelectedLead(lead);
+                              setActivityType('call');
+                              setIsActivityDialogOpen(true);
+                            }}
+                          >
+                            <PhoneCall className="w-4 h-4 mr-2" />
+                            Log Call
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setSelectedLead(lead);
+                              setActivityType('email');
+                              setIsActivityDialogOpen(true);
+                            }}
+                          >
+                            <Mail className="w-4 h-4 mr-2" />
+                            Log Email
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setSelectedLead(lead);
+                              setActivityType('sms');
+                              setIsActivityDialogOpen(true);
+                            }}
+                          >
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Log SMS
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setSelectedLead(lead);
+                              setActivityType('note');
+                              setIsActivityDialogOpen(true);
+                            }}
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Add Note
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
                               setEditingLead(lead);
                               setIsEditDialogOpen(true);
                             }}
@@ -1648,8 +2111,8 @@ export default function LeadsPage() {
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
                               setLeadToDelete(lead);
                             }}
                             className="text-destructive focus:text-destructive"
@@ -1701,8 +2164,8 @@ export default function LeadsPage() {
                       >
                         <td className="p-3">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
                               toggleLeadSelection(lead.id);
                             }}
                             className="p-1 hover:bg-accent rounded transition-colors"
@@ -1758,8 +2221,8 @@ export default function LeadsPage() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}>
@@ -1805,8 +2268,8 @@ export default function LeadsPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
+                      </div>
+                    </div>
           )}
         </CardContent>
       </Card>
@@ -1835,7 +2298,7 @@ export default function LeadsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </div>
+                        </div>
 
       {/* Import Leads Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
@@ -1858,7 +2321,7 @@ export default function LeadsPage() {
                 <p className="text-xs text-blue-700 dark:text-blue-300">
                   Includes all required fields and example data
                 </p>
-              </div>
+                      </div>
             </div>
             <Button 
               variant="outline" 
@@ -1965,10 +2428,10 @@ export default function LeadsPage() {
                             <p className="font-medium">{lead.company || 'N/A'}</p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
               </ScrollArea>
 
               <div className="mt-4 pt-4 border-t flex items-center justify-between">
