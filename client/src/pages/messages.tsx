@@ -163,6 +163,20 @@ export default function Messages() {
   }, [allUsers, teamMembers]); // Wait for both to load
   console.log("👤 Current user:", user?.username, user?.role);
 
+  // Define mode helpers first
+  const isGroupMode = messageMode === "group";
+  const isDirectMode = messageMode === "direct";
+
+  // Get group conversations
+  const { data: groupConversations = [], isLoading: groupConversationsLoading } = useQuery<GroupConversation[]>({
+    queryKey: ["/api/group-conversations"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/group-conversations", undefined);
+      return response.json();
+    },
+    refetchInterval: 5000,
+  });
+
   // Filter by search query and role
   const filteredTeamMembers = teamMembers.filter(member => {
     const matchesSearch = member.username.toLowerCase().includes(searchQuery.toLowerCase());
@@ -187,6 +201,16 @@ export default function Messages() {
       // Invalidate unread counts after viewing a conversation
       queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
     },
+  });
+
+  const { data: groupMessages, isLoading: groupMessagesLoading } = useQuery<GroupMessage[]>({
+    queryKey: ["/api/group-conversations", selectedGroupId, "messages"],
+    enabled: messageMode === "group" && !!selectedGroupId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/group-conversations/${selectedGroupId}/messages`, undefined);
+      return response.json();
+    },
+    refetchInterval: selectedGroupId && messageMode === "group" ? 1500 : false,
   });
 
   const selectedUser = isDirectMode ? allUsers?.find(u => u.id === selectedUserId) : undefined;
@@ -219,29 +243,8 @@ export default function Messages() {
     }));
   }, [messageMode, groupMessages, messages, user, selectedUser]);
 
-  const isGroupMode = messageMode === "group";
-  const isDirectMode = messageMode === "direct";
   const isLoadingCurrentMessages = isGroupMode ? groupMessagesLoading : messagesLoading;
   const hasActiveConversation = isGroupMode ? Boolean(selectedGroupId) : Boolean(selectedUserId);
-
-  const { data: groupConversations = [], isLoading: groupConversationsLoading } = useQuery<GroupConversation[]>({
-    queryKey: ["/api/group-conversations"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/group-conversations", undefined);
-      return response.json();
-    },
-    refetchInterval: 5000,
-  });
-
-  const { data: groupMessages, isLoading: groupMessagesLoading } = useQuery<GroupMessage[]>({
-    queryKey: ["/api/group-conversations", selectedGroupId, "messages"],
-    enabled: messageMode === "group" && !!selectedGroupId,
-    queryFn: async () => {
-      const response = await apiRequest("GET", `/api/group-conversations/${selectedGroupId}/messages`, undefined);
-      return response.json();
-    },
-    refetchInterval: selectedGroupId && messageMode === "group" ? 1500 : false,
-  });
 
   // Presence: heartbeat every 45s when page is open
   useEffect(() => {
