@@ -837,7 +837,7 @@ export default function Messages() {
         </div>
 
         {/* Messages Area - Now with back button on mobile */}
-        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col`}>
+        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col overflow-hidden`}>
           {!selectedUserId ? (
             <div className="flex-1 hidden md:flex items-center justify-center">
               <div className="text-center">
@@ -897,7 +897,7 @@ export default function Messages() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 min-h-0">
                 <ScrollArea className="h-full p-2 sm:p-3 md:p-4 bg-gradient-to-b from-gray-50/50 to-transparent">
                 {messagesLoading ? (
                   <div className="space-y-4">
