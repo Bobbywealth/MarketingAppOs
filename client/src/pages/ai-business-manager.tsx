@@ -213,12 +213,12 @@ export default function AIBusinessManager() {
                         </div>
                       )}
                       <div
-                        className={`flex-1 max-w-[80%] ${
+                        className={`flex-1 max-w-[80%] min-w-0 ${
                           message.role === "user" ? "items-end" : "items-start"
                         } flex flex-col`}
                       >
                         <div
-                          className={`rounded-2xl p-3 md:p-4 ${
+                          className={`rounded-2xl p-3 md:p-4 break-words overflow-hidden ${
                             message.role === "user"
                               ? "bg-primary text-primary-foreground"
                               : message.role === "error"
@@ -228,7 +228,7 @@ export default function AIBusinessManager() {
                               : "bg-muted"
                           }`}
                         >
-                          <p className="text-sm md:text-base whitespace-pre-wrap">
+                          <p className="text-sm md:text-base whitespace-pre-wrap break-words">
                             {message.content}
                           </p>
                           {message.errorDetails && (
