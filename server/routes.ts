@@ -267,6 +267,45 @@ async function notifyAdminsAboutAnalytics(title: string, message: string, catego
   }
 }
 
+// Helper function to notify admins about staff/manager actions
+async function notifyAdminsAboutAction(
+  actorId: number,
+  actorName: string,
+  title: string,
+  message: string,
+  category: string = 'general',
+  actionUrl: string = '/dashboard',
+  type: 'info' | 'success' | 'warning' | 'error' = 'info'
+) {
+  try {
+    const users = await storage.getUsers();
+    const admins = users.filter(u => u.role === UserRole.ADMIN && u.id !== actorId); // Don't notify if admin is the actor
+    const { sendPushToUser } = await import('./push.js');
+    
+    for (const admin of admins) {
+      await storage.createNotification({
+        userId: admin.id,
+        type,
+        title,
+        message,
+        category,
+        actionUrl,
+        isRead: false,
+      });
+      
+      await sendPushToUser(admin.id, {
+        title,
+        body: message,
+        url: actionUrl,
+      }).catch(err => console.error('Failed to send push notification:', err));
+    }
+    
+    console.log(`✅ Notified ${admins.length} admin(s) about action by ${actorName}: ${title}`);
+  } catch (error) {
+    console.error('Failed to send admin action notifications:', error);
+  }
+}
+
 // Helper function to check for significant metric changes
 async function checkSignificantMetricChanges() {
   try {
@@ -2455,34 +2494,23 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.log("Validated client data:", JSON.stringify(validatedData, null, 2));
       const client = await storage.createClient(validatedData);
       
-      // Notify all admins and managers about new client
-      const users = await storage.getUsers();
-      const adminsAndManagers = users.filter(u => 
-        u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
-      );
+      // Get actor information
+      const user = req.user as any;
+      const actorName = user?.firstName || user?.username || 'A team member';
+      const actorRole = user?.role || 'staff';
       
-      const { sendPushToUser } = await import('./push.js');
-      
-      for (const user of adminsAndManagers) {
-        // In-app notification
-        await storage.createNotification({
-          userId: user.id,
-          type: 'success',
-          title: '🎉 New Client Added',
-          message: `${client.name} has been added to the system`,
-          category: 'general',
-          actionUrl: `/clients?clientId=${client.id}`,
-          isRead: false,
-        });
-        
-        // Push notification
-        await sendPushToUser(user.id, {
-          title: '🎉 New Client Added',
-          body: `${client.name} has been added to the system`,
-          url: '/clients',
-        }).catch(err => console.error('Failed to send push notification:', err));
+      // Notify admins if staff/manager created the client
+      if (actorRole !== 'admin') {
+        await notifyAdminsAboutAction(
+          user?.id,
+          actorName,
+          '🎉 New Client Added',
+          `${actorName} added new client: ${client.name}`,
+          'client',
+          `/clients?clientId=${client.id}`,
+          'success'
+        );
       }
-      console.log(`📬 Notified ${adminsAndManagers.length} admins/managers about new client`);
       
       res.status(201).json(client);
     } catch (error) {
@@ -2495,6 +2523,25 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     try {
       const validatedData = insertClientSchema.partial().strip().parse(req.body);
       const client = await storage.updateClient(req.params.id, validatedData);
+      
+      // Get actor information
+      const user = req.user as any;
+      const actorName = user?.firstName || user?.username || 'A team member';
+      const actorRole = user?.role || 'staff';
+      
+      // Notify admins if staff/manager updated the client
+      if (actorRole !== 'admin') {
+        await notifyAdminsAboutAction(
+          user?.id,
+          actorName,
+          '📝 Client Updated',
+          `${actorName} updated client: ${client.name}`,
+          'client',
+          `/clients?clientId=${client.id}`,
+          'info'
+        );
+      }
+      
       res.json(client);
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -2739,6 +2786,21 @@ Example output:
       const campaign = await storage.createCampaign(campaignData);
       console.log(`📣 Campaign created by ${currentUser?.username} (${currentUser?.role}):`, campaign.name);
       
+      // Notify admins if staff/manager created the campaign
+      const actorName = currentUser?.firstName || currentUser?.username || 'A team member';
+      const actorRole = currentUser?.role || 'staff';
+      if (actorRole !== 'admin') {
+        await notifyAdminsAboutAction(
+          currentUser?.id,
+          actorName,
+          '📣 New Campaign Created',
+          `${actorName} created campaign: ${campaign.name}`,
+          'campaign',
+          `/campaigns?campaignId=${campaign.id}`,
+          'success'
+        );
+      }
+      
       // Notify client users if campaign is assigned to a client
       if (campaign.clientId) {
         try {
@@ -2781,6 +2843,25 @@ Example output:
     try {
       const validatedData = insertCampaignSchema.partial().strip().parse(req.body);
       const campaign = await storage.updateCampaign(req.params.id, validatedData);
+      
+      // Get actor information
+      const user = req.user as any;
+      const actorName = user?.firstName || user?.username || 'A team member';
+      const actorRole = user?.role || 'staff';
+      
+      // Notify admins if staff/manager updated the campaign
+      if (actorRole !== 'admin') {
+        await notifyAdminsAboutAction(
+          user?.id,
+          actorName,
+          '📝 Campaign Updated',
+          `${actorName} updated campaign: ${campaign.name}`,
+          'campaign',
+          `/campaigns?campaignId=${campaign.id}`,
+          'info'
+        );
+      }
+      
       res.json(campaign);
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -3196,7 +3277,22 @@ Examples:
       // Enhanced task update notifications
       const currentUser = req.user as any;
       const currentUserId = currentUser?.id || currentUser?.claims?.sub;
+      const actorName = currentUser?.firstName || currentUser?.username || 'A team member';
+      const actorRole = currentUser?.role || 'staff';
       const { sendPushToUser } = await import('./push.js');
+      
+      // Notify admins when staff/manager completes tasks
+      if (validatedData.status === 'completed' && existingTask.status !== 'completed' && actorRole !== 'admin') {
+        await notifyAdminsAboutAction(
+          currentUserId,
+          actorName,
+          '✅ Task Completed',
+          `${actorName} completed task: "${task.title}"`,
+          'task',
+          `/tasks?taskId=${task.id}`,
+          'success'
+        );
+      }
       
       try {
         // Notify about status changes
@@ -3848,34 +3944,23 @@ Examples:
       const validatedData = insertLeadSchema.parse(req.body);
       const lead = await storage.createLead(validatedData);
       
-      // Notify all admins and managers about new lead
-      const users = await storage.getUsers();
-      const adminsAndManagers = users.filter(u => 
-        u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
-      );
+      // Get actor information
+      const user = req.user as any;
+      const actorName = user?.firstName || user?.username || 'A team member';
+      const actorRole = user?.role || 'staff';
       
-      const { sendPushToUser } = await import('./push.js');
-      
-      for (const user of adminsAndManagers) {
-        // In-app notification
-        await storage.createNotification({
-          userId: user.id,
-          type: 'info',
-          title: '🎯 New Lead',
-          message: `${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
-          category: 'general',
-          actionUrl: `/leads?leadId=${lead.id}`,
-          isRead: false,
-        });
-        
-        // Push notification
-        await sendPushToUser(user.id, {
-          title: '🎯 New Lead',
-          body: `${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
-          url: '/leads',
-        }).catch(err => console.error('Failed to send push notification:', err));
+      // Notify admins if staff/manager created the lead
+      if (actorRole !== 'admin') {
+        await notifyAdminsAboutAction(
+          user?.id,
+          actorName,
+          '🎯 New Lead Created',
+          `${actorName} added ${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
+          'lead',
+          `/leads?leadId=${lead.id}`,
+          'info'
+        );
       }
-      console.log(`📬 Notified ${adminsAndManagers.length} admins/managers about new lead`);
       
       res.status(201).json(lead);
     } catch (error) {
@@ -3887,6 +3972,25 @@ Examples:
     try {
       const validatedData = insertLeadSchema.partial().strip().parse(req.body);
       const lead = await storage.updateLead(req.params.id, validatedData);
+      
+      // Get actor information
+      const user = req.user as any;
+      const actorName = user?.firstName || user?.username || 'A team member';
+      const actorRole = user?.role || 'staff';
+      
+      // Notify admins if staff/manager updated the lead
+      if (actorRole !== 'admin') {
+        await notifyAdminsAboutAction(
+          user?.id,
+          actorName,
+          '📝 Lead Updated',
+          `${actorName} updated ${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
+          'lead',
+          `/leads?leadId=${lead.id}`,
+          'info'
+        );
+      }
+      
       res.json(lead);
     } catch (error: any) {
       if (error instanceof ZodError) {
