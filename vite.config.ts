@@ -20,6 +20,32 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("recharts")) {
+              return "charts";
+            }
+            if (id.includes("@tanstack/react-query")) {
+              return "data-layer";
+            }
+            if (id.includes("lucide-react")) {
+              return "icons";
+            }
+            if (
+              id.includes("date-fns") ||
+              id.includes("framer-motion") ||
+              id.includes("react-syntax-highlighter")
+            ) {
+              return "ui-enhancements";
+            }
+            return "vendor";
+          }
+        },
+      },
+    },
   },
   server: {
     fs: {
