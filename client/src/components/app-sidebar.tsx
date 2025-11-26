@@ -116,12 +116,14 @@ const companyTools = [
     url: "/",
     icon: LayoutDashboard,
     permission: null,
+    sidebarKey: "dashboard" as const,
   },
   {
     title: "Team",
     url: "/team",
     icon: UsersRound,
     permission: "canManageUsers" as const,
+    sidebarKey: "team" as const,
   },
   {
     title: "Messages",
@@ -129,6 +131,7 @@ const companyTools = [
     icon: MessageSquare,
     permission: null,
     badgeKey: "messages", // Will fetch unread count
+    sidebarKey: "messages" as const,
   },
   {
     title: "Emails",
@@ -136,18 +139,21 @@ const companyTools = [
     icon: Mail,
     permission: null,
     badgeKey: "emails", // Will fetch unread count
+    sidebarKey: "emails" as const,
   },
   {
     title: "Phone",
     url: "/phone",
     icon: Phone,
     permission: null,
+    sidebarKey: "phone" as const,
   },
   {
     title: "My Calendar",
     url: "/company-calendar",
     icon: Calendar,
     permission: null,
+    sidebarKey: "calendar" as const,
   },
 ];
 
@@ -157,60 +163,70 @@ const operationsTools = [
     url: "/clients",
     icon: Users,
     permission: "canManageClients" as const,
+    sidebarKey: "clients" as const,
   },
   {
     title: "Social Stats",
     url: "/admin/social-stats",
     icon: LineChart,
     permission: "canManageClients" as const,
+    sidebarKey: "socialStats" as const,
   },
   {
     title: "Leads",
     url: "/leads",
     icon: UserPlus,
     permission: "canManageLeads" as const,
+    sidebarKey: "leads" as const,
   },
   {
     title: "Campaigns",
     url: "/campaigns",
     icon: Megaphone,
     permission: "canManageCampaigns" as const,
+    sidebarKey: "campaigns" as const,
   },
   {
     title: "Content Calendar",
     url: "/content",
     icon: Calendar,
     permission: "canManageContent" as const,
+    sidebarKey: "content" as const,
   },
   {
     title: "Tasks",
     url: "/tasks",
     icon: ListTodo,
     permission: null,
+    sidebarKey: "tasks" as const,
   },
   {
     title: "Onboarding",
     url: "/onboarding",
     icon: ClipboardCheck,
     permission: "canManageClients" as const,
+    sidebarKey: "onboarding" as const,
   },
   {
     title: "Support Tickets",
     url: "/tickets",
     icon: Ticket,
     permission: "canManageTickets" as const,
+    sidebarKey: "tickets" as const,
   },
   {
     title: "Website Projects",
     url: "/website-projects",
     icon: Globe,
     permission: "canManageClients" as const,
+    sidebarKey: "websiteProjects" as const,
   },
   {
     title: "Second Me",
     url: "/admin-second-me",
     icon: Sparkles,
     permission: "canManageClients" as const,
+    sidebarKey: "secondMe" as const,
   },
 ];
 
@@ -220,36 +236,42 @@ const businessTools = [
     url: "/analytics",
     icon: BarChart3,
     permission: "canManageClients" as const,
+    sidebarKey: "analytics" as const,
   },
   {
     title: "Invoices & Billing",
     url: "/invoices",
     icon: DollarSign,
     permission: "canManageInvoices" as const,
+    sidebarKey: "invoices" as const,
   },
   {
     title: "Subscription Packages",
     url: "/subscription-packages",
     icon: Package,
     permission: "canManageUsers" as const,
+    sidebarKey: "packages" as const,
   },
   {
     title: "Training",
     url: "/training",
     icon: BookOpen,
     permission: "canManageUsers" as const,
+    sidebarKey: "training" as const,
   },
   {
     title: "AI Business Manager",
     url: "/ai-manager",
     icon: Sparkles,
     roles: ["admin"] as const,
+    sidebarKey: "aiManager" as const,
   },
   {
     title: "Push Notifications",
     url: "/push-notifications",
     icon: Bell,
     roles: ["admin", "manager", "staff"] as const,
+    sidebarKey: "pushNotifications" as const,
   },
 ];
 
