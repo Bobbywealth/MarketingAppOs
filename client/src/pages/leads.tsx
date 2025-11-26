@@ -579,13 +579,14 @@ export default function LeadsPage() {
                   <span className="hidden md:inline">Add Lead</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden p-0">
+            <div className="flex flex-col h-full max-h-[85vh]">
+            <DialogHeader className="px-6 pt-6 pb-4">
               <DialogTitle>Add New Lead</DialogTitle>
               <DialogDescription>Create a new lead in your pipeline (Company name is required)</DialogDescription>
             </DialogHeader>
-            <ScrollArea className="flex-1 pr-4">
-            <form onSubmit={(e) => {
+            <div className="overflow-y-auto flex-1 px-6">
+            <form id="add-lead-form" onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               const data: InsertLead = {
@@ -1045,30 +1046,37 @@ export default function LeadsPage() {
                 <Label>Notes</Label>
                 <Textarea name="notes" placeholder="Additional information about this lead..." rows={3} />
               </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createLeadMutation.isPending}>
-                  {createLeadMutation.isPending ? "Creating..." : "Create Lead"}
-                </Button>
-              </div>
             </form>
-            </ScrollArea>
+            </div>
+            
+            <div className="border-t px-6 py-4 flex justify-end gap-2 bg-background">
+              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                form="add-lead-form"
+                disabled={createLeadMutation.isPending}
+              >
+                {createLeadMutation.isPending ? "Creating..." : "Create Lead"}
+              </Button>
+            </div>
+            </div>
           </DialogContent>
         </Dialog>
 
         {/* Edit Lead Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden p-0">
+            <div className="flex flex-col h-full max-h-[85vh]">
+            <DialogHeader className="px-6 pt-6 pb-4">
               <DialogTitle>Edit Lead</DialogTitle>
               <DialogDescription>Update lead information</DialogDescription>
             </DialogHeader>
             {editingLead && (
-              <ScrollArea className="flex-1 pr-4">
-              <form onSubmit={(e) => {
+              <>
+              <div className="overflow-y-auto flex-1 px-6">
+              <form id="edit-lead-form" onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const data: Partial<InsertLead> = {
@@ -1524,21 +1532,27 @@ export default function LeadsPage() {
                   <Label>Notes</Label>
                   <Textarea name="notes" defaultValue={editingLead.notes || ""} placeholder="Additional information about this lead..." rows={3} />
                 </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => {
-                    setIsEditDialogOpen(false);
-                    setEditingLead(null);
-                  }}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={updateLeadMutation.isPending}>
-                    {updateLeadMutation.isPending ? "Updating..." : "Update Lead"}
-                  </Button>
-                </div>
               </form>
-              </ScrollArea>
+              </div>
+              
+              <div className="border-t px-6 py-4 flex justify-end gap-2 bg-background">
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingLead(null);
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  form="edit-lead-form"
+                  disabled={updateLeadMutation.isPending}
+                >
+                  {updateLeadMutation.isPending ? "Updating..." : "Update Lead"}
+                </Button>
+              </div>
+              </>
             )}
+            </div>
           </DialogContent>
         </Dialog>
 
