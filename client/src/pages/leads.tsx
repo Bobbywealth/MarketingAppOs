@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -52,7 +53,10 @@ import {
   Snowflake,
   SlidersHorizontal,
   ChevronDown,
-  ExternalLink
+  ExternalLink,
+  Instagram,
+  Facebook,
+  MapPinned
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -214,6 +218,8 @@ export default function LeadsPage() {
   const [newTagInput, setNewTagInput] = useState("");
   const [newTags, setNewTags] = useState<string[]>([]);
   const [editTags, setEditTags] = useState<string[]>([]);
+  const [newNeeds, setNewNeeds] = useState<string[]>([]);
+  const [editNeeds, setEditNeeds] = useState<string[]>([]);
   
   // New state for modern UI
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
@@ -588,11 +594,20 @@ export default function LeadsPage() {
                 phoneType: formData.get("phoneType") as string || "business",
                 company: formData.get("company") as string,
                 website: formData.get("website") as string || null,
+                // Social media links
+                instagram: formData.get("instagram") as string || null,
+                tiktok: formData.get("tiktok") as string || null,
+                facebook: formData.get("facebook") as string || null,
+                youtube: formData.get("youtube") as string || null,
+                googleBusinessProfile: formData.get("googleBusinessProfile") as string || null,
+                rating: formData.get("rating") ? parseInt(formData.get("rating") as string) : null,
                 industry: formData.get("industry") as string || null,
                 tags: newTags,
                 stage: formData.get("stage") as string,
                 score: formData.get("score") as string,
                 source: formData.get("source") as string,
+                needs: newNeeds,
+                status: formData.get("status") as string,
                 value: formData.get("value") ? parseInt(formData.get("value") as string) * 100 : null, // Convert to cents
                 notes: formData.get("notes") as string || null,
                 // Contact tracking fields
@@ -609,6 +624,7 @@ export default function LeadsPage() {
               };
               createLeadMutation.mutate(data);
               setNewTags([]); // Reset tags after submission
+              setNewNeeds([]); // Reset needs after submission
             }} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -652,6 +668,41 @@ export default function LeadsPage() {
                 <div>
                   <Label>Lead Value ($)</Label>
                   <Input name="value" type="number" placeholder="5000" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Social Media Links</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Instagram Link</Label>
+                    <Input name="instagram" type="url" placeholder="https://instagram.com/..." />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Facebook Link</Label>
+                    <Input name="facebook" type="url" placeholder="https://facebook.com/..." />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">TikTok Link</Label>
+                    <Input name="tiktok" type="url" placeholder="https://tiktok.com/@..." />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">YouTube Link</Label>
+                    <Input name="youtube" type="url" placeholder="https://youtube.com/@..." />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Google Business Profile</Label>
+                    <Input name="googleBusinessProfile" type="url" placeholder="https://g.page/..." />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Business Rating (1-5)</Label>
+                  <Input name="rating" type="number" min="1" max="5" step="0.1" placeholder="4.5" />
                 </div>
               </div>
 
@@ -758,21 +809,172 @@ export default function LeadsPage() {
                 </div>
                 <div>
                   <Label>Lead Source *</Label>
-                  <Select name="source" defaultValue="website" required>
+                  <Select name="source" defaultValue="google_extract" required>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="website">Website</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="social">Social Media</SelectItem>
-                      <SelectItem value="ads">Advertising</SelectItem>
-                      <SelectItem value="call">Phone Call</SelectItem>
-                      <SelectItem value="form">Lead Form</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="google_extract">🔍 Google Extract</SelectItem>
+                      <SelectItem value="instagram">📷 Instagram</SelectItem>
+                      <SelectItem value="facebook">📘 Facebook</SelectItem>
+                      <SelectItem value="website_form">📝 Website Form</SelectItem>
+                      <SelectItem value="referral">👥 Referral</SelectItem>
+                      <SelectItem value="tiktok">🎵 TikTok</SelectItem>
+                      <SelectItem value="other">📦 Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Needs Checklist */}
+              <div className="space-y-3 pt-4 border-t">
+                <Label className="text-sm font-semibold">What does this business need?</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-social"
+                      checked={newNeeds.includes("social_media")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "social_media"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "social_media"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-social" className="text-sm font-normal cursor-pointer">
+                      Needs Social Media Management
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-content"
+                      checked={newNeeds.includes("content")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "content"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "content"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-content" className="text-sm font-normal cursor-pointer">
+                      Needs Content Creation
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-website"
+                      checked={newNeeds.includes("website")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "website"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "website"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-website" className="text-sm font-normal cursor-pointer">
+                      Needs Website
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-ads"
+                      checked={newNeeds.includes("ads")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "ads"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "ads"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-ads" className="text-sm font-normal cursor-pointer">
+                      Needs Paid Ads
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-branding"
+                      checked={newNeeds.includes("branding")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "branding"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "branding"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-branding" className="text-sm font-normal cursor-pointer">
+                      Needs Branding
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-google"
+                      checked={newNeeds.includes("google_optimization")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "google_optimization"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "google_optimization"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-google" className="text-sm font-normal cursor-pointer">
+                      Needs Google Optimization
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-crm"
+                      checked={newNeeds.includes("crm")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "crm"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "crm"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-crm" className="text-sm font-normal cursor-pointer">
+                      Needs CRM/Automation
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="needs-unsure"
+                      checked={newNeeds.includes("not_sure")}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewNeeds([...newNeeds, "not_sure"]);
+                        } else {
+                          setNewNeeds(newNeeds.filter(n => n !== "not_sure"));
+                        }
+                      }}
+                    />
+                    <Label htmlFor="needs-unsure" className="text-sm font-normal cursor-pointer">
+                      Not Sure
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Dropdown */}
+              <div className="pt-4 border-t">
+                <Label>Status *</Label>
+                <Select name="status" defaultValue="research_completed" required>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="research_completed">✅ Research Completed</SelectItem>
+                    <SelectItem value="missing_info">⚠️ Missing Information</SelectItem>
+                    <SelectItem value="needs_review">👀 Needs Review by Bobby</SelectItem>
+                    <SelectItem value="ready_for_outreach">🚀 Ready for Outreach</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Contact Tracking Section */}
@@ -873,11 +1075,20 @@ export default function LeadsPage() {
                   phoneType: formData.get("phoneType") as string || "business",
                   company: formData.get("company") as string,
                   website: formData.get("website") as string || null,
+                  // Social media links
+                  instagram: formData.get("instagram") as string || null,
+                  tiktok: formData.get("tiktok") as string || null,
+                  facebook: formData.get("facebook") as string || null,
+                  youtube: formData.get("youtube") as string || null,
+                  googleBusinessProfile: formData.get("googleBusinessProfile") as string || null,
+                  rating: formData.get("rating") ? parseInt(formData.get("rating") as string) : null,
                   industry: formData.get("industry") as string || null,
                   tags: editTags,
                   stage: formData.get("stage") as string,
                   score: formData.get("score") as string,
                   source: formData.get("source") as string,
+                  needs: editNeeds,
+                  status: formData.get("status") as string,
                   value: formData.get("value") ? parseInt(formData.get("value") as string) * 100 : null,
                   notes: formData.get("notes") as string || null,
                   // Contact tracking fields
@@ -930,6 +1141,41 @@ export default function LeadsPage() {
                   <div>
                     <Label>Lead Value ($)</Label>
                     <Input name="value" type="number" defaultValue={editingLead.value ? editingLead.value / 100 : ""} placeholder="5000" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Social Media Links</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Instagram Link</Label>
+                      <Input name="instagram" type="url" defaultValue={editingLead.instagram || ""} placeholder="https://instagram.com/..." />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Facebook Link</Label>
+                      <Input name="facebook" type="url" defaultValue={editingLead.facebook || ""} placeholder="https://facebook.com/..." />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">TikTok Link</Label>
+                      <Input name="tiktok" type="url" defaultValue={editingLead.tiktok || ""} placeholder="https://tiktok.com/@..." />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">YouTube Link</Label>
+                      <Input name="youtube" type="url" defaultValue={editingLead.youtube || ""} placeholder="https://youtube.com/@..." />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Google Business Profile</Label>
+                      <Input name="googleBusinessProfile" type="url" defaultValue={editingLead.googleBusinessProfile || ""} placeholder="https://g.page/..." />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Business Rating (1-5)</Label>
+                    <Input name="rating" type="number" min="1" max="5" step="0.1" defaultValue={editingLead.rating || ""} placeholder="4.5" />
                   </div>
                 </div>
 
@@ -1041,16 +1287,167 @@ export default function LeadsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="website">Website</SelectItem>
-                        <SelectItem value="referral">Referral</SelectItem>
-                        <SelectItem value="social">Social Media</SelectItem>
-                        <SelectItem value="ads">Advertising</SelectItem>
-                        <SelectItem value="call">Phone Call</SelectItem>
-                        <SelectItem value="form">Lead Form</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="google_extract">🔍 Google Extract</SelectItem>
+                        <SelectItem value="instagram">📷 Instagram</SelectItem>
+                        <SelectItem value="facebook">📘 Facebook</SelectItem>
+                        <SelectItem value="website_form">📝 Website Form</SelectItem>
+                        <SelectItem value="referral">👥 Referral</SelectItem>
+                        <SelectItem value="tiktok">🎵 TikTok</SelectItem>
+                        <SelectItem value="other">📦 Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                {/* Needs Checklist */}
+                <div className="space-y-3 pt-4 border-t">
+                  <Label className="text-sm font-semibold">What does this business need?</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-social"
+                        checked={editNeeds.includes("social_media")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "social_media"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "social_media"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-social" className="text-sm font-normal cursor-pointer">
+                        Needs Social Media Management
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-content"
+                        checked={editNeeds.includes("content")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "content"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "content"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-content" className="text-sm font-normal cursor-pointer">
+                        Needs Content Creation
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-website"
+                        checked={editNeeds.includes("website")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "website"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "website"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-website" className="text-sm font-normal cursor-pointer">
+                        Needs Website
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-ads"
+                        checked={editNeeds.includes("ads")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "ads"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "ads"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-ads" className="text-sm font-normal cursor-pointer">
+                        Needs Paid Ads
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-branding"
+                        checked={editNeeds.includes("branding")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "branding"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "branding"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-branding" className="text-sm font-normal cursor-pointer">
+                        Needs Branding
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-google"
+                        checked={editNeeds.includes("google_optimization")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "google_optimization"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "google_optimization"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-google" className="text-sm font-normal cursor-pointer">
+                        Needs Google Optimization
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-crm"
+                        checked={editNeeds.includes("crm")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "crm"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "crm"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-crm" className="text-sm font-normal cursor-pointer">
+                        Needs CRM/Automation
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="edit-needs-unsure"
+                        checked={editNeeds.includes("not_sure")}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditNeeds([...editNeeds, "not_sure"]);
+                          } else {
+                            setEditNeeds(editNeeds.filter(n => n !== "not_sure"));
+                          }
+                        }}
+                      />
+                      <Label htmlFor="edit-needs-unsure" className="text-sm font-normal cursor-pointer">
+                        Not Sure
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Dropdown */}
+                <div className="pt-4 border-t">
+                  <Label>Status *</Label>
+                  <Select name="status" defaultValue={editingLead.status || "research_completed"} required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="research_completed">✅ Research Completed</SelectItem>
+                      <SelectItem value="missing_info">⚠️ Missing Information</SelectItem>
+                      <SelectItem value="needs_review">👀 Needs Review by Bobby</SelectItem>
+                      <SelectItem value="ready_for_outreach">🚀 Ready for Outreach</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Contact Tracking Section */}
@@ -1457,6 +1854,44 @@ export default function LeadsPage() {
                         <a href={selectedLead.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                           Website
                         </a>
+                      </div>
+                    )}
+                    {selectedLead.instagram && (
+                      <div className="flex items-center gap-2">
+                        <Instagram className="w-4 h-4 text-muted-foreground" />
+                        <a href={selectedLead.instagram} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          Instagram
+                        </a>
+                      </div>
+                    )}
+                    {selectedLead.tiktok && (
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-muted-foreground" />
+                        <a href={selectedLead.tiktok} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          TikTok
+                        </a>
+                      </div>
+                    )}
+                    {selectedLead.facebook && (
+                      <div className="flex items-center gap-2">
+                        <Facebook className="w-4 h-4 text-muted-foreground" />
+                        <a href={selectedLead.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          Facebook
+                        </a>
+                      </div>
+                    )}
+                    {selectedLead.googleBusinessProfile && (
+                      <div className="flex items-center gap-2">
+                        <MapPinned className="w-4 h-4 text-muted-foreground" />
+                        <a href={selectedLead.googleBusinessProfile} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          Google Business
+                        </a>
+                      </div>
+                    )}
+                    {selectedLead.rating && (
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        <span className="font-medium">{selectedLead.rating} / 5</span>
                       </div>
                     )}
                   </div>
@@ -2106,6 +2541,8 @@ export default function LeadsPage() {
                           onClick={(e) => { 
                             e.stopPropagation(); 
                               setEditingLead(lead);
+                              setEditTags(lead.tags || []);
+                              setEditNeeds(lead.needs || []);
                               setIsEditDialogOpen(true);
                             }}
                           >
@@ -2252,7 +2689,7 @@ export default function LeadsPage() {
                                 Email
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingLead(lead); setIsEditDialogOpen(true); }}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingLead(lead); setEditTags(lead.tags || []); setEditNeeds(lead.needs || []); setIsEditDialogOpen(true); }}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>

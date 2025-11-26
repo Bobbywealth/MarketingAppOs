@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,61 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import type { Message, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
+interface GroupConversation {
+  id: string;
+  name: string;
+  createdBy: number;
+  createdAt: string;
+  participants: Array<{ id: number; username: string; role: string }>;
+}
+
+interface GroupMessage {
+  id: string;
+  conversationId: string;
+  userId: number;
+  content: string;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  durationMs?: number | null;
+  createdAt: string;
+  authorName: string;
+  authorRole: string;
+}
+
+interface NormalizedMessage {
+  id: string | number;
+  userId: number;
+  content: string;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  durationMs?: number | null;
+  createdAt: string;
+  authorName: string;
+  authorRole: string;
+}
 
 export default function Messages() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [messageMode, setMessageMode] = useState<"direct" | "group">("direct");
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [selectedGroupMembers, setSelectedGroupMembers] = useState<number[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -38,6 +86,16 @@ export default function Messages() {
   const [lastSeen, setLastSeen] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (messageMode === "direct") {
+      setSelectedGroupId(null);
+    } else {
+      setSelectedUserId(null);
+      setPresenceOnline(false);
+      setLastSeen(null);
+    }
+  }, [messageMode]);
 
   // Get all users (will be filtered to admin/staff only)
   const { data: allUsers } = useQuery<User[]>({
@@ -112,19 +170,77 @@ export default function Messages() {
     return matchesSearch && matchesRole;
   });
 
+  const filteredGroupConversations = groupConversations.filter((conversation) =>
+    conversation.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Get messages for selected conversation
   const { data: messages, isLoading: messagesLoading } = useQuery<Message[]>({
     queryKey: ["/api/messages/conversation", selectedUserId],
-    enabled: !!selectedUserId,
+    enabled: messageMode === "direct" && !!selectedUserId,
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/messages/conversation/${selectedUserId}`, undefined);
       return response.json();
     },
-    refetchInterval: selectedUserId ? 1500 : false, // Auto-refresh every 1.5 seconds when conversation is open for faster messaging
+    refetchInterval: selectedUserId && messageMode === "direct" ? 1500 : false, // Auto-refresh every 1.5 seconds when conversation is open for faster messaging
     onSuccess: () => {
       // Invalidate unread counts after viewing a conversation
       queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
     },
+  });
+
+  const selectedUser = isDirectMode ? allUsers?.find(u => u.id === selectedUserId) : undefined;
+  const selectedGroup = isGroupMode ? groupConversations.find(conv => conv.id === selectedGroupId) : undefined;
+
+  const normalizedMessages: NormalizedMessage[] = useMemo(() => {
+    if (messageMode === "group") {
+      return (groupMessages || []).map((msg) => ({
+        id: msg.id,
+        userId: msg.userId,
+        content: msg.content,
+        mediaUrl: msg.mediaUrl,
+        mediaType: msg.mediaType,
+        durationMs: msg.durationMs,
+        createdAt: msg.createdAt,
+        authorName: msg.authorName,
+        authorRole: msg.authorRole,
+      }));
+    }
+    return (messages || []).map((msg) => ({
+      id: msg.id,
+      userId: msg.userId,
+      content: msg.content,
+      mediaUrl: msg.mediaUrl,
+      mediaType: msg.mediaType,
+      durationMs: (msg as any).durationMs,
+      createdAt: msg.createdAt,
+      authorName: msg.userId === user?.id ? (user?.username || "You") : selectedUser?.username || "User",
+      authorRole: msg.userId === user?.id ? ((user as any)?.role || "staff") : selectedUser?.role || "staff",
+    }));
+  }, [messageMode, groupMessages, messages, user, selectedUser]);
+
+  const isGroupMode = messageMode === "group";
+  const isDirectMode = messageMode === "direct";
+  const isLoadingCurrentMessages = isGroupMode ? groupMessagesLoading : messagesLoading;
+  const hasActiveConversation = isGroupMode ? Boolean(selectedGroupId) : Boolean(selectedUserId);
+
+  const { data: groupConversations = [], isLoading: groupConversationsLoading } = useQuery<GroupConversation[]>({
+    queryKey: ["/api/group-conversations"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/group-conversations", undefined);
+      return response.json();
+    },
+    refetchInterval: 5000,
+  });
+
+  const { data: groupMessages, isLoading: groupMessagesLoading } = useQuery<GroupMessage[]>({
+    queryKey: ["/api/group-conversations", selectedGroupId, "messages"],
+    enabled: messageMode === "group" && !!selectedGroupId,
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/group-conversations/${selectedGroupId}/messages`, undefined);
+      return response.json();
+    },
+    refetchInterval: selectedGroupId && messageMode === "group" ? 1500 : false,
   });
 
   // Presence: heartbeat every 45s when page is open
@@ -217,20 +333,110 @@ export default function Messages() {
     },
   });
 
+  const sendGroupMessageMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", `/api/group-conversations/${data.conversationId}/messages`, data.payload);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to send message");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/group-conversations", selectedGroupId, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/group-conversations"] });
+      setMessageText("");
+      setTimeout(() => {
+        messageInputRef.current?.focus();
+      }, 0);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send group message",
+        description: error?.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createGroupConversationMutation = useMutation({
+    mutationFn: async (data: { name: string; memberIds: number[] }) => {
+      const response = await apiRequest("POST", "/api/group-conversations", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create group");
+      }
+      return response.json();
+    },
+    onSuccess: (conversation: GroupConversation) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/group-conversations"] });
+      setIsCreateGroupOpen(false);
+      setNewGroupName("");
+      setSelectedGroupMembers([]);
+      setMessageMode("group");
+      setSelectedGroupId(conversation.id);
+      toast({
+        title: "Group chat created",
+        description: `${conversation.name} is ready.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create group",
+        description: error?.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim() || !selectedUserId) return;
+    if (!messageText.trim()) return;
 
-    sendMessageMutation.mutate({
-      recipientId: selectedUserId,
-      content: messageText,
-      isInternal: true,
+    if (isGroupMode) {
+      if (!selectedGroupId) return;
+      sendGroupMessageMutation.mutate({
+        conversationId: selectedGroupId,
+        payload: {
+          content: messageText,
+        },
+      });
+    } else {
+      if (!selectedUserId) return;
+      sendMessageMutation.mutate({
+        recipientId: selectedUserId,
+        content: messageText,
+        isInternal: true,
+      });
+    }
+  };
+
+  const toggleGroupMember = (memberId: number, checked: boolean) => {
+    setSelectedGroupMembers((prev) => {
+      if (checked) {
+        if (prev.includes(memberId)) return prev;
+        return [...prev, memberId];
+      }
+      return prev.filter((id) => id !== memberId);
+    });
+  };
+
+  const handleCreateGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim() || selectedGroupMembers.length === 0) {
+      toast({ title: "Group details missing", description: "Add a name and at least one member.", variant: "destructive" });
+      return;
+    }
+    createGroupConversationMutation.mutate({
+      name: newGroupName.trim(),
+      memberIds: selectedGroupMembers,
     });
   };
 
   // Voice message recording
   const handleStartRecording = async () => {
-    if (!selectedUserId) return;
+    if (isDirectMode && !selectedUserId) return;
+    if (isGroupMode && !selectedGroupId) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Pick a mime type compatible with the current browser (iOS prefers audio/mp4)
@@ -306,7 +512,9 @@ export default function Messages() {
   };
 
   const handleSendVoiceMessage = async () => {
-    if (!recordedBlob || !selectedUserId) return;
+    if (!recordedBlob) return;
+    if (isDirectMode && !selectedUserId) return;
+    if (isGroupMode && !selectedGroupId) return;
     
     try {
       const formData = new FormData();
@@ -322,14 +530,26 @@ export default function Messages() {
       if (!uploadRes.ok) throw new Error('Upload failed');
       const uploaded = await uploadRes.json();
       
-      sendMessageMutation.mutate({
-        recipientId: selectedUserId,
-        content: '(voice message)',
-        isInternal: true,
-        mediaUrl: uploaded.url,
-        mediaType: recordedBlob.type,
-        durationMs: recordedDuration,
-      });
+      if (isGroupMode) {
+        sendGroupMessageMutation.mutate({
+          conversationId: selectedGroupId,
+          payload: {
+            content: '(voice message)',
+            mediaUrl: uploaded.url,
+            mediaType: recordedBlob.type,
+            durationMs: recordedDuration,
+          },
+        });
+      } else {
+        sendMessageMutation.mutate({
+          recipientId: selectedUserId,
+          content: '(voice message)',
+          isInternal: true,
+          mediaUrl: uploaded.url,
+          mediaType: recordedBlob.type,
+          durationMs: recordedDuration,
+        });
+      }
       
       // Clear the recording after sending
       handleDeleteRecording();
@@ -377,28 +597,39 @@ export default function Messages() {
 
   const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedUserId) return;
+    if (!file) return;
+    if (isDirectMode && !selectedUserId) return;
+    if (isGroupMode && !selectedGroupId) return;
     try {
       const form = new FormData();
       form.append('file', file, file.name);
       const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' });
       if (!res.ok) throw new Error('Upload failed');
       const uploaded = await res.json();
-      sendMessageMutation.mutate({
-        recipientId: selectedUserId,
-        content: '(image)',
-        isInternal: true,
-        mediaUrl: uploaded.url,
-        mediaType: file.type,
-      });
+      if (isGroupMode) {
+        sendGroupMessageMutation.mutate({
+          conversationId: selectedGroupId,
+          payload: {
+            content: '(image)',
+            mediaUrl: uploaded.url,
+            mediaType: file.type,
+          },
+        });
+      } else {
+        sendMessageMutation.mutate({
+          recipientId: selectedUserId,
+          content: '(image)',
+          isInternal: true,
+          mediaUrl: uploaded.url,
+          mediaType: file.type,
+        });
+      }
     } catch (err: any) {
       toast({ title: 'Image send failed', description: err?.message || 'Try again', variant: 'destructive' });
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
-
-  const selectedUser = allUsers?.find(u => u.id === selectedUserId);
 
   const getInitials = (username: string) => {
     return username.slice(0, 2).toUpperCase();

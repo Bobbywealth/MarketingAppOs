@@ -5041,6 +5041,102 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
     }
   });
 
+  // Group conversation routes
+  app.get("/api/group-conversations", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const currentUser = req.user as any;
+      const conversations = await storage.getGroupConversations(currentUser.id);
+      res.json(conversations);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch group conversations" });
+    }
+  });
+
+  app.post("/api/group-conversations", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1, "Group name is required"),
+        memberIds: z.array(z.number()).min(1, "Select at least one team member"),
+      });
+      const { name, memberIds } = schema.parse(req.body);
+      const currentUser = req.user as any;
+
+      const conversation = await storage.createGroupConversation({
+        name,
+        createdBy: currentUser.id,
+        memberIds,
+      });
+
+      res.status(201).json(conversation);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation failed", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create group conversation" });
+    }
+  });
+
+  app.get("/api/group-conversations/:conversationId/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { conversationId } = req.params;
+      const currentUser = req.user as any;
+
+      const isMember = await storage.isGroupConversationMember(conversationId, currentUser.id);
+      if (!isMember) {
+        return res.status(403).json({ message: "You are not part of this conversation" });
+      }
+
+      const messages = await storage.getGroupMessages(conversationId);
+      res.json(messages);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch group messages" });
+    }
+  });
+
+  app.post("/api/group-conversations/:conversationId/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { conversationId } = req.params;
+      const currentUser = req.user as any;
+
+      const schema = z.object({
+        content: z.string().optional(),
+        mediaUrl: z.string().url().optional(),
+        mediaType: z.string().optional(),
+        durationMs: z.number().int().min(0).optional(),
+      });
+      const { content, mediaUrl, mediaType, durationMs } = schema.parse(req.body);
+
+      if (!content && !mediaUrl) {
+        return res.status(400).json({ message: "Message content or media is required" });
+      }
+
+      const isMember = await storage.isGroupConversationMember(conversationId, currentUser.id);
+      if (!isMember) {
+        return res.status(403).json({ message: "You are not part of this conversation" });
+      }
+
+      const message = await storage.createGroupMessage({
+        conversationId,
+        userId: currentUser.id,
+        content: content && content.trim().length > 0 ? content : "(media)",
+        mediaUrl: mediaUrl ?? null,
+        mediaType: mediaType ?? null,
+        durationMs: durationMs ?? null,
+      });
+
+      res.status(201).json(message);
+    } catch (error) {
+      console.error(error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation failed", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to send group message" });
+    }
+  });
+
   // Presence: heartbeat updates last_seen
   app.post("/api/presence/heartbeat", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -5597,6 +5693,26 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Update user sidebar permissions 
+  app.patch("/api/users/:id/permissions", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
+    try {
+      const permissionsSchema = z.object({
+        customPermissions: z.record(z.boolean()),
+      });
+      const { customPermissions } = permissionsSchema.parse(req.body);
+      const userId = parseInt(req.params.id);
+
+      await storage.updateUser(userId, { customPermissions });
+      res.json({ message: "User permissions updated successfully" });
+    } catch (error) {
+      console.error(error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation failed", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update user permissions" });
     }
   });
 
@@ -6997,6 +7113,31 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
         
         await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url VARCHAR`);
         console.log('✅ Added action_url column');
+        
+        // Add social media columns to leads
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS instagram VARCHAR`);
+        console.log('✅ Added instagram column to leads');
+        
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS tiktok VARCHAR`);
+        console.log('✅ Added tiktok column to leads');
+        
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS facebook VARCHAR`);
+        console.log('✅ Added facebook column to leads');
+        
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS google_business_profile VARCHAR`);
+        console.log('✅ Added google_business_profile column to leads');
+        
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS rating INTEGER`);
+        console.log('✅ Added rating column to leads');
+        
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS youtube VARCHAR`);
+        console.log('✅ Added youtube column to leads');
+        
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS needs JSONB DEFAULT '[]'::jsonb`);
+        console.log('✅ Added needs column to leads');
+        
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'research_completed'`);
+        console.log('✅ Added status column to leads');
         
         client.release();
         await pool.end();

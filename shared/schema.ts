@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   role: text("role").notNull().default("staff"), // admin, staff, client
   clientId: varchar("client_id"), // Links to clients table for client role users
+  customPermissions: jsonb("custom_permissions"), // Individual sidebar permissions: { dashboard: true, clients: false, etc. }
   // googleAccessToken: text("google_access_token"),
   // googleRefreshToken: text("google_refresh_token"),
   // googleCalendarConnected: boolean("google_calendar_connected").default(false),
@@ -260,12 +261,22 @@ export const leads = pgTable("leads", {
   phoneType: varchar("phone_type").default("business"), // business, personal, mobile
   company: varchar("company").notNull(), // Required - company name
   website: varchar("website"),
+  // Social media links
+  instagram: varchar("instagram"),
+  tiktok: varchar("tiktok"),
+  facebook: varchar("facebook"),
+  youtube: varchar("youtube"),
+  // Google Business Profile
+  googleBusinessProfile: varchar("google_business_profile"),
+  rating: integer("rating"), // 1-5 star rating for the business
   industry: varchar("industry"), // Industry vertical (Technology, Healthcare, Finance, etc.)
   tags: jsonb("tags").$type<string[]>().default([]), // Flexible tags for custom organization
   stage: varchar("stage").notNull().default("prospect"), // prospect, qualified, proposal, closed_won, closed_lost
   score: varchar("score").notNull().default("warm"), // hot, warm, cold
   value: integer("value"), // potential deal value in cents
-  source: varchar("source").notNull().default("website"), // website, ads, form, call, referral, social
+  source: varchar("source").notNull().default("google_extract"), // google_extract, instagram, facebook, website_form, referral, tiktok, other
+  needs: jsonb("needs").$type<string[]>().default([]), // What the business needs: social_media, content, website, ads, branding, google_optimization, crm, not_sure
+  status: varchar("status").default("research_completed"), // research_completed, missing_info, needs_review, ready_for_outreach
   sourceMetadata: jsonb("source_metadata"), // {campaign_id, ad_id, form_name, etc.}
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
@@ -646,6 +657,40 @@ export const pushNotificationHistoryRelations = relations(pushNotificationHistor
   }),
 }));
 
+export const groupConversations = pgTable("group_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupConversationMembers = pgTable("group_conversation_members", {
+  id: serial("id").primaryKey(),
+  conversationId: varchar("conversation_id")
+    .references(() => groupConversations.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  role: text("role").default("member"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const groupMessages = pgTable("group_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id")
+    .references(() => groupConversations.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  content: text("content").notNull(),
+  mediaUrl: varchar("media_url"),
+  mediaType: text("media_type"),
+  durationMs: integer("duration_ms"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Emails table (for tracking company emails via GoDaddy Outlook)
 export const emails = pgTable("emails", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -905,6 +950,10 @@ export type Notification = typeof notifications.$inferSelect;
 export const insertPushNotificationHistorySchema = createInsertSchema(pushNotificationHistory).omit({ id: true, createdAt: true });
 export type InsertPushNotificationHistory = z.infer<typeof insertPushNotificationHistorySchema>;
 export type PushNotificationHistory = typeof pushNotificationHistory.$inferSelect;
+
+export type GroupConversation = typeof groupConversations.$inferSelect;
+export type GroupConversationMember = typeof groupConversationMembers.$inferSelect;
+export type GroupMessage = typeof groupMessages.$inferSelect;
 
 export const insertEmailSchema = createInsertSchema(emails).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertEmail = z.infer<typeof insertEmailSchema>;

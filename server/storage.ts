@@ -93,9 +93,23 @@ import {
   type InsertSecondMe,
   type SecondMeContent,
   type InsertSecondMeContent,
+  groupConversations,
+  groupConversationMembers,
+  groupMessages,
+  type GroupConversation,
+  type GroupMessage,
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, or, and, gte, count } from "drizzle-orm";
+import { eq, desc, or, and, gte, count, inArray } from "drizzle-orm";
+
+export interface GroupConversationWithParticipants extends GroupConversation {
+  participants: Array<{ id: number; username: string; role: string }>;
+}
+
+export interface GroupMessageWithAuthor extends GroupMessage {
+  authorName: string;
+  authorRole: string;
+}
 
 export interface IStorage {
   // User operations
@@ -190,6 +204,13 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(id: string, data: Partial<InsertMessage>): Promise<Message>;
   deleteMessage(id: string): Promise<void>;
+
+  // Group conversation operations
+  getGroupConversations(userId: number): Promise<GroupConversationWithParticipants[]>;
+  createGroupConversation(data: { name: string; createdBy: number; memberIds: number[] }): Promise<GroupConversationWithParticipants>;
+  isGroupConversationMember(conversationId: string, userId: number): Promise<boolean>;
+  getGroupMessages(conversationId: string): Promise<GroupMessageWithAuthor[]>;
+  createGroupMessage(data: { conversationId: string; userId: number; content: string; mediaUrl?: string | null; mediaType?: string | null; durationMs?: number | null }): Promise<GroupMessage>;
 
   // Onboarding task operations
   getOnboardingTasks(): Promise<OnboardingTask[]>;
@@ -295,10 +316,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
-  async updateUser(userId: number, updates: Partial<InsertUser>): Promise<User> {
+  async updateUser(
+    userId: number,
+    updates: Partial<InsertUser> & { customPermissions?: Record<string, boolean> | null }
+  ): Promise<User> {
+    const payload = {
+      ...updates,
+      updatedAt: new Date(),
+    };
     const [user] = await db
       .update(users)
-      .set(updates)
+      .set(payload)
       .where(eq(users.id, userId))
       .returning();
     if (!user) {
@@ -329,6 +357,12 @@ export class DatabaseStorage implements IStorage {
       // Delete messages (both as sender and recipient)
       await db.delete(messages).where(or(eq(messages.userId, userId), eq(messages.recipientId, userId)));
       console.log(`   ✓ Deleted messages`);
+
+      // Delete group chat data
+      await db.delete(groupMessages).where(eq(groupMessages.userId, userId));
+      await db.delete(groupConversationMembers).where(eq(groupConversationMembers.userId, userId));
+      await db.delete(groupConversations).where(eq(groupConversations.createdBy, userId));
+      console.log(`   ✓ Cleaned up group conversations`);
       
       // Delete task comments by this user
       await db.delete(taskComments).where(eq(taskComments.userId, userId));
@@ -885,6 +919,132 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMessage(id: string): Promise<void> {
     await db.delete(messages).where(eq(messages.id, id));
+  }
+
+  async getGroupConversations(userId: number): Promise<GroupConversationWithParticipants[]> {
+    const membershipRows = await db
+      .select({ conversationId: groupConversationMembers.conversationId })
+      .from(groupConversationMembers)
+      .where(eq(groupConversationMembers.userId, userId));
+
+    if (membershipRows.length === 0) {
+      return [];
+    }
+
+    const conversationIds = membershipRows.map((row) => row.conversationId);
+
+    const conversationList = await db
+      .select()
+      .from(groupConversations)
+      .where(inArray(groupConversations.id, conversationIds))
+      .orderBy(desc(groupConversations.createdAt));
+
+    const participantRows = await db
+      .select({
+        conversationId: groupConversationMembers.conversationId,
+        userId: users.id,
+        username: users.username,
+        role: users.role,
+      })
+      .from(groupConversationMembers)
+      .innerJoin(users, eq(groupConversationMembers.userId, users.id))
+      .where(inArray(groupConversationMembers.conversationId, conversationIds));
+
+    const participantMap = new Map<string, Array<{ id: number; username: string; role: string }>>();
+    participantRows.forEach((row) => {
+      const participants = participantMap.get(row.conversationId) || [];
+      participants.push({ id: row.userId, username: row.username, role: row.role });
+      participantMap.set(row.conversationId, participants);
+    });
+
+    return conversationList.map((conversation) => ({
+      ...conversation,
+      participants: participantMap.get(conversation.id) || [],
+    }));
+  }
+
+  async createGroupConversation(data: { name: string; createdBy: number; memberIds: number[] }): Promise<GroupConversationWithParticipants> {
+    const uniqueMemberIds = Array.from(new Set([data.createdBy, ...data.memberIds]));
+
+    const [conversation] = await db
+      .insert(groupConversations)
+      .values({
+        name: data.name,
+        createdBy: data.createdBy,
+      })
+      .returning();
+
+    await db
+      .insert(groupConversationMembers)
+      .values(
+        uniqueMemberIds.map((memberId) => ({
+          conversationId: conversation.id,
+          userId: memberId,
+          role: memberId === data.createdBy ? "owner" : "member",
+        }))
+      );
+
+    const participants = await db
+      .select({
+        userId: users.id,
+        username: users.username,
+        role: users.role,
+      })
+      .from(groupConversationMembers)
+      .innerJoin(users, eq(groupConversationMembers.userId, users.id))
+      .where(eq(groupConversationMembers.conversationId, conversation.id));
+
+    return {
+      ...conversation,
+      participants: participants.map((p) => ({
+        id: p.userId,
+        username: p.username,
+        role: p.role,
+      })),
+    };
+  }
+
+  async isGroupConversationMember(conversationId: string, userId: number): Promise<boolean> {
+    const [membership] = await db
+      .select({ id: groupConversationMembers.id })
+      .from(groupConversationMembers)
+      .where(and(eq(groupConversationMembers.conversationId, conversationId), eq(groupConversationMembers.userId, userId)))
+      .limit(1);
+    return Boolean(membership);
+  }
+
+  async getGroupMessages(conversationId: string): Promise<GroupMessageWithAuthor[]> {
+    return await db
+      .select({
+        id: groupMessages.id,
+        conversationId: groupMessages.conversationId,
+        userId: groupMessages.userId,
+        content: groupMessages.content,
+        mediaUrl: groupMessages.mediaUrl,
+        mediaType: groupMessages.mediaType,
+        createdAt: groupMessages.createdAt,
+        authorName: users.username,
+        authorRole: users.role,
+      })
+      .from(groupMessages)
+      .innerJoin(users, eq(groupMessages.userId, users.id))
+      .where(eq(groupMessages.conversationId, conversationId))
+      .orderBy(groupMessages.createdAt);
+  }
+
+  async createGroupMessage(data: { conversationId: string; userId: number; content: string; mediaUrl?: string | null; mediaType?: string | null; durationMs?: number | null }): Promise<GroupMessage> {
+    const [message] = await db
+      .insert(groupMessages)
+      .values({
+        conversationId: data.conversationId,
+        userId: data.userId,
+        content: data.content,
+        mediaUrl: data.mediaUrl ?? null,
+        mediaType: data.mediaType ?? null,
+        durationMs: data.durationMs ?? null,
+      })
+      .returning();
+    return message;
   }
 
   // Onboarding task operations

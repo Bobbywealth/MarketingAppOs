@@ -1,4 +1,5 @@
 import { useAuth } from "./useAuth";
+import type { SidebarPermissionKey } from "@/data/sidebar-items";
 
 export interface RolePermissions {
   canManageUsers: boolean;
@@ -16,6 +17,7 @@ export function usePermissions() {
   const { user } = useAuth();
 
   const role = (user as any)?.role || "staff";
+  const customSidebarPermissions = (user as any)?.customPermissions as Record<string, boolean> | undefined;
   const isAdmin = role === "admin";
   const isManager = role === "manager";
   const isStaff = role === "staff";
@@ -34,6 +36,14 @@ export function usePermissions() {
     canManageSettings: isAdmin,
   };
 
+  const canSeeSidebarItem = (key?: SidebarPermissionKey) => {
+    if (!key) return true;
+    if (customSidebarPermissions && Object.prototype.hasOwnProperty.call(customSidebarPermissions, key)) {
+      return Boolean(customSidebarPermissions[key]);
+    }
+    return true;
+  };
+
   return {
     permissions,
     role,
@@ -42,5 +52,6 @@ export function usePermissions() {
     isStaff,
     isClient,
     canAccess: (permission: keyof RolePermissions) => permissions[permission],
+    canSeeSidebarItem,
   };
 }

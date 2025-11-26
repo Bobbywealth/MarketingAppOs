@@ -119,6 +119,7 @@ export function setupAuth(app: Express) {
           lastName: user.lastName,
           profileImageUrl: user.profileImageUrl,
           role: user.role,
+          customPermissions: user.customPermissions,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         });
@@ -173,6 +174,7 @@ export function setupAuth(app: Express) {
           lastName: user.lastName,
           profileImageUrl: user.profileImageUrl,
           role: user.role,
+          customPermissions: user.customPermissions,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         });
@@ -306,6 +308,7 @@ Reset URL: http://localhost:5000/reset-password?token=${resetToken}
       lastName: user.lastName,
       profileImageUrl: user.profileImageUrl,
       role: user.role,
+      customPermissions: user.customPermissions,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       permissions,

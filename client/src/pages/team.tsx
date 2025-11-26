@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Pencil, Trash2, Shield, Users as UsersIcon, CheckCircle2 } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Shield, Users as UsersIcon, CheckCircle2, Settings2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -39,6 +39,10 @@ interface User {
   username: string;
   role: string;
   createdAt: string;
+  customPermissions?: Record<string, boolean>;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 interface NewUser {
@@ -50,9 +54,13 @@ interface NewUser {
   role: string;
 }
 
+const SIDEBAR_PERMISSIONS = sidebarPermissionList;
+type PermissionOption = (typeof SIDEBAR_PERMISSIONS)[number];
+
 export default function TeamPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [permissionsDialogUser, setPermissionsDialogUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState<NewUser>({
     username: "",
     password: "",
@@ -110,6 +118,28 @@ export default function TeamPage() {
     },
   });
 
+  const updateUserPermissionsMutation = useMutation({
+    mutationFn: async ({ userId, permissions }: { userId: number; permissions: Record<string, boolean> }) => {
+      const res = await apiRequest("PATCH", `/api/users/${userId}/permissions`, { customPermissions: permissions });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setPermissionsDialogUser(null);
+      toast({
+        title: "Permissions updated",
+        description: "User sidebar permissions have been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update permissions",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/users/${id}`);
@@ -161,6 +191,41 @@ export default function TeamPage() {
         {role}
       </Badge>
     );
+  };
+
+  const handlePermissionChange = (permissionKey: string, checked: boolean) => {
+    if (!permissionsDialogUser) return;
+    
+    const currentPermissions = permissionsDialogUser.customPermissions || {};
+    const updatedPermissions = {
+      ...currentPermissions,
+      [permissionKey]: checked,
+    };
+    setPermissionsDialogUser({
+      ...permissionsDialogUser,
+      customPermissions: updatedPermissions,
+    });
+
+    updateUserPermissionsMutation.mutate({
+      userId: permissionsDialogUser.id,
+      permissions: updatedPermissions,
+    });
+  };
+
+  const isPermissionChecked = (permissionKey: string) => {
+    if (!permissionsDialogUser) return false;
+    return permissionsDialogUser.customPermissions?.[permissionKey] ?? true; // Default to true
+  };
+
+  const getPermissionsByCategory = () => {
+    const categories: Record<string, PermissionOption[]> = {};
+    SIDEBAR_PERMISSIONS.forEach(permission => {
+      if (!categories[permission.category]) {
+        categories[permission.category] = [];
+      }
+      categories[permission.category].push(permission);
+    });
+    return categories;
   };
 
   // All available permissions
@@ -332,7 +397,7 @@ export default function TeamPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -341,10 +406,86 @@ export default function TeamPage() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{user.username}</div>
+                      {(user.firstName || user.lastName) && (
+                        <div className="text-sm text-muted-foreground">
+                          {user.firstName} {user.lastName}
+                        </div>
+                      )}
+                      {user.email && (
+                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                      )}
+                    </TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right space-x-2">
+                      {/* Sidebar Permissions Button */}
+                      <Dialog
+                        open={permissionsDialogUser?.id === user.id}
+                        onOpenChange={(open) => {
+                          if (!open && permissionsDialogUser?.id === user.id) {
+                            setPermissionsDialogUser(null);
+                          }
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPermissionsDialogUser(user)}
+                          >
+                            <Settings2 className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
+                        {permissionsDialogUser?.id === user.id && (
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Sidebar Permissions - {user.username}</DialogTitle>
+                            <DialogDescription>
+                              Control which sidebar menu items {user.username} can see and access.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-6 py-4">
+                            {Object.entries(getPermissionsByCategory()).map(([category, permissions]) => (
+                              <div key={category} className="space-y-3">
+                                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                                  {category}
+                                </h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                  {permissions.map((permission) => (
+                                    <div key={permission.key} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`${user.id}-${permission.key}`}
+                                        checked={isPermissionChecked(permission.key)}
+                                        onCheckedChange={(checked) => 
+                                          handlePermissionChange(permission.key, checked as boolean)
+                                        }
+                                        disabled={updateUserPermissionsMutation.isPending}
+                                      />
+                                      <Label 
+                                        htmlFor={`${user.id}-${permission.key}`}
+                                        className="text-sm font-normal cursor-pointer"
+                                      >
+                                        {permission.label}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                            <div className="pt-4 border-t">
+                              <p className="text-sm text-muted-foreground">
+                                💡 <strong>Tip:</strong> Unchecked items will be hidden from {user.username}'s sidebar. 
+                                Role-based permissions still apply - this only controls visibility.
+                              </p>
+                            </div>
+                          </div>
+                        </DialogContent>
+                        )}
+                      </Dialog>
+
+                      {/* Edit Role Button */}
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
@@ -384,6 +525,8 @@ export default function TeamPage() {
                           </div>
                         </DialogContent>
                       </Dialog>
+
+                      {/* Delete Button */}
                       <Button
                         variant="outline"
                         size="sm"
