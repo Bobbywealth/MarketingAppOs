@@ -123,10 +123,19 @@ export default function Dashboard() {
     },
   ];
 
-  // Hide financial metrics for managers
-  const visibleMetrics = (user?.role === 'manager')
-    ? metrics.filter(m => m.title !== 'Pipeline Value' && m.title !== 'Revenue (MTD)')
-    : metrics;
+  // Role-based metric visibility
+  const visibleMetrics = (() => {
+    if (user?.role === 'staff') {
+      // Staff see only their task completion - no company-wide stats
+      return [];
+    }
+    if (user?.role === 'manager') {
+      // Managers see all except financial metrics
+      return metrics.filter(m => m.title !== 'Pipeline Value' && m.title !== 'Revenue (MTD)');
+    }
+    // Admins see everything
+    return metrics;
+  })();
 
   // Task distribution data for pie chart
   const taskDistributionData = stats?.taskMetrics ? [
@@ -171,12 +180,90 @@ export default function Dashboard() {
                 {getGreeting()}, {user?.username || 'there'}! 👋
               </h1>
               <p className="text-sm md:text-base lg:text-lg text-muted-foreground mt-1">{getCurrentDate()}</p>
-              <p className="text-xs md:text-sm text-muted-foreground/80 mt-0.5">Here's your agency snapshot</p>
+              <p className="text-xs md:text-sm text-muted-foreground/80 mt-0.5">
+                {user?.role === 'staff' ? "Here's your daily work overview" : "Here's your agency snapshot"}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Premium Metric Cards with Sparklines & Click Navigation */}
+        {/* Staff Personal Stats - Simple View */}
+        {user?.role === 'staff' && stats && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
+            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/tasks')}>
+              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                  My Tasks
+                </CardTitle>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md flex-shrink-0">
+                  <ListTodo className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative p-4 md:p-6 pt-0">
+                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                  {stats?.taskMetrics?.total || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {stats?.taskMetrics?.completionPercentage || 0}% Complete
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/leads')}>
+              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                  My Leads
+                </CardTitle>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md flex-shrink-0">
+                  <Users className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative p-4 md:p-6 pt-0">
+                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                  0
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Assigned to you</p>
+              </CardContent>
+            </Card>
+
+            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/messages')}>
+              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                  Messages
+                </CardTitle>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md flex-shrink-0">
+                  <Activity className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative p-4 md:p-6 pt-0">
+                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                  0
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Unread</p>
+              </CardContent>
+            </Card>
+
+            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/company-calendar')}>
+              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                  Deadlines
+                </CardTitle>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-md flex-shrink-0">
+                  <Clock className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative p-4 md:p-6 pt-0">
+                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                  0
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">This week</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Premium Metric Cards with Sparklines & Click Navigation (Admin/Manager only) */}
+        {user?.role !== 'staff' && (
         <TooltipProvider>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
             {visibleMetrics.map((metric) => (
@@ -241,6 +328,7 @@ export default function Dashboard() {
             ))}
           </div>
         </TooltipProvider>
+        )}
 
         {/* Task Progress Section with Donut Chart */}
         {stats?.taskMetrics && (
