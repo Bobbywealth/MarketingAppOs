@@ -3630,6 +3630,73 @@ Examples:
     }
   });
 
+  // AI Business Manager - Voice Transcription endpoint
+  app.post("/api/ai-business-manager/transcribe", isAuthenticated, upload.single('audio'), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: "No audio file provided"
+        });
+      }
+
+      console.log(`🎤 Transcription request from user ${userId}, file: ${req.file.filename}`);
+
+      // Import OpenAI for Whisper API
+      const OpenAI = (await import('openai')).default;
+      
+      if (!process.env.OPENAI_API_KEY) {
+        // Clean up uploaded file
+        await fs.unlink(req.file.path).catch(console.error);
+        return res.status(503).json({
+          success: false,
+          error: "Voice transcription requires OpenAI API key to be configured"
+        });
+      }
+
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      // Read the audio file
+      const audioFile = await fs.readFile(req.file.path);
+      
+      // Create a File object for OpenAI
+      const file = new File([audioFile], req.file.filename, { type: req.file.mimetype });
+
+      // Transcribe using Whisper API
+      const transcription = await openai.audio.transcriptions.create({
+        file: file,
+        model: "whisper-1",
+        language: "en",
+      });
+
+      // Clean up uploaded file
+      await fs.unlink(req.file.path).catch(console.error);
+
+      console.log(`✅ Transcription successful: "${transcription.text}"`);
+
+      res.json({
+        success: true,
+        text: transcription.text
+      });
+
+    } catch (error: any) {
+      console.error("Transcription error:", error);
+      
+      // Clean up file if it exists
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(console.error);
+      }
+
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to transcribe audio"
+      });
+    }
+  });
+
   // Public booking endpoint (no authentication required)
   app.post("/api/bookings", async (req: Request, res: Response) => {
     try {

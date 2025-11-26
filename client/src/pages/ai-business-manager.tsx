@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Loader2, AlertCircle, CheckCircle2, Sparkles, Zap, MessageSquare } from "lucide-react";
+import { Bot, Send, Loader2, AlertCircle, CheckCircle2, Sparkles, Zap, MessageSquare, Mic, MicOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,8 +33,12 @@ export default function AIBusinessManager() {
   ]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Check if user is admin
   useEffect(() => {
@@ -134,6 +138,83 @@ export default function AIBusinessManager() {
     setIsProcessing(true);
 
     sendMessageMutation.mutate(input.trim());
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast({
+        title: "Microphone Access Denied",
+        description: "Please allow microphone access to use voice input.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsTranscribing(true);
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+
+      const response = await apiRequest("POST", "/api/ai-business-manager/transcribe", formData);
+      const data = await response.json();
+      
+      if (data.success && data.text) {
+        setInput(data.text);
+        inputRef.current?.focus();
+      } else {
+        toast({
+          title: "Transcription Failed",
+          description: data.error || "Could not transcribe audio",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Transcription error:', error);
+      toast({
+        title: "Transcription Error",
+        description: error?.message || "Failed to transcribe audio",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
   };
 
   const quickActions = [
@@ -281,13 +362,28 @@ export default function AIBusinessManager() {
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Just tell me what you need... try 'text Robert Laing' or 'what's my schedule today?' 💬"
-                    disabled={isProcessing}
+                    placeholder={isRecording ? "🎤 Listening..." : isTranscribing ? "✨ Transcribing..." : "Type or click the mic to speak..."}
+                    disabled={isProcessing || isRecording || isTranscribing}
                     className="flex-1"
                   />
                   <Button
+                    type="button"
+                    onClick={toggleRecording}
+                    disabled={isProcessing || isTranscribing}
+                    variant={isRecording ? "destructive" : "outline"}
+                    className={isRecording ? "animate-pulse" : ""}
+                  >
+                    {isTranscribing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : isRecording ? (
+                      <MicOff className="w-4 h-4" />
+                    ) : (
+                      <Mic className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
                     type="submit"
-                    disabled={!input.trim() || isProcessing}
+                    disabled={!input.trim() || isProcessing || isRecording || isTranscribing}
                     className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700"
                   >
                     {isProcessing ? (
