@@ -652,7 +652,7 @@ export default function Messages() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-shrink-0 p-3 sm:p-4 md:p-6 border-b bg-white">
         <div className="space-y-1 md:space-y-2">
           <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
@@ -660,7 +660,7 @@ export default function Messages() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:grid md:grid-cols-12 min-h-0">
+      <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
         {/* Team Members Sidebar - Now visible on mobile */}
         <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col bg-gradient-to-b from-primary/5 via-transparent to-transparent`}>
           <div className="flex-shrink-0 p-3 sm:p-4 border-b space-y-3 bg-white/80 backdrop-blur-sm">
@@ -897,7 +897,8 @@ export default function Messages() {
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-2 sm:p-3 md:p-4 bg-gradient-to-b from-gray-50/50 to-transparent">
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full p-2 sm:p-3 md:p-4 bg-gradient-to-b from-gray-50/50 to-transparent">
                 {messagesLoading ? (
                   <div className="space-y-4">
                     {[...Array(3)].map((_, i) => (
@@ -1011,6 +1012,7 @@ export default function Messages() {
                   </div>
                 )}
               </ScrollArea>
+              </div>
 
               {/* Message Input */}
               <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 border-t bg-white space-y-3">
