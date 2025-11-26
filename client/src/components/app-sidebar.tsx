@@ -43,8 +43,196 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-import { clientTools, companyTools, operationsTools, businessTools } from "@/data/sidebar-items";
-import type { SidebarPermissionKey } from "@/data/sidebar-items";
+import { Moon, Sun, Bell, User } from "lucide-react";
+
+// Client-specific navigation
+const clientTools = [
+  {
+    title: "Dashboard",
+    url: "/",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "My Campaigns",
+    url: "/client-campaigns",
+    icon: Megaphone,
+  },
+  {
+    title: "My Content",
+    url: "/client-content",
+    icon: Calendar,
+  },
+  {
+    title: "Analytics",
+    url: "/client-analytics",
+    icon: BarChart3,
+  },
+  {
+    title: "Billing",
+    url: "/client-billing",
+    icon: DollarSign,
+  },
+  {
+    title: "Second Me",
+    url: "/second-me",
+    icon: Sparkles,
+  },
+  {
+    title: "Support Tickets",
+    url: "/tickets",
+    icon: Ticket,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
+];
+
+// Reordered for better workflow logic - Team communication tools together
+const companyTools = [
+  {
+    title: "Dashboard",
+    url: "/",
+    icon: LayoutDashboard,
+    permission: null,
+  },
+  {
+    title: "Team",
+    url: "/team",
+    icon: UsersRound,
+    permission: "canManageUsers" as const,
+  },
+  {
+    title: "Messages",
+    url: "/messages",
+    icon: MessageSquare,
+    permission: null,
+    badgeKey: "messages", // Will fetch unread count
+  },
+  {
+    title: "Emails",
+    url: "/emails",
+    icon: Mail,
+    permission: null,
+    badgeKey: "emails", // Will fetch unread count
+  },
+  {
+    title: "Phone",
+    url: "/phone",
+    icon: Phone,
+    permission: null,
+  },
+  {
+    title: "My Calendar",
+    url: "/company-calendar",
+    icon: Calendar,
+    permission: null,
+  },
+];
+
+const operationsTools = [
+  {
+    title: "Clients",
+    url: "/clients",
+    icon: Users,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Social Stats",
+    url: "/admin/social-stats",
+    icon: LineChart,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Leads",
+    url: "/leads",
+    icon: UserPlus,
+    permission: "canManageLeads" as const,
+  },
+  {
+    title: "Campaigns",
+    url: "/campaigns",
+    icon: Megaphone,
+    permission: "canManageCampaigns" as const,
+  },
+  {
+    title: "Content Calendar",
+    url: "/content",
+    icon: Calendar,
+    permission: "canManageContent" as const,
+  },
+  {
+    title: "Tasks",
+    url: "/tasks",
+    icon: ListTodo,
+    permission: null,
+  },
+  {
+    title: "Onboarding",
+    url: "/onboarding",
+    icon: ClipboardCheck,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Support Tickets",
+    url: "/tickets",
+    icon: Ticket,
+    permission: "canManageTickets" as const,
+  },
+  {
+    title: "Website Projects",
+    url: "/website-projects",
+    icon: Globe,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Second Me",
+    url: "/admin-second-me",
+    icon: Sparkles,
+    permission: "canManageClients" as const,
+  },
+];
+
+const businessTools = [
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
+    permission: "canManageClients" as const,
+  },
+  {
+    title: "Invoices & Billing",
+    url: "/invoices",
+    icon: DollarSign,
+    permission: "canManageInvoices" as const,
+  },
+  {
+    title: "Subscription Packages",
+    url: "/subscription-packages",
+    icon: Package,
+    permission: "canManageUsers" as const,
+  },
+  {
+    title: "Training",
+    url: "/training",
+    icon: BookOpen,
+    permission: "canManageUsers" as const,
+  },
+  {
+    title: "AI Business Manager",
+    url: "/ai-manager",
+    icon: Sparkles,
+    roles: ["admin"] as const,
+  },
+  {
+    title: "Push Notifications",
+    url: "/push-notifications",
+    icon: Bell,
+    roles: ["admin", "manager", "staff"] as const,
+  },
+];
+
 // Enhanced Navigation Item Component with Badge Support
 function NavItem({ 
   item, 
