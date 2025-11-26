@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye, Plus, Clock, AlertCircle } from "lucide-react";
+import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye, Plus, Clock, AlertCircle, UserPlus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -123,6 +123,66 @@ export default function Dashboard() {
     },
   ];
 
+  // Manager-specific metrics (operational, non-financial)
+  const managerMetrics = [
+    {
+      title: "Total Clients",
+      value: stats?.totalClients || 0,
+      displayValue: stats?.totalClients || 0,
+      change: `${stats?.clientsChange || "0"}%`,
+      changeType: (stats?.clientsChange && parseInt(stats.clientsChange) >= 0) ? "positive" as const : "negative" as const,
+      icon: Users,
+      gradientFrom: "from-blue-500",
+      gradientTo: "to-cyan-500",
+      iconBg: "from-blue-500/20 to-cyan-500/20",
+      sparklineData: generateSparklineData(stats?.totalClients || 10, parseInt(stats?.clientsChange || "0")),
+      link: "/clients",
+      tooltip: "Total number of active clients",
+    },
+    {
+      title: "Active Campaigns",
+      value: stats?.activeCampaigns || 0,
+      displayValue: stats?.activeCampaigns || 0,
+      change: `${stats?.campaignsChange || "0"}%`,
+      changeType: (stats?.campaignsChange && parseInt(stats.campaignsChange) >= 0) ? "positive" as const : "negative" as const,
+      icon: Megaphone,
+      gradientFrom: "from-orange-500",
+      gradientTo: "to-pink-500",
+      iconBg: "from-orange-500/20 to-pink-500/20",
+      sparklineData: generateSparklineData(stats?.activeCampaigns || 5, parseInt(stats?.campaignsChange || "0")),
+      link: "/campaigns",
+      tooltip: "Currently running marketing campaigns",
+    },
+    {
+      title: "Total Leads",
+      value: stats?.totalLeads || 0,
+      displayValue: stats?.totalLeads || 0,
+      change: "+0%",
+      changeType: "positive" as const,
+      icon: UserPlus,
+      gradientFrom: "from-purple-500",
+      gradientTo: "to-pink-500",
+      iconBg: "from-purple-500/20 to-pink-500/20",
+      sparklineData: generateSparklineData(stats?.totalLeads || 20, 0),
+      link: "/leads",
+      tooltip: "Leads in the pipeline",
+    },
+    {
+      title: "Task Completion",
+      value: `${stats?.taskMetrics?.completionPercentage || 0}%`,
+      displayValue: stats?.taskMetrics?.completionPercentage || 0,
+      change: "+0%",
+      changeType: "positive" as const,
+      icon: CheckCircle2,
+      gradientFrom: "from-emerald-500",
+      gradientTo: "to-teal-500",
+      iconBg: "from-emerald-500/20 to-teal-500/20",
+      sparklineData: generateSparklineData(stats?.taskMetrics?.completionPercentage || 50, 0),
+      link: "/tasks",
+      tooltip: "Team task completion rate",
+    },
+  ];
+
   // Role-based metric visibility
   const visibleMetrics = (() => {
     if (user?.role === 'staff') {
@@ -130,8 +190,8 @@ export default function Dashboard() {
       return [];
     }
     if (user?.role === 'manager') {
-      // Managers see all except financial metrics
-      return metrics.filter(m => m.title !== 'Pipeline Value' && m.title !== 'Revenue (MTD)');
+      // Managers see operational metrics (no financial data)
+      return managerMetrics;
     }
     // Admins see everything
     return metrics;
