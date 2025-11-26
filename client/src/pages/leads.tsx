@@ -579,11 +579,12 @@ export default function LeadsPage() {
                   <span className="hidden md:inline">Add Lead</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Add New Lead</DialogTitle>
               <DialogDescription>Create a new lead in your pipeline (Company name is required)</DialogDescription>
             </DialogHeader>
+            <ScrollArea className="flex-1 pr-4">
             <form onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
@@ -1054,17 +1055,19 @@ export default function LeadsPage() {
                 </Button>
               </div>
             </form>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
 
         {/* Edit Lead Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Edit Lead</DialogTitle>
               <DialogDescription>Update lead information</DialogDescription>
             </DialogHeader>
             {editingLead && (
+              <ScrollArea className="flex-1 pr-4">
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
@@ -1534,6 +1537,7 @@ export default function LeadsPage() {
                   </Button>
                 </div>
               </form>
+              </ScrollArea>
             )}
           </DialogContent>
         </Dialog>
