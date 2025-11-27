@@ -29,6 +29,7 @@ import BlogPage from "@/pages/blog";
 import { Logo } from "@/components/Logo";
 import Dashboard from "@/pages/dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
+import SalesDashboard from "@/pages/sales-dashboard";
 import ClientContent from "@/pages/client-content";
 import ClientCampaigns from "@/pages/client-campaigns";
 import ClientBilling from "@/pages/client-billing";
@@ -68,6 +69,7 @@ import AIBusinessManager from "@/pages/ai-business-manager";
 function Router() {
   const { user } = useAuth();
   const isClient = user?.role === 'client';
+  const isSalesAgent = user?.role === 'sales_agent';
   
   // Track page views for non-authenticated pages
   if (!user) {
@@ -86,6 +88,8 @@ function Router() {
       {!user && <Route path="/" component={Landing} />}
       {/* Client-specific routes */}
       {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
+      {/* Sales Agent-specific routes */}
+      {isSalesAgent && <ProtectedRoute path="/" component={SalesDashboard} />}
       {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
       {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
       {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
@@ -93,7 +97,7 @@ function Router() {
       {isClient && <ProtectedRoute path="/second-me" component={ClientSecondMeDashboard} />}
       {isClient && <ProtectedRoute path="/second-me/onboarding" component={SecondMeOnboarding} />}
       {/* Admin/Manager/Staff routes */}
-      {!isClient && <ProtectedRoute path="/" component={Dashboard} />}
+      {!isClient && !isSalesAgent && <ProtectedRoute path="/" component={Dashboard} />}
       {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
       {!isClient && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}

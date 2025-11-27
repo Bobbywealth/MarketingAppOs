@@ -3697,6 +3697,103 @@ Examples:
     }
   });
 
+  // Sales Agent Metrics endpoint
+  app.get("/api/sales/metrics", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      const userRole = user?.role;
+
+      // Only sales agents and admins can access this
+      if (userRole !== "sales_agent" && userRole !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get leads assigned to this sales agent
+      const allLeads = await storage.getLeads();
+      const assignedLeads = allLeads.filter(lead => 
+        lead.assignedTo === String(userId) || userRole === "admin"
+      );
+
+      // Calculate metrics
+      const leadsAssigned = assignedLeads.length;
+      const leadsContacted = assignedLeads.filter(lead => 
+        lead.status !== "new" && lead.status !== "unqualified"
+      ).length;
+      const leadsConverted = assignedLeads.filter(lead => 
+        lead.status === "converted" || lead.status === "customer"
+      ).length;
+      const conversionRate = leadsAssigned > 0 
+        ? Math.round((leadsConverted / leadsAssigned) * 100) 
+        : 0;
+
+      // Calculate revenue (placeholder - you'll need to add actual revenue tracking)
+      const revenueGenerated = leadsConverted * 5000; // Placeholder: $5k per conversion
+
+      // Get activities for this week
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const leadActivities = await storage.getLeadActivities();
+      const userActivities = leadActivities.filter(activity => 
+        activity.userId === userId && new Date(activity.createdAt) >= oneWeekAgo
+      );
+
+      const activitiesThisWeek = {
+        calls: userActivities.filter(a => a.activityType === "call").length,
+        emails: userActivities.filter(a => a.activityType === "email").length,
+        meetings: userActivities.filter(a => a.activityType === "meeting").length,
+      };
+
+      // Quota tracking (placeholder - you'll need to add actual quota system)
+      const quota = {
+        target: 50000, // $50k monthly target
+        achieved: revenueGenerated,
+        percentage: Math.min(Math.round((revenueGenerated / 50000) * 100), 100),
+      };
+
+      // Top leads (sorted by potential value or recent activity)
+      const topLeads = assignedLeads
+        .filter(lead => lead.status !== "lost" && lead.status !== "unqualified")
+        .slice(0, 5)
+        .map(lead => ({
+          id: lead.id,
+          name: lead.name,
+          company: lead.company || "N/A",
+          status: lead.status,
+          value: 5000, // Placeholder - add actual deal value field
+          lastContact: lead.lastContactedAt || lead.createdAt,
+        }));
+
+      // Recent activity
+      const recentActivity = userActivities
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10)
+        .map(activity => ({
+          id: activity.id,
+          type: activity.activityType,
+          description: activity.notes || `${activity.activityType} activity`,
+          timestamp: activity.createdAt,
+        }));
+
+      res.json({
+        leadsAssigned,
+        leadsContacted,
+        leadsConverted,
+        conversionRate,
+        revenueGenerated,
+        activitiesThisWeek,
+        quota,
+        topLeads,
+        recentActivity,
+      });
+
+    } catch (error: any) {
+      console.error("Sales metrics error:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch sales metrics" });
+    }
+  });
+
   // Public booking endpoint (no authentication required)
   app.post("/api/bookings", async (req: Request, res: Response) => {
     try {

@@ -109,6 +109,60 @@ const clientTools = [
   },
 ];
 
+// Sales Agent-specific navigation
+const salesAgentTools = [
+  {
+    title: "Sales Dashboard",
+    url: "/",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "My Leads",
+    url: "/leads",
+    icon: UserPlus,
+  },
+  {
+    title: "My Clients",
+    url: "/clients",
+    icon: Users,
+  },
+  {
+    title: "Tasks",
+    url: "/tasks",
+    icon: ListTodo,
+  },
+  {
+    title: "My Calendar",
+    url: "/company-calendar",
+    icon: Calendar,
+  },
+  {
+    title: "Messages",
+    url: "/messages",
+    icon: MessageSquare,
+  },
+  {
+    title: "Phone",
+    url: "/phone",
+    icon: Phone,
+  },
+  {
+    title: "Emails",
+    url: "/emails",
+    icon: Mail,
+  },
+  {
+    title: "Support Tickets",
+    url: "/tickets",
+    icon: Ticket,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
+];
+
 // Reordered for better workflow logic - Team communication tools together
 const companyTools = [
   {
@@ -362,6 +416,7 @@ export function AppSidebar() {
   const { setOpenMobile, state, toggleSidebar, isMobile } = useSidebar();
   const { canAccess, canSeeSidebarItem } = usePermissions();
   const isClient = (user as any)?.role === 'client';
+  const isSalesAgent = (user as any)?.role === 'sales_agent';
   const isCollapsed = state === "collapsed" && !isMobile;
 
   // Fetch unread message counts
@@ -480,6 +535,81 @@ export function AppSidebar() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{(user as any)?.username || "Client"}</p>
                 <p className="text-xs text-muted-foreground truncate capitalize">{(user as any)?.role || "client"}</p>
+              </div>
+            )}
+          </div>
+          {!isCollapsed && (
+            <a
+              href={logoutUrl}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out</span>
+            </a>
+          )}
+        </SidebarFooter>
+      </Sidebar>
+    );
+  }
+
+  // For sales agents, show sales-specific menu
+  if (isSalesAgent) {
+    return (
+      <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
+        <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
+          <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
+            {isCollapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-full flex justify-center">
+                      <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Marketing Team App</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Logo variant="auto" size="xl" className="!h-24 !w-auto mx-auto" />
+            )}
+          </Link>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel className="px-3 py-2 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-[0.05em]">
+              Sales Tools
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {salesAgentTools.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <NavItem
+                      item={item}
+                      isActive={location === item.url}
+                      isCollapsed={isCollapsed}
+                      onClick={handleLinkClick}
+                    />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="px-3 py-4 border-t border-border/50">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={(user as any)?.avatar} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                {getUserInitials()}
+              </AvatarFallback>
+            </Avatar>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{(user as any)?.firstName || (user as any)?.username}</p>
+                <p className="text-xs text-muted-foreground truncate capitalize">Sales Agent</p>
               </div>
             )}
           </div>
