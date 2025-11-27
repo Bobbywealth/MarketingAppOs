@@ -300,6 +300,13 @@ const businessTools = [
     sidebarKey: "invoices" as const,
   },
   {
+    title: "Commissions",
+    url: "/commissions",
+    icon: TrendingUp,
+    roles: ["admin", "manager"] as const,
+    sidebarKey: "commissions" as const,
+  },
+  {
     title: "Subscription Packages",
     url: "/subscription-packages",
     icon: Package,

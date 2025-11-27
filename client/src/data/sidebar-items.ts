@@ -23,6 +23,7 @@ export const sidebarPermissionList = [
   // Business Tools
   { key: "analytics", label: "Analytics", category: "Business" },
   { key: "invoices", label: "Invoices & Billing", category: "Business" },
+  { key: "commissions", label: "Commissions", category: "Business" },
   { key: "packages", label: "Subscription Packages", category: "Business" },
   { key: "training", label: "Training", category: "Business" },
   { key: "aiManager", label: "AI Business Manager", category: "Business" },

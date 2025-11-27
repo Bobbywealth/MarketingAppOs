@@ -65,6 +65,7 @@ import NotFound from "@/pages/not-found";
 import AdminSocialOverview from "@/pages/admin-social-overview";
 import AdminSocialAccounts from "@/pages/admin-social-accounts";
 import AIBusinessManager from "@/pages/ai-business-manager";
+import Commissions from "@/pages/commissions";
 
 function Router() {
   const { user } = useAuth();
@@ -106,6 +107,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
       {!isClient && <ProtectedRoute path="/content" component={Content} />}
       {!isClient && <ProtectedRoute path="/invoices" component={Invoices} />}
+      {!isClient && <ProtectedRoute path="/commissions" component={Commissions} />}
       {!isClient && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
       {!isClient && <ProtectedRoute path="/onboarding" component={Onboarding} />}
       {!isClient && <ProtectedRoute path="/messages" component={Messages} />}

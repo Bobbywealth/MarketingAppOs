@@ -290,6 +290,10 @@ export const leads = pgTable("leads", {
   // Conversion tracking
   convertedToClientId: varchar("converted_to_client_id").references(() => clients.id), // Links to client if converted
   convertedAt: timestamp("converted_at"), // When the lead was converted to client
+  // Sales agent features
+  dealValue: decimal("deal_value", { precision: 10, scale: 2 }), // Potential deal value
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("10.00"), // Commission percentage
+  expectedCloseDate: timestamp("expected_close_date"), // Expected closing date
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1060,3 +1064,103 @@ export const secondMeContent = pgTable("second_me_content", {
 export const insertSecondMeContentSchema = createInsertSchema(secondMeContent).omit({ id: true, createdAt: true });
 export type InsertSecondMeContent = z.infer<typeof insertSecondMeContentSchema>;
 export type SecondMeContent = typeof secondMeContent.$inferSelect;
+
+// Sales Agent Features
+
+// Commissions table - tracks earnings for sales agents
+export const commissions = pgTable("commissions", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  leadId: varchar("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
+  dealValue: decimal("deal_value", { precision: 10, scale: 2 }).notNull(),
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).notNull(),
+  commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status").default("pending"), // pending, approved, paid
+  notes: text("notes"),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const commissionsRelations = relations(commissions, ({ one }) => ({
+  agent: one(users, {
+    fields: [commissions.agentId],
+    references: [users.id],
+  }),
+  lead: one(leads, {
+    fields: [commissions.leadId],
+    references: [leads.id],
+  }),
+  client: one(clients, {
+    fields: [commissions.clientId],
+    references: [clients.id],
+  }),
+  approver: one(users, {
+    fields: [commissions.approvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertCommissionSchema = createInsertSchema(commissions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCommission = z.infer<typeof insertCommissionSchema>;
+export type Commission = typeof commissions.$inferSelect;
+
+// Sales Quotas table - defines targets for sales agents
+export const salesQuotas = pgTable("sales_quotas", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  periodType: varchar("period_type").default("monthly"), // monthly, quarterly, yearly
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  targetAmount: decimal("target_amount", { precision: 10, scale: 2 }).notNull(),
+  achievedAmount: decimal("achieved_amount", { precision: 10, scale: 2 }).default("0"),
+  targetLeads: integer("target_leads"),
+  convertedLeads: integer("converted_leads").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const salesQuotasRelations = relations(salesQuotas, ({ one }) => ({
+  agent: one(users, {
+    fields: [salesQuotas.agentId],
+    references: [users.id],
+  }),
+}));
+
+export const insertSalesQuotaSchema = createInsertSchema(salesQuotas).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSalesQuota = z.infer<typeof insertSalesQuotaSchema>;
+export type SalesQuota = typeof salesQuotas.$inferSelect;
+
+// Lead Assignments table - tracks assignment history
+export const leadAssignments = pgTable("lead_assignments", {
+  id: serial("id").primaryKey(),
+  leadId: varchar("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  agentId: integer("agent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assignedBy: integer("assigned_by").references(() => users.id),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  unassignedAt: timestamp("unassigned_at"),
+  reason: text("reason"),
+  isActive: boolean("is_active").default(true),
+});
+
+export const leadAssignmentsRelations = relations(leadAssignments, ({ one }) => ({
+  lead: one(leads, {
+    fields: [leadAssignments.leadId],
+    references: [leads.id],
+  }),
+  agent: one(users, {
+    fields: [leadAssignments.agentId],
+    references: [users.id],
+  }),
+  assigner: one(users, {
+    fields: [leadAssignments.assignedBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertLeadAssignmentSchema = createInsertSchema(leadAssignments).omit({ id: true, assignedAt: true });
+export type InsertLeadAssignment = z.infer<typeof insertLeadAssignmentSchema>;
+export type LeadAssignment = typeof leadAssignments.$inferSelect;

@@ -3794,6 +3794,176 @@ Examples:
     }
   });
 
+  // Get sales agents (users with sales_agent role)
+  app.get("/api/users/sales-agents", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const salesAgents = allUsers.filter(u => u.role === "sales_agent");
+      res.json(salesAgents);
+    } catch (error: any) {
+      console.error("Error fetching sales agents:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch sales agents" });
+    }
+  });
+
+  // Lead Assignment endpoints
+  app.post("/api/leads/assign", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const { leadId, agentId, reason } = req.body;
+
+      if (!leadId || !agentId) {
+        return res.status(400).json({ message: "Lead ID and Agent ID are required" });
+      }
+
+      // Update lead's assignedTo field
+      await pool.query(
+        `UPDATE leads SET assigned_to_id = $1, updated_at = NOW() WHERE id = $2`,
+        [agentId, leadId]
+      );
+
+      // Create assignment record
+      await pool.query(
+        `INSERT INTO lead_assignments (lead_id, agent_id, assigned_by, reason, is_active) 
+         VALUES ($1, $2, $3, $4, true)`,
+        [leadId, agentId, user.id, reason || null]
+      );
+
+      // Deactivate previous assignments
+      await pool.query(
+        `UPDATE lead_assignments 
+         SET is_active = false, unassigned_at = NOW() 
+         WHERE lead_id = $1 AND agent_id != $2 AND is_active = true`,
+        [leadId, agentId]
+      );
+
+      res.json({ success: true, message: "Lead assigned successfully" });
+    } catch (error: any) {
+      console.error("Lead assignment error:", error);
+      res.status(500).json({ message: error.message || "Failed to assign lead" });
+    }
+  });
+
+  // Commission endpoints
+  app.get("/api/commissions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const { status } = req.query;
+
+      let query = `
+        SELECT 
+          c.*,
+          u.username as agent_name,
+          u.first_name || ' ' || u.last_name as agent_full_name,
+          l.name as lead_name,
+          l.company as lead_company,
+          cl.name as client_name
+        FROM commissions c
+        LEFT JOIN users u ON c.agent_id = u.id
+        LEFT JOIN leads l ON c.lead_id = l.id
+        LEFT JOIN clients cl ON c.client_id = cl.id
+      `;
+
+      const params: any[] = [];
+
+      // Filter by status if provided
+      if (status && status !== "all") {
+        query += ` WHERE c.status = $1`;
+        params.push(status);
+      }
+
+      // Sales agents can only see their own commissions
+      if (user.role === "sales_agent") {
+        query += params.length > 0 ? ` AND c.agent_id = $${params.length + 1}` : ` WHERE c.agent_id = $1`;
+        params.push(user.id);
+      }
+
+      query += ` ORDER BY c.created_at DESC`;
+
+      const result = await pool.query(query, params);
+
+      const commissions = result.rows.map(row => ({
+        id: row.id,
+        agentId: row.agent_id,
+        agentName: row.agent_full_name || row.agent_name,
+        leadId: row.lead_id,
+        leadName: row.lead_name || row.lead_company,
+        clientId: row.client_id,
+        clientName: row.client_name,
+        dealValue: parseFloat(row.deal_value),
+        commissionRate: parseFloat(row.commission_rate),
+        commissionAmount: parseFloat(row.commission_amount),
+        status: row.status,
+        notes: row.notes,
+        approvedBy: row.approved_by,
+        approvedAt: row.approved_at,
+        paidAt: row.paid_at,
+        createdAt: row.created_at,
+      }));
+
+      res.json(commissions);
+    } catch (error: any) {
+      console.error("Error fetching commissions:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch commissions" });
+    }
+  });
+
+  app.post("/api/commissions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { agentId, leadId, clientId, dealValue, commissionRate, commissionAmount, notes } = req.body;
+
+      if (!agentId || !dealValue || !commissionRate || !commissionAmount) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const result = await pool.query(
+        `INSERT INTO commissions (agent_id, lead_id, client_id, deal_value, commission_rate, commission_amount, notes, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+         RETURNING *`,
+        [agentId, leadId || null, clientId || null, dealValue, commissionRate, commissionAmount, notes || null]
+      );
+
+      res.json({ success: true, commission: result.rows[0] });
+    } catch (error: any) {
+      console.error("Error creating commission:", error);
+      res.status(500).json({ message: error.message || "Failed to create commission" });
+    }
+  });
+
+  app.patch("/api/commissions/:id/status", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!["pending", "approved", "paid"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      let updateFields = "status = $1, updated_at = NOW()";
+      const params: any[] = [status];
+
+      if (status === "approved") {
+        updateFields += ", approved_by = $2, approved_at = NOW()";
+        params.push(user.id);
+      } else if (status === "paid") {
+        updateFields += ", paid_at = NOW()";
+      }
+
+      params.push(id);
+
+      await pool.query(
+        `UPDATE commissions SET ${updateFields} WHERE id = $${params.length}`,
+        params
+      );
+
+      res.json({ success: true, message: "Commission status updated" });
+    } catch (error: any) {
+      console.error("Error updating commission status:", error);
+      res.status(500).json({ message: error.message || "Failed to update commission status" });
+    }
+  });
+
   // Public booking endpoint (no authentication required)
   app.post("/api/bookings", async (req: Request, res: Response) => {
     try {
