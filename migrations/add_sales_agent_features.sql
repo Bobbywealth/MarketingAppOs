@@ -7,8 +7,8 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS expected_close_date DATE;
 CREATE TABLE IF NOT EXISTS commissions (
   id SERIAL PRIMARY KEY,
   agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
-  client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+  lead_id VARCHAR REFERENCES leads(id) ON DELETE SET NULL,
+  client_id VARCHAR REFERENCES clients(id) ON DELETE SET NULL,
   deal_value DECIMAL(10,2) NOT NULL,
   commission_rate DECIMAL(5,2) NOT NULL,
   commission_amount DECIMAL(10,2) NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS sales_quotas (
 -- Create lead_assignments table for tracking assignment history
 CREATE TABLE IF NOT EXISTS lead_assignments (
   id SERIAL PRIMARY KEY,
-  lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  lead_id VARCHAR NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
   agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   assigned_by INTEGER REFERENCES users(id),
   assigned_at TIMESTAMP DEFAULT NOW(),
