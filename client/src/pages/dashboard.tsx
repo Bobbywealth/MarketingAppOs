@@ -573,7 +573,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1">
-                  {stripeData.activeSubscriptions} Active
+                  {stripeData?.activeSubscriptions || 0} Active
                 </Badge>
               </div>
             </CardHeader>
@@ -581,14 +581,14 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Total Subscriptions</p>
-                  <p className="text-3xl font-bold" data-testid="metric-total-subscriptions">{stripeData.totalSubscriptions}</p>
+                  <p className="text-3xl font-bold" data-testid="metric-total-subscriptions">{stripeData?.totalSubscriptions || 0}</p>
                   <p className="text-xs text-muted-foreground">
-                    {stripeData.activeSubscriptions} active • {stripeData.totalSubscriptions - stripeData.activeSubscriptions} inactive
+                    {stripeData?.activeSubscriptions || 0} active • {((stripeData?.totalSubscriptions || 0) - (stripeData?.activeSubscriptions || 0))} inactive
                   </p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Active Subscriptions</p>
-                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-active-subscriptions">{stripeData.activeSubscriptions}</p>
+                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-active-subscriptions">{stripeData?.activeSubscriptions || 0}</p>
                   <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                     <ArrowUpRight className="w-3 h-3" />
                     <span>Healthy retention</span>
