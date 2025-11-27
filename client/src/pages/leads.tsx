@@ -227,8 +227,11 @@ export default function LeadsPage() {
   const [quickFilterScore, setQuickFilterScore] = useState<string | null>(null);
   const [quickFilterSource, setQuickFilterSource] = useState<string | null>(null);
 
-  const { data: leads = [], isLoading } = useQuery<Lead[]>({
+  const { data: leads = [], isLoading, refetch } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   // Populate editTags when editing a lead
