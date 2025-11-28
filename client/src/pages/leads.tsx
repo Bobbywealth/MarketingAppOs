@@ -598,6 +598,7 @@ export default function LeadsPage() {
                 phone: formData.get("phone") as string || null,
                 phoneType: formData.get("phoneType") as string || "business",
                 company: formData.get("company") as string,
+                location: formData.get("location") as string || null,
                 website: formData.get("website") as string || null,
                 // Social media links
                 instagram: formData.get("instagram") as string || null,
@@ -667,9 +668,16 @@ export default function LeadsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <Label>Location</Label>
+                  <Input name="location" placeholder="New York, NY" />
+                </div>
+                <div>
                   <Label>Website</Label>
                   <Input name="website" type="url" placeholder="https://example.com" />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label>Lead Value ($)</Label>
                   <Input name="value" type="number" placeholder="5000" />
@@ -1088,6 +1096,7 @@ export default function LeadsPage() {
                   phone: formData.get("phone") as string || null,
                   phoneType: formData.get("phoneType") as string || "business",
                   company: formData.get("company") as string,
+                  location: formData.get("location") as string || null,
                   website: formData.get("website") as string || null,
                   // Social media links
                   instagram: formData.get("instagram") as string || null,
@@ -1149,9 +1158,16 @@ export default function LeadsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <Label>Location</Label>
+                    <Input name="location" defaultValue={editingLead.location || ""} placeholder="New York, NY" />
+                  </div>
+                  <div>
                     <Label>Website</Label>
                     <Input name="website" type="url" defaultValue={editingLead.website || ""} placeholder="https://example.com" />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <Label>Lead Value ($)</Label>
                     <Input name="value" type="number" defaultValue={editingLead.value ? editingLead.value / 100 : ""} placeholder="5000" />

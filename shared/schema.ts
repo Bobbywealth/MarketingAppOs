@@ -260,6 +260,7 @@ export const leads = pgTable("leads", {
   phone: varchar("phone"),
   phoneType: varchar("phone_type").default("business"), // business, personal, mobile
   company: varchar("company").notNull(), // Required - company name
+  location: varchar("location"), // City, State or full address
   website: varchar("website"),
   // Social media links
   instagram: varchar("instagram"),

@@ -18,6 +18,9 @@ async function addColumns() {
     await pool.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS expected_close_date TIMESTAMP');
     console.log('✅ Added expected_close_date column');
     
+    await pool.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS location VARCHAR');
+    console.log('✅ Added location column');
+    
     console.log('\n✨ All columns added successfully! Your leads will now load.');
     
     await pool.end();
