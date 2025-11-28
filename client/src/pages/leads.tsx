@@ -56,7 +56,8 @@ import {
   ExternalLink,
   Instagram,
   Facebook,
-  MapPinned
+  MapPinned,
+  Columns3
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -67,6 +68,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
+import { LeadsKanban } from "@/components/LeadsKanban";
 
 // Helper function to get badge variant based on stage
 function getStageBadge(stage: string): "default" | "secondary" | "outline" | "destructive" {
@@ -222,7 +224,7 @@ export default function LeadsPage() {
   const [editNeeds, setEditNeeds] = useState<string[]>([]);
   
   // New state for modern UI
-  const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  const [viewMode, setViewMode] = useState<"card" | "list" | "kanban">("card");
   const [quickFilterStage, setQuickFilterStage] = useState<string | null>(null);
   const [quickFilterScore, setQuickFilterScore] = useState<string | null>(null);
   const [quickFilterSource, setQuickFilterSource] = useState<string | null>(null);
@@ -2126,6 +2128,14 @@ export default function LeadsPage() {
                 >
                   <List className="w-4 h-4" />
                 </Button>
+                <Button
+                  variant={viewMode === "kanban" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("kanban")}
+                  className="rounded-none"
+                >
+                  <Columns3 className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -2356,6 +2366,18 @@ export default function LeadsPage() {
                 </Button>
               )}
             </div>
+          ) : viewMode === "kanban" ? (
+            <LeadsKanban
+              leads={filteredLeads}
+              onLeadClick={setSelectedLead}
+              onEditLead={(lead) => {
+                setEditingLead(lead);
+                setEditTags(lead.tags || []);
+                setEditNeeds(lead.needs || []);
+                setIsEditDialogOpen(true);
+              }}
+              onDeleteLead={deleteLeadMutation.mutate}
+            />
           ) : viewMode === "card" ? (
             <div className="space-y-2">
               {filteredLeads.map((lead) => (
