@@ -257,8 +257,8 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold mb-1">Email Us</h3>
-                        <a href="mailto:business@wolfpaqmarketing.com" className="text-blue-600 hover:underline">
-                          business@wolfpaqmarketing.com
+                        <a href="mailto:business@marketingteam.app" className="text-blue-600 hover:underline">
+                          business@marketingteam.app
                         </a>
                         <p className="text-sm text-gray-500 mt-1">
                           We'll respond within 24 hours
