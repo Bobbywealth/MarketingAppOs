@@ -918,7 +918,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-muted-foreground mb-6 italic">
-                "Wolfpaq took my Instagram from 5K to 50K followers in 6 months. Their content strategy and ad campaigns were game-changers. My music career has never been better!"
+                "Marketing Team App took my Instagram from 5K to 50K followers in 6 months. Their content strategy and ad campaigns were game-changers. My music career has never been better!"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
@@ -938,7 +938,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-muted-foreground mb-6 italic">
-                "Our e-commerce sales tripled after Wolfpaq revamped our website and ran our ad campaigns. The ROI has been insane. Best marketing investment we've ever made!"
+                "Our e-commerce sales tripled after Marketing Team App revamped our website and ran our ad campaigns. The ROI has been insane. Best marketing investment we've ever made!"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">
@@ -958,7 +958,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <p className="text-muted-foreground mb-6 italic">
-                "As a fitness coach, I needed help building my personal brand. Wolfpaq handled everything - content, ads, website. Now I'm booked out 3 months in advance!"
+                "As a fitness coach, I needed help building my personal brand. Marketing Team App handled everything - content, ads, website. Now I'm booked out 3 months in advance!"
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">
