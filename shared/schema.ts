@@ -1165,3 +1165,67 @@ export const leadAssignmentsRelations = relations(leadAssignments, ({ one }) => 
 export const insertLeadAssignmentSchema = createInsertSchema(leadAssignments).omit({ id: true, assignedAt: true });
 export type InsertLeadAssignment = z.infer<typeof insertLeadAssignmentSchema>;
 export type LeadAssignment = typeof leadAssignments.$inferSelect;
+
+// Discount Codes table
+export const discountCodes = pgTable("discount_codes", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).unique().notNull(),
+  description: text("description"),
+  discountPercentage: decimal("discount_percentage", { precision: 5, scale: 2 }).notNull(),
+  durationMonths: integer("duration_months"), // null = one-time discount
+  stripeCouponId: varchar("stripe_coupon_id", { length: 100 }),
+  maxUses: integer("max_uses"),
+  usesCount: integer("uses_count").default(0),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true),
+  appliesToPackages: jsonb("applies_to_packages").$type<string[]>(), // null = all packages
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const discountCodesRelations = relations(discountCodes, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [discountCodes.createdBy],
+    references: [users.id],
+  }),
+  redemptions: many(discountRedemptions),
+}));
+
+export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertDiscountCode = z.infer<typeof insertDiscountCodeSchema>;
+export type DiscountCode = typeof discountCodes.$inferSelect;
+
+// Discount Redemptions table
+export const discountRedemptions = pgTable("discount_redemptions", {
+  id: serial("id").primaryKey(),
+  codeId: integer("code_id").references(() => discountCodes.id),
+  discountCode: varchar("discount_code", { length: 50 }).notNull(),
+  userEmail: varchar("user_email").notNull(),
+  clientId: varchar("client_id").references(() => clients.id),
+  packageId: varchar("package_id").references(() => subscriptionPackages.id),
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull(),
+  finalPrice: decimal("final_price", { precision: 10, scale: 2 }).notNull(),
+  stripeSessionId: varchar("stripe_session_id"),
+  redeemedAt: timestamp("redeemed_at").defaultNow(),
+});
+
+export const discountRedemptionsRelations = relations(discountRedemptions, ({ one }) => ({
+  code: one(discountCodes, {
+    fields: [discountRedemptions.codeId],
+    references: [discountCodes.id],
+  }),
+  client: one(clients, {
+    fields: [discountRedemptions.clientId],
+    references: [clients.id],
+  }),
+  package: one(subscriptionPackages, {
+    fields: [discountRedemptions.packageId],
+    references: [subscriptionPackages.id],
+  }),
+}));
+
+export const insertDiscountRedemptionSchema = createInsertSchema(discountRedemptions).omit({ id: true, redeemedAt: true });
+export type InsertDiscountRedemption = z.infer<typeof insertDiscountRedemptionSchema>;
+export type DiscountRedemption = typeof discountRedemptions.$inferSelect;

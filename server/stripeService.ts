@@ -319,6 +319,8 @@ export async function createCheckoutSession(params: {
   clientEmail: string;
   clientName: string;
   leadId?: string;
+  discountCode?: string;
+  stripeCouponId?: string;
   successUrl: string;
   cancelUrl: string;
 }) {
@@ -328,7 +330,7 @@ export async function createCheckoutSession(params: {
   }
 
   try {
-    const session = await stripeInstance.checkout.sessions.create({
+    const sessionConfig: any = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -354,11 +356,23 @@ export async function createCheckoutSession(params: {
         packageName: params.packageName,
         clientName: params.clientName,
         leadId: params.leadId || '',
+        discountCode: params.discountCode || '',
       },
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
       billing_address_collection: 'required',
-    });
+      // Always allow promotion codes at checkout
+      allow_promotion_codes: true,
+    };
+
+    // Add discount if provided
+    if (params.stripeCouponId) {
+      sessionConfig.discounts = [{
+        coupon: params.stripeCouponId,
+      }];
+    }
+
+    const session = await stripeInstance.checkout.sessions.create(sessionConfig);
 
     return {
       sessionId: session.id,

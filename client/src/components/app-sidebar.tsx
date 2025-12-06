@@ -26,6 +26,7 @@ import {
   Circle,
   LineChart,
   User,
+  Percent,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
@@ -312,6 +313,13 @@ const businessTools = [
     icon: Package,
     permission: "canManageUsers" as const,
     sidebarKey: "packages" as const,
+  },
+  {
+    title: "Discount Codes",
+    url: "/discount-codes",
+    icon: Percent,
+    roles: ["admin"] as const,
+    sidebarKey: "discountCodes" as const,
   },
   {
     title: "Training",

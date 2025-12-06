@@ -53,6 +53,7 @@ import Phone from "@/pages/phone";
 import Settings from "@/pages/settings";
 import CompanyCalendar from "@/pages/company-calendar";
 import SubscriptionPackages from "@/pages/subscription-packages";
+import DiscountCodes from "@/pages/discount-codes";
 import SecondMe from "@/pages/second-me";
 import SecondMeOnboarding from "@/pages/second-me-onboarding";
 import ClientSecondMeDashboard from "@/pages/client-second-me-dashboard";
@@ -109,6 +110,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/invoices" component={Invoices} />}
       {!isClient && <ProtectedRoute path="/commissions" component={Commissions} />}
       {!isClient && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
+      {!isClient && <ProtectedRoute path="/discount-codes" component={DiscountCodes} />}
       {!isClient && <ProtectedRoute path="/onboarding" component={Onboarding} />}
       {!isClient && <ProtectedRoute path="/messages" component={Messages} />}
       {!isClient && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}

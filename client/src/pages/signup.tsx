@@ -27,7 +27,9 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowRight, ArrowLeft, Building2, User, Target, CheckCircle, Star, TrendingUp, Users, Zap, Shield, Clock, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowLeft, Building2, User, Target, CheckCircle, Star, TrendingUp, Users, Zap, Shield, Clock, Sparkles, Tag, CheckCircle2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { HeaderLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
@@ -75,6 +77,9 @@ export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [auditResults, setAuditResults] = useState<any>(null);
+  const [discountCode, setDiscountCode] = useState("");
+  const [validDiscount, setValidDiscount] = useState<any>(null);
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
 
   // Fetch subscription packages
   const { data: packages } = useQuery({
@@ -154,8 +159,49 @@ export default function SignupPage() {
     },
   });
 
+  // Validate discount code
+  const validateDiscountCode = async (code: string) => {
+    if (!code.trim()) {
+      setValidDiscount(null);
+      return;
+    }
+
+    setIsValidatingDiscount(true);
+    try {
+      const response = await apiRequest("POST", "/api/discounts/validate", {
+        code: code.trim(),
+        packageId: selectedPackage,
+      });
+      const data = await response.json();
+      
+      if (data.valid) {
+        setValidDiscount(data);
+        toast({
+          title: "✅ Discount Applied!",
+          description: `${data.discountPercentage}% off${data.durationMonths ? ` for ${data.durationMonths} months` : ''}`,
+        });
+      } else {
+        setValidDiscount(null);
+        toast({
+          title: "❌ Invalid Code",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setValidDiscount(null);
+      toast({
+        title: "❌ Error",
+        description: "Failed to validate discount code",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidatingDiscount(false);
+    }
+  };
+
   const checkoutMutation = useMutation({
-    mutationFn: async (data: { packageId: string; leadId?: string; email: string; name: string }) => {
+    mutationFn: async (data: { packageId: string; leadId?: string; email: string; name: string; discountCode?: string }) => {
       const response = await apiRequest("POST", "/api/create-checkout-session", data);
       const result = await response.json();
       if (!result.success) {
@@ -332,6 +378,94 @@ export default function SignupPage() {
             )}
           </div>
 
+          {/* Discount Code Section */}
+          {selectedPackage && (
+            <div className="max-w-2xl mx-auto mb-8">
+              <Card className="border-dashed border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Tag className="w-6 h-6 text-primary" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-base font-semibold mb-2 block">
+                        Have a Discount Code? 🎁
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={discountCode}
+                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                          onBlur={(e) => validateDiscountCode(e.target.value)}
+                          placeholder="Enter code (e.g., WINTER25)"
+                          className="uppercase"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => validateDiscountCode(discountCode)}
+                          disabled={isValidatingDiscount || !discountCode}
+                        >
+                          {isValidatingDiscount ? "Checking..." : "Apply"}
+                        </Button>
+                      </div>
+                      
+                      {validDiscount && (
+                        <Alert className="mt-3 bg-emerald-50 border-emerald-200">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <AlertDescription className="text-emerald-700 font-medium">
+                            <span className="font-bold">{validDiscount.discountPercentage}% OFF</span>
+                            {validDiscount.durationMonths && ` for ${validDiscount.durationMonths} months`}!
+                            {validDiscount.description && ` - ${validDiscount.description}`}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Show price breakdown if discount applied */}
+                  {validDiscount && selectedPackage && packages && (
+                    <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+                      {(() => {
+                        const pkg = packages.find((p: any) => p.id === selectedPackage);
+                        if (!pkg) return null;
+                        const originalPrice = pkg.price / 100;
+                        const discountAmount = originalPrice * (validDiscount.discountPercentage / 100);
+                        const finalPrice = originalPrice - discountAmount;
+                        
+                        return (
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span>Original Price:</span>
+                              <span>${originalPrice.toFixed(2)}/mo</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-emerald-600 font-semibold">
+                              <span>Discount ({validDiscount.discountPercentage}%):</span>
+                              <span>-${discountAmount.toFixed(2)}</span>
+                            </div>
+                            <Separator />
+                            <div className="flex justify-between text-base font-bold">
+                              <span>You Pay:</span>
+                              <span className="text-emerald-600">
+                                ${finalPrice.toFixed(2)}/mo
+                              </span>
+                            </div>
+                            {validDiscount.durationMonths && (
+                              <p className="text-xs text-muted-foreground text-center mt-2">
+                                Discount applies for {validDiscount.durationMonths} months, then ${originalPrice.toFixed(2)}/mo
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Continue Button */}
           <div className="text-center">
             <Button 
@@ -345,6 +479,7 @@ export default function SignupPage() {
                     packageId: selectedPackage,
                     email: formValues.email,
                     name: formValues.name,
+                    discountCode: validDiscount ? discountCode : undefined,
                   });
                 }
               }}

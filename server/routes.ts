@@ -905,7 +905,7 @@ export function registerRoutes(app: Express) {
   // Create Stripe Checkout Session for package purchase
   app.post("/api/create-checkout-session", async (req: Request, res: Response) => {
     try {
-      const { packageId, leadId, email, name } = req.body;
+      const { packageId, leadId, email, name, discountCode } = req.body;
 
       if (!packageId || !email || !name) {
         return res.status(400).json({ message: "Missing required fields: packageId, email, name" });
@@ -915,6 +915,23 @@ export function registerRoutes(app: Express) {
       const pkg = await storage.getSubscriptionPackage(packageId);
       if (!pkg) {
         return res.status(404).json({ message: "Package not found" });
+      }
+
+      // Validate discount code if provided
+      let stripeCouponId = undefined;
+      if (discountCode) {
+        const discountResult = await pool.query(
+          `SELECT stripe_coupon_id FROM discount_codes 
+           WHERE UPPER(code) = UPPER($1) 
+           AND is_active = true 
+           AND (expires_at IS NULL OR expires_at > NOW())
+           AND (max_uses IS NULL OR uses_count < max_uses)`,
+          [discountCode]
+        );
+        
+        if (discountResult.rows.length > 0 && discountResult.rows[0].stripe_coupon_id) {
+          stripeCouponId = discountResult.rows[0].stripe_coupon_id;
+        }
       }
 
       // Get the app's base URL
@@ -928,6 +945,8 @@ export function registerRoutes(app: Express) {
         clientEmail: email,
         clientName: name,
         leadId,
+        discountCode: discountCode || undefined,
+        stripeCouponId,
         successUrl: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${baseUrl}/signup?canceled=true`,
       });
@@ -1046,6 +1065,288 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       console.error('Stripe confirm error:', error);
       return res.status(500).json({ success: false, message: error?.message || 'Stripe confirm failed' });
+    }
+  });
+
+  // ============ Discount Codes API ============
+  
+  // Validate discount code (public endpoint for signup page)
+  app.post("/api/discounts/validate", async (req: Request, res: Response) => {
+    try {
+      const { code, packageId } = req.body;
+      
+      if (!code) {
+        return res.status(400).json({ valid: false, message: "Code required" });
+      }
+
+      const result = await pool.query(
+        `SELECT * FROM discount_codes 
+         WHERE UPPER(code) = UPPER($1) 
+         AND is_active = true 
+         AND (expires_at IS NULL OR expires_at > NOW())
+         AND (max_uses IS NULL OR uses_count < max_uses)`,
+        [code]
+      );
+
+      if (result.rows.length === 0) {
+        return res.json({ 
+          valid: false, 
+          message: "Invalid or expired discount code" 
+        });
+      }
+
+      const discount = result.rows[0];
+
+      // Check if code applies to this package
+      if (discount.applies_to_packages && packageId) {
+        const packageIds = discount.applies_to_packages;
+        if (Array.isArray(packageIds) && !packageIds.includes(packageId)) {
+          return res.json({
+            valid: false,
+            message: "This code doesn't apply to the selected package"
+          });
+        }
+      }
+
+      res.json({
+        valid: true,
+        code: discount.code,
+        discountPercentage: parseFloat(discount.discount_percentage),
+        durationMonths: discount.duration_months,
+        description: discount.description,
+        stripeCouponId: discount.stripe_coupon_id,
+      });
+
+    } catch (error: any) {
+      console.error("Discount validation error:", error);
+      res.status(500).json({ valid: false, message: "Error validating code" });
+    }
+  });
+
+  // Create discount code (admin only)
+  app.post("/api/discounts", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const { 
+        code, 
+        description, 
+        discountPercentage, 
+        durationMonths, 
+        maxUses, 
+        expiresAt,
+        appliesToPackages 
+      } = req.body;
+
+      if (!code || !discountPercentage) {
+        return res.status(400).json({ message: "Code and discount percentage are required" });
+      }
+
+      // Create Stripe coupon first
+      let stripeCouponId = null;
+      if (stripe) {
+        try {
+          const couponData: any = {
+            percent_off: parseFloat(discountPercentage),
+            name: code,
+            id: code.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+          };
+
+          if (durationMonths) {
+            couponData.duration = 'repeating';
+            couponData.duration_in_months = parseInt(durationMonths);
+          } else {
+            couponData.duration = 'once';
+          }
+
+          const coupon = await stripe.coupons.create(couponData);
+          stripeCouponId = coupon.id;
+        } catch (stripeError: any) {
+          console.error("Stripe coupon creation error:", stripeError);
+          return res.status(400).json({ message: `Stripe error: ${stripeError.message}` });
+        }
+      }
+
+      // Save to database
+      const result = await pool.query(
+        `INSERT INTO discount_codes 
+         (code, description, discount_percentage, duration_months, stripe_coupon_id, 
+          max_uses, expires_at, applies_to_packages, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [
+          code.toUpperCase(),
+          description || null,
+          discountPercentage,
+          durationMonths || null,
+          stripeCouponId,
+          maxUses || null,
+          expiresAt || null,
+          appliesToPackages ? JSON.stringify(appliesToPackages) : null,
+          user.id
+        ]
+      );
+
+      res.json({ success: true, discount: result.rows[0] });
+
+    } catch (error: any) {
+      console.error("Error creating discount code:", error);
+      if (error.code === '23505') { // Unique violation
+        return res.status(400).json({ message: "Code already exists" });
+      }
+      res.status(500).json({ message: error.message || "Failed to create discount code" });
+    }
+  });
+
+  // List all discount codes (authenticated users)
+  app.get("/api/discounts", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const result = await pool.query(
+        `SELECT 
+          dc.*,
+          u.username as creator_name,
+          COUNT(dr.id) as total_redemptions,
+          COALESCE(SUM(dr.discount_amount), 0) as total_discounted
+         FROM discount_codes dc
+         LEFT JOIN users u ON dc.created_by = u.id
+         LEFT JOIN discount_redemptions dr ON dc.id = dr.code_id
+         GROUP BY dc.id, u.username
+         ORDER BY dc.created_at DESC`
+      );
+
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching discount codes:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update discount code (admin only)
+  app.patch("/api/discounts/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { isActive, maxUses, expiresAt, description } = req.body;
+
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramCount = 1;
+
+      if (typeof isActive !== 'undefined') {
+        updates.push(`is_active = $${paramCount++}`);
+        values.push(isActive);
+      }
+      if (typeof maxUses !== 'undefined') {
+        updates.push(`max_uses = $${paramCount++}`);
+        values.push(maxUses);
+      }
+      if (typeof expiresAt !== 'undefined') {
+        updates.push(`expires_at = $${paramCount++}`);
+        values.push(expiresAt);
+      }
+      if (typeof description !== 'undefined') {
+        updates.push(`description = $${paramCount++}`);
+        values.push(description);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
+      }
+
+      updates.push(`updated_at = NOW()`);
+      values.push(id);
+
+      const result = await pool.query(
+        `UPDATE discount_codes SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+        values
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Discount code not found" });
+      }
+
+      res.json({ success: true, discount: result.rows[0] });
+    } catch (error: any) {
+      console.error("Error updating discount code:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete discount code (admin only)
+  app.delete("/api/discounts/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const result = await pool.query(
+        `DELETE FROM discount_codes WHERE id = $1 RETURNING *`,
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Discount code not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting discount code:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Track redemption when checkout succeeds (called after payment confirmation)
+  app.post("/api/discounts/redeem", async (req: Request, res: Response) => {
+    try {
+      const { code, email, packageId, originalPrice, discountAmount, finalPrice, stripeSessionId } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ message: "Code is required" });
+      }
+
+      // Increment usage count
+      await pool.query(
+        `UPDATE discount_codes SET uses_count = uses_count + 1, updated_at = NOW() WHERE UPPER(code) = UPPER($1)`,
+        [code]
+      );
+
+      // Record redemption
+      await pool.query(
+        `INSERT INTO discount_redemptions 
+         (code_id, discount_code, user_email, package_id, original_price, 
+          discount_amount, final_price, stripe_session_id)
+         SELECT id, $1, $2, $3, $4, $5, $6, $7
+         FROM discount_codes WHERE UPPER(code) = UPPER($1)`,
+        [code, email, packageId, originalPrice, discountAmount, finalPrice, stripeSessionId]
+      );
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Redemption tracking error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get discount redemption analytics (admin only)
+  app.get("/api/discounts/analytics", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const result = await pool.query(`
+        SELECT 
+          dc.code,
+          dc.discount_percentage,
+          dc.uses_count,
+          dc.max_uses,
+          COUNT(dr.id) as redemptions,
+          COALESCE(SUM(dr.discount_amount), 0) as total_discount_given,
+          COALESCE(SUM(dr.final_price), 0) as total_revenue,
+          ARRAY_AGG(DISTINCT dr.user_email) FILTER (WHERE dr.user_email IS NOT NULL) as redeemed_by
+        FROM discount_codes dc
+        LEFT JOIN discount_redemptions dr ON dc.id = dr.code_id
+        WHERE dc.is_active = true
+        GROUP BY dc.id, dc.code, dc.discount_percentage, dc.uses_count, dc.max_uses
+        ORDER BY redemptions DESC
+      `);
+
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching discount analytics:", error);
+      res.status(500).json({ message: error.message });
     }
   });
 

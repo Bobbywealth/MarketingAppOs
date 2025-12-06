@@ -25,6 +25,7 @@ export const sidebarPermissionList = [
   { key: "invoices", label: "Invoices & Billing", category: "Business" },
   { key: "commissions", label: "Commissions", category: "Business" },
   { key: "packages", label: "Subscription Packages", category: "Business" },
+  { key: "discountCodes", label: "Discount Codes", category: "Business" },
   { key: "training", label: "Training", category: "Business" },
   { key: "aiManager", label: "AI Business Manager", category: "Business" },
   { key: "pushNotifications", label: "Push Notifications", category: "Business" },
