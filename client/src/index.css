@@ -99,6 +99,14 @@
   --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 60% / 0.2) 0px, transparent 50%),
                    radial-gradient(at 100% 100%, hsl(25 95% 53% / 0.15) 0px, transparent 50%);
   --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+
+  /* Landing Page Color System */
+  --landing-primary: 217 91% 60%;
+  --landing-secondary: 25 95% 53%;
+  --landing-success: 142 71% 45%;
+  --landing-gradient-hero: linear-gradient(-45deg, #2563eb, #1d4ed8, #4338ca, #6366f1, #3b82f6, #1e40af);
+  --landing-gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(25 95% 53%));
+  --landing-gradient-orange: linear-gradient(135deg, #f97316, #fb923c);
 }
 
 /* Floating Animation */
@@ -639,6 +647,114 @@
     100% {
       background-position: 0% 50%;
     }
+  }
+
+  /* Slide in from bottom animation for sticky CTA */
+  @keyframes slide-in-from-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-in {
+    animation-duration: 0.3s;
+    animation-fill-mode: both;
+  }
+
+  .fade-in {
+    animation-name: fadeIn;
+  }
+
+  .slide-in-from-bottom-4 {
+    animation-name: slide-in-from-bottom;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Improved mobile responsive utilities */
+  @media (max-width: 768px) {
+    .hero-glow::before {
+      width: 150%;
+      height: 150%;
+    }
+    
+    /* Ensure mobile CTAs don't overlap */
+    body.has-sticky-cta {
+      padding-bottom: 80px;
+    }
+
+    /* Better mobile text sizing */
+    .mobile-text-responsive {
+      font-size: clamp(0.875rem, 2vw, 1rem);
+    }
+
+    /* Improved touch targets for mobile */
+    button,
+    a[role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Tablet optimizations */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .tablet-grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Safe area for iOS devices */
+  @supports (padding: max(0px)) {
+    .safe-bottom {
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+    
+    .safe-top {
+      padding-top: max(0.5rem, env(safe-area-inset-top));
+    }
+  }
+
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Smooth scroll behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better focus visible for accessibility */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+
+  /* Landing page specific stat boxes */
+  .stat-box {
+    background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--card)));
+    border: 1px solid hsl(var(--border));
+    transition: all 0.3s ease;
+  }
+
+  .stat-box:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px -4px hsl(var(--primary) / 0.15);
   }
 
   /* Email Content Formatting */
