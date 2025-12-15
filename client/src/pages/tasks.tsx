@@ -31,6 +31,12 @@ import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
 import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -68,16 +74,23 @@ export default function TasksPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
-  // Load showCompleted preference from localStorage, default to false (hide completed)
-  const [showCompleted, setShowCompleted] = useState(() => {
-    const saved = localStorage.getItem('tasks-show-completed');
-    return saved !== null ? JSON.parse(saved) : false;
+  // Visibility preferences
+  const [hideCompleted, setHideCompleted] = useState(() => {
+    const saved = localStorage.getItem("tasks-hide-completed");
+    return saved !== null ? JSON.parse(saved) : true; // default: hide completed
+  });
+  const [hideFuture, setHideFuture] = useState(() => {
+    const saved = localStorage.getItem("tasks-hide-future");
+    return saved !== null ? JSON.parse(saved) : false; // default: show future tasks
   });
 
-  // Save showCompleted preference to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('tasks-show-completed', JSON.stringify(showCompleted));
-  }, [showCompleted]);
+    localStorage.setItem("tasks-hide-completed", JSON.stringify(hideCompleted));
+  }, [hideCompleted]);
+
+  useEffect(() => {
+    localStorage.setItem("tasks-hide-future", JSON.stringify(hideFuture));
+  }, [hideFuture]);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -412,38 +425,21 @@ export default function TasksPage() {
     if (filterPriority !== "all" && task.priority !== filterPriority) return false;
     // Filter by selected space (null = show all tasks)
     if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
-    
-    // Hide tasks completed TODAY (they'll reappear tomorrow)
-    if (task.status === "completed" && task.completedAt) {
-      const completedDate = new Date(task.completedAt);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      completedDate.setHours(0, 0, 0, 0);
-      
-      // If completed today, hide it
-      if (completedDate.getTime() === today.getTime()) {
-        return false;
-      }
-    }
-    
-    // Hide tasks with future due dates (scheduled for tomorrow or later)
-    // Only hide if status is "todo" (not started yet)
-    if (task.status === "todo" && task.dueDate) {
+
+    // Hide completed if requested
+    if (hideCompleted && task.status === "completed") return false;
+
+    // Optionally hide future-dated todos
+    if (hideFuture && task.status === "todo" && task.dueDate) {
       const taskDueDate = toEST(task.dueDate);
       const nowInEST = nowEST();
-      
-      // Set both to start of day for comparison
       taskDueDate.setHours(0, 0, 0, 0);
       nowInEST.setHours(0, 0, 0, 0);
-      
-      // If due date is in the future (tomorrow or later), hide it
       if (taskDueDate.getTime() > nowInEST.getTime()) {
         return false;
       }
     }
     
-    // Hide all completed tasks if toggle is off
-    if (!showCompleted && task.status === "completed") return false;
     return true;
   });
 
@@ -465,6 +461,17 @@ export default function TasksPage() {
       case "todo": return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
       default: return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
     }
+  };
+
+  const getAssignee = (id?: number | null) => users.find((u) => u.id === id);
+  const getAssigneeInitials = (id?: number | null) => {
+    const user = getAssignee(id);
+    if (!user) return "–";
+    const source = (user.firstName && `${user.firstName} ${user.lastName || ""}`.trim()) || user.username || "";
+    const parts = source.split(" ").filter(Boolean);
+    if (parts.length === 0) return "–";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
   };
 
   const renderKanbanView = () => {
@@ -638,8 +645,11 @@ export default function TasksPage() {
                   
                   <div className="col-span-1 flex items-center justify-center">
                     {task.assignedToId ? (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                        A
+                      <div
+                        className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary"
+                        title={getAssignee(task.assignedToId)?.username || "Assigned user"}
+                      >
+                        {getAssigneeInitials(task.assignedToId)}
                       </div>
                     ) : (
                       <span className="text-muted-foreground text-xs">-</span>
@@ -696,7 +706,7 @@ export default function TasksPage() {
                           <p className="text-xs font-medium text-muted-foreground mb-1">ASSIGNED TO</p>
                           <div className="flex items-center gap-2 text-sm">
                             <User className="w-4 h-4 text-muted-foreground" />
-                            <span>User #{task.assignedToId}</span>
+                            <span>{getAssignee(task.assignedToId)?.username || `User #${task.assignedToId}`}</span>
                           </div>
                         </div>
                       )}
@@ -790,7 +800,7 @@ export default function TasksPage() {
                     {task.assignedToId && (
                       <div className="flex items-center gap-1">
                         <User className="w-4 h-4" />
-                        Assigned
+                      {getAssignee(task.assignedToId)?.username || "Assigned"}
                       </div>
                     )}
                   </div>
@@ -929,13 +939,22 @@ export default function TasksPage() {
           </Select>
 
           <Button
-            variant={showCompleted ? "outline" : "secondary"}
+            variant={hideCompleted ? "secondary" : "outline"}
             size="default"
-            onClick={() => setShowCompleted(!showCompleted)}
+            onClick={() => setHideCompleted((v) => !v)}
             data-testid="button-toggle-completed"
             className="gap-2"
           >
-            {showCompleted ? "✅ Hide Completed" : "👁️ Show Completed"}
+            {hideCompleted ? "✅ Hide Completed" : "👁️ Show Completed"}
+          </Button>
+          <Button
+            variant={hideFuture ? "secondary" : "outline"}
+            size="default"
+            onClick={() => setHideFuture((v) => !v)}
+            data-testid="button-toggle-future"
+            className="gap-2"
+          >
+            {hideFuture ? "⏳ Hide Future Todos" : "🗓️ Show Future Todos"}
           </Button>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -1059,219 +1078,226 @@ export default function TasksPage() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="assignedToId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assign To</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-task-assignee">
-                              <SelectValue placeholder="Select team member" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {users.map((user) => (
-                              <SelectItem key={user.id} value={user.id.toString()}>
-                                {user.username}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Related Client</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-task-client">
-                              <SelectValue placeholder="Select client (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="spaceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Space (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-task-space">
-                              <SelectValue placeholder="Select space (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {spaces.map((space) => (
-                              <SelectItem key={space.id} value={space.id}>
-                                {space.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Recurring Task Settings */}
-                  <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-                    <FormField
-                      control={form.control}
-                      name="isRecurring"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <input
-                              type="checkbox"
-                              checked={field.value || false}
-                              onChange={(e) => field.onChange(e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 mt-1"
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel className="cursor-pointer">
-                              🔄 Make this a recurring task
-                            </FormLabel>
-                            <p className="text-xs text-muted-foreground">
-                              Automatically create a new task when this one is completed
-                            </p>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {form.watch("isRecurring") && (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="recurringPattern"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Repeat Pattern</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select pattern" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="daily">Daily</SelectItem>
-                                    <SelectItem value="weekly">Weekly</SelectItem>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                    <SelectItem value="yearly">Yearly</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="recurringInterval"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Every</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    placeholder="1"
-                                  />
-                                </FormControl>
-                                <p className="text-xs text-muted-foreground">
-                                  Repeat every X {form.watch("recurringPattern") || "period"}(s)
-                                </p>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
+                  <Accordion type="single" collapsible defaultValue="links">
+                    <AccordionItem value="links">
+                      <AccordionTrigger className="text-sm font-semibold">Links & recurrence</AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-2">
                         <FormField
                           control={form.control}
-                          name="scheduleFrom"
-                          render={({ field }) => (
-                            <FormItem className="space-y-3">
-                              <FormLabel>Schedule Next Task From</FormLabel>
-                              <FormControl>
-                                <div className="flex flex-col gap-2">
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="radio"
-                                      value="due_date"
-                                      checked={field.value === "due_date"}
-                                      onChange={() => field.onChange("due_date")}
-                                      className="h-4 w-4"
-                                    />
-                                    <div>
-                                      <div className="font-medium text-sm">📅 Due Date</div>
-                                      <div className="text-xs text-muted-foreground">Next task uses same schedule (e.g., every Monday)</div>
-                                    </div>
-                                  </label>
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="radio"
-                                      value="completion_date"
-                                      checked={field.value === "completion_date"}
-                                      onChange={() => field.onChange("completion_date")}
-                                      className="h-4 w-4"
-                                    />
-                                    <div>
-                                      <div className="font-medium text-sm">✅ Completion Date</div>
-                                      <div className="text-xs text-muted-foreground">Next task starts from when you complete this one</div>
-                                    </div>
-                                  </label>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="recurringEndDate"
+                          name="assignedToId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>End Date (Optional)</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <p className="text-xs text-muted-foreground">
-                                Leave empty to repeat indefinitely
-                              </p>
+                              <FormLabel>Assign To</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-task-assignee">
+                                    <SelectValue placeholder="Select team member" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {users.map((user) => (
+                                    <SelectItem key={user.id} value={user.id.toString()}>
+                                      {user.username}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </>
-                    )}
-                  </div>
+
+                        <FormField
+                          control={form.control}
+                          name="clientId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Related Client</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-task-client">
+                                    <SelectValue placeholder="Select client (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {clients.map((client) => (
+                                    <SelectItem key={client.id} value={client.id}>
+                                      {client.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="spaceId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Space (Optional)</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-task-space">
+                                    <SelectValue placeholder="Select space (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {spaces.map((space) => (
+                                    <SelectItem key={space.id} value={space.id}>
+                                      {space.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Recurring Task Settings */}
+                        <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                          <FormField
+                            control={form.control}
+                            name="isRecurring"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <input
+                                    type="checkbox"
+                                    checked={field.value || false}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 mt-1"
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="cursor-pointer">
+                                    🔄 Make this a recurring task
+                                  </FormLabel>
+                                  <p className="text-xs text-muted-foreground">
+                                    Automatically create a new task when this one is completed
+                                  </p>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          {form.watch("isRecurring") && (
+                            <>
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name="recurringPattern"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Repeat Pattern</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select pattern" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="daily">Daily</SelectItem>
+                                          <SelectItem value="weekly">Weekly</SelectItem>
+                                          <SelectItem value="monthly">Monthly</SelectItem>
+                                          <SelectItem value="yearly">Yearly</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="recurringInterval"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Every</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          {...field}
+                                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                          placeholder="1"
+                                        />
+                                      </FormControl>
+                                      <p className="text-xs text-muted-foreground">
+                                        Repeat every X {form.watch("recurringPattern") || "period"}(s)
+                                      </p>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              <FormField
+                                control={form.control}
+                                name="scheduleFrom"
+                                render={({ field }) => (
+                                  <FormItem className="space-y-3">
+                                    <FormLabel>Schedule Next Task From</FormLabel>
+                                    <FormControl>
+                                      <div className="flex flex-col gap-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            value="due_date"
+                                            checked={field.value === "due_date"}
+                                            onChange={() => field.onChange("due_date")}
+                                            className="h-4 w-4"
+                                          />
+                                          <div>
+                                            <div className="font-medium text-sm">📅 Due Date</div>
+                                            <div className="text-xs text-muted-foreground">Next task uses same schedule (e.g., every Monday)</div>
+                                          </div>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            value="completion_date"
+                                            checked={field.value === "completion_date"}
+                                            onChange={() => field.onChange("completion_date")}
+                                            className="h-4 w-4"
+                                          />
+                                          <div>
+                                            <div className="font-medium text-sm">✅ Completion Date</div>
+                                            <div className="text-xs text-muted-foreground">Next task starts from when you complete this one</div>
+                                          </div>
+                                        </label>
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="recurringEndDate"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>End Date (Optional)</FormLabel>
+                                    <FormControl>
+                                      <Input type="date" {...field} />
+                                    </FormControl>
+                                    <p className="text-xs text-muted-foreground">
+                                      Leave empty to repeat indefinitely
+                                    </p>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </>
+                          )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
 
                   <div className="flex justify-end gap-3 pt-4">
                     <Button
@@ -1392,178 +1418,226 @@ export default function TasksPage() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="assignedToId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assign To</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select team member" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {users.map((user) => (
-                              <SelectItem key={user.id} value={user.id.toString()}>
-                                {user.username}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Related Client</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select client (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="spaceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Space (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select space (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {spaces.map((space) => (
-                              <SelectItem key={space.id} value={space.id}>
-                                {space.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Recurring Task Settings */}
-                  <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-                    <FormField
-                      control={form.control}
-                      name="isRecurring"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <input
-                              type="checkbox"
-                              checked={field.value || false}
-                              onChange={(e) => field.onChange(e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 mt-1"
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel className="cursor-pointer">
-                              🔄 Make this a recurring task
-                            </FormLabel>
-                            <p className="text-xs text-muted-foreground">
-                              Automatically create a new task when this one is completed
-                            </p>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {form.watch("isRecurring") && (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="recurringPattern"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Repeat Pattern</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select pattern" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="daily">Daily</SelectItem>
-                                    <SelectItem value="weekly">Weekly</SelectItem>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                    <SelectItem value="yearly">Yearly</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="recurringInterval"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Every</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    placeholder="1"
-                                  />
-                                </FormControl>
-                                <p className="text-xs text-muted-foreground">
-                                  Repeat every X {form.watch("recurringPattern") || "period"}(s)
-                                </p>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
+                  <Accordion type="single" collapsible defaultValue="links-edit">
+                    <AccordionItem value="links-edit">
+                      <AccordionTrigger className="text-sm font-semibold">Links & recurrence</AccordionTrigger>
+                      <AccordionContent className="space-y-4 pt-2">
                         <FormField
                           control={form.control}
-                          name="recurringEndDate"
+                          name="assignedToId"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>End Date (Optional)</FormLabel>
-                              <FormControl>
-                                <Input type="date" {...field} />
-                              </FormControl>
-                              <p className="text-xs text-muted-foreground">
-                                Leave empty to repeat indefinitely
-                              </p>
+                              <FormLabel>Assign To</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select team member" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {users.map((user) => (
+                                    <SelectItem key={user.id} value={user.id.toString()}>
+                                      {user.username}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </>
-                    )}
-                  </div>
+
+                        <FormField
+                          control={form.control}
+                          name="clientId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Related Client</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select client (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {clients.map((client) => (
+                                    <SelectItem key={client.id} value={client.id}>
+                                      {client.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="spaceId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Space (Optional)</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select space (optional)" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {spaces.map((space) => (
+                                    <SelectItem key={space.id} value={space.id}>
+                                      {space.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Recurring Task Settings */}
+                        <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                          <FormField
+                            control={form.control}
+                            name="isRecurring"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <input
+                                    type="checkbox"
+                                    checked={field.value || false}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 mt-1"
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="cursor-pointer">
+                                    🔄 Make this a recurring task
+                                  </FormLabel>
+                                  <p className="text-xs text-muted-foreground">
+                                    Automatically create a new task when this one is completed
+                                  </p>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+
+                          {form.watch("isRecurring") && (
+                            <>
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name="recurringPattern"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Repeat Pattern</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Select pattern" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          <SelectItem value="daily">Daily</SelectItem>
+                                          <SelectItem value="weekly">Weekly</SelectItem>
+                                          <SelectItem value="monthly">Monthly</SelectItem>
+                                          <SelectItem value="yearly">Yearly</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name="recurringInterval"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Every</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          {...field}
+                                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                          placeholder="1"
+                                        />
+                                      </FormControl>
+                                      <p className="text-xs text-muted-foreground">
+                                        Repeat every X {form.watch("recurringPattern") || "period"}(s)
+                                      </p>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              <FormField
+                                control={form.control}
+                                name="scheduleFrom"
+                                render={({ field }) => (
+                                  <FormItem className="space-y-3">
+                                    <FormLabel>Schedule Next Task From</FormLabel>
+                                    <FormControl>
+                                      <div className="flex flex-col gap-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            value="due_date"
+                                            checked={field.value === "due_date"}
+                                            onChange={() => field.onChange("due_date")}
+                                            className="h-4 w-4"
+                                          />
+                                          <div>
+                                            <div className="font-medium text-sm">📅 Due Date</div>
+                                            <div className="text-xs text-muted-foreground">Next task uses same schedule (e.g., every Monday)</div>
+                                          </div>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            value="completion_date"
+                                            checked={field.value === "completion_date"}
+                                            onChange={() => field.onChange("completion_date")}
+                                            className="h-4 w-4"
+                                          />
+                                          <div>
+                                            <div className="font-medium text-sm">✅ Completion Date</div>
+                                            <div className="text-xs text-muted-foreground">Next task starts from when you complete this one</div>
+                                          </div>
+                                        </label>
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name="recurringEndDate"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>End Date (Optional)</FormLabel>
+                                    <FormControl>
+                                      <Input type="date" {...field} />
+                                    </FormControl>
+                                    <p className="text-xs text-muted-foreground">
+                                      Leave empty to repeat indefinitely
+                                    </p>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </>
+                          )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
 
                   <div className="flex justify-end gap-3 pt-4">
                     <Button
