@@ -25,6 +25,7 @@ type ViewType = "day" | "week" | "month";
 // Form schema extending the insert schema
 const formSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
+  visitId: z.string().optional().nullable(),
   platforms: z.array(z.string()).min(1, "Select at least one platform"),
   title: z.string().optional(),
   caption: z.string().optional(),
@@ -72,6 +73,13 @@ export default function Content() {
     onSuccess: (data) => {
       console.log("👥 Loaded clients:", data?.length || 0);
     },
+  });
+
+  // Visits list for linking content to a visit batch (optional)
+  const watchedClientId = form.watch("clientId");
+  const { data: visitsForClient = [] } = useQuery<any[]>({
+    queryKey: [watchedClientId ? `/api/visits?clientId=${watchedClientId}` : ""],
+    enabled: !!watchedClientId,
   });
 
   const createPostMutation = useMutation({
@@ -218,6 +226,7 @@ export default function Content() {
     
     const postData: InsertContentPost = {
       clientId: values.clientId,
+      visitId: values.visitId || null,
       platforms: values.platforms,
       title: values.title || "Untitled Post",
       content: values.caption || "",
@@ -242,6 +251,7 @@ export default function Content() {
     // Populate form with post data
     form.reset({
       clientId: post.clientId,
+      visitId: (post as any).visitId || null,
       platforms: Array.isArray(post.platforms) ? post.platforms : [],
       title: post.title || "",
       caption: post.content || "",
@@ -484,6 +494,36 @@ export default function Content() {
 
                     <FormField
                       control={form.control}
+                      name="visitId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Link to Visit (optional)</FormLabel>
+                          <Select
+                            onValueChange={(v) => field.onChange(v === "none" ? null : v)}
+                            value={field.value || "none"}
+                            disabled={!watchedClientId}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={watchedClientId ? "Select visit" : "Select client first"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">No visit</SelectItem>
+                              {visitsForClient.map((v: any) => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  {new Date(v.scheduledStart).toLocaleString()} • {v.creatorName || "Creator"} • {v.status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="platforms"
                       render={() => (
                         <FormItem>
@@ -659,12 +699,13 @@ export default function Content() {
         {/* View Switcher & Navigation */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* View Switcher */}
-          <div className="flex items-center gap-2 border rounded-lg p-1">
+          <div className="flex items-center gap-2 border rounded-lg p-1 shrink-0">
             <Button
               size="sm"
               variant={view === "day" ? "default" : "ghost"}
               onClick={() => setView("day")}
-              className="h-8"
+              className="h-8 min-h-[44px] md:min-h-0 touch-manipulation"
+              type="button"
             >
               Day
             </Button>
@@ -672,7 +713,8 @@ export default function Content() {
               size="sm"
               variant={view === "week" ? "default" : "ghost"}
               onClick={() => setView("week")}
-              className="h-8"
+              className="h-8 min-h-[44px] md:min-h-0 touch-manipulation"
+              type="button"
             >
               Week
             </Button>
@@ -680,7 +722,8 @@ export default function Content() {
               size="sm"
               variant={view === "month" ? "default" : "ghost"}
               onClick={() => setView("month")}
-              className="h-8"
+              className="h-8 min-h-[44px] md:min-h-0 touch-manipulation"
+              type="button"
             >
               Month
             </Button>
@@ -726,10 +769,10 @@ export default function Content() {
         </div>
 
         {/* Calendar Grid */}
-        <div className={`grid gap-4 ${
+        <div className={`grid gap-2 md:gap-4 ${
           view === "day" ? "grid-cols-1" : 
           view === "week" ? "grid-cols-1 md:grid-cols-7" : 
-          "grid-cols-7"
+          "grid-cols-1 sm:grid-cols-2 md:grid-cols-7"
         }`}>
           {viewDays.map((day) => {
             const dayPosts = getPostsForDay(day);
@@ -764,10 +807,21 @@ export default function Content() {
                   {dayPosts.map((post) => (
                     <Card 
                       key={post.id} 
-                      className={`hover-elevate border-0 bg-card/50 cursor-move ${draggedPost?.id === post.id ? 'opacity-50' : ''}`} 
+                      className={`hover-elevate border-0 bg-card/50 cursor-move touch-manipulation ${draggedPost?.id === post.id ? 'opacity-50' : ''}`} 
                       data-testid={`card-post-${post.id}`}
                       draggable
                       onDragStart={() => handleDragStart(post)}
+                      onTouchStart={(e) => {
+                        // On mobile, allow long press to start drag
+                        const touch = e.touches[0];
+                        const element = e.currentTarget;
+                        const timer = setTimeout(() => {
+                          handleDragStart(post);
+                          element.style.opacity = '0.5';
+                        }, 500);
+                        element.addEventListener('touchend', () => clearTimeout(timer), { once: true });
+                        element.addEventListener('touchmove', () => clearTimeout(timer), { once: true });
+                      }}
                     >
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-start justify-between gap-1">
@@ -818,42 +872,59 @@ export default function Content() {
                           </p>
                         )}
 
+                        {(post as any).visitId && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Visit linked
+                          </p>
+                        )}
+
                         {/* Action buttons */}
-                        <div className="flex gap-1 pt-1">
+                        <div className="flex gap-1 pt-1 flex-wrap">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-6 text-xs flex items-center gap-1"
+                            className="h-7 md:h-6 text-xs flex items-center gap-1 min-h-[32px] md:min-h-0 touch-manipulation"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEditPost(post);
                             }}
                             title="Edit post"
+                            type="button"
                           >
                             <Edit className="w-3 h-3" />
-                            Edit
+                            <span className="hidden sm:inline">Edit</span>
                           </Button>
 
                           {post.approvalStatus === "pending" && (
                             <>
                               <Button
                                 size="sm"
-                                className="flex-1 h-6 text-xs"
-                                onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "approved" })}
+                                className="flex-1 h-7 md:h-6 text-xs min-h-[32px] md:min-h-0 touch-manipulation"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateApprovalMutation.mutate({ id: post.id, status: "approved" });
+                                }}
                                 data-testid={`button-approve-${post.id}`}
                                 title="Approve post"
+                                type="button"
                               >
                                 <Check className="w-3 h-3" />
+                                <span className="hidden sm:inline ml-1">Approve</span>
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                className="flex-1 h-6 text-xs"
-                                onClick={() => updateApprovalMutation.mutate({ id: post.id, status: "rejected" })}
+                                className="flex-1 h-7 md:h-6 text-xs min-h-[32px] md:min-h-0 touch-manipulation"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateApprovalMutation.mutate({ id: post.id, status: "rejected" });
+                                }}
                                 data-testid={`button-reject-${post.id}`}
                                 title="Reject post"
+                                type="button"
                               >
                                 <X className="w-3 h-3" />
+                                <span className="hidden sm:inline ml-1">Reject</span>
                               </Button>
                             </>
                           )}

@@ -14,6 +14,8 @@ export const sidebarPermissionList = [
   { key: "leads", label: "Leads", category: "Operations" },
   { key: "campaigns", label: "Campaigns", category: "Operations" },
   { key: "content", label: "Content Calendar", category: "Operations" },
+  { key: "visits", label: "Visits", category: "Operations" },
+  { key: "creators", label: "Creators", category: "Operations" },
   { key: "tasks", label: "Tasks", category: "Operations" },
   { key: "onboarding", label: "Onboarding", category: "Operations" },
   { key: "tickets", label: "Support Tickets", category: "Operations" },
@@ -30,3 +32,5 @@ export const sidebarPermissionList = [
   { key: "aiManager", label: "AI Business Manager", category: "Business" },
   { key: "pushNotifications", label: "Push Notifications", category: "Business" },
 ];
+
+export type SidebarPermissionKey = (typeof sidebarPermissionList)[number]["key"];

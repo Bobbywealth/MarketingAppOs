@@ -2111,12 +2111,15 @@ export default function LeadsPage() {
               </Select>
 
               {/* View Mode Toggle */}
-              <div className="flex border rounded-lg overflow-hidden ml-auto">
+              <div className="flex border rounded-lg overflow-hidden ml-auto shrink-0">
                 <Button
                   variant={viewMode === "card" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("card")}
-                  className="rounded-none"
+                  className="rounded-none min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
+                  title="Card view"
+                  aria-label="Switch to card view"
+                  type="button"
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </Button>
@@ -2124,7 +2127,10 @@ export default function LeadsPage() {
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
-                  className="rounded-none"
+                  className="rounded-none min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
+                  title="List view"
+                  aria-label="Switch to list view"
+                  type="button"
                 >
                   <List className="w-4 h-4" />
                 </Button>
@@ -2132,7 +2138,10 @@ export default function LeadsPage() {
                   variant={viewMode === "kanban" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("kanban")}
-                  className="rounded-none"
+                  className="rounded-none min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
+                  title="Kanban view"
+                  aria-label="Switch to kanban view"
+                  type="button"
                 >
                   <Columns3 className="w-4 h-4" />
                 </Button>

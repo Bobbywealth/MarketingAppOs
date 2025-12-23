@@ -14,3 +14,8 @@ vite.config.ts.*
 
 # Uploaded files
 uploads/
+
+# Credentials / exports (never commit)
+client-credentials.txt
+client-credentials*.txt
+!client-credentials.example.txt

@@ -706,6 +706,12 @@
       min-height: 44px;
       min-width: 44px;
     }
+    
+    /* Better touch handling */
+    .touch-manipulation {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    }
   }
 
   /* Tablet optimizations */

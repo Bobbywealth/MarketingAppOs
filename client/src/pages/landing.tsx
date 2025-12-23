@@ -23,9 +23,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { HeaderLogo, FooterLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
 import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 import instagramLogo from "@assets/instagram-logo.png";
@@ -34,6 +42,8 @@ import linkedinLogo from "@assets/linkedin-logo.png";
 import googleAdsLogo from "@assets/google-ads-logo.png";
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   useDocumentMeta(
     "Marketing Team App | Your Remote Digital Marketing Team",
     "Stop wasting money on marketing that doesn't work. Marketing Team App is your remote digital marketing team for strategy, content, campaigns and growth."
@@ -333,6 +343,13 @@ export default function LandingPage() {
             <Link href="/blog" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-blog">
               Blog
             </Link>
+            <Link
+              href="/signup/creator"
+              className="text-base font-medium text-foreground hover:text-primary transition-colors"
+              data-testid="nav-creator-signup"
+            >
+              Become a Creator
+            </Link>
             <a href="#about" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-about">
               About Us
             </a>
@@ -342,6 +359,130 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Mobile Menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[85vw] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4 mt-6">
+                  <SheetClose asChild>
+                    <Link href="/" className="text-base font-medium text-foreground hover:text-primary transition-colors py-2">
+                      Home
+                    </Link>
+                  </SheetClose>
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-2">Services</div>
+                    <SheetClose asChild>
+                      <a href="#digital-marketing" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+                          <TrendingUp className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-foreground mb-0.5">Digital Marketing</div>
+                          <div className="text-xs text-muted-foreground">Social media, ads & campaigns</div>
+                        </div>
+                      </a>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <a href="#content-creation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shrink-0">
+                          <Pencil className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-foreground mb-0.5">Content Creation</div>
+                          <div className="text-xs text-muted-foreground">Copy, graphics & videos</div>
+                        </div>
+                      </a>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <a href="#web-design" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0">
+                          <Globe className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-foreground mb-0.5">Web & App Development</div>
+                          <div className="text-xs text-muted-foreground">Websites, apps & CRMs</div>
+                        </div>
+                      </a>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <a href="#ai-automation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0">
+                          <Bot className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-foreground mb-0.5 flex items-center gap-2">
+                            AI Automation
+                            <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">New</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">Chatbots & workflow automation</div>
+                        </div>
+                      </a>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <a href="#seo" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0">
+                          <Target className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-foreground mb-0.5">SEO & Analytics</div>
+                          <div className="text-xs text-muted-foreground">Search optimization & tracking</div>
+                        </div>
+                      </a>
+                    </SheetClose>
+                  </div>
+                  
+                  <div className="border-t pt-4 space-y-2">
+                    <SheetClose asChild>
+                      <Link href="/blog" className="block text-base font-medium text-foreground hover:text-primary transition-colors py-2">
+                        Blog
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Link href="/signup/creator" className="block text-base font-medium text-foreground hover:text-primary transition-colors py-2">
+                        Become a Creator
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <a href="#about" className="block text-base font-medium text-foreground hover:text-primary transition-colors py-2">
+                        About Us
+                      </a>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Link href="/contact" className="block text-base font-medium text-foreground hover:text-primary transition-colors py-2">
+                        Contact Us
+                      </Link>
+                    </SheetClose>
+                  </div>
+                  
+                  <div className="border-t pt-4 space-y-2">
+                    <SheetClose asChild>
+                      <Link href="/login" className="block">
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-login-mobile">
+                          Login
+                        </Button>
+                      </Link>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Link href="/signup" className="block">
+                        <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white" data-testid="button-signup-mobile">
+                          Start Free Trial
+                        </Button>
+                      </Link>
+                    </SheetClose>
+                  </div>
+                </nav>
+              </SheetContent>
+            </Sheet>
+            
+            {/* Desktop buttons */}
             <Link href="/login">
               <Button className="hidden md:inline-flex bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-login-header">Login</Button>
             </Link>
@@ -397,6 +538,15 @@ export default function LandingPage() {
                   >
                     📞 Book Strategy Call
                   </Button>
+                </Link>
+              </div>
+              <div className="text-center lg:text-left pt-2 px-2 sm:px-6 lg:px-0">
+                <Link
+                  href="/signup/creator"
+                  className="text-sm text-blue-100/90 hover:text-white underline underline-offset-4"
+                  data-testid="link-creator-apply-hero"
+                >
+                  Are you a creator? Apply here →
                 </Link>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-blue-100 pt-4 px-4">

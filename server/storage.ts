@@ -793,15 +793,51 @@ export class DatabaseStorage implements IStorage {
 
   // Content post operations
   async getContentPosts(): Promise<ContentPost[]> {
-    return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
+    try {
+      return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
+    } catch (error: any) {
+      // If visit_id column doesn't exist, try to add it and retry
+      if (error?.code === '42703' && error?.message?.includes('visit_id')) {
+        console.log('⚠️ visit_id column missing, attempting to add it...');
+        try {
+          await pool.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS visit_id VARCHAR;`).catch(() => {});
+          // Retry the query
+          return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
+        } catch (retryError) {
+          console.error('❌ Failed to add visit_id column:', retryError);
+          throw error; // Throw original error
+        }
+      }
+      throw error;
+    }
   }
 
   async getContentPostsByClient(clientId: string): Promise<ContentPost[]> {
-    return await db
-      .select()
-      .from(contentPosts)
-      .where(eq(contentPosts.clientId, clientId))
-      .orderBy(desc(contentPosts.createdAt));
+    try {
+      return await db
+        .select()
+        .from(contentPosts)
+        .where(eq(contentPosts.clientId, clientId))
+        .orderBy(desc(contentPosts.createdAt));
+    } catch (error: any) {
+      // If visit_id column doesn't exist, try to add it and retry
+      if (error?.code === '42703' && error?.message?.includes('visit_id')) {
+        console.log('⚠️ visit_id column missing, attempting to add it...');
+        try {
+          await pool.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS visit_id VARCHAR;`).catch(() => {});
+          // Retry the query
+          return await db
+            .select()
+            .from(contentPosts)
+            .where(eq(contentPosts.clientId, clientId))
+            .orderBy(desc(contentPosts.createdAt));
+        } catch (retryError) {
+          console.error('❌ Failed to add visit_id column:', retryError);
+          throw error; // Throw original error
+        }
+      }
+      throw error;
+    }
   }
 
   async createContentPost(postData: InsertContentPost): Promise<ContentPost> {

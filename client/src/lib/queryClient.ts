@@ -80,8 +80,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       // Smart caching - data is considered fresh for 2 minutes
       staleTime: 2 * 60 * 1000,
-      // Keep inactive queries in cache for 5 minutes
-      cacheTime: 5 * 60 * 1000,
+      // Keep inactive queries in cache for 5 minutes (TanStack v5 uses gcTime)
+      gcTime: 5 * 60 * 1000,
       // Auto-refresh when you switch back to the tab (for real-time updates)
       refetchOnWindowFocus: true,
       // Don't refetch on component mount if data is fresh

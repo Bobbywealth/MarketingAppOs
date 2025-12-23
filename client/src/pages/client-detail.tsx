@@ -8,6 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ArrowLeft,
   Phone,
@@ -34,6 +42,8 @@ export default function ClientDetail() {
   const [, params] = useRoute("/clients/:id");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isSalesAgent = (user as any)?.role === "sales_agent";
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -73,6 +83,44 @@ export default function ClientDetail() {
   const { data: campaigns = [] } = useQuery<any[]>({
     queryKey: ["/api/campaigns"],
     select: (data) => data.filter((campaign: any) => campaign.clientId === clientId),
+  });
+
+  // Fetch creator assignments for this client (internal only)
+  const { data: creatorAssignments = [] } = useQuery<any[]>({
+    queryKey: [`/api/clients/${clientId}/creators`],
+    enabled: !!clientId && !isSalesAgent,
+  });
+
+  // Fetch visits for this client (internal only)
+  const { data: visits = [] } = useQuery<any[]>({
+    queryKey: [clientId ? `/api/visits?clientId=${clientId}` : ""],
+    enabled: !!clientId && !isSalesAgent,
+  });
+
+  const { data: allCreators = [] } = useQuery<any[]>({
+    queryKey: ["/api/creators"],
+    enabled: !!clientId && !isSalesAgent,
+  });
+
+  const assignCreatorMutation = useMutation({
+    mutationFn: async ({ creatorId, role }: { creatorId: string; role: "primary" | "backup" }) => {
+      const res = await fetch(`/api/clients/${clientId}/creators`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ creatorId, role }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to assign creator");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/clients/${clientId}/creators`] });
+      toast({ title: "Creator assignment updated" });
+    },
+    onError: (e: any) => toast({ title: "Assignment failed", description: e?.message, variant: "destructive" }),
   });
 
   if (clientLoading) {
@@ -135,6 +183,16 @@ export default function ClientDetail() {
 
   // Get primary social platform
   const primarySocial = socialStats.find((s: any) => s.platform === "instagram") || socialStats[0];
+
+  const nextVisit = visits
+    .filter((v: any) => new Date(v.scheduledStart) > new Date() && v.status !== "cancelled")
+    .sort((a: any, b: any) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime())[0];
+  const lastVisit = visits
+    .filter((v: any) => new Date(v.scheduledStart) <= new Date())
+    .sort((a: any, b: any) => new Date(b.scheduledStart).getTime() - new Date(a.scheduledStart).getTime())[0];
+
+  const primaryCreator = creatorAssignments.find((a: any) => a.role === "primary");
+  const backupCreator = creatorAssignments.find((a: any) => a.role === "backup");
 
   const getPlatformIcon = (platform: string) => {
     const icons: Record<string, any> = {
@@ -288,9 +346,40 @@ export default function ClientDetail() {
           </Card>
         </div>
 
+        {/* Fulfillment Snapshot (not visible to sales agents) */}
+        {!isSalesAgent && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Fulfillment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <div className="text-sm text-muted-foreground">Creators</div>
+                <div className="text-sm">Primary: {primaryCreator?.creatorName || "—"}</div>
+                <div className="text-sm">Backup: {backupCreator?.creatorName || "—"}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Next Visit</div>
+                <div className="text-sm">
+                  {nextVisit ? `${new Date(nextVisit.scheduledStart).toLocaleString()} • ${nextVisit.creatorName || "Creator"}` : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Last Visit</div>
+                <div className="text-sm">
+                  {lastVisit ? `${new Date(lastVisit.scheduledStart).toLocaleString()} • ${lastVisit.status}` : "—"}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className={`grid w-full ${isSalesAgent ? "grid-cols-5" : "grid-cols-6"}`}>
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -311,6 +400,12 @@ export default function ClientDetail() {
               <CreditCard className="w-4 h-4" />
               Billing
             </TabsTrigger>
+            {!isSalesAgent && (
+              <TabsTrigger value="visits" className="gap-2">
+                <Calendar className="w-4 h-4" />
+                Visits
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Overview Tab */}
@@ -605,6 +700,108 @@ export default function ClientDetail() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Visits Tab (not visible to sales agents) */}
+          {!isSalesAgent && (
+            <TabsContent value="visits">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Visits</CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => setLocation(`/visits?clientId=${clientId}`)}>
+                    View in Visits
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Primary Creator</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="text-sm text-muted-foreground">Current: {primaryCreator?.creatorName || "—"}</div>
+                      {["admin", "manager"].includes((user as any)?.role) && (
+                        <Select
+                          value={primaryCreator?.creatorId || "none"}
+                          onValueChange={(v) => v !== "none" && assignCreatorMutation.mutate({ creatorId: v, role: "primary" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Assign primary" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Unassigned</SelectItem>
+                            {allCreators
+                              .filter((c: any) => c.status !== "inactive")
+                              .map((c: any) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.fullName} ({c.status})
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Backup Creator</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="text-sm text-muted-foreground">Current: {backupCreator?.creatorName || "—"}</div>
+                      {["admin", "manager"].includes((user as any)?.role) && (
+                        <Select
+                          value={backupCreator?.creatorId || "none"}
+                          onValueChange={(v) => v !== "none" && assignCreatorMutation.mutate({ creatorId: v, role: "backup" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Assign backup" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Unassigned</SelectItem>
+                            {allCreators
+                              .filter((c: any) => c.status !== "inactive")
+                              .map((c: any) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.fullName} ({c.status})
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {visits.length > 0 ? (
+                  visits
+                    .sort((a: any, b: any) => new Date(b.scheduledStart).getTime() - new Date(a.scheduledStart).getTime())
+                    .slice(0, 25)
+                    .map((v: any) => (
+                      <div key={v.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                        <div>
+                          <p className="font-medium">
+                            {new Date(v.scheduledStart).toLocaleString()} • {v.creatorName || "Creator"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Status: {v.status} • Upload: {v.uploadReceived ? "received" : v.uploadOverdue ? "overdue" : "missing"} • Approved: {v.approved ? "yes" : "no"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={v.uploadOverdue ? "destructive" : "secondary"}>{v.uploadOverdue ? "Upload Overdue" : v.status}</Badge>
+                          <Button variant="outline" size="sm" onClick={() => setLocation(`/visits/${v.id}`)}>
+                            Open
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No visits for this client</p>
+                )}
+              </CardContent>
+            </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

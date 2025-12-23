@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const isOps = ["admin", "manager", "creator_manager"].includes((user as any)?.role);
   
   const { data: stats, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -31,6 +32,48 @@ export default function Dashboard() {
     retry: false,
     meta: { returnNull: true }, // Don't throw error if Stripe not configured
   });
+
+  // Ops widgets (Visits)
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday start
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const { data: visitsThisWeek = [] } = useQuery<any[]>({
+    queryKey: [
+      isOps ? `/api/visits?from=${encodeURIComponent(startOfWeek.toISOString())}&to=${encodeURIComponent(endOfWeek.toISOString())}` : "",
+    ],
+    enabled: isOps,
+  });
+
+  const { data: overdueUploads = [] } = useQuery<any[]>({
+    queryKey: [isOps ? "/api/visits?uploadOverdue=true" : ""],
+    enabled: isOps,
+  });
+
+  const { data: visitsCompletedToday = [] } = useQuery<any[]>({
+    queryKey: [
+      isOps
+        ? `/api/visits?status=completed&from=${encodeURIComponent(startOfToday.toISOString())}&to=${encodeURIComponent(endOfToday.toISOString())}`
+        : "",
+    ],
+    enabled: isOps,
+  });
+
+  const lowQualityCreators = (visitsThisWeek || [])
+    .filter((v: any) => v.qualityScore != null && Number(v.qualityScore) <= 3)
+    .reduce((acc: Record<string, { creatorName: string; count: number }>, v: any) => {
+      const key = v.creatorId || v.creatorName || "unknown";
+      const current = acc[key] || { creatorName: v.creatorName || "Unknown", count: 0 };
+      current.count += 1;
+      acc[key] = current;
+      return acc;
+    }, {});
+  const lowQualityCount = Object.values(lowQualityCreators).length;
 
   // Use Stripe revenue if available, otherwise fall back to internal invoices
   const stripeRevenue = stripeData?.totalRevenue || 0;
@@ -246,6 +289,48 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Ops Control Widgets */}
+        {isOps && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/visits")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Visits scheduled this week</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{visitsThisWeek.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Tap to open Visits</p>
+              </CardContent>
+            </Card>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/visits?uploadOverdue=true")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Uploads overdue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-600">{overdueUploads.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Completed visits missing uploads</p>
+              </CardContent>
+            </Card>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/visits?status=completed")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Visits completed today</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{visitsCompletedToday.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Based on scheduled time</p>
+              </CardContent>
+            </Card>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/creators")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Creators w/ low quality</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{lowQualityCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">Score ≤ 3 this week</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Staff Personal Stats - Simple View */}
         {user?.role === 'staff' && stats && (

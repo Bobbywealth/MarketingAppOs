@@ -67,11 +67,21 @@ import AdminSocialOverview from "@/pages/admin-social-overview";
 import AdminSocialAccounts from "@/pages/admin-social-accounts";
 import AIBusinessManager from "@/pages/ai-business-manager";
 import Commissions from "@/pages/commissions";
+import Creators from "@/pages/creators";
+import CreatorNew from "@/pages/creator-new";
+import CreatorDetail from "@/pages/creator-detail";
+import CreatorEdit from "@/pages/creator-edit";
+import CreatorSignup from "@/pages/creator-signup";
+import CreatorSignupRedirect from "@/pages/creator-signup-redirect";
+import Visits from "@/pages/visits";
+import VisitNew from "@/pages/visit-new";
+import VisitDetail from "@/pages/visit-detail";
 
 function Router() {
   const { user } = useAuth();
   const isClient = user?.role === 'client';
   const isSalesAgent = user?.role === 'sales_agent';
+  const isInternal = !!user && !isClient && !isSalesAgent; // admin/manager/staff/creator_manager
   
   // Track page views for non-authenticated pages
   if (!user) {
@@ -84,6 +94,8 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/signup" component={SignupPage} />
+      <Route path="/creator-signup" component={CreatorSignupRedirect} />
+      <Route path="/signup/creator" component={CreatorSignup} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/blog" component={BlogPage} />
@@ -99,32 +111,39 @@ function Router() {
       {isClient && <ProtectedRoute path="/second-me" component={ClientSecondMeDashboard} />}
       {isClient && <ProtectedRoute path="/second-me/onboarding" component={SecondMeOnboarding} />}
       {/* Admin/Manager/Staff routes */}
-      {!isClient && !isSalesAgent && <ProtectedRoute path="/" component={Dashboard} />}
+      {isInternal && <ProtectedRoute path="/" component={Dashboard} />}
       {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
-      {!isClient && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
-      {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
+      {isInternal && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
+      {isInternal && <ProtectedRoute path="/campaigns" component={Campaigns} />}
       {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
       {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
-      {!isClient && <ProtectedRoute path="/content" component={Content} />}
-      {!isClient && <ProtectedRoute path="/invoices" component={Invoices} />}
-      {!isClient && <ProtectedRoute path="/commissions" component={Commissions} />}
-      {!isClient && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
-      {!isClient && <ProtectedRoute path="/discount-codes" component={DiscountCodes} />}
-      {!isClient && <ProtectedRoute path="/onboarding" component={Onboarding} />}
+      {isInternal && <ProtectedRoute path="/content" component={Content} />}
+      {isInternal && <ProtectedRoute path="/invoices" component={Invoices} />}
+      {isInternal && <ProtectedRoute path="/commissions" component={Commissions} />}
+      {isInternal && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
+      {isInternal && <ProtectedRoute path="/discount-codes" component={DiscountCodes} />}
+      {isInternal && <ProtectedRoute path="/onboarding" component={Onboarding} />}
       {!isClient && <ProtectedRoute path="/messages" component={Messages} />}
-      {!isClient && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}
-      {!isClient && <ProtectedRoute path="/analytics" component={Analytics} />}
-      {!isClient && <ProtectedRoute path="/team" component={Team} />}
+      {isInternal && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}
+      {isInternal && <ProtectedRoute path="/analytics" component={Analytics} />}
+      {isInternal && <ProtectedRoute path="/team" component={Team} />}
       {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
       {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
       {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
-      {!isClient && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
-      {!isClient && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
-      {!isClient && <ProtectedRoute path="/training" component={Training} />}
-      {!isClient && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
-      {!isClient && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
-      {!isClient && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
+      {isInternal && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
+      {isInternal && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
+      {isInternal && <ProtectedRoute path="/training" component={Training} />}
+      {isInternal && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
+      {isInternal && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
+      {isInternal && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
+      {isInternal && <ProtectedRoute path="/creators" component={Creators} />}
+      {isInternal && <ProtectedRoute path="/creators/new" component={CreatorNew} />}
+      {isInternal && <ProtectedRoute path="/creators/:id" component={CreatorDetail} />}
+      {isInternal && <ProtectedRoute path="/creators/:id/edit" component={CreatorEdit} />}
+      {isInternal && <ProtectedRoute path="/visits" component={Visits} />}
+      {isInternal && <ProtectedRoute path="/visits/new" component={VisitNew} />}
+      {isInternal && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
       {user?.role === "admin" && <ProtectedRoute path="/ai-manager" component={AIBusinessManager} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />

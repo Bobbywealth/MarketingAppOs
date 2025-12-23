@@ -6,6 +6,7 @@ export enum UserRole {
   MANAGER = "manager",
   STAFF = "staff",
   SALES_AGENT = "sales_agent",
+  CREATOR_MANAGER = "creator_manager",
   CLIENT = "client",
 }
 
@@ -64,6 +65,17 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canManageInvoices: false, // View only for their deals
     canManageTickets: true, // For client support
     canViewReports: false, // Can only view their own performance metrics
+    canManageSettings: false,
+  },
+  [UserRole.CREATOR_MANAGER]: {
+    canManageUsers: false,
+    canManageClients: true,
+    canManageCampaigns: false,
+    canManageLeads: false,
+    canManageContent: true,
+    canManageInvoices: false,
+    canManageTickets: false,
+    canViewReports: true,
     canManageSettings: false,
   },
   [UserRole.CLIENT]: {

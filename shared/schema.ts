@@ -61,8 +61,16 @@ export const clients = pgTable("clients", {
   website: varchar("website"),
   logoUrl: varchar("logo_url"),
   serviceTags: text("service_tags").array(), // social media, lead gen, design, etc.
-  status: varchar("status").notNull().default("active"), // active, inactive, onboarding
+  status: varchar("status").notNull().default("active"), // active, inactive, onboarding, at_risk, paused, cancelled
   assignedToId: integer("assigned_to_id").references(() => users.id),
+  // Sprint 1: sales + onboarding cleanup fields
+  packageId: varchar("package_id"), // FK to subscription_packages.id (kept as string for flexibility)
+  startDate: timestamp("start_date"),
+  salesAgentId: integer("sales_agent_id").references(() => users.id),
+  accountManagerId: integer("account_manager_id").references(() => users.id),
+  billingStatus: varchar("billing_status").default("current"), // current | overdue | paused | cancelled
+  lastPostDate: timestamp("last_post_date"),
+  lastVisitDate: timestamp("last_visit_date"),
   notes: text("notes"),
   socialLinks: jsonb("social_links"), // {twitter, facebook, instagram, linkedin}
   stripeCustomerId: varchar("stripe_customer_id"),
@@ -75,6 +83,14 @@ export const clients = pgTable("clients", {
 export const clientsRelations = relations(clients, ({ one, many }) => ({
   assignedTo: one(users, {
     fields: [clients.assignedToId],
+    references: [users.id],
+  }),
+  salesAgent: one(users, {
+    fields: [clients.salesAgentId],
+    references: [users.id],
+  }),
+  accountManager: one(users, {
+    fields: [clients.accountManagerId],
     references: [users.id],
   }),
   campaigns: many(campaigns),
@@ -260,7 +276,10 @@ export const leads = pgTable("leads", {
   phone: varchar("phone"),
   phoneType: varchar("phone_type").default("business"), // business, personal, mobile
   company: varchar("company").notNull(), // Required - company name
+  // Sprint 1: pipeline required fields
+  decisionMakerName: varchar("decision_maker_name"),
   location: varchar("location"), // City, State or full address
+  primaryLocationAddress: text("primary_location_address"), // Full address (preferred over location for Closed Won validation)
   website: varchar("website"),
   // Social media links
   instagram: varchar("instagram"),
@@ -273,6 +292,7 @@ export const leads = pgTable("leads", {
   industry: varchar("industry"), // Industry vertical (Technology, Healthcare, Finance, etc.)
   tags: jsonb("tags").$type<string[]>().default([]), // Flexible tags for custom organization
   stage: varchar("stage").notNull().default("prospect"), // prospect, qualified, proposal, closed_won, closed_lost
+  closeReason: varchar("close_reason"), // required when stage = closed_lost
   score: varchar("score").notNull().default("warm"), // hot, warm, cold
   value: integer("value"), // potential deal value in cents
   source: varchar("source").notNull().default("google_extract"), // google_extract, instagram, facebook, website_form, referral, tiktok, other
@@ -295,6 +315,9 @@ export const leads = pgTable("leads", {
   dealValue: decimal("deal_value", { precision: 10, scale: 2 }), // Potential deal value
   commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default("10.00"), // Commission percentage
   expectedCloseDate: timestamp("expected_close_date"), // Expected closing date
+  // Sprint 1: Closed Won required fields
+  packageId: varchar("package_id"), // Selected subscription package (string/FK)
+  expectedStartDate: timestamp("expected_start_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -358,10 +381,78 @@ export const leadAutomationsRelations = relations(leadAutomations, ({ one }) => 
   }),
 }));
 
+// ===== Creators + Visits (Fulfillment Model) =====
+
+export const creators = pgTable("creators", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fullName: text("full_name").notNull(),
+  phone: text("phone"),
+  email: text("email"),
+  homeCity: text("home_city"),
+  baseZip: text("base_zip"),
+  serviceZipCodes: text("service_zip_codes").array(),
+  serviceRadiusMiles: integer("service_radius_miles"),
+  ratePerVisitCents: integer("rate_per_visit_cents").notNull(),
+  availabilityNotes: text("availability_notes"),
+  status: varchar("status").notNull().default("active"), // active | backup | inactive
+  performanceScore: decimal("performance_score", { precision: 2, scale: 1 }).default("5.0"), // 1.0 - 5.0
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const clientCreators = pgTable("client_creators", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "cascade" }).notNull(),
+  creatorId: varchar("creator_id").references(() => creators.id, { onDelete: "cascade" }).notNull(),
+  role: varchar("role").notNull(), // primary | backup
+  active: boolean("active").notNull().default(true),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  unassignedAt: timestamp("unassigned_at"),
+});
+
+export const creatorVisits = pgTable("creator_visits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "cascade" }).notNull(),
+  creatorId: varchar("creator_id").references(() => creators.id, { onDelete: "cascade" }).notNull(),
+  scheduledStart: timestamp("scheduled_start").notNull(),
+  scheduledEnd: timestamp("scheduled_end").notNull(),
+  status: varchar("status").notNull().default("scheduled"), // scheduled | completed | missed | cancelled
+  completedAt: timestamp("completed_at"),
+  uploadReceived: boolean("upload_received").notNull().default(false),
+  uploadTimestamp: timestamp("upload_timestamp"),
+  uploadLinks: jsonb("upload_links").$type<string[]>().default([]),
+  uploadDueAt: timestamp("upload_due_at"),
+  uploadOverdue: boolean("upload_overdue").notNull().default(false),
+  approved: boolean("approved").notNull().default(false),
+  approvedBy: integer("approved_by").references(() => users.id),
+  qualityScore: integer("quality_score"), // 1-5
+  paymentReleased: boolean("payment_released").notNull().default(false),
+  paymentReleasedAt: timestamp("payment_released_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const creatorsRelations = relations(creators, ({ many }) => ({
+  assignments: many(clientCreators),
+  visits: many(creatorVisits),
+}));
+
+export const clientCreatorsRelations = relations(clientCreators, ({ one }) => ({
+  client: one(clients, { fields: [clientCreators.clientId], references: [clients.id] }),
+  creator: one(creators, { fields: [clientCreators.creatorId], references: [creators.id] }),
+}));
+
+export const creatorVisitsRelations = relations(creatorVisits, ({ one }) => ({
+  client: one(clients, { fields: [creatorVisits.clientId], references: [clients.id] }),
+  creator: one(creators, { fields: [creatorVisits.creatorId], references: [creators.id] }),
+  approver: one(users, { fields: [creatorVisits.approvedBy], references: [users.id] }),
+}));
+
 // Content Posts table (Content Calendar)
 export const contentPosts = pgTable("content_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: varchar("client_id").references(() => clients.id).notNull(),
+  visitId: varchar("visit_id").references(() => creatorVisits.id, { onDelete: "set null" }),
   platforms: jsonb("platforms").notNull(), // Array of: facebook, instagram, twitter, linkedin, tiktok, youtube
   title: varchar("title").notNull(),
   content: text("content").notNull(),
@@ -379,6 +470,10 @@ export const contentPostsRelations = relations(contentPosts, ({ one }) => ({
   client: one(clients, {
     fields: [contentPosts.clientId],
     references: [clients.id],
+  }),
+  visit: one(creatorVisits, {
+    fields: [contentPosts.visitId],
+    references: [creatorVisits.id],
   }),
 }));
 
@@ -815,7 +910,22 @@ export const upsertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true }).extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
-export const insertClientSchema = createInsertSchema(clients).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertClientSchema = createInsertSchema(clients)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    startDate: z.union([z.string(), z.date()]).optional().nullable().transform((val) => {
+      if (!val) return null;
+      return val instanceof Date ? val : new Date(val);
+    }),
+    lastPostDate: z.union([z.string(), z.date()]).optional().nullable().transform((val) => {
+      if (!val) return null;
+      return val instanceof Date ? val : new Date(val);
+    }),
+    lastVisitDate: z.union([z.string(), z.date()]).optional().nullable().transform((val) => {
+      if (!val) return null;
+      return val instanceof Date ? val : new Date(val);
+    }),
+  });
 export const insertClientSocialStatsSchema = createInsertSchema(clientSocialStats).omit({ id: true, createdAt: true });
 export const insertCampaignSchema = createInsertSchema(campaigns)
   .omit({ id: true, createdAt: true, updatedAt: true })
@@ -846,7 +956,18 @@ export const insertTaskSchema = createInsertSchema(tasks)
 export const insertTaskSpaceSchema = createInsertSchema(taskSpaces).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertUserViewPreferencesSchema = createInsertSchema(userViewPreferences).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, createdAt: true });
-export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertLeadSchema = createInsertSchema(leads)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    expectedStartDate: z.union([z.string(), z.date()]).optional().nullable().transform((val) => {
+      if (!val) return null;
+      return val instanceof Date ? val : new Date(val);
+    }),
+    expectedCloseDate: z.union([z.string(), z.date()]).optional().nullable().transform((val) => {
+      if (!val) return null;
+      return val instanceof Date ? val : new Date(val);
+    }),
+  });
 export const insertContentPostSchema = createInsertSchema(contentPosts)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
@@ -1229,3 +1350,16 @@ export const discountRedemptionsRelations = relations(discountRedemptions, ({ on
 export const insertDiscountRedemptionSchema = createInsertSchema(discountRedemptions).omit({ id: true, redeemedAt: true });
 export type InsertDiscountRedemption = z.infer<typeof insertDiscountRedemptionSchema>;
 export type DiscountRedemption = typeof discountRedemptions.$inferSelect;
+
+// Creators + Visits schemas/types
+export const insertCreatorSchema = createInsertSchema(creators).omit({ id: true, createdAt: true });
+export type InsertCreator = z.infer<typeof insertCreatorSchema>;
+export type Creator = typeof creators.$inferSelect;
+
+export const insertClientCreatorSchema = createInsertSchema(clientCreators).omit({ id: true, assignedAt: true });
+export type InsertClientCreator = z.infer<typeof insertClientCreatorSchema>;
+export type ClientCreator = typeof clientCreators.$inferSelect;
+
+export const insertCreatorVisitSchema = createInsertSchema(creatorVisits).omit({ id: true, createdAt: true });
+export type InsertCreatorVisit = z.infer<typeof insertCreatorVisitSchema>;
+export type CreatorVisit = typeof creatorVisits.$inferSelect;

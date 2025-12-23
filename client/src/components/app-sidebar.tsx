@@ -64,10 +64,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-import { Moon, Sun, Bell, User } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
+
+type SidebarNavItem = {
+  title: string;
+  url: string;
+  icon: any;
+  permission?: any;
+  sidebarKey?: any;
+  badgeKey?: any;
+  roles?: readonly string[];
+};
 
 // Client-specific navigation
-const clientTools = [
+const clientTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
     url: "/",
@@ -111,7 +121,7 @@ const clientTools = [
 ];
 
 // Sales Agent-specific navigation
-const salesAgentTools = [
+const salesAgentTools: SidebarNavItem[] = [
   {
     title: "Sales Dashboard",
     url: "/",
@@ -165,7 +175,7 @@ const salesAgentTools = [
 ];
 
 // Reordered for better workflow logic - Team communication tools together
-const companyTools = [
+const companyTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
     url: "/",
@@ -212,7 +222,7 @@ const companyTools = [
   },
 ];
 
-const operationsTools = [
+const operationsTools: SidebarNavItem[] = [
   {
     title: "Clients",
     url: "/clients",
@@ -247,6 +257,22 @@ const operationsTools = [
     icon: Calendar,
     permission: "canManageContent" as const,
     sidebarKey: "content" as const,
+  },
+  {
+    title: "Visits",
+    url: "/visits",
+    icon: Calendar,
+    permission: "canManageClients" as const,
+    sidebarKey: "visits" as const,
+    roles: ["admin", "manager", "staff", "creator_manager"] as const,
+  },
+  {
+    title: "Creators",
+    url: "/creators",
+    icon: UsersRound,
+    permission: "canManageClients" as const,
+    sidebarKey: "creators" as const,
+    roles: ["admin", "manager", "staff", "creator_manager"] as const,
   },
   {
     title: "Tasks",
@@ -285,7 +311,7 @@ const operationsTools = [
   },
 ];
 
-const businessTools = [
+const businessTools: SidebarNavItem[] = [
   {
     title: "Analytics",
     url: "/analytics",
@@ -655,6 +681,9 @@ export function AppSidebar() {
   const filteredOperations = operationsTools.filter(item => {
     if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
       return false;
+    }
+    if (item.roles) {
+      return item.roles.includes((user as any)?.role as any);
     }
     if (!item.permission) return true;
     return canAccess(item.permission);

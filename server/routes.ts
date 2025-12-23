@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import { pool, db } from "./db";
-import { sql, eq, and } from "drizzle-orm";
+import { sql, eq, and, or } from "drizzle-orm";
 import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
@@ -28,6 +28,13 @@ import {
   insertLeadActivitySchema,
   insertLeadAutomationSchema,
   clientSocialStats,
+  clients,
+  leads,
+  onboardingTasks,
+  contentPosts,
+  creators,
+  clientCreators,
+  creatorVisits,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import Stripe from "stripe";
@@ -56,6 +63,208 @@ async function ensureMessageColumns() {
   try {
     await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
   } catch {}
+}
+
+function getCurrentUserContext(req: Request): { userId: number | null; role: string | null } {
+  const anyReq = req as any;
+  const user = req.user as any;
+  const userIdRaw = anyReq.userId ?? user?.id ?? user?.claims?.sub ?? null;
+  const roleRaw = anyReq.userRole ?? user?.role ?? null;
+  const userId = userIdRaw === null || userIdRaw === undefined ? null : Number(userIdRaw);
+  const role = roleRaw ? String(roleRaw) : null;
+  return { userId: Number.isFinite(userId) ? userId : null, role };
+}
+
+async function getAccessibleClientOr404(req: Request, res: Response, clientId: string) {
+  const { userId, role } = getCurrentUserContext(req);
+  const client = await storage.getClient(clientId);
+  if (!client) {
+    res.status(404).json({ message: "Client not found" });
+    return null;
+  }
+  if (role === UserRole.SALES_AGENT) {
+    const allowed =
+      (client as any).salesAgentId === userId ||
+      (client as any).assignedToId === userId;
+    if (!allowed) {
+      res.status(404).json({ message: "Client not found" });
+      return null;
+    }
+  }
+  return client;
+}
+
+async function getAccessibleLeadOr404(req: Request, res: Response, leadId: string) {
+  const { userId, role } = getCurrentUserContext(req);
+  const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+  if (!lead) {
+    res.status(404).json({ message: "Lead not found" });
+    return null;
+  }
+  if (role === UserRole.SALES_AGENT) {
+    if ((lead as any).assignedToId !== userId) {
+      res.status(404).json({ message: "Lead not found" });
+      return null;
+    }
+  }
+  return lead;
+}
+
+function getMissingFieldsForStage(targetStage: string, lead: any): string[] {
+  const missing: string[] = [];
+  const company = (lead?.company ?? "").toString().trim();
+  const phone = (lead?.phone ?? "").toString().trim();
+  const email = (lead?.email ?? "").toString().trim();
+  const decisionMakerName = (lead?.decisionMakerName ?? "").toString().trim();
+  const packageId = (lead?.packageId ?? "").toString().trim();
+  const expectedStartDate = lead?.expectedStartDate ? new Date(lead.expectedStartDate) : null;
+  const address = ((lead?.primaryLocationAddress ?? lead?.location) ?? "").toString().trim();
+  const assignedToId = lead?.assignedToId ?? null;
+  const closeReason = (lead?.closeReason ?? "").toString().trim();
+
+  if (targetStage === "qualified") {
+    if (!company) missing.push("businessName");
+    if (!phone && !email) missing.push("phoneOrEmail");
+  }
+
+  if (targetStage === "proposal") {
+    if (!company) missing.push("businessName");
+    if (!phone) missing.push("phone");
+    if (!email) missing.push("email");
+    if (!decisionMakerName) missing.push("decisionMakerName");
+  }
+
+  if (targetStage === "closed_won") {
+    if (!packageId) missing.push("packageSelection");
+    if (!expectedStartDate || isNaN(expectedStartDate.getTime())) missing.push("expectedStartDate");
+    if (!address) missing.push("primaryLocationAddress");
+    if (!assignedToId) missing.push("assignedToId");
+  }
+
+  if (targetStage === "closed_lost") {
+    if (!closeReason) missing.push("closeReason");
+  }
+
+  return missing;
+}
+
+const ONBOARDING_TEMPLATE: Array<{ dueDay: number; title: string; description?: string }> = [
+  { dueDay: 1, title: "Kickoff call scheduled", description: "Confirm kickoff meeting date/time and attendees." },
+  { dueDay: 2, title: "Collect brand assets", description: "Logo, fonts, brand colors, and any brand guidelines." },
+  { dueDay: 3, title: "Connect social accounts", description: "Grant access to Instagram/Facebook/TikTok/YouTube as applicable." },
+  { dueDay: 5, title: "Confirm primary location details", description: "Verify the primary address and service area." },
+  { dueDay: 7, title: "Approve first content calendar", description: "Review and approve initial 2-week posting plan." },
+];
+
+async function ensureOnboardingTasksForClient(clientId: string) {
+  const existing = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(onboardingTasks)
+    .where(eq(onboardingTasks.clientId, clientId));
+  const count = Number(existing?.[0]?.count ?? 0);
+  if (count > 0) return;
+
+  await db.insert(onboardingTasks).values(
+    ONBOARDING_TEMPLATE.map((t) => ({
+      clientId,
+      title: t.title,
+      description: t.description ?? null,
+      dueDay: t.dueDay,
+      completed: false,
+    }))
+  );
+}
+
+async function ensureCommissionForLead(params: { lead: any; clientId: string }) {
+  const lead = params.lead;
+  if (!lead?.assignedToId) return;
+
+  // Idempotency: only one commission per lead for now (Sprint 2 adds recurring + types)
+  const exists = await pool.query(`SELECT id FROM commissions WHERE lead_id = $1 LIMIT 1`, [lead.id]);
+  if (exists.rows.length > 0) return;
+
+  const dealValueNum =
+    lead.dealValue !== null && lead.dealValue !== undefined
+      ? Number(lead.dealValue)
+      : lead.value
+        ? Number(lead.value) / 100
+        : 0;
+  const commissionRateNum = lead.commissionRate !== null && lead.commissionRate !== undefined ? Number(lead.commissionRate) : 10;
+  const commissionAmountNum = (dealValueNum * commissionRateNum) / 100;
+
+  await pool.query(
+    `INSERT INTO commissions (agent_id, lead_id, client_id, deal_value, commission_rate, commission_amount, status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+    [
+      lead.assignedToId,
+      lead.id,
+      params.clientId,
+      dealValueNum.toFixed(2),
+      commissionRateNum.toFixed(2),
+      commissionAmountNum.toFixed(2),
+    ]
+  );
+}
+
+async function autoConvertLeadToClient(params: { leadId: string; actorUserId?: number | null }) {
+  const lead = await db.select().from(leads).where(eq(leads.id, params.leadId)).then((rows) => rows[0]);
+  if (!lead) throw new Error("Lead not found");
+
+  // Safety: if already converted, ensure onboarding tasks exist and exit
+  if ((lead as any).convertedToClientId) {
+    await ensureOnboardingTasksForClient((lead as any).convertedToClientId);
+    return { lead, clientId: (lead as any).convertedToClientId as string };
+  }
+
+  const now = new Date();
+  const startDate = (lead as any).expectedStartDate ? new Date((lead as any).expectedStartDate) : now;
+
+  // Prefer an already-linked client, then email match, else create new
+  let createdClient: any = null;
+  if ((lead as any).clientId) {
+    createdClient = await storage.getClient((lead as any).clientId);
+  }
+  if (!createdClient && (lead as any).email) {
+    createdClient = (await db.select().from(clients).where(eq(clients.email, (lead as any).email)).limit(1))[0] ?? null;
+  }
+  if (!createdClient) {
+    createdClient = await storage.createClient({
+      name: (lead as any).company || (lead as any).name || "New Client",
+      company: (lead as any).company || undefined,
+      email: (lead as any).email || undefined,
+      phone: (lead as any).phone || undefined,
+      status: "onboarding",
+      assignedToId: (lead as any).assignedToId ?? null,
+      salesAgentId: (lead as any).assignedToId ?? null,
+      packageId: (lead as any).packageId ?? null,
+      startDate,
+      notes: `Auto-converted from lead ${lead.id} on ${now.toISOString()}`,
+    } as any);
+  }
+
+  await db
+    .update(leads)
+    .set({
+      convertedToClientId: createdClient.id,
+      convertedAt: now,
+      clientId: createdClient.id,
+      updatedAt: now,
+    } as any)
+    .where(eq(leads.id, lead.id));
+
+  await ensureOnboardingTasksForClient(createdClient.id);
+  await ensureCommissionForLead({ lead, clientId: createdClient.id });
+
+  if (params.actorUserId) {
+    await storage.createActivityLog({
+      userId: params.actorUserId,
+      activityType: "lead_converted",
+      description: `Lead ${lead.id} converted to client ${createdClient.id}`,
+      metadata: { leadId: lead.id, clientId: createdClient.id },
+    });
+  }
+
+  return { lead, clientId: createdClient.id };
 }
 
 // Initialize Stripe if keys are present
@@ -997,10 +1206,14 @@ export function registerRoutes(app: Express) {
       // Attempt to find existing lead by id or email
       let matchedLead: any = null;
       try {
-        const allLeads = await storage.getLeads();
-        matchedLead = allLeads.find((l: any) => (leadId && l.id === leadId) || (email && l.email === email));
+        if (leadId) {
+          matchedLead = (await db.select().from(leads).where(eq(leads.id, leadId)).limit(1))[0] ?? null;
+        }
+        if (!matchedLead && email) {
+          matchedLead = (await db.select().from(leads).where(eq(leads.email, email)).limit(1))[0] ?? null;
+        }
       } catch (e) {
-        console.warn("⚠️ Unable to fetch leads while confirming Stripe payment:", e);
+        console.warn("⚠️ Unable to fetch lead while confirming Stripe payment:", e);
       }
 
       // Create client if one with same email doesn't already exist
@@ -1015,6 +1228,10 @@ export function registerRoutes(app: Express) {
             name,
             email: email || undefined,
             status: "onboarding",
+            packageId: packageId || undefined,
+            startDate: new Date(),
+            salesAgentId: matchedLead?.assignedToId ?? undefined,
+            assignedToId: matchedLead?.assignedToId ?? undefined,
             notes: `Created from Stripe session ${sessionId}${packageId ? ` for package ${packageId}` : ""}`,
           } as any);
         }
@@ -1026,11 +1243,22 @@ export function registerRoutes(app: Express) {
       // Update lead as converted
       if (matchedLead) {
         try {
+          const now = new Date();
           await storage.updateLead(matchedLead.id, {
-            stage: "converted",
-            notes: `${matchedLead.notes || ""}\nConverted via Stripe payment on ${new Date().toISOString()} (session ${sessionId})`,
-            value: createdClient?.id || null,
+            stage: "closed_won",
+            packageId: packageId || (matchedLead as any).packageId || null,
+            expectedStartDate: (matchedLead as any).expectedStartDate || now,
+            convertedToClientId: createdClient?.id || null,
+            convertedAt: now,
+            clientId: createdClient?.id || null,
+            notes: `${matchedLead.notes || ""}\nConverted via Stripe payment on ${now.toISOString()} (session ${sessionId})`,
           } as any);
+
+          // Ensure onboarding tasks + commission exist
+          if (createdClient?.id) {
+            await ensureOnboardingTasksForClient(createdClient.id);
+            await ensureCommissionForLead({ lead: matchedLead, clientId: createdClient.id });
+          }
         } catch (e) {
           console.warn("⚠️ Failed to update lead as converted:", e);
         }
@@ -2734,10 +2962,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         return res.status(503).json({ message: "Stripe is not configured" });
       }
 
-      const client = await storage.getClient(req.params.clientId);
-      if (!client) {
-        return res.status(404).json({ message: "Client not found" });
-      }
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
 
       if (!client.stripeSubscriptionId) {
         return res.json({ subscription: null });
@@ -2767,8 +2993,17 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Client routes
   app.get("/api/clients", isAuthenticated, requirePermission("canManageClients"), async (_req: Request, res: Response) => {
     try {
-      const clients = await storage.getClients();
-      res.json(clients);
+      const { userId, role } = getCurrentUserContext(_req);
+      if (role === UserRole.SALES_AGENT && userId) {
+        const scoped = await db
+          .select()
+          .from(clients)
+          .where(or(eq(clients.salesAgentId, userId), eq(clients.assignedToId, userId)))
+          .orderBy(sql`${clients.createdAt} DESC`);
+        return res.json(scoped);
+      }
+      const all = await storage.getClients();
+      res.json(all);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch clients" });
@@ -2777,10 +3012,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.get("/api/clients/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
-      const client = await storage.getClient(req.params.id);
-      if (!client) {
-        return res.status(404).json({ message: "Client not found" });
-      }
+      const client = await getAccessibleClientOr404(req, res, req.params.id);
+      if (!client) return;
       res.json(client);
     } catch (error) {
       console.error(error);
@@ -2822,7 +3055,23 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.patch("/api/clients/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      const existing = await getAccessibleClientOr404(req, res, req.params.id);
+      if (!existing) return;
       const validatedData = insertClientSchema.partial().strip().parse(req.body);
+      // Gate "active" on onboarding completion
+      if ((validatedData as any).status === "active") {
+        const rows = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(onboardingTasks)
+          .where(and(eq(onboardingTasks.clientId, req.params.id), eq(onboardingTasks.completed, false)));
+        const remaining = Number(rows?.[0]?.count ?? 0);
+        if (remaining > 0) {
+          return res.status(400).json({
+            message: `Cannot set client to active: ${remaining} onboarding task(s) still incomplete`,
+            remainingTasks: remaining,
+          });
+        }
+      }
       const client = await storage.updateClient(req.params.id, validatedData);
       
       // Get actor information
@@ -2858,6 +3107,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.delete("/api/clients/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      const existing = await getAccessibleClientOr404(req, res, req.params.id);
+      if (!existing) return;
       await storage.deleteClient(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -2866,9 +3117,572 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
+  // ===== Creators module =====
+  const internalRoles = [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CREATOR_MANAGER] as const;
+
+  // Public creator application endpoint (no authentication required)
+  app.post("/api/creators/apply", async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        fullName: z.string().min(1, "Full name is required"),
+        phone: z.string().optional().nullable(),
+        email: z.string().email("Valid email is required").optional().nullable(),
+        homeCity: z.string().optional().nullable(),
+        baseZip: z.string().optional().nullable(),
+        serviceZipCodes: z.array(z.string()).optional().nullable(),
+        serviceRadiusMiles: z.number().int().positive().optional().nullable(),
+        ratePerVisitCents: z.number().int().positive().optional().nullable(),
+        availabilityNotes: z.string().optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+      
+      // Create creator with "pending" status for admin review
+      const [created] = await db
+        .insert(creators)
+        .values({
+          fullName: data.fullName,
+          phone: data.phone ?? null,
+          email: data.email ?? null,
+          homeCity: data.homeCity ?? null,
+          baseZip: data.baseZip ?? null,
+          serviceZipCodes: data.serviceZipCodes ?? null,
+          serviceRadiusMiles: data.serviceRadiusMiles ?? null,
+          ratePerVisitCents: data.ratePerVisitCents ?? 7500, // Default $75 if not provided
+          availabilityNotes: data.availabilityNotes ?? null,
+          status: "inactive", // Set to inactive initially, admins will activate after review
+          performanceScore: "5.0", // Default score
+          notes: `[PENDING APPLICATION] Submitted via public creator signup form on ${new Date().toISOString()}. Please review and activate if approved.`,
+        } as any)
+        .returning();
+
+      // Notify admins about new creator application
+      try {
+        const users = await storage.getUsers();
+        const admins = users.filter((u: any) => u.role === UserRole.ADMIN || u.role === UserRole.CREATOR_MANAGER);
+        const { sendPushToUser } = await import('./push.js');
+        
+        for (const admin of admins) {
+          // In-app notification
+          await storage.createNotification({
+            userId: admin.id,
+            type: 'info',
+            title: '👤 New Creator Application',
+            message: `${data.fullName} has submitted a creator application`,
+            category: 'creator_management',
+            actionUrl: `/creators/${created.id}`,
+            isRead: false,
+          });
+          
+          // Push notification
+          await sendPushToUser(admin.id, {
+            title: '👤 New Creator Application',
+            body: `${data.fullName} has submitted a creator application`,
+            url: `/creators/${created.id}`,
+          }).catch((err: any) => console.error('Failed to send push notification:', err));
+        }
+      } catch (notifError) {
+        console.error('Failed to send creator application notifications:', notifError);
+      }
+
+      res.status(201).json({ 
+        success: true, 
+        message: "Application submitted successfully",
+        id: created.id 
+      });
+    } catch (error: any) {
+      console.error("Error creating creator application:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors 
+        });
+      }
+      res.status(400).json({ message: error.message || "Failed to submit application" });
+    }
+  });
+
+  app.get("/api/creators", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const { city, zip, status, minScore } = req.query as any;
+      const conditions: any[] = [];
+      if (city) conditions.push(eq(creators.homeCity, String(city)));
+      if (zip) conditions.push(or(eq(creators.baseZip, String(zip)), sql`${creators.serviceZipCodes} @> ARRAY[${String(zip)}]::text[]`));
+      if (status) conditions.push(eq(creators.status, String(status)));
+      if (minScore) conditions.push(sql`${creators.performanceScore} >= ${String(minScore)}`);
+
+      let q = db.select().from(creators);
+      if (conditions.length > 0) q = (q as any).where(and(...conditions));
+      const rows = await (q as any).orderBy(sql`${creators.createdAt} DESC`);
+      res.json(rows);
+    } catch (error: any) {
+      console.error("Error fetching creators:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch creators" });
+    }
+  });
+
+  app.post("/api/creators", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        fullName: z.string().min(1),
+        phone: z.string().optional().nullable(),
+        email: z.string().email().optional().nullable(),
+        homeCity: z.string().optional().nullable(),
+        baseZip: z.string().optional().nullable(),
+        serviceZipCodes: z.array(z.string()).optional().nullable(),
+        serviceRadiusMiles: z.number().int().positive().optional().nullable(),
+        ratePerVisitCents: z.number().int().positive(),
+        availabilityNotes: z.string().optional().nullable(),
+        status: z.enum(["active", "backup", "inactive"]).default("active"),
+        performanceScore: z.number().min(1).max(5).optional().nullable(),
+        notes: z.string().optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+      const [created] = await db
+        .insert(creators)
+        .values({
+          fullName: data.fullName,
+          phone: data.phone ?? null,
+          email: data.email ?? null,
+          homeCity: data.homeCity ?? null,
+          baseZip: data.baseZip ?? null,
+          serviceZipCodes: data.serviceZipCodes ?? null,
+          serviceRadiusMiles: data.serviceRadiusMiles ?? null,
+          ratePerVisitCents: data.ratePerVisitCents,
+          availabilityNotes: data.availabilityNotes ?? null,
+          status: data.status,
+          performanceScore: data.performanceScore != null ? String(data.performanceScore.toFixed(1)) : "5.0",
+          notes: data.notes ?? null,
+        } as any)
+        .returning();
+      res.status(201).json(created);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.get("/api/creators/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const [creator] = await db.select().from(creators).where(eq(creators.id, req.params.id)).limit(1);
+      if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+      const assignments = await db
+        .select({
+          id: clientCreators.id,
+          clientId: clientCreators.clientId,
+          role: clientCreators.role,
+          active: clientCreators.active,
+          assignedAt: clientCreators.assignedAt,
+          unassignedAt: clientCreators.unassignedAt,
+          clientName: clients.name,
+        })
+        .from(clientCreators)
+        .innerJoin(clients, eq(clientCreators.clientId, clients.id))
+        .where(and(eq(clientCreators.creatorId, req.params.id), eq(clientCreators.active, true)))
+        .orderBy(sql`${clientCreators.assignedAt} DESC`);
+
+      const visits = await db
+        .select()
+        .from(creatorVisits)
+        .where(eq(creatorVisits.creatorId, req.params.id))
+        .orderBy(sql`${creatorVisits.scheduledStart} DESC`)
+        .limit(100);
+
+      res.json({ creator, assignments, visits });
+    } catch (error: any) {
+      console.error("Error fetching creator:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch creator" });
+    }
+  });
+
+  app.patch("/api/creators/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        fullName: z.string().min(1).optional(),
+        phone: z.string().optional().nullable(),
+        email: z.string().email().optional().nullable(),
+        homeCity: z.string().optional().nullable(),
+        baseZip: z.string().optional().nullable(),
+        serviceZipCodes: z.array(z.string()).optional().nullable(),
+        serviceRadiusMiles: z.number().int().positive().optional().nullable(),
+        ratePerVisitCents: z.number().int().positive().optional(),
+        availabilityNotes: z.string().optional().nullable(),
+        status: z.enum(["active", "backup", "inactive"]).optional(),
+        performanceScore: z.number().min(1).max(5).optional().nullable(),
+        notes: z.string().optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+      const [updated] = await db
+        .update(creators)
+        .set({
+          ...(data.fullName !== undefined ? { fullName: data.fullName } : {}),
+          ...(data.phone !== undefined ? { phone: data.phone } : {}),
+          ...(data.email !== undefined ? { email: data.email } : {}),
+          ...(data.homeCity !== undefined ? { homeCity: data.homeCity } : {}),
+          ...(data.baseZip !== undefined ? { baseZip: data.baseZip } : {}),
+          ...(data.serviceZipCodes !== undefined ? { serviceZipCodes: data.serviceZipCodes } : {}),
+          ...(data.serviceRadiusMiles !== undefined ? { serviceRadiusMiles: data.serviceRadiusMiles } : {}),
+          ...(data.ratePerVisitCents !== undefined ? { ratePerVisitCents: data.ratePerVisitCents } : {}),
+          ...(data.availabilityNotes !== undefined ? { availabilityNotes: data.availabilityNotes } : {}),
+          ...(data.status !== undefined ? { status: data.status } : {}),
+          ...(data.performanceScore !== undefined ? { performanceScore: data.performanceScore == null ? null : String(data.performanceScore.toFixed(1)) } : {}),
+          ...(data.notes !== undefined ? { notes: data.notes } : {}),
+        } as any)
+        .where(eq(creators.id, req.params.id))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "Creator not found" });
+      res.json(updated);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  // ===== Client ↔ Creator assignments (admin/ops only => admin/manager) =====
+  app.get("/api/clients/:clientId/creators", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CREATOR_MANAGER), async (req: Request, res: Response) => {
+    try {
+      // internal access only; allow staff/creator_manager view
+      const rows = await db
+        .select({
+          id: clientCreators.id,
+          clientId: clientCreators.clientId,
+          creatorId: clientCreators.creatorId,
+          role: clientCreators.role,
+          active: clientCreators.active,
+          assignedAt: clientCreators.assignedAt,
+          unassignedAt: clientCreators.unassignedAt,
+          creatorName: creators.fullName,
+          creatorStatus: creators.status,
+          ratePerVisitCents: creators.ratePerVisitCents,
+          performanceScore: creators.performanceScore,
+        })
+        .from(clientCreators)
+        .innerJoin(creators, eq(clientCreators.creatorId, creators.id))
+        .where(and(eq(clientCreators.clientId, req.params.clientId), eq(clientCreators.active, true)))
+        .orderBy(sql`${clientCreators.role} ASC, ${clientCreators.assignedAt} DESC`);
+      res.json(rows);
+    } catch (error: any) {
+      console.error("Error fetching client creators:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch client creators" });
+    }
+  });
+
+  app.post("/api/clients/:clientId/creators", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        creatorId: z.string().min(1),
+        role: z.enum(["primary", "backup"]),
+      });
+      const data = schema.parse(req.body);
+
+      // Ensure client and creator exist
+      const client = await storage.getClient(req.params.clientId);
+      if (!client) return res.status(404).json({ message: "Client not found" });
+      const [creator] = await db.select().from(creators).where(eq(creators.id, data.creatorId)).limit(1);
+      if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+      // Enforce single active primary/backup per client by deactivating existing of same role
+      await db
+        .update(clientCreators)
+        .set({ active: false, unassignedAt: new Date() } as any)
+        .where(and(eq(clientCreators.clientId, req.params.clientId), eq(clientCreators.role, data.role), eq(clientCreators.active, true)));
+
+      const [created] = await db
+        .insert(clientCreators)
+        .values({
+          clientId: req.params.clientId,
+          creatorId: data.creatorId,
+          role: data.role,
+          active: true,
+          assignedAt: new Date(),
+        } as any)
+        .returning();
+
+      res.status(201).json(created);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/client-creators/:id/unassign", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+    try {
+      const [updated] = await db
+        .update(clientCreators)
+        .set({ active: false, unassignedAt: new Date() } as any)
+        .where(eq(clientCreators.id, req.params.id))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "Assignment not found" });
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Unassign error:", error);
+      res.status(500).json({ message: error.message || "Failed to unassign creator" });
+    }
+  });
+
+  // ===== Visits module (Internal Only) =====
+  app.get("/api/visits", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const { clientId, creatorId, status, from, to, uploadOverdue } = req.query as any;
+      const conditions: any[] = [];
+      if (clientId) conditions.push(eq(creatorVisits.clientId, String(clientId)));
+      if (creatorId) conditions.push(eq(creatorVisits.creatorId, String(creatorId)));
+      if (status) conditions.push(eq(creatorVisits.status, String(status)));
+      if (uploadOverdue === "true") conditions.push(eq(creatorVisits.uploadOverdue, true));
+      if (from) conditions.push(sql`${creatorVisits.scheduledStart} >= ${new Date(String(from)).toISOString()}`);
+      if (to) conditions.push(sql`${creatorVisits.scheduledStart} <= ${new Date(String(to)).toISOString()}`);
+
+      let q = db
+        .select({
+          id: creatorVisits.id,
+          clientId: creatorVisits.clientId,
+          creatorId: creatorVisits.creatorId,
+          scheduledStart: creatorVisits.scheduledStart,
+          scheduledEnd: creatorVisits.scheduledEnd,
+          status: creatorVisits.status,
+          completedAt: creatorVisits.completedAt,
+          uploadReceived: creatorVisits.uploadReceived,
+          uploadTimestamp: creatorVisits.uploadTimestamp,
+          uploadLinks: creatorVisits.uploadLinks,
+          uploadDueAt: creatorVisits.uploadDueAt,
+          uploadOverdue: creatorVisits.uploadOverdue,
+          approved: creatorVisits.approved,
+          approvedBy: creatorVisits.approvedBy,
+          qualityScore: creatorVisits.qualityScore,
+          paymentReleased: creatorVisits.paymentReleased,
+          paymentReleasedAt: creatorVisits.paymentReleasedAt,
+          notes: creatorVisits.notes,
+          createdAt: creatorVisits.createdAt,
+          clientName: clients.name,
+          creatorName: creators.fullName,
+        })
+        .from(creatorVisits)
+        .innerJoin(clients, eq(creatorVisits.clientId, clients.id))
+        .innerJoin(creators, eq(creatorVisits.creatorId, creators.id));
+
+      if (conditions.length > 0) q = (q as any).where(and(...conditions));
+
+      const rows = await (q as any).orderBy(sql`${creatorVisits.scheduledStart} DESC`).limit(500);
+      res.json(rows);
+    } catch (error: any) {
+      console.error("Error fetching visits:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch visits" });
+    }
+  });
+
+  async function assertNoDoubleBooking(params: { creatorId: string; scheduledStart: Date; scheduledEnd: Date; excludeVisitId?: string }) {
+    const { creatorId, scheduledStart, scheduledEnd, excludeVisitId } = params;
+    const rows = await pool.query(
+      `
+      SELECT id FROM creator_visits
+      WHERE creator_id = $1
+        AND status != 'cancelled'
+        AND ($2 < scheduled_end) AND ($3 > scheduled_start)
+        ${excludeVisitId ? "AND id <> $4" : ""}
+      LIMIT 1
+      `,
+      excludeVisitId ? [creatorId, scheduledStart.toISOString(), scheduledEnd.toISOString(), excludeVisitId] : [creatorId, scheduledStart.toISOString(), scheduledEnd.toISOString()]
+    );
+    if (rows.rows.length > 0) {
+      throw new Error("Creator is already booked for an overlapping time window");
+    }
+  }
+
+  app.post("/api/visits", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        clientId: z.string().min(1),
+        creatorId: z.string().min(1),
+        scheduledStart: z.union([z.string(), z.date()]),
+        scheduledEnd: z.union([z.string(), z.date()]),
+        notes: z.string().optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+      const scheduledStart = data.scheduledStart instanceof Date ? data.scheduledStart : new Date(data.scheduledStart);
+      const scheduledEnd = data.scheduledEnd instanceof Date ? data.scheduledEnd : new Date(data.scheduledEnd);
+      if (!(scheduledStart < scheduledEnd)) return res.status(400).json({ message: "scheduledEnd must be after scheduledStart" });
+
+      await assertNoDoubleBooking({ creatorId: data.creatorId, scheduledStart, scheduledEnd });
+
+      const [created] = await db
+        .insert(creatorVisits)
+        .values({
+          clientId: data.clientId,
+          creatorId: data.creatorId,
+          scheduledStart,
+          scheduledEnd,
+          status: "scheduled",
+          notes: data.notes ?? null,
+        } as any)
+        .returning();
+
+      res.status(201).json(created);
+    } catch (error: any) {
+      if (String(error?.message || "").includes("overlapping")) {
+        return res.status(409).json({ message: error.message });
+      }
+      handleValidationError(error, res);
+    }
+  });
+
+  app.get("/api/visits/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const rows = await db
+        .select({
+          visit: creatorVisits,
+          client: { id: clients.id, name: clients.name },
+          creator: { id: creators.id, fullName: creators.fullName, ratePerVisitCents: creators.ratePerVisitCents, status: creators.status },
+        })
+        .from(creatorVisits)
+        .innerJoin(clients, eq(creatorVisits.clientId, clients.id))
+        .innerJoin(creators, eq(creatorVisits.creatorId, creators.id))
+        .where(eq(creatorVisits.id, req.params.id))
+        .limit(1) as any;
+      if (!rows?.[0]) return res.status(404).json({ message: "Visit not found" });
+      res.json(rows[0]);
+    } catch (error: any) {
+      console.error("Error fetching visit:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch visit" });
+    }
+  });
+
+  app.patch("/api/visits/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        scheduledStart: z.union([z.string(), z.date()]).optional(),
+        scheduledEnd: z.union([z.string(), z.date()]).optional(),
+        status: z.enum(["scheduled", "completed", "missed", "cancelled"]).optional(),
+        notes: z.string().optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+      const [existing] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, req.params.id)).limit(1);
+      if (!existing) return res.status(404).json({ message: "Visit not found" });
+
+      const nextStart = data.scheduledStart ? (data.scheduledStart instanceof Date ? data.scheduledStart : new Date(data.scheduledStart)) : (existing as any).scheduledStart;
+      const nextEnd = data.scheduledEnd ? (data.scheduledEnd instanceof Date ? data.scheduledEnd : new Date(data.scheduledEnd)) : (existing as any).scheduledEnd;
+      if (!(new Date(nextStart) < new Date(nextEnd))) return res.status(400).json({ message: "scheduledEnd must be after scheduledStart" });
+
+      if (data.scheduledStart || data.scheduledEnd) {
+        await assertNoDoubleBooking({ creatorId: (existing as any).creatorId, scheduledStart: new Date(nextStart), scheduledEnd: new Date(nextEnd), excludeVisitId: req.params.id });
+      }
+
+      const set: any = {};
+      if (data.scheduledStart) set.scheduledStart = nextStart;
+      if (data.scheduledEnd) set.scheduledEnd = nextEnd;
+      if (data.status) set.status = data.status;
+      if (data.notes !== undefined) set.notes = data.notes;
+
+      const [updated] = await db.update(creatorVisits).set(set).where(eq(creatorVisits.id, req.params.id)).returning();
+      res.json(updated);
+    } catch (error: any) {
+      if (String(error?.message || "").includes("overlapping")) {
+        return res.status(409).json({ message: error.message });
+      }
+      handleValidationError(error, res);
+    }
+  });
+
+  app.post("/api/visits/:id/complete", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const [existing] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, req.params.id)).limit(1);
+      if (!existing) return res.status(404).json({ message: "Visit not found" });
+
+      const now = new Date();
+      const [updated] = await db
+        .update(creatorVisits)
+        .set({
+          status: "completed",
+          completedAt: now,
+          uploadDueAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+          uploadOverdue: false,
+        } as any)
+        .where(eq(creatorVisits.id, req.params.id))
+        .returning();
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Complete visit error:", error);
+      res.status(500).json({ message: error.message || "Failed to complete visit" });
+    }
+  });
+
+  app.post("/api/visits/:id/upload", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        uploadLinks: z.array(z.string()).min(1),
+      });
+      const data = schema.parse(req.body);
+      const now = new Date();
+      const [updated] = await db
+        .update(creatorVisits)
+        .set({
+          uploadReceived: true,
+          uploadTimestamp: now,
+          uploadLinks: data.uploadLinks,
+          uploadOverdue: false,
+        } as any)
+        .where(eq(creatorVisits.id, req.params.id))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "Visit not found" });
+      res.json(updated);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.post("/api/visits/:id/approve", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        approved: z.boolean().default(true),
+        qualityScore: z.number().int().min(1).max(5).optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+      const userId = (req.user as any)?.id;
+      const [updated] = await db
+        .update(creatorVisits)
+        .set({
+          approved: data.approved,
+          approvedBy: userId,
+          qualityScore: data.qualityScore ?? null,
+        } as any)
+        .where(eq(creatorVisits.id, req.params.id))
+        .returning();
+      if (!updated) return res.status(404).json({ message: "Visit not found" });
+      res.json(updated);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.post("/api/visits/:id/release-payment", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+    try {
+      const [visit] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, req.params.id)).limit(1);
+      if (!visit) return res.status(404).json({ message: "Visit not found" });
+
+      const eligible = (visit as any).status === "completed" && (visit as any).uploadReceived === true && (visit as any).approved === true;
+      if (!eligible) {
+        return res.status(400).json({
+          message: "Payment not eligible. Requires: status=completed, uploadReceived=true, approved=true",
+          status: (visit as any).status,
+          uploadReceived: (visit as any).uploadReceived,
+          approved: (visit as any).approved,
+        });
+      }
+
+      const now = new Date();
+      const [updated] = await db
+        .update(creatorVisits)
+        .set({ paymentReleased: true, paymentReleasedAt: now } as any)
+        .where(eq(creatorVisits.id, req.params.id))
+        .returning();
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Release payment error:", error);
+      res.status(500).json({ message: error.message || "Failed to release payment" });
+    }
+  });
+
   // Client Social Media Stats routes (Manual Entry)
   app.get("/api/clients/:clientId/social-stats", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
       const stats = await db.select().from(clientSocialStats).where(eq(clientSocialStats.clientId, req.params.clientId));
       res.json(stats);
     } catch (error) {
@@ -2879,6 +3693,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/clients/:clientId/social-stats", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
       console.log("📊 POST /api/clients/:clientId/social-stats");
       console.log("   Client ID:", req.params.clientId);
       console.log("   Request body:", JSON.stringify(req.body, null, 2));
@@ -2937,6 +3753,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.delete("/api/clients/:clientId/social-stats/:platform", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
       await db.delete(clientSocialStats)
         .where(
           and(
@@ -4108,13 +4926,18 @@ Examples:
   });
 
   // Lead Assignment endpoints
-  app.post("/api/leads/assign", isAuthenticated, async (req: Request, res: Response) => {
+  app.post("/api/leads/assign", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
       const { leadId, agentId, reason } = req.body;
 
       if (!leadId || !agentId) {
         return res.status(400).json({ message: "Lead ID and Agent ID are required" });
+      }
+
+      // Sales agents may only (re)assign leads to themselves
+      if (user?.role === UserRole.SALES_AGENT && Number(agentId) !== Number(user.id)) {
+        return res.status(403).json({ message: "Forbidden: sales agents can only assign leads to themselves" });
       }
 
       // Update lead's assignedTo field
@@ -4209,7 +5032,7 @@ Examples:
     }
   });
 
-  app.post("/api/commissions", isAuthenticated, async (req: Request, res: Response) => {
+  app.post("/api/commissions", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
     try {
       const { agentId, leadId, clientId, dealValue, commissionRate, commissionAmount, notes } = req.body;
 
@@ -4231,7 +5054,7 @@ Examples:
     }
   });
 
-  app.patch("/api/commissions/:id/status", isAuthenticated, async (req: Request, res: Response) => {
+  app.patch("/api/commissions/:id/status", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
       const { id } = req.params;
@@ -4566,17 +5389,42 @@ Examples:
   // Lead routes
   app.get("/api/leads", isAuthenticated, requirePermission("canManageLeads"), async (_req: Request, res: Response) => {
     try {
-      const leads = await storage.getLeads();
-      res.json(leads);
+      const { userId, role } = getCurrentUserContext(_req);
+      if (role === UserRole.SALES_AGENT && userId) {
+        const scoped = await db
+          .select()
+          .from(leads)
+          .where(eq(leads.assignedToId, userId))
+          .orderBy(sql`${leads.createdAt} DESC`);
+        return res.json(scoped);
+      }
+      const all = await storage.getLeads();
+      res.json(all);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch leads" });
     }
   });
 
+  app.get("/api/leads/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const lead = await getAccessibleLeadOr404(req, res, req.params.id);
+      if (!lead) return;
+      res.json(lead);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch lead" });
+    }
+  });
+
   app.post("/api/leads", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
+      const { userId, role } = getCurrentUserContext(req);
       const validatedData = insertLeadSchema.parse(req.body);
+      // Sales agents can only create leads assigned to themselves
+      if (role === UserRole.SALES_AGENT && userId) {
+        (validatedData as any).assignedToId = userId;
+      }
       const lead = await storage.createLead(validatedData);
       
       // Get actor information
@@ -4605,7 +5453,29 @@ Examples:
 
   app.patch("/api/leads/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
+      const existing = await getAccessibleLeadOr404(req, res, req.params.id);
+      if (!existing) return;
       const validatedData = insertLeadSchema.partial().strip().parse(req.body);
+      const { userId, role } = getCurrentUserContext(req);
+
+      // Sales agents cannot re-assign leads away from themselves
+      if (role === UserRole.SALES_AGENT && (validatedData as any).assignedToId && Number((validatedData as any).assignedToId) !== Number(userId)) {
+        return res.status(403).json({ message: "Forbidden: sales agents cannot reassign leads" });
+      }
+
+      // Stage required-field validation
+      const nextStage = (validatedData as any).stage as string | undefined;
+      if (nextStage && nextStage !== (existing as any).stage) {
+        const merged = { ...(existing as any), ...(validatedData as any) };
+        const missingFields = getMissingFieldsForStage(nextStage, merged);
+        if (missingFields.length > 0) {
+          return res.status(400).json({
+            message: `Cannot move lead to '${nextStage}': missing required field(s)`,
+            missingFields,
+          });
+        }
+      }
+
       const lead = await storage.updateLead(req.params.id, validatedData);
       
       // Get actor information
@@ -4626,6 +5496,18 @@ Examples:
         );
       }
       
+      // Auto-convert Closed Won -> Client + Onboarding + Commission
+      if (nextStage === "closed_won" && (existing as any).stage !== "closed_won") {
+        try {
+          await autoConvertLeadToClient({ leadId: lead.id, actorUserId: userId });
+          const refreshed = await db.select().from(leads).where(eq(leads.id, lead.id));
+          return res.json(refreshed[0] ?? lead);
+        } catch (e: any) {
+          console.error("Auto-convert failed:", e);
+          return res.status(500).json({ message: "Lead updated but auto-conversion failed", error: e?.message || String(e) });
+        }
+      }
+
       res.json(lead);
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -4641,6 +5523,8 @@ Examples:
 
   app.delete("/api/leads/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
+      const existing = await getAccessibleLeadOr404(req, res, req.params.id);
+      if (!existing) return;
       await storage.deleteLead(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -4652,6 +5536,8 @@ Examples:
   // Lead Activities Routes
   app.post("/api/leads/:id/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
+      const lead = await getAccessibleLeadOr404(req, res, req.params.id);
+      if (!lead) return;
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
       const leadId = req.params.id;
@@ -4686,6 +5572,8 @@ Examples:
 
   app.get("/api/leads/:id/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
+      const lead = await getAccessibleLeadOr404(req, res, req.params.id);
+      if (!lead) return;
       const activities = await storage.getLeadActivities(req.params.id);
       res.json(activities);
     } catch (error) {
@@ -5107,6 +5995,15 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
         console.log("❌ Missing clientId in request");
         return res.status(400).json({ message: "clientId is required" });
       }
+
+      // If linking to a visit, ensure visit belongs to same client
+      if (req.body.visitId) {
+        const [visit] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, String(req.body.visitId))).limit(1);
+        if (!visit) return res.status(400).json({ message: "Invalid visitId" });
+        if (String(visit.clientId) !== String(req.body.clientId)) {
+          return res.status(400).json({ message: "visitId does not belong to selected client" });
+        }
+      }
       
       const validatedData = insertContentPostSchema.parse(req.body);
       console.log("✅ Validated data:", JSON.stringify(validatedData, null, 2));
@@ -5172,6 +6069,18 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
 
   app.patch("/api/content-posts/:id", isAuthenticated, requirePermission("canManageContent"), async (req: Request, res: Response) => {
     try {
+      if (req.body.visitId || req.body.clientId) {
+        // If visitId is being set/changed, validate it matches the post's client (or new clientId)
+        const [existing] = await db.select().from(contentPosts).where(eq(contentPosts.id, req.params.id)).limit(1) as any;
+        const nextClientId = String(req.body.clientId ?? existing?.clientId ?? "");
+        if (req.body.visitId) {
+          const [visit] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, String(req.body.visitId))).limit(1);
+          if (!visit) return res.status(400).json({ message: "Invalid visitId" });
+          if (String(visit.clientId) !== nextClientId) {
+            return res.status(400).json({ message: "visitId does not belong to selected client" });
+          }
+        }
+      }
       const validatedData = insertContentPostSchema.partial().strip().parse(req.body);
       const post = await storage.updateContentPost(req.params.id, validatedData);
       res.json(post);
@@ -5950,7 +6859,7 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
   app.patch("/api/users/:id/role", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
       const roleSchema = z.object({
-        role: z.enum(["admin", "staff", "client"])
+        role: z.enum(["admin", "manager", "staff", "sales_agent", "creator_manager", "client"])
       });
       const { role } = roleSchema.parse(req.body);
       const user = await storage.updateUserRole(req.params.id, role);
@@ -5992,6 +6901,12 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
         results.campaigns = results.campaigns.filter((c: any) => c.createdBy === currentUser?.id);
         // Tasks are already filtered by the tasks endpoint
       }
+
+      // Sales agents: only see assigned clients/leads in global search
+      if (currentUser?.role === UserRole.SALES_AGENT) {
+        results.clients = results.clients.filter((c: any) => c.salesAgentId === currentUser.id || c.assignedToId === currentUser.id);
+        results.leads = results.leads.filter((l: any) => l.assignedToId === currentUser.id);
+      }
       
       res.json(results);
     } catch (error) {
@@ -6003,6 +6918,8 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
   // Client Document routes
   app.get("/api/clients/:clientId/documents", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
       const documents = await storage.getClientDocuments(req.params.clientId);
       res.json(documents);
     } catch (error) {
@@ -6013,7 +6930,9 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
 
   app.post("/api/clients/:clientId/documents", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId;
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
+      const userId = (req.user as any)?.id;
       
       const requestSchema = z.object({
         name: z.string(),
@@ -6040,7 +6959,7 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
         objectPath: objectPath,
         fileType: validatedData.fileType,
         fileSize: validatedData.fileSize,
-        uploadedBy: userId.toString(),
+        uploadedBy: userId?.toString(),
       });
 
       const document = await storage.createClientDocument(documentData);
@@ -6052,6 +6971,8 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
 
   app.delete("/api/clients/:clientId/documents/:documentId", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
       await storage.deleteClientDocument(req.params.documentId);
       res.status(204).send();
     } catch (error) {
@@ -6289,6 +7210,8 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
   // Lead activity routes
   app.get("/api/leads/:leadId/activities", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
+      if (!lead) return;
       const activities = await storage.getLeadActivities(req.params.leadId);
       res.json(activities);
     } catch (error) {
@@ -6299,7 +7222,9 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
 
   app.post("/api/leads/:leadId/activities", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId;
+      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
+      if (!lead) return;
+      const userId = (req.user as any)?.id ?? null;
       const validatedData = insertLeadActivitySchema.parse({
         ...req.body,
         leadId: req.params.leadId,
@@ -6315,6 +7240,8 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
   // Lead automation routes
   app.get("/api/leads/:leadId/automations", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
+      if (!lead) return;
       const automations = await storage.getLeadAutomations(req.params.leadId);
       res.json(automations);
     } catch (error) {
@@ -6325,6 +7252,8 @@ Only extract actual leads/contacts. Skip headers, footers, and non-contact infor
 
   app.post("/api/leads/:leadId/automations", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
+      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
+      if (!lead) return;
       const validatedData = insertLeadAutomationSchema.parse({
         ...req.body,
         leadId: req.params.leadId,

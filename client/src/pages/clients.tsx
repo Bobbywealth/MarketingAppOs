@@ -605,24 +605,28 @@ export default function Clients() {
             </Button>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center border rounded-lg overflow-hidden">
+            <div className="flex items-center border rounded-lg overflow-hidden shrink-0">
               <Button
                 variant={viewMode === "grid" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("grid")}
-                className="rounded-none border-0"
+                className="rounded-none border-0 min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
                 title="Grid view"
+                aria-label="Switch to grid view"
+                type="button"
               >
-                <LayoutGrid className="w-4 h-4" />
+                <LayoutGrid className="w-4 h-4 md:w-4 md:h-4" />
               </Button>
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("list")}
-                className="rounded-none border-0"
+                className="rounded-none border-0 min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
                 title="List view"
+                aria-label="Switch to list view"
+                type="button"
               >
-                <List className="w-4 h-4" />
+                <List className="w-4 h-4 md:w-4 md:h-4" />
               </Button>
             </div>
           </div>
@@ -658,13 +662,13 @@ export default function Clients() {
         </div>
 
         {/* Premium Client Cards with Stagger Animation */}
-        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in" : "flex flex-col gap-3 stagger-fade-in"}>
+        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in" : "flex flex-col gap-2 md:gap-3 stagger-fade-in"}>
           {filteredClients?.map((client) => (
             <Card 
               key={client.id}
               onDragOver={(e) => handleDragOver(e, client)}
               onDrop={(e) => handleDrop(e, client)}
-              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 ${viewMode === "grid" ? "card-hover-lift" : ""} gradient-border cursor-pointer ${
+              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 ${viewMode === "grid" ? "card-hover-lift" : "border-l-4 border-l-primary"} gradient-border cursor-pointer ${
                 draggedClient?.id === client.id ? 'opacity-50 scale-95' : ''
               } ${
                 dragOverClient?.id === client.id ? 'ring-2 ring-primary ring-offset-2' : ''
@@ -716,7 +720,7 @@ export default function Clients() {
                   </Button>
                 </div>
 
-                <div className={`flex items-start gap-4 ${viewMode === "grid" ? "mb-4 mt-6" : "mt-6"}`}>
+                <div className={`flex items-start gap-4 ${viewMode === "grid" ? "mb-4 mt-6" : "mb-2 mt-4 flex-row"}`}>
                   {/* Drag Handle - Only this triggers dragging */}
                   <div 
                     draggable
@@ -730,8 +734,8 @@ export default function Clients() {
                   >
                     <GripVertical className="w-5 h-5 text-muted-foreground" />
                   </div>
-                  <div className="relative">
-                    <Avatar className="h-14 w-14 border-2 border-primary/20 shadow-md">
+                  <div className="relative flex-shrink-0">
+                    <Avatar className={`${viewMode === "grid" ? "h-14 w-14" : "h-12 w-12"} border-2 border-primary/20 shadow-md`}>
                       <AvatarImage src={client.logoUrl || ""} />
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-lg font-bold">
                         {client.name.substring(0, 2).toUpperCase()}
@@ -740,7 +744,7 @@ export default function Clients() {
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-background shadow-sm"></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-primary transition-colors">
+                    <h3 className={`font-semibold ${viewMode === "grid" ? "text-lg" : "text-base"} truncate mb-1 group-hover:text-primary transition-colors`}>
                       {client.name}
                     </h3>
                     {client.company && (
@@ -752,7 +756,7 @@ export default function Clients() {
                   </div>
                 </div>
 
-                <div className={viewMode === "grid" ? "space-y-2.5" : "flex flex-wrap items-center gap-2"}>
+                <div className={viewMode === "grid" ? "space-y-2.5" : "flex flex-wrap items-center gap-2 mt-2"}>
                   {client.email && (
                     <a
                       href={`mailto:${client.email}`}

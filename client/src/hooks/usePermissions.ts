@@ -22,18 +22,19 @@ export function usePermissions() {
   const isManager = role === "manager";
   const isStaff = role === "staff";
   const isSalesAgent = role === "sales_agent";
+  const isCreatorManager = role === "creator_manager";
   const isClient = role === "client";
 
   // Compute permissions based on role (matches server/rbac.ts)
   const permissions: RolePermissions = {
     canManageUsers: isAdmin,
-    canManageClients: isAdmin || isManager || isStaff || isSalesAgent,
+    canManageClients: isAdmin || isManager || isStaff || isSalesAgent || isCreatorManager,
     canManageCampaigns: isAdmin || isManager || isStaff,
     canManageLeads: isAdmin || isManager || isStaff || isSalesAgent,
-    canManageContent: isAdmin || isManager || isStaff,
+    canManageContent: isAdmin || isManager || isStaff || isCreatorManager,
     canManageInvoices: isAdmin || isManager, // Staff and sales agents cannot manage invoices
     canManageTickets: isAdmin || isManager || isStaff || isSalesAgent,
-    canViewReports: isAdmin || isManager, // Staff and sales agents cannot view full reports
+    canViewReports: isAdmin || isManager || isCreatorManager, // Staff and sales agents cannot view full reports
     canManageSettings: isAdmin,
   };
 
@@ -52,6 +53,7 @@ export function usePermissions() {
     isManager,
     isStaff,
     isSalesAgent,
+    isCreatorManager,
     isClient,
     canAccess: (permission: keyof RolePermissions) => permissions[permission],
     canSeeSidebarItem,
