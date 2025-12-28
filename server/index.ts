@@ -8,6 +8,7 @@ import { initializeEmailService } from "./emailService";
 import { initializeEmailParser } from "./emailParser";
 import { startEmailSyncService } from "./emailSyncService";
 import { startVisitsAutomation } from "./visitsAutomation";
+import { startTaskAutomation } from "./taskAutomation";
 import { storage } from "./storage";
 
 const app = express();
@@ -59,6 +60,8 @@ app.use((req, res, next) => {
   startEmailSyncService(storage);
   // Start overdue upload automation (hourly)
   startVisitsAutomation();
+  // Start task due date reminders (daily)
+  startTaskAutomation();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

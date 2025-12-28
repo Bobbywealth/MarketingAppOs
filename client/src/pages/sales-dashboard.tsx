@@ -65,14 +65,22 @@ export default function SalesDashboard() {
     );
   }
 
-  const firstName = (user as any)?.firstName || (user as any)?.username || "Agent";
+  // Get current time for greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    const displayName = user?.firstName || user?.username?.split(' ')[0] || 'there';
+    
+    if (hour < 12) return `Good morning, ${displayName}`;
+    if (hour < 18) return `Good afternoon, ${displayName}`;
+    return `Good evening, ${displayName}`;
+  };
 
   return (
     <div className="min-h-full gradient-mesh p-4 md:p-6 lg:p-8 space-y-6">
       {/* Welcome Header */}
       <div className="space-y-2">
         <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">
-          Welcome back, {firstName}! 👋
+          {getGreeting()}! 👋
         </h1>
         <p className="text-muted-foreground text-sm md:text-base">
           Here's your sales performance overview

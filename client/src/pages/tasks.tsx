@@ -30,6 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
+import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
 import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
 
 const taskFormSchema = z.object({
@@ -66,6 +67,9 @@ export default function TasksPage() {
   const [isListening, setIsListening] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
   // Load showCompleted preference from localStorage, default to false (hide completed)
@@ -260,7 +264,52 @@ export default function TasksPage() {
     },
   });
 
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ ids, data }: { ids: string[], data: any }) => {
+      // For now, update tasks one by one as we don't have a bulk endpoint
+      // In a real app, you'd want a POST /api/tasks/bulk-update
+      return Promise.all(ids.map(id => apiRequest("PATCH", `/api/tasks/${id}`, data)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setSelectedTaskIds(new Set());
+      toast({ title: "Tasks updated successfully" });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      return Promise.all(ids.map(id => apiRequest("DELETE", `/api/tasks/${id}`)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setSelectedTaskIds(new Set());
+      toast({ title: "Tasks deleted successfully" });
+    },
+  });
+
   const handleEditTask = (task: Task) => {
+    // ... same as before
+  };
+
+  const toggleTaskSelection = (taskId: string, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation();
+    const newSelection = new Set(selectedTaskIds);
+    if (newSelection.has(taskId)) {
+      newSelection.delete(taskId);
+    } else {
+      newSelection.add(taskId);
+    }
+    setSelectedTaskIds(newSelection);
+  };
+
+  const selectAllTasks = () => {
+    if (selectedTaskIds.size === filteredTasks.length) {
+      setSelectedTaskIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)));
+    }
+  };
     setEditingTask(task);
     form.reset({
       title: task.title,
@@ -476,27 +525,33 @@ export default function TasksPage() {
     ];
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-full p-4 overflow-x-auto">
         {columns.map((column) => {
           const columnTasks = filteredTasks.filter((task) => task.status === column.id);
           
           return (
             <div 
               key={column.id} 
-              className="flex flex-col"
+              className="flex flex-col h-full min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <span>{column.icon}</span>
-                  {column.title}
-                  <Badge variant="secondary" className="ml-auto">
+              <div className="mb-4 px-2 py-1 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{column.icon}</span>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                    {column.title}
+                  </h3>
+                  <Badge variant="secondary" className="ml-2 bg-background/50 text-[10px] px-1.5 h-4 min-w-[20px] justify-center">
                     {columnTasks.length}
                   </Badge>
-                </h3>
+                </div>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-50 hover:opacity-100">
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
-              <div className="space-y-3 flex-1 min-h-[200px] p-2 rounded-lg border-2 border-dashed border-transparent transition-colors"
+
+              <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar"
                 style={{ 
                   borderColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.3)' : 'transparent',
                   backgroundColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.05)' : 'transparent'
@@ -507,51 +562,57 @@ export default function TasksPage() {
                     key={task.id} 
                     draggable
                     onDragStart={() => handleDragStart(task)}
-                    className={`hover-elevate active-elevate-2 transition-all group cursor-move ${
+                    className={`hover-elevate transition-all group cursor-grab active:cursor-grabbing border-none shadow-sm hover:shadow-md bg-card/80 backdrop-blur-md border border-white/10 dark:border-white/5 ${
                       draggedTask?.id === task.id ? 'opacity-50' : ''
                     }`}
                     data-testid={`task-card-${task.id}`}
+                    onClick={() => {
+                      setSelectedTask(task);
+                      setIsDetailSidebarOpen(true);
+                    }}
                   >
-                    <CardHeader className="p-4 space-y-2">
+                    <CardHeader className="p-3 space-y-3">
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-semibold text-sm line-clamp-2 flex-1">{task.title}</h4>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleEditTask(task)}
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Badge className={getPriorityColor(task.priority)} variant="secondary">
-                            {task.priority}
-                          </Badge>
-                        </div>
+                        <h4 className="font-semibold text-sm leading-tight flex-1">{task.title}</h4>
                       </div>
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {task.dueDate && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {toLocaleDateStringEST(task.dueDate)}
+                      
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className={`${getPriorityColor(task.priority)} text-[10px] px-1.5 h-5`} variant="outline">
+                          {task.priority.toUpperCase()}
+                        </Badge>
+                        {task.isRecurring && (
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-blue-600 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-900">
+                            <Repeat className="w-2.5 h-2.5" />
+                            {task.recurringPattern}
                           </div>
                         )}
-                        {task.assignedToId && (
-                          <div className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            <span>Assigned</span>
-                          </div>
-                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1 pt-2 border-t border-muted/30">
+                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                          {task.dueDate && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-2.5 h-2.5" />
+                              {toLocaleDateStringEST(task.dueDate)}
+                            </div>
+                          )}
+                          {task.checklist && task.checklist.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
+                            </div>
+                          )}
+                        </div>
+                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                          {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
+                        </div>
                       </div>
                     </CardHeader>
                   </Card>
                 ))}
                 {columnTasks.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    No tasks
+                  <div className="text-center py-10 border-2 border-dashed rounded-xl border-muted/20 text-muted-foreground/50 text-xs">
+                    Drop tasks here
                   </div>
                 )}
               </div>
@@ -566,36 +627,52 @@ export default function TasksPage() {
     return (
       <div className="border rounded-lg overflow-hidden bg-card">
         {/* Header - Hidden on mobile, shown on desktop */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground">
-          <div className="col-span-5">TASK NAME</div>
+        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground items-center">
+          <div className="col-span-1 flex justify-center">
+            <Checkbox 
+              checked={selectedTaskIds.size === filteredTasks.length && filteredTasks.length > 0}
+              onCheckedChange={selectAllTasks}
+            />
+          </div>
+          <div className="col-span-4">TASK NAME</div>
           <div className="col-span-2">STATUS</div>
           <div className="col-span-2">PRIORITY</div>
           <div className="col-span-2">DUE DATE</div>
-          <div className="col-span-1">ASSIGNEE</div>
+          <div className="col-span-1 text-right pr-4">ASSIGNEE</div>
         </div>
         
         {/* Task Rows */}
         <div className="divide-y">
           {filteredTasks.map((task) => (
-            <div key={task.id} className="group">
+            <div key={task.id} className="group relative">
               {/* Compact Row - Responsive layout */}
               <div 
                 className={`px-3 md:px-4 py-3 md:py-2.5 cursor-pointer hover:bg-muted/30 transition-colors ${
-                  expandedTaskId === task.id ? "bg-muted/50" : ""
+                  selectedTaskIds.has(task.id) ? "bg-primary/5 hover:bg-primary/10" : 
+                  selectedTask?.id === task.id ? "bg-muted/50" : ""
                 }`}
-                onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+                onClick={() => {
+                  setSelectedTask(task);
+                  setIsDetailSidebarOpen(true);
+                }}
                 data-testid={`task-row-${task.id}`}
               >
                 {/* Mobile Layout - Stacked */}
                 <div className="md:hidden space-y-2">
                   <div className="flex items-center gap-2">
+                    <Checkbox 
+                      checked={selectedTaskIds.has(task.id)}
+                      onCheckedChange={() => toggleTaskSelection(task.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mr-1"
+                    />
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                     <span className="font-medium text-sm flex-1">{task.title}</span>
                     {task.isRecurring && (
                       <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" title={`Recurring: ${task.recurringPattern}`} />
                     )}
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap pl-7">
                     <Badge className={`${getStatusColor(task.status)} text-xs`} variant="secondary">
                       {task.status.replace("_", " ")}
                     </Badge>
@@ -612,127 +689,55 @@ export default function TasksPage() {
 
                 {/* Desktop Layout - Grid */}
                 <div className="hidden md:grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-5 flex items-center gap-2 min-w-0">
-                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
-                    <span className="truncate text-sm font-medium">{task.title}</span>
+                  <div className="col-span-1 flex justify-center">
+                    <Checkbox 
+                      checked={selectedTaskIds.has(task.id)}
+                      onCheckedChange={() => toggleTaskSelection(task.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      task.status === "in_progress" ? "animate-pulse" : ""
+                    } ${getPriorityColor(task.priority)}`} />
+                    <span className="truncate text-sm font-semibold tracking-tight group-hover:text-primary transition-colors">
+                      {task.title}
+                    </span>
                     {task.isRecurring && (
-                      <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" title={`Recurring: ${task.recurringPattern}`} />
+                      <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 opacity-70" title={`Recurring: ${task.recurringPattern}`} />
                     )}
                   </div>
                   
                   <div className="col-span-2">
-                    <Badge className={`${getStatusColor(task.status)} text-xs`} variant="secondary">
+                    <Badge className={`${getStatusColor(task.status)} text-[10px] uppercase tracking-wide px-1.5 h-5`} variant="outline">
                       {task.status.replace("_", " ")}
                     </Badge>
                   </div>
                   
                   <div className="col-span-2">
-                    <Badge className={`${getPriorityColor(task.priority)} text-xs`} variant="secondary">
+                    <Badge className={`${getPriorityColor(task.priority)} text-[10px] uppercase tracking-wide px-1.5 h-5`} variant="outline">
                       {task.priority}
                     </Badge>
                   </div>
                   
-                  <div className="col-span-2 text-sm text-muted-foreground">
+                  <div className="col-span-2 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    {task.dueDate && <Calendar className="w-3 h-3 opacity-50" />}
                     {task.dueDate ? toLocaleDateStringEST(task.dueDate) : "-"}
                   </div>
                   
-                  <div className="col-span-1 flex items-center justify-center">
+                  <div className="col-span-1 flex items-center justify-end pr-2">
                     {task.assignedToId ? (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                        A
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/20">
+                        {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground text-xs">-</span>
+                      <div className="w-6 h-6 rounded-full border border-dashed flex items-center justify-center text-muted-foreground/30">
+                        <User className="w-3 h-3" />
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
-              
-              {/* Expanded Details */}
-              {expandedTaskId === task.id && (
-                <div className="px-4 py-4 bg-muted/20 border-t">
-                  <div className="space-y-4">
-                    {/* Description - Always show */}
-                    <div className="bg-background/50 rounded-lg p-3 border">
-                      <p className="text-xs font-semibold text-muted-foreground mb-2">DESCRIPTION</p>
-                      {task.description ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{task.description}</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No description provided</p>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">STATUS</p>
-                        <Select
-                          value={task.status}
-                          onValueChange={(status) => updateTaskStatusMutation.mutate({ id: task.id, status })}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="todo">To Do</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="review">Review</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      {task.dueDate && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">DUE DATE</p>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            {toLocaleDateStringEST(task.dueDate)}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {task.assignedToId && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">ASSIGNED TO</p>
-                          <div className="flex items-center gap-2 text-sm">
-                            <User className="w-4 h-4 text-muted-foreground" />
-                            <span>User #{task.assignedToId}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditTask(task);
-                        }}
-                      >
-                        <Edit className="w-3 h-3 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm("Delete this task?")) {
-                            deleteTaskMutation.mutate(task.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-3 h-3 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           ))}
         </div>
         
@@ -749,9 +754,26 @@ export default function TasksPage() {
     return (
       <div className="space-y-3">
         {filteredTasks.map((task) => (
-          <Card key={task.id} className="hover-elevate active-elevate-2 group" data-testid={`task-card-${task.id}`}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4">
+          <Card 
+            key={task.id} 
+            className={`hover-elevate transition-all group cursor-pointer ${
+              selectedTaskIds.has(task.id) ? "border-primary bg-primary/5" : ""
+            }`} 
+            data-testid={`task-card-${task.id}`}
+            onClick={() => {
+              setSelectedTask(task);
+              setIsDetailSidebarOpen(true);
+            }}
+          >
+            <CardContent className="p-6 relative">
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Checkbox 
+                  checked={selectedTaskIds.has(task.id)}
+                  onCheckedChange={() => toggleTaskSelection(task.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              <div className={`flex items-start justify-between gap-4 transition-transform ${selectedTaskIds.has(task.id) ? "translate-x-6" : "group-hover:translate-x-6"}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2 flex-wrap">
                     <h3 className="font-semibold">{task.title}</h3>
@@ -1614,6 +1636,66 @@ export default function TasksPage() {
           />
         )}
       </>
+
+      <TaskDetailSidebar
+        task={selectedTask}
+        isOpen={isDetailSidebarOpen}
+        onClose={() => {
+          setIsDetailSidebarOpen(false);
+          setSelectedTask(null);
+        }}
+      />
+
+      {/* Bulk Action Bar */}
+      {selectedTaskIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-3 border-r pr-6">
+            <span className="text-sm font-bold text-primary">{selectedTaskIds.size} selected</span>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedTaskIds(new Set())} className="h-7 text-xs">
+              Clear
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Select onValueChange={(status) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { status } })}>
+              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
+                <SelectValue placeholder="Update Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todo">To Do</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="review">Review</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select onValueChange={(priority) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { priority } })}>
+              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
+                <SelectValue placeholder="Update Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10"
+              onClick={() => {
+                if (confirm(`Delete ${selectedTaskIds.size} tasks?`)) {
+                  bulkDeleteMutation.mutate(Array.from(selectedTaskIds));
+                }
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

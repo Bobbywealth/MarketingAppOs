@@ -525,6 +525,13 @@ async function runMigrations() {
         console.log('⚠️ push_notification_history table already exists or error:', e.message);
       }
       
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS checklist JSONB DEFAULT '[]';`);
+        console.log('✅ Added checklist column to tasks table');
+      } catch (e) {
+        console.log('⚠️ checklist already exists or error:', e.message);
+      }
+      
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
       

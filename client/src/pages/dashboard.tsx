@@ -92,9 +92,11 @@ export default function Dashboard() {
   // Get current time for greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
+    const displayName = user?.firstName || user?.username?.split(' ')[0] || 'there';
+    
+    if (hour < 12) return `Good morning, ${displayName}`;
+    if (hour < 18) return `Good afternoon, ${displayName}`;
+    return `Good evening, ${displayName}`;
   };
 
   const getCurrentDate = () => {
@@ -290,7 +292,7 @@ export default function Dashboard() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
-                {getGreeting()}, {user?.username || 'there'}! 👋
+                {getGreeting()}! 👋
               </h1>
               <p className="text-sm md:text-base lg:text-lg text-muted-foreground mt-1">{getCurrentDate()}</p>
               <p className="text-xs md:text-sm text-muted-foreground/80 mt-0.5">

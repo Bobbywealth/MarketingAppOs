@@ -65,22 +65,6 @@ router.post("/campaigns", isAuthenticated, requirePermission("canManageCampaigns
   }
 });
 
-// Task routes
-router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
-  try {
-    const currentUser = req.user as any;
-    if (currentUser?.role === UserRole.CLIENT) {
-      const clientId = currentUser?.clientId;
-      const tasksList = clientId ? await storage.getTasksByClient(clientId) : [];
-      return res.json(tasksList);
-    }
-    const allTasks = await storage.getTasks();
-    res.json(allTasks);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch tasks" });
-  }
-});
-
 // Content Post routes
 router.get("/content-posts", isAuthenticated, async (req: Request, res: Response) => {
   try {

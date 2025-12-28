@@ -199,6 +199,7 @@ export const tasks = pgTable("tasks", {
   recurringInterval: integer("recurring_interval").default(1), // e.g., every 2 weeks
   recurringEndDate: timestamp("recurring_end_date"),
   scheduleFrom: varchar("schedule_from").default("due_date"), // "due_date" or "completion_date"
+  checklist: jsonb("checklist").$type<Array<{ id: string; text: string; completed: boolean }>>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
