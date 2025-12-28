@@ -54,6 +54,8 @@ interface NormalizedMessage {
   createdAt: string;
   authorName: string;
   authorRole: string;
+  readAt?: string | null;
+  deliveredAt?: string | null;
 }
 
 export default function Messages() {
@@ -240,6 +242,8 @@ export default function Messages() {
       createdAt: msg.createdAt,
       authorName: msg.userId === user?.id ? (user?.username || "You") : selectedUser?.username || "User",
       authorRole: msg.userId === user?.id ? ((user as any)?.role || "staff") : selectedUser?.role || "staff",
+      readAt: msg.readAt,
+      deliveredAt: msg.deliveredAt,
     }));
   }, [messageMode, groupMessages, messages, user, selectedUser]);
 
@@ -638,178 +642,187 @@ export default function Messages() {
     return username.slice(0, 2).toUpperCase();
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    const colors = {
-      admin: 'bg-purple-500',
-      manager: 'bg-blue-500',
-      staff: 'bg-green-500',
+  const getRoleBadgeStyles = (role: string) => {
+    const styles = {
+      admin: {
+        bg: 'bg-purple-100 dark:bg-purple-900/30',
+        text: 'text-purple-600 dark:text-purple-400',
+        dot: 'bg-purple-500'
+      },
+      manager: {
+        bg: 'bg-blue-100 dark:bg-blue-900/30',
+        text: 'text-blue-600 dark:text-blue-400',
+        dot: 'bg-blue-500'
+      },
+      staff: {
+        bg: 'bg-green-100 dark:bg-green-900/30',
+        text: 'text-green-600 dark:text-green-400',
+        dot: 'bg-green-500'
+      },
     };
-    return colors[role as keyof typeof colors] || 'bg-gray-500';
+    return styles[role as keyof typeof styles] || { bg: 'bg-zinc-100', text: 'text-zinc-600', dot: 'bg-zinc-400' };
   };
 
   const getStatusColor = (isOnline: boolean) => {
-    return isOnline ? 'bg-green-500' : 'bg-gray-400';
+    return isOnline ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700';
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 p-3 sm:p-4 md:p-6 border-b bg-white">
-        <div className="space-y-1 md:space-y-2">
-          <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold" data-testid="text-page-title">Team Messages</h1>
-          <p className="text-xs sm:text-sm md:text-base text-muted-foreground">Internal communication with admins and staff</p>
+    <div className="flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
+      {/* Premium Page Header */}
+      <div className="flex-shrink-0 px-6 py-6 border-b border-zinc-100 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-md z-20">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100" data-testid="text-page-title">
+                Messages
+              </h1>
+            </div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium ml-13">
+              Collaborate with your team in real-time
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2 mr-4">
+              {teamMembers.slice(0, 3).map((m, i) => (
+                <Avatar key={m.id} className="w-8 h-8 border-2 border-white dark:border-zinc-900 ring-2 ring-zinc-50 dark:ring-zinc-800">
+                  <AvatarFallback className="text-[10px] bg-zinc-100 dark:bg-zinc-800">
+                    {getInitials(m.username)}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              {teamMembers.length > 3 && (
+                <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[10px] font-bold text-zinc-500">
+                  +{teamMembers.length - 3}
+                </div>
+              )}
+            </div>
+            <Button variant="outline" size="sm" className="rounded-xl border-zinc-200 dark:border-zinc-800 font-semibold h-9">
+              <Paperclip className="w-4 h-4 mr-2 text-zinc-400" />
+              Files
+            </Button>
+            <Button size="sm" className="rounded-xl font-bold h-9 shadow-lg shadow-primary/20">
+              <Users className="w-4 h-4 mr-2" />
+              Directory
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
-        {/* Team Members Sidebar - Now visible on mobile */}
-        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col bg-gradient-to-b from-primary/5 via-transparent to-transparent`}>
-          <div className="flex-shrink-0 p-3 sm:p-4 border-b space-y-3 bg-white/80 backdrop-blur-sm">
-            <div className="md:hidden bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
-              <p className="text-xs font-medium text-blue-900">👆 Tap a team member to start messaging</p>
-            </div>
-            
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search team members..."
-                className="pl-8 sm:pl-10 text-xs sm:text-sm shadow-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            {/* Filter Dropdown */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-between text-xs"
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                >
-                  <div className="flex items-center gap-2">
-                    <Filter className="w-3 h-3" />
-                    <span>
-                      {roleFilter === "all" ? "All Roles" : 
-                       roleFilter === "admin" ? "Admins" :
-                       roleFilter === "manager" ? "Managers" : "Staff"}
-                    </span>
-                  </div>
-                  <ChevronDown className="w-3 h-3" />
-                </Button>
-                
-                {showFilterDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 overflow-hidden">
-                    <button
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setRoleFilter("all");
-                        setShowFilterDropdown(false);
-                      }}
-                    >
-                      All Roles
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center gap-2"
-                      onClick={() => {
-                        setRoleFilter("admin");
-                        setShowFilterDropdown(false);
-                      }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      Admins
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center gap-2"
-                      onClick={() => {
-                        setRoleFilter("manager");
-                        setShowFilterDropdown(false);
-                      }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      Managers
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-accent transition-colors flex items-center gap-2"
-                      onClick={() => {
-                        setRoleFilter("staff");
-                        setShowFilterDropdown(false);
-                      }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      Staff
-                    </button>
-                  </div>
-                )}
+        {/* Team List Panel */}
+        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col bg-white dark:bg-zinc-950`}>
+          <div className="flex-shrink-0 p-4 border-b space-y-4 bg-white dark:bg-zinc-950">
+            {/* Smart Search Bar */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-primary/5 rounded-xl blur-md group-focus-within:bg-primary/10 transition-all duration-300"></div>
+              <div className="relative flex items-center bg-white dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 rounded-xl shadow-sm group-focus-within:border-primary/30 group-focus-within:ring-4 group-focus-within:ring-primary/5 transition-all duration-300">
+                <Search className="ml-3 w-4 h-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
+                <Input
+                  placeholder="Search name, role, or status..."
+                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-sm h-11"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <div className="pr-2 flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-8 w-8 rounded-lg transition-all ${showFilterDropdown ? 'bg-primary/10 text-primary' : 'text-zinc-400 hover:text-zinc-600'}`}
+                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  >
+                    <Filter className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               
-              <Badge variant="secondary" className="text-xs">
-                {filteredTeamMembers.length}
-              </Badge>
+              {showFilterDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="p-1">
+                    {[
+                      { id: 'all', label: 'All Roles', color: 'bg-zinc-400' },
+                      { id: 'admin', label: 'Admins', color: 'bg-purple-500' },
+                      { id: 'manager', label: 'Managers', color: 'bg-blue-500' },
+                      { id: 'staff', label: 'Staff', color: 'bg-green-500' }
+                    ].map((role) => (
+                      <button
+                        key={role.id}
+                        className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-all flex items-center gap-3 ${
+                          roleFilter === role.id 
+                            ? 'bg-primary/10 text-primary font-medium' 
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                        onClick={() => {
+                          setRoleFilter(role.id);
+                          setShowFilterDropdown(false);
+                        }}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${role.color} ring-4 ${role.id === roleFilter ? 'ring-primary/20' : 'ring-transparent'}`}></div>
+                        {role.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="p-2">
+            <div className="p-3">
               {filteredTeamMembers.length === 0 ? (
-                <div className="text-center py-8 md:py-12 px-4">
-                  <Users className="w-12 h-12 md:w-16 md:h-16 mx-auto text-muted-foreground mb-3 opacity-50" />
-                  <p className="text-sm md:text-base font-medium text-muted-foreground mb-2">
-                    {searchQuery ? "No team members found" : "No team members available"}
+                <div className="text-center py-12 px-4">
+                  <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-zinc-800 shadow-inner">
+                    <Users className="w-10 h-10 text-zinc-300 dark:text-zinc-700" />
+                  </div>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+                    {searchQuery ? "No results found" : "Looking a bit quiet here"}
                   </p>
-                  {!searchQuery && (
-                    <div className="mt-4 text-left bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                      <p className="text-xs text-blue-900 dark:text-blue-100 mb-2 font-medium">💡 Why am I not seeing anyone?</p>
-                      <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1.5 list-disc list-inside">
-                        <li>Team messages are only for admins, managers, and staff</li>
-                        <li>You may be the only team member registered</li>
-                        <li>Ask your admin to add more team members</li>
-                      </ul>
-                    </div>
-                  )}
-                  {searchQuery && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Try a different search term
-                    </p>
-                  )}
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-[200px] mx-auto">
+                    {searchQuery ? "Try searching for a different name or role" : "Invite your team to start collaborating"}
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {filteredTeamMembers.map((member) => (
-                    <div
-                      key={member.id}
-                      onClick={() => setSelectedUserId(member.id)}
-                      className={`p-3 rounded-xl cursor-pointer transition-all duration-300 group relative overflow-hidden ${
-                        selectedUserId === member.id 
-                          ? 'bg-primary/10 border-2 border-primary shadow-md scale-[1.02]' 
-                          : 'hover:bg-white hover:shadow-lg border-2 border-transparent'
-                      }`}
-                    >
-                      {/* Gradient overlay on hover */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      
-                      <div className="flex items-center gap-3 relative z-10">
-                        {/* Avatar with status dot */}
-                        <div className="relative">
-                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12 ring-2 ring-white shadow-sm">
-                            <AvatarFallback className={`${getRoleBadgeColor(member.role)} text-white text-sm font-semibold`}>
+                <div className="space-y-1">
+                  {filteredTeamMembers.map((member) => {
+                    const isSelected = selectedUserId === member.id;
+                    const hasUnread = unreadCounts?.[member.id];
+                    return (
+                      <div
+                        key={member.id}
+                        onClick={() => setSelectedUserId(member.id)}
+                        className={`group p-3 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden flex items-center gap-4 ${
+                          isSelected 
+                            ? 'bg-primary/5 border-2 border-primary/20 shadow-sm' 
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-900 border-2 border-transparent'
+                        }`}
+                      >
+                        {/* Hover Accent Bar */}
+                        <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-primary transition-all duration-300 ${isSelected ? 'opacity-100' : 'opacity-0 -translate-x-1 group-hover:opacity-50 group-hover:translate-x-0'}`}></div>
+                        
+                        {/* Avatar with Status */}
+                        <div className="relative flex-shrink-0">
+                          <Avatar className="w-12 h-12 border-2 border-white dark:border-zinc-800 shadow-md transition-transform duration-300 group-hover:scale-105">
+                            <AvatarFallback className={`bg-gradient-to-br from-primary/80 to-purple-600/80 text-white text-base font-bold`}>
                               {getInitials(member.username)}
                             </AvatarFallback>
                           </Avatar>
-                          {/* Status dot */}
-                          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(true)}`}></div>
+                          <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-zinc-800 shadow-sm ${getStatusColor(true)}`}>
+                            <div className={`w-full h-full rounded-full ${getStatusColor(true)} animate-ping opacity-40`}></div>
+                          </div>
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold truncate text-sm">{member.username}</p>
-                            {unreadCounts?.[member.id] && (
-                              <Badge 
-                                variant="destructive" 
-                                className="text-xs h-5 min-w-[20px] flex items-center justify-center animate-pulse shadow-lg"
-                              >
-                                {unreadCounts[member.id]}
+                          <div className="flex items-center justify-between gap-2 mb-0.5">
+                            <p className={`font-bold truncate transition-colors ${isSelected ? 'text-primary' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                              {member.username}
+                            </p>
+                            {hasUnread && (
+                              <Badge className="bg-primary hover:bg-primary text-white text-[10px] h-5 min-w-[20px] rounded-full px-1.5 shadow-lg shadow-primary/20 animate-bounce">
+                                {hasUnread}
                               </Badge>
                             )}
                           </div>
@@ -817,19 +830,26 @@ export default function Messages() {
                           <div className="flex items-center gap-2">
                             <Badge 
                               variant="secondary" 
-                              className={`text-[10px] px-1.5 py-0 ${getRoleBadgeColor(member.role)} text-white`}
+                              className={`text-[10px] px-2 py-0 h-4 rounded-md font-bold uppercase tracking-wider ${getRoleBadgeStyles(member.role).bg} ${getRoleBadgeStyles(member.role).text} border-0`}
                             >
                               {member.role}
                             </Badge>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(true)}`}></div>
-                              Online
+                            <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium flex items-center gap-1.5">
+                              <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></span>
+                              Active 2 min ago
                             </span>
                           </div>
                         </div>
+
+                        {/* Hover Action Icon */}
+                        <div className={`flex-shrink-0 transition-all duration-300 ${isSelected ? 'opacity-100' : 'opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`}>
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                            <MessageSquare className="w-4 h-4" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -837,284 +857,360 @@ export default function Messages() {
         </div>
 
         {/* Messages Area - Now with back button on mobile */}
-        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col overflow-hidden`}>
+        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-900`}>
           {!selectedUserId ? (
-            <div className="flex-1 hidden md:flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-                <p className="text-lg font-medium mb-1">Select a team member</p>
-                <p className="text-sm text-muted-foreground">
-                  Choose someone from the list to start messaging
-                </p>
+            <div className="flex-1 hidden md:flex items-center justify-center p-8">
+              <div className="max-w-md w-full text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="relative mx-auto w-32 h-32">
+                  <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-4 bg-primary/20 rounded-full animate-ping duration-1000"></div>
+                  <div className="relative w-full h-full bg-white dark:bg-zinc-800 rounded-full shadow-xl flex items-center justify-center border-4 border-zinc-50 dark:border-zinc-900">
+                    <MessageSquare className="w-12 h-12 text-primary" />
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full border-4 border-white dark:border-zinc-900 flex items-center justify-center shadow-lg">
+                    <Users className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Start a conversation</h2>
+                  <p className="text-zinc-500 dark:text-zinc-400">
+                    Select a team member from the sidebar to collaborate in real-time.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" className="rounded-xl h-12 border-2 border-zinc-200 dark:border-zinc-800 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                    <Users className="w-4 h-4 mr-2 text-zinc-400 group-hover:text-primary transition-colors" />
+                    Create Group
+                  </Button>
+                  <Button variant="outline" className="rounded-xl h-12 border-2 border-zinc-200 dark:border-zinc-800 hover:border-primary/30 hover:bg-primary/5 transition-all group">
+                    <Smile className="w-4 h-4 mr-2 text-zinc-400 group-hover:text-primary transition-colors" />
+                    Message Admin
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
             <>
-              {/* Chat Header - Enhanced */}
-              <div className="flex-shrink-0 p-3 sm:p-4 border-b bg-gradient-to-r from-white to-primary/5 shadow-sm">
+              {/* Modern Chat Header */}
+              <div className="flex-shrink-0 p-4 border-b bg-white dark:bg-zinc-950 shadow-sm z-10">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     {/* Back button for mobile */}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="md:hidden hover:bg-accent h-8 w-8"
+                      className="md:hidden hover:bg-zinc-100 dark:hover:bg-zinc-900 h-10 w-10 rounded-xl"
                       onClick={() => setSelectedUserId(null)}
                     >
-                      <ArrowLeft className="w-4 h-4" />
+                      <ArrowLeft className="w-5 h-5" />
                     </Button>
                     
-                    {/* Avatar with status */}
-                    <div className="relative">
-                      <Avatar className="w-10 h-10 sm:w-12 sm:h-12 ring-2 ring-white shadow-md">
-                        <AvatarFallback className={`${selectedUser && getRoleBadgeColor(selectedUser.role)} text-white font-semibold`}>
+                    {/* Avatar with Status */}
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-primary/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <Avatar className="w-12 h-12 border-2 border-white dark:border-zinc-800 shadow-md relative z-10">
+                        <AvatarFallback className={`${selectedUser && getRoleBadgeStyles(selectedUser.role).dot} text-white font-bold text-base`}>
                           {selectedUser && getInitials(selectedUser.username)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${presenceOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-zinc-800 z-20 shadow-sm ${presenceOnline ? 'bg-emerald-500' : 'bg-zinc-400'}`}></div>
                     </div>
                     
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-sm sm:text-base">{selectedUser?.username}</h3>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{selectedUser?.username}</h3>
                         {selectedUser && (
                           <Badge 
                             variant="secondary" 
-                            className={`text-[10px] ${getRoleBadgeColor(selectedUser.role)} text-white`}
+                            className={`text-[10px] px-2 py-0 h-4 rounded-md font-bold uppercase tracking-wider ${getRoleBadgeStyles(selectedUser.role).bg} ${getRoleBadgeStyles(selectedUser.role).text} border-0`}
                           >
                             {selectedUser.role}
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium ${presenceOnline ? 'text-green-600' : 'text-muted-foreground'}`}>
-                          {presenceOnline ? '🟢 Online' : lastSeen ? `Last seen ${formatDistanceToNow(new Date(lastSeen), { addSuffix: true })}` : 'Offline'}
+                        <span className={`text-xs font-semibold ${presenceOnline ? 'text-green-600 dark:text-green-500' : 'text-zinc-400'}`}>
+                          {presenceOnline ? 'Online now' : lastSeen ? `Last seen ${formatDistanceToNow(new Date(lastSeen), { addSuffix: true })}` : 'Offline'}
                         </span>
                       </div>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                      <Search className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                      <Users className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                      <ChevronDown className="w-5 h-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 min-h-0">
-                <ScrollArea className="h-full p-2 sm:p-3 md:p-4 bg-gradient-to-b from-gray-50/50 to-transparent">
-                {messagesLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="flex gap-3">
-                        <div className="w-8 h-8 bg-muted rounded-full animate-pulse"></div>
-                        <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                          <div className="h-16 bg-muted rounded animate-pulse"></div>
-                        </div>
+              {/* Messages Area */}
+              <div className="flex-1 min-h-0 bg-zinc-50 dark:bg-zinc-900/50 relative">
+                <ScrollArea className="h-full">
+                  <div className="p-4 sm:p-6 space-y-6">
+                    {messagesLoading ? (
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className={`flex gap-3 ${i % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
+                            <div className="w-10 h-10 bg-zinc-200 dark:bg-zinc-800 rounded-full animate-pulse"></div>
+                            <div className={`space-y-2 ${i % 2 === 0 ? 'items-start' : 'items-end'} flex flex-col w-full max-w-[60%]`}>
+                              <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded w-24 animate-pulse"></div>
+                              <div className="h-20 bg-zinc-200 dark:bg-zinc-800 rounded-2xl w-full animate-pulse"></div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : messages && messages.length > 0 ? (
-                  <div className="space-y-4">
-                    {messages.map((message) => {
-                      const isOwnMessage = message.userId === user?.id;
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex gap-2 sm:gap-3 ${isOwnMessage ? 'flex-row-reverse' : ''}`}
-                          data-testid={`message-${message.id}`}
-                        >
-                          <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {isOwnMessage 
-                                ? getInitials(user?.username || 'U')
-                                : getInitials(selectedUser?.username || 'U')
-                              }
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={`flex-1 max-w-[75%] sm:max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col`}>
-                            <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                              <span className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                              </span>
-                            </div>
+                    ) : normalizedMessages && normalizedMessages.length > 0 ? (
+                      <div className="space-y-6">
+                        {normalizedMessages.map((message, idx) => {
+                          const isOwnMessage = message.userId === user?.id;
+                          const showAvatar = idx === 0 || normalizedMessages[idx-1].userId !== message.userId;
+                          
+                          return (
                             <div
-                              className={`rounded-2xl p-3 shadow-sm transition-all hover:shadow-md ${
-                                isOwnMessage
-                                  ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground'
-                                  : 'bg-white border border-gray-200'
-                              }`}
+                              key={message.id}
+                              className={`flex gap-3 group ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
                             >
-                              {message.mediaUrl ? (
-                                <div className="space-y-1">
-                                  {message.mediaType?.startsWith('image') ? (
-                                    <div 
-                                      className="cursor-pointer hover:opacity-90 transition-opacity"
-                                      onClick={() => setSelectedImage(message.mediaUrl)}
-                                    >
-                                      <img src={message.mediaUrl} alt="image message" className="max-w-[240px] max-h-[240px] rounded-md shadow" />
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <audio controls preload="metadata" src={message.mediaUrl} className="w-full">
-                                        Your browser does not support the audio element.
-                                      </audio>
-                                      {message.durationMs && (
-                                        <div className="text-[10px] opacity-80">
-                                          {Math.round((message.durationMs as any) / 1000)}s
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              ) : (
-                                <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
-                              )}
-                            </div>
-                            {isOwnMessage && (
-                              <div className="flex items-center gap-1 mt-1">
-                                {message.readAt ? (
-                                  <>
-                                    <CheckCheck className="w-3 h-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">Read</span>
-                                  </>
-                                ) : message.deliveredAt ? (
-                                  <>
-                                    <Check className="w-3 h-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">Delivered</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Check className="w-3 h-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">Sent</span>
-                                  </>
+                              {/* Avatar with conditional visibility for message grouping */}
+                              <div className="w-10 flex-shrink-0">
+                                {showAvatar && (
+                                  <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800 shadow-sm transition-transform group-hover:scale-105">
+                                    <AvatarFallback className={`${isOwnMessage ? 'bg-primary/10 text-primary' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600'} text-xs font-bold`}>
+                                      {isOwnMessage ? getInitials(user?.username || 'U') : getInitials(message.authorName || 'U')}
+                                    </AvatarFallback>
+                                  </Avatar>
                                 )}
                               </div>
-                            )}
-                          </div>
+
+                              <div className={`flex flex-col max-w-[75%] sm:max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                                {showAvatar && (
+                                  <span className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 mb-1 px-1">
+                                    {isOwnMessage ? 'You' : message.authorName} • {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                                  </span>
+                                )}
+                                
+                                <div className="relative group/bubble">
+                                  <div
+                                    className={`rounded-2xl px-4 py-3 shadow-sm transition-all relative ${
+                                      isOwnMessage
+                                        ? 'bg-primary text-white rounded-tr-none shadow-primary/10'
+                                        : message.authorRole === 'admin' 
+                                          ? 'bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 text-zinc-900 dark:text-zinc-100 rounded-tl-none'
+                                          : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-tl-none'
+                                    }`}
+                                  >
+                                    {message.mediaUrl ? (
+                                      <div className="space-y-2">
+                                        {message.mediaType?.startsWith('image') ? (
+                                          <div 
+                                            className="cursor-pointer overflow-hidden rounded-lg shadow-md hover:ring-4 hover:ring-primary/20 transition-all"
+                                            onClick={() => setSelectedImage(message.mediaUrl)}
+                                          >
+                                            <img src={message.mediaUrl} alt="message attachment" className="max-w-full h-auto max-h-[300px] object-cover" />
+                                          </div>
+                                        ) : (
+                                          <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                                            <audio controls preload="metadata" src={message.mediaUrl} className="w-full h-8" />
+                                            {message.durationMs && (
+                                              <div className="text-[10px] text-zinc-400 mt-2 font-medium">
+                                                Voice Message • {Math.round((message.durationMs as any) / 1000)}s
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                                    )}
+
+                                    {/* Hover Timestamp */}
+                                    <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/bubble:opacity-100 transition-opacity whitespace-nowrap text-[10px] font-bold text-zinc-400 px-2 ${isOwnMessage ? 'right-full' : 'left-full'}`}>
+                                      {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {isOwnMessage && (
+                                  <div className="flex items-center gap-1.5 mt-1.5 px-1">
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">
+                                      {message.readAt ? 'Seen' : 'Delivered'}
+                                    </span>
+                                    {message.readAt ? (
+                                      <CheckCheck className="w-3.5 h-3.5 text-primary" />
+                                    ) : (
+                                      <Check className="w-3.5 h-3.5 text-zinc-300" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-12 space-y-6">
+                        <div className="w-24 h-24 bg-white dark:bg-zinc-800 rounded-3xl shadow-xl flex items-center justify-center rotate-3 border-2 border-zinc-50 dark:border-zinc-900">
+                          <Smile className="w-12 h-12 text-primary animate-bounce" />
                         </div>
-                      );
-                    })}
-                    <div ref={messagesEndRef} />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center p-8">
-                      <div className="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-full flex items-center justify-center">
-                        <MessageSquare className="w-12 h-12 text-primary" />
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Say hello to {selectedUser?.username}!</h3>
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto">
+                            Send a message to start collaborating and get the project moving forward.
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {['👋 Hey!', '🙌 Ready to start?', '🔥 Let\'s go!'].map((msg) => (
+                            <Button 
+                              key={msg}
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setMessageText(msg);
+                                messageInputRef.current?.focus();
+                              }}
+                              className="rounded-full bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 hover:border-primary hover:text-primary transition-all text-xs font-semibold"
+                            >
+                              {msg}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Start the conversation with {selectedUser?.username}!
-                      </p>
-                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                        <span>💬</span>
-                        <span>Send a message to get started</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                )}
-              </ScrollArea>
+                </ScrollArea>
               </div>
 
-              {/* Message Input */}
-              <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 border-t bg-white space-y-3">
-                {/* Voice Message Preview */}
-                {recordedBlob && (
-                  <div className="bg-gray-50 rounded-lg p-3 border">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        type="button"
-                        onClick={handlePlayRecording}
-                        variant="outline"
-                        size="sm"
-                        className="w-10 h-10 rounded-full p-0"
-                      >
-                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                      </Button>
-                      
-                      <div className="flex-1">
-                        <div className="h-2 bg-gray-200 rounded-full relative">
-                          <div className="h-2 bg-blue-500 rounded-full w-0" style={{ width: isPlaying ? '100%' : '0%' }}></div>
-                          <div className="absolute top-0 left-0 w-3 h-3 bg-white border-2 border-blue-500 rounded-full -mt-0.5"></div>
+              {/* Enhanced Message Input Area */}
+              <div className="flex-shrink-0 p-4 border-t bg-white dark:bg-zinc-950 z-10">
+                <div className="max-w-4xl mx-auto">
+                  {/* Voice Message Preview */}
+                  {recordedBlob && (
+                    <div className="mb-3 animate-in slide-in-from-bottom-2 duration-300">
+                      <div className="bg-zinc-50 dark:bg-zinc-900 rounded-2xl p-4 border-2 border-primary/20 shadow-lg flex items-center gap-4">
+                        <Button
+                          type="button"
+                          onClick={handlePlayRecording}
+                          className={`w-12 h-12 rounded-full p-0 shadow-lg shadow-primary/20 transition-transform active:scale-95 ${isPlaying ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900' : 'bg-primary text-white'}`}
+                        >
+                          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
+                        </Button>
+                        
+                        <div className="flex-1 space-y-1">
+                          <div className="h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary transition-all duration-300 ease-linear" style={{ width: isPlaying ? '100%' : '0%' }}></div>
+                          </div>
+                          <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                            <span>{isPlaying ? 'Playing...' : 'Recording Ready'}</span>
+                            <span>{Math.round(recordedDuration / 1000)}s</span>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {Math.round(recordedDuration / 1000)}s
+                        
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            onClick={handleDeleteRecording}
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleSendVoiceMessage}
+                            disabled={sendMessageMutation.isPending}
+                            className="rounded-xl h-10 px-6 gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                          >
+                            <Send className="w-4 h-4" />
+                            Send
+                          </Button>
                         </div>
                       </div>
-                      
-                      <Button
-                        type="button"
-                        onClick={handleRewindRecording}
-                        variant="ghost"
-                        size="sm"
-                        className="w-8 h-8 p-0"
-                      >
-                        <SkipBack className="w-4 h-4" />
-                      </Button>
-                      
-                      <Button
-                        type="button"
-                        onClick={handleDeleteRecording}
-                        variant="ghost"
-                        size="sm"
-                        className="w-8 h-8 p-0 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      
-                      <Button
-                        type="button"
-                        onClick={handleSendVoiceMessage}
-                        disabled={sendMessageMutation.isPending}
-                        size="sm"
-                        className="gap-1"
-                      >
-                        <Send className="w-4 h-4" />
-                        Send
-                      </Button>
+                      <audio ref={audioRef} className="hidden" />
                     </div>
-                    <audio ref={audioRef} className="hidden" />
-                  </div>
-                )}
+                  )}
 
-                {/* Regular Message Input */}
-                {!recordedBlob && (
-                  <form onSubmit={handleSendMessage} className="flex gap-1 sm:gap-2">
-                    <Input
-                      ref={messageInputRef}
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      placeholder={`Message ${selectedUser?.username}...`}
-                      disabled={sendMessageMutation.isPending}
-                      data-testid="input-message"
-                      className="flex-1 text-xs sm:text-sm"
-                      autoFocus
-                    />
-                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
-                    <Button type="button" onClick={handlePickImage} variant="secondary" className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10" size="sm">
-                      <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline text-xs sm:text-sm">Image</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={isRecording ? handleStopRecording : handleStartRecording}
-                      variant={isRecording ? 'destructive' : 'secondary'}
-                      className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
-                      size="sm"
-                    >
-                      {isRecording ? <StopCircle className="w-3 h-3 sm:w-4 sm:h-4" /> : <Mic className="w-3 h-3 sm:w-4 sm:h-4" />}
-                      <span className="hidden sm:inline text-xs sm:text-sm">{isRecording ? 'Stop' : 'Voice'}</span>
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={!messageText.trim() || sendMessageMutation.isPending}
-                      data-testid="button-send-message"
-                      className="gap-1 sm:gap-2 shrink-0 h-8 sm:h-10"
-                      size="sm"
-                    >
-                      <Send className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline text-xs sm:text-sm">Send</span>
-                    </Button>
+                  <form onSubmit={handleSendMessage} className="relative group">
+                    <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-lg opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                    <div className="relative flex items-end gap-2 bg-zinc-50 dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-800 rounded-2xl p-2 focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5 transition-all duration-300 shadow-sm">
+                      <div className="flex items-center gap-1 pb-1 pl-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                        >
+                          <Smile className="w-5 h-5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={handlePickImage}
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                        >
+                          <Paperclip className="w-5 h-5" />
+                        </Button>
+                      </div>
+
+                      <Input
+                        ref={messageInputRef}
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder="Type a message..."
+                        className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent min-h-[44px] text-sm py-3"
+                        disabled={sendMessageMutation.isPending}
+                        autoFocus
+                      />
+                      
+                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
+                      
+                      <div className="flex items-center gap-1 pb-1 pr-1">
+                        {!messageText.trim() ? (
+                          <Button
+                            type="button"
+                            onClick={isRecording ? handleStopRecording : handleStartRecording}
+                            className={`h-9 w-9 rounded-xl transition-all duration-300 ${
+                              isRecording 
+                                ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                                : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-300 dark:hover:bg-zinc-700'
+                            }`}
+                          >
+                            {isRecording ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="submit"
+                            disabled={!messageText.trim() || sendMessageMutation.isPending}
+                            className="h-9 px-4 rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center gap-2"
+                          >
+                            <span className="text-xs font-bold uppercase tracking-wider">Send</span>
+                            <Send className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex justify-between px-2">
+                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                        Press Enter to send
+                      </p>
+                      <div className="flex gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800"></div>
+                      </div>
+                    </div>
                   </form>
-                )}
+                </div>
               </div>
             </>
           )}

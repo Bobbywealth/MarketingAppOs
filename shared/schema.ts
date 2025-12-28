@@ -426,6 +426,10 @@ export const creatorVisits = pgTable("creator_visits", {
   approved: boolean("approved").notNull().default(false),
   approvedBy: integer("approved_by").references(() => users.id),
   qualityScore: integer("quality_score"), // 1-5
+  qualityDetailedScore: jsonb("quality_detailed_score"), // { lighting: 5, framing: 4, content: 5 }
+  revisionRequested: boolean("revision_requested").default(false),
+  revisionNotes: text("revision_notes"),
+  disputeStatus: varchar("dispute_status"), // pending, resolved, none
   paymentReleased: boolean("payment_released").notNull().default(false),
   paymentReleasedAt: timestamp("payment_released_at"),
   notes: text("notes"),

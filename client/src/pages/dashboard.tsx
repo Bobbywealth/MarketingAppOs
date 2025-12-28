@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye, Plus, Clock, AlertCircle, UserPlus } from "lucide-react";
+import { Users, Megaphone, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Activity, Calendar, CreditCard, CheckCircle2, ListTodo, Eye, Plus, Clock, AlertCircle, UserPlus, ShieldCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,16 @@ export default function Dashboard() {
         ? `/api/visits?status=completed&from=${encodeURIComponent(startOfToday.toISOString())}&to=${encodeURIComponent(endOfToday.toISOString())}`
         : "",
     ],
+    enabled: isOps,
+  });
+
+  const { data: pendingApprovals = [] } = useQuery<any[]>({
+    queryKey: [isOps ? "/api/visits?status=completed&approved=false" : ""],
+    enabled: isOps,
+  });
+
+  const { data: disputedVisits = [] } = useQuery<any[]>({
+    queryKey: [isOps ? "/api/visits?disputeStatus=pending" : ""],
     enabled: isOps,
   });
 
@@ -292,37 +302,66 @@ export default function Dashboard() {
 
         {/* Ops Control Widgets */}
         {isOps && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-l-4 border-l-amber-500" onClick={() => navigate("/visits?status=completed&approved=false")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  Pending Approvals
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{pendingApprovals.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Ready for review</p>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-l-4 border-l-red-500" onClick={() => navigate("/visits?disputeStatus=pending")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Open Disputes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-600">{disputedVisits.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Needs attention</p>
+              </CardContent>
+            </Card>
+
             <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/visits")}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Visits scheduled this week</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Visits this week</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{visitsThisWeek.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Tap to open Visits</p>
+                <p className="text-xs text-muted-foreground mt-1">Scheduled range</p>
               </CardContent>
             </Card>
+
             <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/visits?uploadOverdue=true")}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">Uploads overdue</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-red-600">{overdueUploads.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Completed visits missing uploads</p>
+                <p className="text-xs text-muted-foreground mt-1">Missing assets</p>
               </CardContent>
             </Card>
+
             <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/visits?status=completed")}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm text-muted-foreground">Visits completed today</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{visitsCompletedToday.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Based on scheduled time</p>
+                <p className="text-xs text-muted-foreground mt-1">Daily target</p>
               </CardContent>
             </Card>
+
             <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/creators")}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Creators w/ low quality</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">Low quality creators</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{lowQualityCount}</div>

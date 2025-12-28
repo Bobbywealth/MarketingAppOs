@@ -21,7 +21,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, UsersRound, Star, MapPin } from "lucide-react";
+import { Plus, UsersRound, Star, MapPin, Award } from "lucide-react";
+
+const getCreatorTier = (score: string | number | null) => {
+  const s = Number(score || 0);
+  if (s >= 4.8) return { label: "Gold", color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+  if (s >= 4.0) return { label: "Silver", color: "text-slate-400", bg: "bg-slate-400/10", border: "border-slate-400/20" };
+  return { label: "Bronze", color: "text-orange-700", bg: "bg-orange-700/10", border: "border-orange-700/20" };
+};
 
 type CreatorRow = {
   id: string;
@@ -126,45 +133,55 @@ export default function CreatorsPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>City / Zip</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Tier</TableHead>
                     <TableHead>Score</TableHead>
                     <TableHead>Rate</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {creators.map((c) => (
-                    <TableRow key={c.id} className="cursor-pointer" onClick={() => setLocation(`/creators/${c.id}`)}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {c.fullName}
-                        </div>
-                        {(c.email || c.phone) && (
-                          <div className="text-xs text-muted-foreground">
-                            {c.email || c.phone}
+                  {creators.map((c) => {
+                    const tier = getCreatorTier(c.performanceScore);
+                    return (
+                      <TableRow key={c.id} className="cursor-pointer" onClick={() => setLocation(`/creators/${c.id}`)}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {c.fullName}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="w-4 h-4 text-muted-foreground" />
-                          <span>{c.homeCity || "—"}</span>
-                          <span className="text-muted-foreground">•</span>
-                          <span>{c.baseZip || "—"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={c.status === "active" ? "default" : c.status === "backup" ? "secondary" : "outline"}>
-                          {c.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-amber-500" />
-                          <span>{c.performanceScore ?? "5.0"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>${(c.ratePerVisitCents / 100).toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
+                          {(c.email || c.phone) && (
+                            <div className="text-xs text-muted-foreground">
+                              {c.email || c.phone}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="w-4 h-4 text-muted-foreground" />
+                            <span>{c.homeCity || "—"}</span>
+                            <span className="text-muted-foreground">•</span>
+                            <span>{c.baseZip || "—"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={c.status === "active" ? "default" : c.status === "backup" ? "secondary" : "outline"}>
+                            {c.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${tier.bg} ${tier.color} ${tier.border}`}>
+                            <Award className="w-3 h-3" />
+                            {tier.label}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-amber-500" />
+                            <span>{c.performanceScore ?? "5.0"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>${(c.ratePerVisitCents / 100).toFixed(2)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {creators.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
@@ -186,6 +203,7 @@ export default function CreatorsPage() {
     </div>
   );
 }
+
 
 
 

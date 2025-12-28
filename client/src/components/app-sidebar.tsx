@@ -391,28 +391,40 @@ function NavItem({
     <SidebarMenuButton 
       asChild 
       isActive={isActive}
-      className="group relative transition-all duration-200 ease-in-out rounded-md hover:bg-primary/10 hover:shadow-sm"
+      className={`group relative transition-all duration-300 ease-in-out rounded-lg h-11 ${
+        isActive 
+          ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20' 
+          : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+      }`}
       data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}
     >
-      <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full py-2.5 px-2">
-        {/* Active Accent Bar with Gradient */}
-        {isActive && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-primary to-primary/80 rounded-r-full shadow-sm" />
-        )}
+      <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full py-0 px-3 overflow-hidden">
+        {/* Animated Left Border */}
+        <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-primary rounded-r-full transition-all duration-300 ${
+          isActive ? 'h-6 opacity-100' : 'group-hover:h-4 group-hover:opacity-50'
+        }`} />
         
-        <div className={`transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`}>
-          <Icon className="w-4 h-4" />
+        <div className={`transition-all duration-300 ${
+          isActive 
+            ? 'text-primary scale-110' 
+            : 'text-zinc-400 group-hover:text-primary group-hover:scale-110'
+        }`}>
+          <Icon className="w-5 h-5" />
         </div>
         
         {!isCollapsed && (
           <>
-            <span className={`font-medium transition-colors duration-200 ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
+            <span className={`font-semibold text-sm transition-all duration-300 ${
+              isActive 
+                ? 'text-zinc-900 dark:text-zinc-100 translate-x-1' 
+                : 'text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 group-hover:translate-x-1'
+            }`}>
               {item.title}
             </span>
             {showBadge && (
               <Badge 
                 variant="destructive" 
-                className="ml-auto text-xs h-5 min-w-[20px] flex items-center justify-center animate-pulse"
+                className="ml-auto text-[10px] h-5 min-w-[20px] rounded-full flex items-center justify-center animate-pulse shadow-lg shadow-destructive/20"
               >
                 {badgeCount > 99 ? '99+' : badgeCount}
               </Badge>
@@ -420,7 +432,7 @@ function NavItem({
           </>
         )}
         {isCollapsed && showBadge && (
-          <div className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full border-2 border-background animate-pulse" />
+          <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-white dark:border-zinc-900 animate-pulse shadow-sm" />
         )}
       </Link>
     </SidebarMenuButton>
@@ -541,12 +553,12 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel className="px-3 py-2 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-[0.05em]">
+          <SidebarGroup className="mt-4">
+            <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Menu
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="px-2 gap-1">
                 {clientTools.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <NavItem
@@ -619,12 +631,12 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel className="px-3 py-2 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-[0.05em]">
+          <SidebarGroup className="mt-4">
+            <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Sales Tools
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="px-2 gap-1">
                 {salesAgentTools.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <NavItem
@@ -765,12 +777,12 @@ export function AppSidebar() {
       
       <SidebarContent className="data-[collapsible=icon]:overflow-hidden">
         {/* Company Tools Section */}
-        <SidebarGroup className="mt-3">
-          <SidebarGroupLabel className="px-3 py-3 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-[0.05em]">
-            Company Tools
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Company
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="px-2 gap-1">
               {filteredCompanyTools.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem
@@ -787,15 +799,17 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Divider */}
-        <Separator className="my-2" />
+        <div className="px-4 my-4">
+          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
+        </div>
 
         {/* Operations Section */}
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 py-3 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-[0.05em]">
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
             Operations
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="px-2 gap-1">
               {filteredOperations.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem
@@ -812,15 +826,17 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Divider */}
-        <Separator className="my-2" />
+        <div className="px-4 my-4">
+          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
+        </div>
 
         {/* Business Section */}
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 py-3 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-[0.05em]">
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
             Business
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="px-2 gap-1">
               {filteredBusiness.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem

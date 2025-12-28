@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, CheckCircle2, Upload, ShieldCheck, DollarSign } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Upload, ShieldCheck, DollarSign, AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function VisitDetailPage() {
   const [, setLocation] = useLocation();
@@ -31,10 +31,11 @@ export default function VisitDetailPage() {
   const [uploadLinksText, setUploadLinksText] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [qualityScore, setQualityScore] = useState<string>("5");
+  const [revisionNotes, setRevisionNotes] = useState<string>("");
 
   const canReleasePayment = useMemo(() => {
     if (!visit) return false;
-    return visit.status === "completed" && visit.uploadReceived === true && visit.approved === true && visit.paymentReleased !== true;
+    return visit.status === "completed" && visit.uploadReceived === true && visit.approved === true && visit.paymentReleased !== true && visit.disputeStatus !== "pending";
   }, [visit]);
 
   const patchNotes = useMutation({
@@ -109,6 +110,31 @@ export default function VisitDetailPage() {
     onError: (e: any) => toast({ title: "Failed to release payment", description: e?.message, variant: "destructive" }),
   });
 
+  const requestRevision = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/visits/${visitId}/request-revision`, { revisionNotes });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/visits/${visitId}`] });
+      toast({ title: "Revision requested" });
+      setRevisionNotes("");
+    },
+    onError: (e: any) => toast({ title: "Failed to request revision", description: e?.message, variant: "destructive" }),
+  });
+
+  const updateDispute = useMutation({
+    mutationFn: async (status: "pending" | "resolved" | "none") => {
+      const res = await apiRequest("POST", `/api/visits/${visitId}/dispute`, { disputeStatus: status });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/visits/${visitId}`] });
+      toast({ title: "Dispute status updated" });
+    },
+    onError: (e: any) => toast({ title: "Failed to update dispute", description: e?.message, variant: "destructive" }),
+  });
+
   return (
     <div className="min-h-full gradient-mesh">
       <div className="p-4 md:p-6 lg:p-8 xl:p-12 space-y-6">
@@ -138,6 +164,18 @@ export default function VisitDetailPage() {
                     <Badge variant={visit.uploadOverdue ? "destructive" : visit.status === "completed" ? "default" : "secondary"}>
                       {visit.uploadOverdue ? "Upload Overdue" : visit.status}
                     </Badge>
+                    {visit.revisionRequested && (
+                      <Badge variant="destructive" className="gap-1">
+                        <RefreshCw className="w-3 h-3" />
+                        Revision Requested
+                      </Badge>
+                    )}
+                    {visit.disputeStatus === "pending" && (
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Disputed
+                      </Badge>
+                    )}
                     <Badge variant={visit.paymentReleased ? "default" : "outline"}>
                       {visit.paymentReleased ? "Paid" : "Unpaid"}
                     </Badge>
@@ -210,6 +248,53 @@ export default function VisitDetailPage() {
                     </div>
                   </div>
 
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label>Revision Requests</Label>
+                    <Textarea 
+                      placeholder="Specify what needs to be changed..." 
+                      value={revisionNotes} 
+                      onChange={(e) => setRevisionNotes(e.target.value)} 
+                      rows={2} 
+                    />
+                    <Button 
+                      className="w-full" 
+                      variant="ghost" 
+                      disabled={requestRevision.isPending || !revisionNotes.trim()} 
+                      onClick={() => requestRevision.mutate()}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Request Revision
+                    </Button>
+                  </div>
+
+                  {["admin", "manager"].includes((user as any)?.role) && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <Label>Dispute Management</Label>
+                      <div className="flex gap-2">
+                        {visit.disputeStatus !== "pending" ? (
+                          <Button 
+                            className="flex-1" 
+                            variant="destructive" 
+                            disabled={updateDispute.isPending} 
+                            onClick={() => updateDispute.mutate("pending")}
+                          >
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            Open Dispute
+                          </Button>
+                        ) : (
+                          <Button 
+                            className="flex-1" 
+                            variant="outline" 
+                            disabled={updateDispute.isPending} 
+                            onClick={() => updateDispute.mutate("resolved")}
+                          >
+                            Resolve Dispute
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     className="w-full"
                     variant="outline"
@@ -253,6 +338,7 @@ export default function VisitDetailPage() {
     </div>
   );
 }
+
 
 
 

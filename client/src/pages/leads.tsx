@@ -69,6 +69,8 @@ import {
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
 import { LeadsKanban } from "@/components/LeadsKanban";
+import { LeadCard } from "@/components/leads/LeadCard";
+import { LeadListView } from "@/components/leads/LeadListView";
 
 // Helper function to get badge variant based on stage
 function getStageBadge(stage: string): "default" | "secondary" | "outline" | "destructive" {
@@ -2390,393 +2392,49 @@ export default function LeadsPage() {
           ) : viewMode === "card" ? (
             <div className="space-y-2">
               {filteredLeads.map((lead) => (
-                <Card 
-                  key={lead.id} 
-                  className={`group cursor-pointer transition-all hover:shadow-md ${
-                    selectedLeads.has(lead.id) ? 'ring-2 ring-primary bg-primary/5' : ''
-                  }`}
-                  onClick={() => setSelectedLead(lead)}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      {/* Checkbox */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLeadSelection(lead.id);
-                        }}
-                        className="p-1 hover:bg-accent rounded transition-colors flex-shrink-0"
-                      >
-                        {selectedLeads.has(lead.id) ? (
-                          <CheckSquare className="w-4 h-4 text-primary" />
-                        ) : (
-                          <Square className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </button>
-
-                      {/* Avatar */}
-                      <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-sm font-semibold">
-                          {(lead.company || lead.name)?.substring(0, 2).toUpperCase() || "??"}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                      {/* Lead Info */}
-                        <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-semibold text-base truncate">{lead.company || lead.name || 'Unnamed Lead'}</h3>
-                          {lead.stage && (
-                            <Badge variant={getStageBadge(lead.stage)} className="flex-shrink-0 text-xs">
-                              {lead.stage.replace('_', ' ')}
-                            </Badge>
-                          )}
-                          {lead.score && (
-                            <Badge 
-                              variant={lead.score === 'hot' ? 'destructive' : lead.score === 'warm' ? 'default' : 'secondary'}
-                              className="flex-shrink-0 text-xs"
-                            >
-                              {lead.score === 'hot' && '🔥'}
-                              {lead.score === 'warm' && '☀️'}
-                              {lead.score === 'cold' && '❄️'}
-                              </Badge>
-                            )}
-                          </div>
-                          
-                        {/* Inline Contact Info */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          {lead.name && lead.company && (
-                            <span className="flex items-center gap-1">
-                              👤 {lead.name}
-                            </span>
-                          )}
-                            {lead.email && (
-                            <span className="flex items-center gap-1 truncate max-w-[200px]">
-                              <Mail className="w-3 h-3 flex-shrink-0" />
-                              {lead.email}
-                            </span>
-                            )}
-                            {lead.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="w-3 h-3 flex-shrink-0" />
-                              {lead.phone}
-                            </span>
-                            )}
-                            {lead.value && (
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="w-3 h-3 flex-shrink-0" />
-                              ${(lead.value / 100).toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Contact Status & Last Contact - NEW! */}
-                        {(lead.contactStatus !== 'not_contacted' || lead.lastContactMethod) && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {lead.contactStatus && lead.contactStatus !== 'not_contacted' && (
-                              <Badge 
-                                variant="secondary" 
-                                className={`text-xs ${
-                                  lead.contactStatus === 'contacted' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                  lead.contactStatus === 'in_discussion' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                  lead.contactStatus === 'proposal_sent' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                  lead.contactStatus === 'follow_up_needed' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                  lead.contactStatus === 'no_response' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                  ''
-                                }`}
-                              >
-                                {lead.contactStatus === 'contacted' && '🟢'}
-                                {lead.contactStatus === 'in_discussion' && '🔵'}
-                                {lead.contactStatus === 'proposal_sent' && '🟡'}
-                                {lead.contactStatus === 'follow_up_needed' && '🟠'}
-                                {lead.contactStatus === 'no_response' && '🔴'}
-                                {' '}{lead.contactStatus.replace(/_/g, ' ')}
-                              </Badge>
-                            )}
-                            {lead.lastContactMethod && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                {lead.lastContactMethod === 'email' && '📧'}
-                                {lead.lastContactMethod === 'sms' && '💬'}
-                                {lead.lastContactMethod === 'call' && '📞'}
-                                {lead.lastContactMethod === 'meeting' && '🤝'}
-                                {lead.lastContactMethod === 'social' && '📱'}
-                                {lead.lastContactMethod === 'other' && '📋'}
-                                Last: {lead.lastContactMethod}
-                                {lead.lastContactDate && ` • ${new Date(lead.lastContactDate).toLocaleDateString()}`}
-                              </span>
-                            )}
-                            {lead.nextFollowUpDate && (
-                              <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                                ⏰ Next: {new Date(lead.nextFollowUpDate).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Actions Dropdown */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                            className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedLead(lead);
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (lead.phone) {
-                                setLocation(`/phone?number=${encodeURIComponent(lead.phone)}&action=call`);
-                              }
-                            }}
-                            disabled={!lead.phone}
-                          >
-                            <PhoneCall className="w-4 h-4 mr-2" />
-                            Call
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            if (lead.email) {
-                              window.location.href = `mailto:${lead.email}`;
-                            }
-                          }}
-                            disabled={!lead.email}
-                          >
-                            <Mail className="w-4 h-4 mr-2" />
-                            Email
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {/* Quick Activity Logging */}
-                          <DropdownMenuItem 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setSelectedLead(lead);
-                              setActivityType('call');
-                              setIsActivityDialogOpen(true);
-                            }}
-                          >
-                            <PhoneCall className="w-4 h-4 mr-2" />
-                            Log Call
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setSelectedLead(lead);
-                              setActivityType('email');
-                              setIsActivityDialogOpen(true);
-                            }}
-                          >
-                            <Mail className="w-4 h-4 mr-2" />
-                            Log Email
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setSelectedLead(lead);
-                              setActivityType('sms');
-                              setIsActivityDialogOpen(true);
-                            }}
-                          >
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            Log SMS
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setSelectedLead(lead);
-                              setActivityType('note');
-                              setIsActivityDialogOpen(true);
-                            }}
-                          >
-                            <FileText className="w-4 h-4 mr-2" />
-                            Add Note
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                              setEditingLead(lead);
-                              setEditTags(lead.tags || []);
-                              setEditNeeds(lead.needs || []);
-                              setIsEditDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                              setLeadToDelete(lead);
-                            }}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardContent>
-                </Card>
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  isSelected={selectedLeads.has(lead.id)}
+                  onToggleSelection={toggleLeadSelection}
+                  onClick={setSelectedLead}
+                  onEdit={(lead) => {
+                    setEditingLead(lead);
+                    setEditTags(lead.tags || []);
+                    setEditNeeds(lead.needs || []);
+                    setIsEditDialogOpen(true);
+                  }}
+                  onDelete={setLeadToDelete}
+                  onLogActivity={(lead, type) => {
+                    setSelectedLead(lead);
+                    setActivityType(type as any);
+                    setIsActivityDialogOpen(true);
+                  }}
+                  onCall={(phone) => setLocation(`/phone?number=${encodeURIComponent(phone)}&action=call`)}
+                />
               ))}
             </div>
           ) : (
-            /* List/Table View */
-            <div className="border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50 border-b">
-                    <tr>
-                      <th className="text-left p-3 text-xs font-semibold w-[40px]">
-                        <button onClick={selectAllLeads} className="p-1 hover:bg-accent rounded transition-colors">
-                          {selectedLeads.size === filteredLeads.length && filteredLeads.length > 0 ? (
-                            <CheckSquare className="w-4 h-4 text-primary" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="text-left p-3 text-xs font-semibold">Company</th>
-                      <th className="text-left p-3 text-xs font-semibold">Contact</th>
-                      <th className="text-left p-3 text-xs font-semibold">Email</th>
-                      <th className="text-left p-3 text-xs font-semibold">Phone</th>
-                      <th className="text-left p-3 text-xs font-semibold">Stage</th>
-                      <th className="text-left p-3 text-xs font-semibold">Score</th>
-                      <th className="text-left p-3 text-xs font-semibold">Value</th>
-                      <th className="text-right p-3 text-xs font-semibold w-[60px]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredLeads.map((lead) => (
-                      <tr 
-                        key={lead.id}
-                        className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
-                          selectedLeads.has(lead.id) ? 'bg-primary/5' : ''
-                        }`}
-                        onClick={() => setSelectedLead(lead)}
-                      >
-                        <td className="p-3">
-                          <button
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                              toggleLeadSelection(lead.id);
-                            }}
-                            className="p-1 hover:bg-accent rounded transition-colors"
-                          >
-                            {selectedLeads.has(lead.id) ? (
-                              <CheckSquare className="w-4 h-4 text-primary" />
-                            ) : (
-                              <Square className="w-4 h-4 text-muted-foreground" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary text-xs font-semibold">
-                                {(lead.company || lead.name)?.substring(0, 2).toUpperCase() || "??"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium text-sm">{lead.company || lead.name || "N/A"}</span>
-                          </div>
-                        </td>
-                        <td className="p-3 text-sm">{(lead.company && lead.name) ? lead.name : "-"}</td>
-                        <td className="p-3 text-sm text-muted-foreground truncate max-w-[200px]">
-                          {lead.email || "-"}
-                        </td>
-                        <td className="p-3 text-sm">{lead.phone || "-"}</td>
-                        <td className="p-3">
-                          {lead.stage ? (
-                            <Badge variant={getStageBadge(lead.stage)} className="text-xs">
-                              {lead.stage.replace('_', ' ')}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          {lead.score && (
-                            <Badge 
-                              variant={lead.score === 'hot' ? 'destructive' : lead.score === 'warm' ? 'default' : 'secondary'}
-                              className="text-xs"
-                            >
-                              {lead.score === 'hot' && '🔥 '}
-                              {lead.score === 'warm' && '☀️ '}
-                              {lead.score === 'cold' && '❄️ '}
-                              {lead.score}
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="p-3 text-sm font-medium">
-                          {lead.value ? `$${(lead.value / 100).toLocaleString()}` : "-"}
-                        </td>
-                        <td className="p-3 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (lead.phone) setLocation(`/phone?number=${encodeURIComponent(lead.phone)}&action=call`);
-                                }}
-                                disabled={!lead.phone}
-                              >
-                                <PhoneCall className="w-4 h-4 mr-2" />
-                                Call
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (lead.email) window.location.href = `mailto:${lead.email}`;
-                                }}
-                                disabled={!lead.email}
-                              >
-                                <Mail className="w-4 h-4 mr-2" />
-                                Email
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingLead(lead); setEditTags(lead.tags || []); setEditNeeds(lead.needs || []); setIsEditDialogOpen(true); }}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={(e) => { e.stopPropagation(); setLeadToDelete(lead); }}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                      </div>
-                    </div>
+            <LeadListView
+              leads={filteredLeads}
+              selectedLeads={selectedLeads}
+              onToggleSelection={toggleLeadSelection}
+              onSelectAll={selectAllLeads}
+              onLeadClick={setSelectedLead}
+              onEdit={(lead) => {
+                setEditingLead(lead);
+                setEditTags(lead.tags || []);
+                setEditNeeds(lead.needs || []);
+                setIsEditDialogOpen(true);
+              }}
+              onDelete={setLeadToDelete}
+              onLogActivity={(lead, type) => {
+                setSelectedLead(lead);
+                setActivityType(type as any);
+                setIsActivityDialogOpen(true);
+              }}
+              onCall={(phone) => setLocation(`/phone?number=${encodeURIComponent(phone)}&action=call`)}
+            />
           )}
         </CardContent>
       </Card>
