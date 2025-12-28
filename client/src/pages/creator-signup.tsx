@@ -13,10 +13,10 @@ import { HeaderLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 export default function CreatorSignupPage() {
-  useDocumentMeta(
-    "Creator Application | Marketing Team App",
-    "Apply to become a creator and start earning with Marketing Team App"
-  );
+  useDocumentMeta({
+    title: "Creator Application | Marketing Team App",
+    description: "Apply to become a creator and start earning with Marketing Team App"
+  });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -333,5 +333,7 @@ export default function CreatorSignupPage() {
     </div>
   );
 }
+
+
 
 

@@ -1,8 +1,8 @@
 {
-  "name": "Marketing Team App",
-  "short_name": "MTA CRM",
-  "description": "Complete CRM solution for marketing teams",
-  "start_url": "/pwa-home",
+  "name": "Marketing Team App | Your Remote Digital Marketing Team",
+  "short_name": "Marketing Team",
+  "description": "Stop wasting money on marketing that doesn't work. Marketing Team App is your remote digital marketing team.",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
@@ -56,20 +56,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow"
     }
   ]
 }

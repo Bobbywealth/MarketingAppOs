@@ -14,10 +14,10 @@ import { Logo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 export default function AuthPage() {
-  useDocumentMeta(
-    "Login | Marketing Team App",
-    "Securely sign in to your Marketing Team App account to manage clients, campaigns, content and more."
-  );
+  useDocumentMeta({
+    title: "Login | Marketing Team App",
+    description: "Securely sign in to your Marketing Team App account to manage clients, campaigns, content and more."
+  });
   const { user, loginMutation, registerMutation } = useAuth();
   const { toast } = useToast();
   const [loginData, setLoginData] = useState({ username: "", password: "" });

@@ -13,10 +13,10 @@ import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { BookingModal } from "@/components/BookingModal";
 
 export default function ContactPage() {
-  useDocumentMeta(
-    "Contact Marketing Team App | Book a Strategy Call",
-    "Book a free 30-minute strategy call with the Marketing Team App. Get actionable insights and a clear growth plan for your business."
-  );
+  useDocumentMeta({
+    title: "Contact Marketing Team App | Book a Strategy Call",
+    description: "Book a free 30-minute strategy call with the Marketing Team App. Get actionable insights and a clear growth plan for your business."
+  });
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);

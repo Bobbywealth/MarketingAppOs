@@ -44,10 +44,13 @@ import googleAdsLogo from "@assets/google-ads-logo.png";
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  useDocumentMeta(
-    "Marketing Team App | Your Remote Digital Marketing Team",
-    "Stop wasting money on marketing that doesn't work. Marketing Team App is your remote digital marketing team for strategy, content, campaigns and growth."
-  );
+  useDocumentMeta({
+    title: "Marketing Team App | Your Remote Digital Marketing Team",
+    description: "Stop wasting money on marketing that doesn't work. Marketing Team App is your remote digital marketing team for strategy, content, campaigns and growth.",
+    ogImage: "https://www.marketingteam.app/icon-512x512.png", // Assuming this exists or will be useful
+    ogType: "website",
+    twitterCard: "summary_large_image"
+  });
 
   // Add structured data for SEO
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function LandingPage() {
       "name": "Marketing Team App",
       "description": "Your remote digital marketing team for strategy, content, campaigns and growth",
       "url": window.location.origin,
-      "logo": `${window.location.origin}/logo.png`,
+      "logo": `${window.location.origin}/icon-512x512.png`,
       "sameAs": [
         "https://facebook.com/marketingteamapp",
         "https://twitter.com/marketingteamapp",

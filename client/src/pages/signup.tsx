@@ -68,10 +68,10 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  useDocumentMeta(
-    "Get Started | Marketing Team App",
-    "Start your journey with Marketing Team App. Tell us about your goals and we'll tailor a plan to grow your brand."
-  );
+  useDocumentMeta({
+    title: "Get Started | Marketing Team App",
+    description: "Start your journey with Marketing Team App. Tell us about your goals and we'll tailor a plan to grow your brand."
+  });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [step, setStep] = useState(1);

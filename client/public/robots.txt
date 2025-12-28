@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Allow: /blog
+Allow: /contact
+Allow: /signup
+Allow: /creator-signup
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /pipeline
+Disallow: /leads
+Disallow: /clients
+Disallow: /settings
+Disallow: /tasks
+Disallow: /messages
+Disallow: /emails
+Disallow: /phone
+
+Sitemap: https://www.marketingteam.app/sitemap.xml
+

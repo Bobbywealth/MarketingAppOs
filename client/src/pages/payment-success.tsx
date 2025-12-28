@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
 import { HeaderLogo } from "@/components/Logo";
 import { apiRequest } from "@/lib/queryClient";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 export default function PaymentSuccessPage() {
+  useDocumentMeta({
+    title: "Payment Successful | Marketing Team App",
+    description: "Your payment was successful. Welcome to the Marketing Team App family!"
+  });
   const [, setLocation] = useLocation();
   const [isConverting, setIsConverting] = useState(false);
   const [convertMessage, setConvertMessage] = useState<string | null>(null);

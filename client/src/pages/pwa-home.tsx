@@ -7,10 +7,10 @@ import { HeaderLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 export default function PWAHomePage() {
-  useDocumentMeta(
-    "Loading App | Marketing Team App",
-    "Launching Marketing Team App — your remote digital marketing team."
-  );
+  useDocumentMeta({
+    title: "Loading App | Marketing Team App",
+    description: "Launching Marketing Team App — your remote digital marketing team."
+  });
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 

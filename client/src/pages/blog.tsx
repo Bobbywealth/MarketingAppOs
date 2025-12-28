@@ -447,10 +447,10 @@ Ready to join the 10% who succeed? Stop making these costly mistakes and start i
 const categories = ["All", "Digital Marketing", "AI & Automation", "SEO", "Social Media", "Email Marketing", "Mobile Marketing"];
 
 export default function BlogPage() {
-  useDocumentMeta(
-    "Marketing Insights & News | Marketing Team App",
-    "Stay ahead with expert tips on digital marketing, AI automation, SEO, social media and growth from the Marketing Team App."
-  );
+  useDocumentMeta({
+    title: "Marketing Insights & News | Marketing Team App",
+    description: "Stay ahead with expert tips on digital marketing, AI automation, SEO, social media and growth from the Marketing Team App."
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
