@@ -20,6 +20,7 @@ import { insertLeadSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import fs from "fs/promises";
 import OpenAI from "openai";
+import { analyzeLeadWithAI } from "../leadIntelligence";
 
 const router = Router();
 
@@ -62,6 +63,9 @@ router.post("/", isAuthenticated, requirePermission("canManageLeads"), async (re
       (validatedData as any).assignedToId = userId;
     }
     const lead = await storage.createLead(validatedData);
+    
+    // Trigger AI analysis in the background
+    analyzeLeadWithAI(lead.id).catch(err => console.error("Background AI analysis failed:", err));
     
     // Get actor information
     const user = req.user as any;
@@ -417,6 +421,70 @@ router.post("/bulk-import", isAuthenticated, requirePermission("canManageLeads")
   } catch (error: any) {
     console.error("Bulk import error:", error);
     res.status(500).json({ message: "Failed to import leads", error: error.message });
+  }
+});
+
+// AI Intelligence & Copilot Routes
+router.post("/:id/ai-analyze", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+  try {
+    const lead = await getAccessibleLeadOr404(req, res, req.params.id);
+    if (!lead) return;
+    
+    const updatedLead = await analyzeLeadWithAI(req.params.id);
+    res.json(updatedLead);
+  } catch (error: any) {
+    console.error("AI Analysis error:", error);
+    res.status(500).json({ message: "Failed to analyze lead with AI", error: error.message });
+  }
+});
+
+router.post("/:id/draft-outreach", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+  try {
+    const lead = await getAccessibleLeadOr404(req, res, req.params.id);
+    if (!lead) return;
+
+    const { goal, type = 'email' } = req.body;
+    if (!goal) return res.status(400).json({ message: "Outreach goal is required" });
+
+    // Fetch context
+    const activities = await storage.getLeadActivities(req.params.id);
+    const userEmails = await storage.getEmails(undefined); // Generic for now, ideally filtered by lead email
+    const leadEmails = userEmails.filter(e => e.from === lead.email || (Array.isArray(e.to) && e.to.includes(lead.email as any)));
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    const systemPrompt = `You are a Sales Outreach Specialist. Generate a personalized ${type} draft for a lead.
+Use the provided lead context and interaction history to make the message highly relevant and authentic.
+Tone: Professional, helpful, and not pushy.
+Goal: ${goal}`;
+
+    const contextPrompt = `Lead Context:
+Company: ${lead.company}
+Name: ${lead.name || "Not provided"}
+Industry: ${lead.industry}
+Notes: ${lead.notes}
+
+Interaction History:
+${activities.slice(0, 5).map(a => `- ${a.createdAt}: ${a.type} - ${a.description}`).join("\n")}
+
+Recent Emails:
+${leadEmails.slice(0, 3).map(e => `- ${e.receivedAt}: ${e.subject}`).join("\n")}
+
+Generate a draft ${type} message. Include a subject line if it's an email.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: contextPrompt }
+      ],
+      temperature: 0.7,
+    });
+
+    res.json({ draft: response.choices[0]?.message?.content });
+  } catch (error: any) {
+    console.error("Outreach drafting error:", error);
+    res.status(500).json({ message: "Failed to generate outreach draft", error: error.message });
   }
 });
 

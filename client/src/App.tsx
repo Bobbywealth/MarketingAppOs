@@ -14,68 +14,80 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { usePageTracking } from "@/hooks/usePageTracking";
-import { Menu } from "lucide-react";
+import { Menu, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-
-import AuthPage from "@/pages/auth-page";
-import Landing from "@/pages/landing";
-import SignupPage from "@/pages/signup";
-import PaymentSuccessPage from "@/pages/payment-success";
-import ContactPage from "@/pages/contact";
-import BlogPage from "@/pages/blog";
 import { Logo } from "@/components/Logo";
-import Dashboard from "@/pages/dashboard";
-import ClientDashboard from "@/pages/client-dashboard";
-import SalesDashboard from "@/pages/sales-dashboard";
-import ClientContent from "@/pages/client-content";
-import ClientCampaigns from "@/pages/client-campaigns";
-import ClientBilling from "@/pages/client-billing";
-import ClientAnalytics from "@/pages/client-analytics";
-import Clients from "@/pages/clients";
-import ClientDetail from "@/pages/client-detail";
-import AdminSocialStats from "@/pages/admin-social-stats";
-import Campaigns from "@/pages/campaigns";
-import Tasks from "@/pages/tasks";
-import Leads from "@/pages/leads";
-import Content from "@/pages/content";
-import Invoices from "@/pages/invoices";
-import Tickets from "@/pages/tickets";
-import Onboarding from "@/pages/onboarding";
-import Messages from "@/pages/messages";
-import WebsiteProjects from "@/pages/website-projects";
-import Analytics from "@/pages/analytics";
-import Team from "@/pages/team";
-import Emails from "@/pages/emails";
-import Phone from "@/pages/phone";
-import Settings from "@/pages/settings";
-import CompanyCalendar from "@/pages/company-calendar";
-import SubscriptionPackages from "@/pages/subscription-packages";
-import DiscountCodes from "@/pages/discount-codes";
-import SecondMe from "@/pages/second-me";
-import SecondMeOnboarding from "@/pages/second-me-onboarding";
-import ClientSecondMeDashboard from "@/pages/client-second-me-dashboard";
-import AdminSecondMe from "@/pages/admin-second-me";
-import AdminSecondMeUpload from "@/pages/admin-second-me-upload";
-import Training from "@/pages/training";
-import PushNotifications from "@/pages/push-notifications";
-import PWAHomePage from "@/pages/pwa-home";
-import NotFound from "@/pages/not-found";
-import AdminSocialOverview from "@/pages/admin-social-overview";
-import AdminSocialAccounts from "@/pages/admin-social-accounts";
-import AIBusinessManager from "@/pages/ai-business-manager";
-import Commissions from "@/pages/commissions";
-import Creators from "@/pages/creators";
-import CreatorNew from "@/pages/creator-new";
-import CreatorDetail from "@/pages/creator-detail";
-import CreatorEdit from "@/pages/creator-edit";
-import CreatorSignup from "@/pages/creator-signup";
-import CreatorSignupRedirect from "@/pages/creator-signup-redirect";
-import Visits from "@/pages/visits";
-import VisitNew from "@/pages/visit-new";
-import VisitDetail from "@/pages/visit-detail";
+import { MobileNav } from "@/components/MobileNav";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+// Lazy load all pages for better mobile performance
+const AuthPage = lazy(() => import("@/pages/auth-page"));
+const Landing = lazy(() => import("@/pages/landing"));
+const SignupPage = lazy(() => import("@/pages/signup"));
+const PaymentSuccessPage = lazy(() => import("@/pages/payment-success"));
+const ContactPage = lazy(() => import("@/pages/contact"));
+const BlogPage = lazy(() => import("@/pages/blog"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const ClientDashboard = lazy(() => import("@/pages/client-dashboard"));
+const SalesDashboard = lazy(() => import("@/pages/sales-dashboard"));
+const ClientContent = lazy(() => import("@/pages/client-content"));
+const ClientCampaigns = lazy(() => import("@/pages/client-campaigns"));
+const ClientBilling = lazy(() => import("@/pages/client-billing"));
+const ClientAnalytics = lazy(() => import("@/pages/client-analytics"));
+const Clients = lazy(() => import("@/pages/clients"));
+const ClientDetail = lazy(() => import("@/pages/client-detail"));
+const AdminSocialStats = lazy(() => import("@/pages/admin-social-stats"));
+const Campaigns = lazy(() => import("@/pages/campaigns"));
+const Tasks = lazy(() => import("@/pages/tasks"));
+const Leads = lazy(() => import("@/pages/leads"));
+const Content = lazy(() => import("@/pages/content"));
+const Invoices = lazy(() => import("@/pages/invoices"));
+const Tickets = lazy(() => import("@/pages/tickets"));
+const Onboarding = lazy(() => import("@/pages/onboarding"));
+const Messages = lazy(() => import("@/pages/messages"));
+const WebsiteProjects = lazy(() => import("@/pages/website-projects"));
+const Analytics = lazy(() => import("@/pages/analytics"));
+const Team = lazy(() => import("@/pages/team"));
+const Emails = lazy(() => import("@/pages/emails"));
+const Phone = lazy(() => import("@/pages/phone"));
+const Settings = lazy(() => import("@/pages/settings"));
+const CompanyCalendar = lazy(() => import("@/pages/company-calendar"));
+const SubscriptionPackages = lazy(() => import("@/pages/subscription-packages"));
+const DiscountCodes = lazy(() => import("@/pages/discount-codes"));
+const SecondMe = lazy(() => import("@/pages/second-me"));
+const SecondMeOnboarding = lazy(() => import("@/pages/second-me-onboarding"));
+const ClientSecondMeDashboard = lazy(() => import("@/pages/client-second-me-dashboard"));
+const AdminSecondMe = lazy(() => import("@/pages/admin-second-me"));
+const AdminSecondMeUpload = lazy(() => import("@/pages/admin-second-me-upload"));
+const Training = lazy(() => import("@/pages/training"));
+const PushNotifications = lazy(() => import("@/pages/push-notifications"));
+const PWAHomePage = lazy(() => import("@/pages/pwa-home"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const AdminSocialOverview = lazy(() => import("@/pages/admin-social-overview"));
+const AdminSocialAccounts = lazy(() => import("@/pages/admin-social-accounts"));
+const AIBusinessManager = lazy(() => import("@/pages/ai-business-manager"));
+const Commissions = lazy(() => import("@/pages/commissions"));
+const Creators = lazy(() => import("@/pages/creators"));
+const CreatorNew = lazy(() => import("@/pages/creator-new"));
+const CreatorDetail = lazy(() => import("@/pages/creator-detail"));
+const CreatorEdit = lazy(() => import("@/pages/creator-edit"));
+const CreatorSignup = lazy(() => import("@/pages/creator-signup"));
+const CreatorSignupRedirect = lazy(() => import("@/pages/creator-signup-redirect"));
+const Visits = lazy(() => import("@/pages/visits"));
+const VisitNew = lazy(() => import("@/pages/visit-new"));
+const VisitDetail = lazy(() => import("@/pages/visit-detail"));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 function Router() {
   const { user } = useAuth();
@@ -89,67 +101,69 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/pwa-home" component={PWAHomePage} />
-      <Route path="/login" component={AuthPage} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/signup" component={SignupPage} />
-      <Route path="/creator-signup" component={CreatorSignupRedirect} />
-      <Route path="/signup/creator" component={CreatorSignup} />
-      <Route path="/payment-success" component={PaymentSuccessPage} />
-      <Route path="/contact" component={ContactPage} />
-      <Route path="/blog" component={BlogPage} />
-      {!user && <Route path="/" component={Landing} />}
-      {/* Client-specific routes */}
-      {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
-      {/* Sales Agent-specific routes */}
-      {isSalesAgent && <ProtectedRoute path="/" component={SalesDashboard} />}
-      {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
-      {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
-      {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
-      {isClient && <ProtectedRoute path="/client-billing" component={ClientBilling} />}
-      {isClient && <ProtectedRoute path="/second-me" component={ClientSecondMeDashboard} />}
-      {isClient && <ProtectedRoute path="/second-me/onboarding" component={SecondMeOnboarding} />}
-      {/* Admin/Manager/Staff routes */}
-      {isInternal && <ProtectedRoute path="/" component={Dashboard} />}
-      {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
-      {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
-      {isInternal && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
-      {isInternal && <ProtectedRoute path="/campaigns" component={Campaigns} />}
-      {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
-      {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
-      {isInternal && <ProtectedRoute path="/content" component={Content} />}
-      {isInternal && <ProtectedRoute path="/invoices" component={Invoices} />}
-      {isInternal && <ProtectedRoute path="/commissions" component={Commissions} />}
-      {isInternal && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
-      {isInternal && <ProtectedRoute path="/discount-codes" component={DiscountCodes} />}
-      {isInternal && <ProtectedRoute path="/onboarding" component={Onboarding} />}
-      {!isClient && <ProtectedRoute path="/messages" component={Messages} />}
-      {isInternal && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}
-      {isInternal && <ProtectedRoute path="/analytics" component={Analytics} />}
-      {isInternal && <ProtectedRoute path="/team" component={Team} />}
-      {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
-      {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
-      {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
-      {isInternal && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
-      {isInternal && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
-      {isInternal && <ProtectedRoute path="/training" component={Training} />}
-      {isInternal && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
-      {isInternal && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
-      {isInternal && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
-      {isInternal && <ProtectedRoute path="/creators" component={Creators} />}
-      {isInternal && <ProtectedRoute path="/creators/new" component={CreatorNew} />}
-      {isInternal && <ProtectedRoute path="/creators/:id" component={CreatorDetail} />}
-      {isInternal && <ProtectedRoute path="/creators/:id/edit" component={CreatorEdit} />}
-      {isInternal && <ProtectedRoute path="/visits" component={Visits} />}
-      {isInternal && <ProtectedRoute path="/visits/new" component={VisitNew} />}
-      {isInternal && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
-      {user?.role === "admin" && <ProtectedRoute path="/ai-manager" component={AIBusinessManager} />}
-      {/* Shared routes (both clients and staff) */}
-      <ProtectedRoute path="/tickets" component={Tickets} />
-      <ProtectedRoute path="/settings" component={Settings} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        <Route path="/pwa-home" component={PWAHomePage} />
+        <Route path="/login" component={AuthPage} />
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/signup" component={SignupPage} />
+        <Route path="/creator-signup" component={CreatorSignupRedirect} />
+        <Route path="/signup/creator" component={CreatorSignup} />
+        <Route path="/payment-success" component={PaymentSuccessPage} />
+        <Route path="/contact" component={ContactPage} />
+        <Route path="/blog" component={BlogPage} />
+        {!user && <Route path="/" component={Landing} />}
+        {/* Client-specific routes */}
+        {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
+        {/* Sales Agent-specific routes */}
+        {isSalesAgent && <ProtectedRoute path="/" component={SalesDashboard} />}
+        {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
+        {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
+        {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
+        {isClient && <ProtectedRoute path="/client-billing" component={ClientBilling} />}
+        {isClient && <ProtectedRoute path="/second-me" component={ClientSecondMeDashboard} />}
+        {isClient && <ProtectedRoute path="/second-me/onboarding" component={SecondMeOnboarding} />}
+        {/* Admin/Manager/Staff routes */}
+        {isInternal && <ProtectedRoute path="/" component={Dashboard} />}
+        {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
+        {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
+        {isInternal && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
+        {isInternal && <ProtectedRoute path="/campaigns" component={Campaigns} />}
+        {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
+        {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
+        {isInternal && <ProtectedRoute path="/content" component={Content} />}
+        {isInternal && <ProtectedRoute path="/invoices" component={Invoices} />}
+        {isInternal && <ProtectedRoute path="/commissions" component={Commissions} />}
+        {isInternal && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
+        {isInternal && <ProtectedRoute path="/discount-codes" component={DiscountCodes} />}
+        {isInternal && <ProtectedRoute path="/onboarding" component={Onboarding} />}
+        {!isClient && <ProtectedRoute path="/messages" component={Messages} />}
+        {isInternal && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}
+        {isInternal && <ProtectedRoute path="/analytics" component={Analytics} />}
+        {isInternal && <ProtectedRoute path="/team" component={Team} />}
+        {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
+        {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
+        {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
+        {isInternal && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
+        {isInternal && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
+        {isInternal && <ProtectedRoute path="/training" component={Training} />}
+        {isInternal && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
+        {isInternal && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
+        {isInternal && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
+        {isInternal && <ProtectedRoute path="/creators" component={Creators} />}
+        {isInternal && <ProtectedRoute path="/creators/new" component={CreatorNew} />}
+        {isInternal && <ProtectedRoute path="/creators/:id" component={CreatorDetail} />}
+        {isInternal && <ProtectedRoute path="/creators/:id/edit" component={CreatorEdit} />}
+        {isInternal && <ProtectedRoute path="/visits" component={Visits} />}
+        {isInternal && <ProtectedRoute path="/visits/new" component={VisitNew} />}
+        {isInternal && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
+        {user?.role === "admin" && <ProtectedRoute path="/ai-manager" component={AIBusinessManager} />}
+        {/* Shared routes (both clients and staff) */}
+        <ProtectedRoute path="/tickets" component={Tickets} />
+        <ProtectedRoute path="/settings" component={Settings} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -173,6 +187,7 @@ function HamburgerMenu() {
 function AppContent() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
   const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications();
   const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
   
@@ -224,11 +239,11 @@ function AppContent() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="sticky top-0 z-50 flex items-center gap-3 px-3 md:px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className="sticky top-0 z-50 flex items-center gap-2 px-3 md:px-6 py-3 md:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               {/* Left: Hamburger + Logo (logo only on mobile) */}
-              <div className="flex items-center gap-3 md:gap-3">
+              <div className="flex items-center gap-2 md:gap-3">
                 <HamburgerMenu />
-                <Logo variant="auto" size="lg" className="md:hidden" />
+                <Logo variant="auto" size="lg" className="md:hidden h-8 w-auto" />
               </div>
               
               {/* Center: Search Bar (all screens) */}
@@ -237,9 +252,9 @@ function AppContent() {
               </div>
               
               {/* Right: Actions */}
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-1 md:gap-2 ml-auto">
                 <NotificationsCenter />
-                <ThemeToggle />
+                {!isMobile && <ThemeToggle />}
               </div>
             </header>
             {shouldShowPushPrompt && (
@@ -253,7 +268,7 @@ function AppContent() {
                 </div>
               </div>
             )}
-            <main className="flex-1 overflow-auto">
+            <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
               <Router />
             </main>
           </div>
@@ -262,6 +277,7 @@ function AppContent() {
       </SidebarProvider>
       <Toaster />
       <PWAInstallButton />
+      <MobileNav />
     </TooltipProvider>
   );
 }

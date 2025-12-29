@@ -80,6 +80,16 @@ export default function ClientDashboard() {
     .filter((invoice: any) => invoice.status === 'sent' || invoice.status === 'overdue')
     .reduce((sum: number, invoice: any) => sum + invoice.amount, 0);
 
+  // Get current time for greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    const displayName = (user as any)?.firstName || user?.username?.split(' ')[0] || 'there';
+    
+    if (hour < 12) return `Good morning, ${displayName}`;
+    if (hour < 18) return `Good afternoon, ${displayName}`;
+    return `Good evening, ${displayName}`;
+  };
+
   const metrics = [
     {
       title: "Scheduled Posts",
@@ -121,7 +131,7 @@ export default function ClientDashboard() {
         {/* Welcome Header */}
         <div className="space-y-2">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple">
-            Welcome back{user?.username ? `, ${user.username}` : ''}!
+            {getGreeting()}! 👋
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground">
             Here's an overview of your content and activity

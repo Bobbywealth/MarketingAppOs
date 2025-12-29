@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, Download, Calendar, TrendingUp, Image as ImageIcon, Video, ExternalLink, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
 
 interface SecondMeCharacter {
   id: string;
@@ -38,6 +39,7 @@ interface ContentPiece {
 
 export default function ClientSecondMeDashboard() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
   const { data: character, isLoading } = useQuery<SecondMeCharacter>({
     queryKey: ["/api/second-me/character"],
@@ -58,6 +60,16 @@ export default function ClientSecondMeDashboard() {
     );
   }
 
+  // Get current time for greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    const displayName = user?.firstName || user?.username?.split(' ')[0] || 'there';
+    
+    if (hour < 12) return `Good morning, ${displayName}`;
+    if (hour < 18) return `Good afternoon, ${displayName}`;
+    return `Good evening, ${displayName}`;
+  };
+
   if (!character) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
@@ -67,7 +79,8 @@ export default function ClientSecondMeDashboard() {
               <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4">
                 <Sparkles className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-3xl font-bold mb-2">Create Your Second Me</h2>
+              <h2 className="text-3xl font-bold mb-2">{getGreeting()}! 👋</h2>
+              <p className="text-xl font-medium mb-4">Create Your Second Me</p>
               <p className="text-muted-foreground text-lg mb-6">
                 Upload 15-20+ professional photos to create your AI digital twin. Get weekly AI-generated photos, videos, and multimedia content featuring your digital visual avatar!
               </p>
@@ -131,7 +144,7 @@ export default function ClientSecondMeDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Your Second Me
+              {getGreeting()}! 👋
             </h1>
             <p className="text-muted-foreground">AI-powered digital twin creating content for you</p>
           </div>

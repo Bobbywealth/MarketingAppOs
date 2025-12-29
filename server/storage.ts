@@ -166,6 +166,7 @@ export interface IStorage {
 
   // Lead operations
   getLeads(): Promise<Lead[]>;
+  getLead(id: string): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, data: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
@@ -724,6 +725,11 @@ export class DatabaseStorage implements IStorage {
   // Lead operations
   async getLeads(): Promise<Lead[]> {
     return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  }
+
+  async getLead(id: string): Promise<Lead | undefined> {
+    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead;
   }
 
   async createLead(leadData: InsertLead): Promise<Lead> {

@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { 
   UserPlus, 
   Search,
@@ -552,7 +553,8 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <PullToRefresh onRefresh={async () => { await refetch(); }}>
+      <div className="flex flex-col h-screen overflow-hidden">
       {/* Compact Sticky Header - Fixed at top */}
       <div className="flex-shrink-0 border-b bg-background shadow-sm">
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
@@ -2632,7 +2634,8 @@ export default function LeadsPage() {
         </DialogContent>
       </Dialog>
       </div> {/* End Scrollable Content Area */}
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }
 

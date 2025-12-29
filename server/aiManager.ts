@@ -140,6 +140,46 @@ const tools = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_morning_briefing",
+      description: "Get a briefing of the last 24 hours of lead activity and suggested actions",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_lead_history",
+      description: "Summarize interaction history for a specific lead",
+      parameters: {
+        type: "object",
+        properties: {
+          companyName: { type: "string", description: "The name of the lead's company" },
+        },
+        required: ["companyName"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "suggest_next_step",
+      description: "Suggest the next best action for a lead based on their status and history",
+      parameters: {
+        type: "object",
+        properties: {
+          companyName: { type: "string", description: "The name of the lead's company" },
+        },
+        required: ["companyName"],
+      },
+    },
+  },
 ];
 
 // Execute the actual functions
@@ -283,6 +323,68 @@ async function executeFunction(name: string, args: any, userId: number) {
           status: i.status,
           dueDate: i.dueDate
         }))
+      };
+    }
+
+    case "get_morning_briefing": {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const allLeads = await storage.getLeads();
+      const recentLeads = allLeads.filter(l => new Date(l.createdAt!) >= yesterday);
+      
+      const hotLeads = allLeads.filter(l => l.score === 'hot').slice(0, 5);
+      
+      return {
+        newLeadsCount: recentLeads.length,
+        newLeads: recentLeads.map(l => ({ company: l.company, score: l.score })),
+        topLeadsToCall: hotLeads.map(l => ({ company: l.company, lastContact: l.lastContactDate })),
+        summary: "You have " + recentLeads.length + " new leads in the last 24 hours. " + hotLeads.length + " hot leads are waiting for follow-up."
+      };
+    }
+
+    case "get_lead_history": {
+      const allLeads = await storage.getLeads();
+      const lead = allLeads.find(l => l.company.toLowerCase().includes(args.companyName.toLowerCase()));
+      
+      if (!lead) return { error: "Lead not found" };
+      
+      const activities = await storage.getLeadActivities(lead.id);
+      return {
+        company: lead.company,
+        stage: lead.stage,
+        activityCount: activities.length,
+        recentActivities: activities.slice(0, 5).map(a => ({
+          type: a.type,
+          description: a.description,
+          date: a.createdAt
+        }))
+      };
+    }
+
+    case "suggest_next_step": {
+      const allLeads = await storage.getLeads();
+      const lead = allLeads.find(l => l.company.toLowerCase().includes(args.companyName.toLowerCase()));
+      
+      if (!lead) return { error: "Lead not found" };
+      
+      const activities = await storage.getLeadActivities(lead.id);
+      
+      let suggestion = "";
+      if (lead.stage === 'prospect') {
+        suggestion = "Initialize first contact via email or LinkedIn.";
+      } else if (lead.stage === 'contacted' && activities.length > 0) {
+        suggestion = "Follow up on the last interaction. If no response, try a phone call.";
+      } else if (lead.stage === 'qualified') {
+        suggestion = "Schedule a discovery call or presentation.";
+      } else {
+        suggestion = "Review current relationship status and identify upsell opportunities.";
+      }
+      
+      return {
+        company: lead.company,
+        currentStage: lead.stage,
+        suggestedAction: suggestion
       };
     }
 

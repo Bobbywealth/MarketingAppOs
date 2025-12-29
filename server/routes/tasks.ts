@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { db, pool } from "../db";
-import { tasks, taskSpaces, taskComments, UserRole, rolePermissions } from "@shared/schema";
+import { tasks, taskSpaces, taskComments } from "@shared/schema";
+import { UserRole, rolePermissions } from "../rbac";
 import { eq, and, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { requireRole, requirePermission } from "../rbac";

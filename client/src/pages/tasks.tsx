@@ -289,7 +289,23 @@ export default function TasksPage() {
   });
 
   const handleEditTask = (task: Task) => {
-    // ... same as before
+    setEditingTask(task);
+    form.reset({
+      title: task.title,
+      description: task.description || "",
+      status: task.status as any,
+      priority: task.priority as any,
+      dueDate: task.dueDate ? toInputDateEST(task.dueDate) : "",
+      campaignId: task.campaignId || "",
+      clientId: task.clientId || "",
+      spaceId: task.spaceId || "",
+      assignedToId: task.assignedToId?.toString() || "",
+      isRecurring: task.isRecurring || false,
+      recurringPattern: task.recurringPattern as any,
+      recurringInterval: task.recurringInterval || 1,
+      recurringEndDate: task.recurringEndDate ? toInputDateEST(task.recurringEndDate) : "",
+    });
+    setIsEditDialogOpen(true);
   };
 
   const toggleTaskSelection = (taskId: string, event?: React.MouseEvent) => {
@@ -309,24 +325,6 @@ export default function TasksPage() {
     } else {
       setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)));
     }
-  };
-    setEditingTask(task);
-    form.reset({
-      title: task.title,
-      description: task.description || "",
-      status: task.status as any,
-      priority: task.priority as any,
-      dueDate: task.dueDate ? toInputDateEST(task.dueDate) : "",
-      campaignId: task.campaignId || "",
-      clientId: task.clientId || "",
-      spaceId: task.spaceId || "",
-      assignedToId: task.assignedToId?.toString() || "",
-      isRecurring: task.isRecurring || false,
-      recurringPattern: task.recurringPattern as any,
-      recurringInterval: task.recurringInterval || 1,
-      recurringEndDate: task.recurringEndDate ? toInputDateEST(task.recurringEndDate) : "",
-    });
-    setIsEditDialogOpen(true);
   };
 
   const handleDragStart = (task: Task) => {
@@ -738,6 +736,7 @@ export default function TasksPage() {
                   </div>
                 </div>
               </div>
+            </div>
           ))}
         </div>
         
