@@ -58,7 +58,10 @@ import {
   Instagram,
   Facebook,
   MapPinned,
-  Columns3
+  Columns3,
+  Sparkles,
+  Wand2,
+  BrainCircuit
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -141,10 +144,99 @@ function LeadActivityTimeline({ leadId }: { leadId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full">        {/* AI Outreach Drafting Dialog */}
+        <Dialog open={isAiDraftDialogOpen} onOpenChange={setIsAiDraftDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-purple-600" />
+                AI Outreach Copilot
+              </DialogTitle>
+              <DialogDescription>
+                Generate a personalized outreach draft for {selectedLead?.company || selectedLead?.name}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>What is your goal for this outreach?</Label>
+                <Select value={aiDraftGoal} onValueChange={setAiDraftGoal}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a goal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Introduce our services">👋 Introduce our services</SelectItem>
+                    <SelectItem value="Schedule a discovery call">📅 Schedule a discovery call</SelectItem>
+                    <SelectItem value="Follow up on previous contact">🔄 Follow up on previous contact</SelectItem>
+                    <SelectItem value="Send a personalized proposal">📄 Send a personalized proposal</SelectItem>
+                    <SelectItem value="Reconnect after inactivity">✨ Reconnect after inactivity</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button 
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                onClick={() => {
+                  if (selectedLead) {
+                    setIsDrafting(true);
+                    setAiDraftResult("");
+                    aiDraftOutreachMutation.mutate({ id: selectedLead.id, goal: aiDraftGoal });
+                  }
+                }}
+                disabled={isDrafting}
+              >
+                {isDrafting ? (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
+                    Generating Draft...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Generate Draft
+                  </>
+                )}
+              </Button>
+
+              {aiDraftResult && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <Label>AI Generated Draft</Label>
+                  <ScrollArea className="h-[300px] w-full border rounded-md p-4 bg-muted/30">
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {aiDraftResult}
+                    </div>
+                  </ScrollArea>
+                  <div className="flex gap-2 justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(aiDraftResult);
+                        toast({ title: "Copied to clipboard" });
+                      }}
+                    >
+                      Copy to Clipboard
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        if (selectedLead?.email) {
+                          window.location.href = `mailto:${selectedLead.email}?body=${encodeURIComponent(aiDraftResult)}`;
+                        }
+                      }}
+                    >
+                      Use in Email
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (!activities || activities.length === 0) {
     return (
@@ -225,6 +317,12 @@ export default function LeadsPage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [newNeeds, setNewNeeds] = useState<string[]>([]);
   const [editNeeds, setEditNeeds] = useState<string[]>([]);
+  
+  // AI Copilot state
+  const [isAiDraftDialogOpen, setIsAiDraftDialogOpen] = useState(false);
+  const [aiDraftGoal, setAiDraftGoal] = useState("Introduce our services");
+  const [aiDraftResult, setAiDraftResult] = useState("");
+  const [isDrafting, setIsDrafting] = useState(false);
   
   // New state for modern UI
   const [viewMode, setViewMode] = useState<"card" | "list" | "kanban">("card");
@@ -477,6 +575,47 @@ export default function LeadsPage() {
       bulkImportLeadsMutation.mutate(parsedLeads);
     }
   };
+
+  const aiAnalyzeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/leads/${id}/ai-analyze`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ 
+        title: "🧠 AI Analysis Complete", 
+        description: `Lead score: ${data.score}, Industry: ${data.industry}` 
+      });
+      if (selectedLead?.id === data.id) setSelectedLead(data);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "AI Analysis Failed", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const aiDraftOutreachMutation = useMutation({
+    mutationFn: async ({ id, goal }: { id: string; goal: string }) => {
+      const response = await apiRequest("POST", `/api/leads/${id}/draft-outreach`, { goal });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setAiDraftResult(data.draft);
+      setIsDrafting(false);
+    },
+    onError: (error: any) => {
+      setIsDrafting(false);
+      toast({ 
+        title: "AI Drafting Failed", 
+        description: error?.message,
+        variant: "destructive" 
+      });
+    },
+  });
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = !searchQuery || 
@@ -1855,6 +1994,30 @@ export default function LeadsPage() {
                       )}
                     </DialogDescription>
                   </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+                      onClick={() => {
+                        setIsAiDraftDialogOpen(true);
+                        setAiDraftResult("");
+                      }}
+                    >
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      AI Draft
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                      onClick={() => aiAnalyzeMutation.mutate(selectedLead.id)}
+                      disabled={aiAnalyzeMutation.isPending}
+                    >
+                      <BrainCircuit className={`w-4 h-4 text-blue-600 ${aiAnalyzeMutation.isPending ? 'animate-pulse' : ''}`} />
+                      {aiAnalyzeMutation.isPending ? "Analyzing..." : "AI Analyze"}
+                    </Button>
+                  </div>
                 </div>
               </DialogHeader>
 
@@ -2413,6 +2576,12 @@ export default function LeadsPage() {
                     setIsActivityDialogOpen(true);
                   }}
                   onCall={(phone) => setLocation(`/phone?number=${encodeURIComponent(phone)}&action=call`)}
+                  onAIAnalyze={(lead) => aiAnalyzeMutation.mutate(lead.id)}
+                  onAIDraftOutreach={(lead) => {
+                    setSelectedLead(lead);
+                    setIsAiDraftDialogOpen(true);
+                    setAiDraftResult("");
+                  }}
                 />
               ))}
             </div>
@@ -2436,6 +2605,12 @@ export default function LeadsPage() {
                 setIsActivityDialogOpen(true);
               }}
               onCall={(phone) => setLocation(`/phone?number=${encodeURIComponent(phone)}&action=call`)}
+              onAIAnalyze={(lead) => aiAnalyzeMutation.mutate(lead.id)}
+              onAIDraftOutreach={(lead) => {
+                setSelectedLead(lead);
+                setIsAiDraftDialogOpen(true);
+                setAiDraftResult("");
+              }}
             />
           )}
         </CardContent>

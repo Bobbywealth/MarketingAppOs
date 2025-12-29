@@ -14,7 +14,10 @@ import {
   Edit, 
   Trash2,
   DollarSign,
-  Phone
+  Phone,
+  Sparkles,
+  BrainCircuit,
+  Wand2
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -35,6 +38,8 @@ interface LeadCardProps {
   onDelete: (lead: Lead) => void;
   onLogActivity: (lead: Lead, type: string) => void;
   onCall: (phone: string) => void;
+  onAIAnalyze: (lead: Lead) => void;
+  onAIDraftOutreach: (lead: Lead) => void;
 }
 
 const getStageBadge = (stage: string) => {
@@ -56,7 +61,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({
   onEdit,
   onDelete,
   onLogActivity,
-  onCall
+  onCall,
+  onAIAnalyze,
+  onAIDraftOutreach
 }) => {
   return (
     <Card 
@@ -263,6 +270,27 @@ export const LeadCard: React.FC<LeadCardProps> = ({
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Add Note
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onAIAnalyze(lead);
+                }}
+                className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+              >
+                <BrainCircuit className="w-4 h-4 mr-2" />
+                AI Analyze
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  onAIDraftOutreach(lead);
+                }}
+                className="text-purple-600 focus:text-purple-700 focus:bg-purple-50"
+              >
+                <Wand2 className="w-4 h-4 mr-2" />
+                AI Draft Outreach
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
