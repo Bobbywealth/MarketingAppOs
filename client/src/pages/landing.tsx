@@ -269,6 +269,8 @@ export default function LandingPage() {
   const [heroWordIndex, setHeroWordIndex] = useState(0);
   const heroWords = ["Team", "Partner", "Growth Engine", "Strategy"];
 
+  const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
   useEffect(() => {
     const interval = setInterval(() => {
       setHeroWordIndex((prev) => (prev + 1) % heroWords.length);
@@ -1074,12 +1076,12 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          {!showResults ? (
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              whileInView={{ scale: 1, opacity: 1 }}
-              viewport={{ once: true }}
-            >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+          >
+            {!showResults ? (
               <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl overflow-hidden relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
                 <CardHeader>
@@ -1223,11 +1225,12 @@ export default function LandingPage() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Why Trust Us Section - New */}
       <section className="py-16 px-4 bg-white border-y">

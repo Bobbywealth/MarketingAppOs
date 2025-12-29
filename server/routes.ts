@@ -198,44 +198,8 @@ async function notifyAdminsAboutAnalytics(title: string, message: string, catego
   }
 }
 
-// Helper function to notify admins about staff/manager actions
-async function notifyAdminsAboutAction(
-  actorId: number,
-  actorName: string,
-  title: string,
-  message: string,
-  category: string = 'general',
-  actionUrl: string = '/dashboard',
-  type: 'info' | 'success' | 'warning' | 'error' = 'info'
-) {
-  try {
-    const users = await storage.getUsers();
-    const admins = users.filter(u => u.role === UserRole.ADMIN && u.id !== actorId); // Don't notify if admin is the actor
-    const { sendPushToUser } = await import('./push.js');
-    
-    for (const admin of admins) {
-      await storage.createNotification({
-        userId: admin.id,
-        type,
-        title,
-        message,
-        category,
-        actionUrl,
-        isRead: false,
-      });
-      
-      await sendPushToUser(admin.id, {
-        title,
-        body: message,
-        url: actionUrl,
-      }).catch(err => console.error('Failed to send push notification:', err));
-    }
-    
-    console.log(`✅ Notified ${admins.length} admin(s) about action by ${actorName}: ${title}`);
-  } catch (error) {
-    console.error('Failed to send admin action notifications:', error);
-  }
-}
+// Helper function to notify admins about staff/manager actions is now imported from ./routes/common
+
 
 // Helper function to check for significant metric changes
 async function checkSignificantMetricChanges() {
