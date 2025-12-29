@@ -80,43 +80,49 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Cache-first strategy for other assets
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached version but update cache in background
-        fetch(request).then((response) => {
-          if (response && response.status === 200) {
-            const responseToCache = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, responseToCache);
-            });
-          }
-        }).catch(() => {});
-        
-        return cachedResponse;
-      }
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        // Only cache http/https requests
+        const url = new URL(request.url);
+        const isHttp = url.protocol === 'http:' || url.protocol === 'https:';
 
-      // Not in cache, fetch from network
-      return fetch(request).then((response) => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200 || response.type === 'error') {
-          return response;
+        if (cachedResponse) {
+          // Return cached version but update cache in background if it's http
+          if (isHttp) {
+            fetch(request).then((response) => {
+              if (response && response.status === 200) {
+                const responseToCache = response.clone();
+                caches.open(DYNAMIC_CACHE).then((cache) => {
+                  cache.put(request, responseToCache);
+                });
+              }
+            }).catch(() => {});
+          }
+          return cachedResponse;
         }
 
-        // Clone the response
-        const responseToCache = response.clone();
+        // Not in cache, fetch from network
+        return fetch(request).then((response) => {
+          // Don't cache non-successful responses or non-http requests
+          if (!response || response.status !== 200 || response.type === 'error' || !isHttp) {
+            return response;
+          }
 
-        caches.open(DYNAMIC_CACHE).then((cache) => {
-          cache.put(request, responseToCache);
+          // Clone the response
+          const responseToCache = response.clone();
+
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            cache.put(request, responseToCache);
+          });
+
+          return response;
         });
-
-        return response;
-      });
-    }).catch(() => {
-      // Return offline page if available
-      return caches.match('/index.html');
-    })
-  );
+      }).catch(() => {
+        // Return offline page if available
+        return caches.match('/index.html');
+      })
+    );
+  }
 });
 
 // Handle push notifications

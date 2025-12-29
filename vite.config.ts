@@ -34,13 +34,6 @@ export default defineConfig({
             if (id.includes("lucide-react")) {
               return "icons";
             }
-            if (
-              id.includes("date-fns") ||
-              id.includes("framer-motion") ||
-              id.includes("react-syntax-highlighter")
-            ) {
-              return "ui-enhancements";
-            }
             return "vendor";
           }
         },
