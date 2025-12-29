@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 import heroImage from "@assets/hero-header-image.png";
 import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 import instagramLogo from "@assets/instagram-logo.png";
@@ -264,10 +266,19 @@ export default function LandingPage() {
     auditMutation.mutate(auditForm);
   };
 
-  const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString()}`;
+  const [heroWordIndex, setHeroWordIndex] = useState(0);
+  const heroWords = ["Team", "Partner", "Growth Engine", "Strategy"];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroWordIndex((prev) => (prev + 1) % heroWords.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden scroll-smooth">
+    <div className="min-h-screen bg-background overflow-x-hidden scroll-smooth relative">
+      <AnimatedBackground />
       {/* Header */}
       <header className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
@@ -502,6 +513,33 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative py-16 md:py-24 lg:py-32 px-4 overflow-hidden gradient-animate-hero hero-glow flex items-center min-h-[80vh] md:min-h-[85vh]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.3),transparent_50%)]"></div>
+        
+        {/* Animated Background Shapes */}
+        <motion.div 
+          animate={{ 
+            y: [0, -20, 0],
+            rotate: [0, 10, 0]
+          }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-20 left-[10%] w-12 h-12 bg-white/10 rounded-lg blur-sm pointer-events-none"
+        ></motion.div>
+        <motion.div 
+          animate={{ 
+            y: [0, 30, 0],
+            rotate: [0, -20, 0]
+          }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-40 left-[20%] w-16 h-16 bg-blue-400/10 rounded-full blur-md pointer-events-none"
+        ></motion.div>
+        <motion.div 
+          animate={{ 
+            y: [0, -40, 0],
+            rotate: [0, 15, 0]
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-40 right-[15%] w-20 h-20 bg-purple-400/10 rounded-full blur-xl pointer-events-none"
+        ></motion.div>
+        
         <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
         <div className="container mx-auto relative z-10">
@@ -515,7 +553,20 @@ export default function LandingPage() {
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight text-shadow-soft px-2">
                 Your Remote <br className="hidden sm:block" />
                 Digital Marketing <br className="hidden sm:block" />
-                <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Team</span>
+                <span className="relative inline-block min-w-[150px]">
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={heroWordIndex}
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -20, opacity: 0 }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                      className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent inline-block"
+                    >
+                      {heroWords[heroWordIndex]}
+                    </motion.span>
+                  </AnimatePresence>
+                </span>
               </h1>
               <p className="text-lg sm:text-xl md:text-2xl font-semibold text-white mb-2 px-2 sm:px-4">
                 Stop Wasting Money on Marketing That Doesn't Work
@@ -591,34 +642,57 @@ export default function LandingPage() {
       </section>
 
       {/* Trust Indicators Section - Positioned High */}
-      <section className="py-12 px-4 bg-white border-y">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-12 px-4 bg-white/80 backdrop-blur-sm border-y relative z-20"
+      >
         <div className="container mx-auto max-w-6xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            <div className="text-center">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="text-center"
+            >
               <div className="text-3xl md:text-4xl font-bold text-blue-600 mb-2">850+</div>
               <p className="text-sm text-muted-foreground">Successful Campaigns</p>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="text-center"
+            >
               <div className="text-3xl md:text-4xl font-bold text-green-600 mb-2">4.2M+</div>
               <p className="text-sm text-muted-foreground">Leads Generated</p>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="text-center"
+            >
               <div className="text-3xl md:text-4xl font-bold text-orange-600 mb-2">310%</div>
               <p className="text-sm text-muted-foreground">Avg ROI Increase</p>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="text-center"
+            >
               <div className="text-3xl md:text-4xl font-bold text-purple-600 mb-2">98%</div>
               <p className="text-sm text-muted-foreground">Client Satisfaction</p>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
 
       {/* Our Services */}
       <section className="py-12 md:py-16 px-4 relative z-20">
         <div className="container mx-auto">
-          <div className="text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Our Services</p>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Everything You Need to Win Online
@@ -626,163 +700,183 @@ export default function LandingPage() {
             <p className="text-muted-foreground max-w-2xl mx-auto">
               From strategy to execution, we deliver results-driven marketing that grows your business, brand, or career.
             </p>
-          </div>
+          </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
             {/* Digital Marketing */}
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
-              </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Digital Marketing</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                Social media management, paid advertising, email marketing campaigns, and SEO optimization that actually convert visitors into customers and grow your audience organically.
-              </p>
-              
-              {expandedService === 'digital' && (
-                <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                  <p className="font-semibold text-foreground">What you get:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Full social media management (all platforms)</li>
-                    <li>Targeted paid ad campaigns (Facebook, Instagram, Google)</li>
-                    <li>Email marketing automation & sequences</li>
-                    <li>SEO optimization & content strategy</li>
-                    <li>Monthly analytics & performance reports</li>
-                  </ul>
+            <motion.div
+              whileHover={{ y: -10 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500 relative overflow-hidden group h-full">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
+                  <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
                 </div>
-              )}
-              
-              <button
-                onClick={() => setExpandedService(expandedService === 'digital' ? null : 'digital')}
-                className="text-xs text-blue-600 hover:text-blue-700 font-semibold mb-2 flex items-center gap-1"
-              >
-                {expandedService === 'digital' ? '− Show Less' : '+ Learn More'}
-              </button>
-              
-              <div className="text-xs text-green-600 font-semibold mb-2">🔥 850+ Campaigns Launched</div>
-              <Link href="/signup">
-                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                  Get Started →
-                </Button>
-              </Link>
-            </Card>
+                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Digital Marketing</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                  Social media management, paid advertising, email marketing campaigns, and SEO optimization that actually convert visitors into customers and grow your audience organically.
+                </p>
+                
+                {expandedService === 'digital' && (
+                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
+                    <p className="font-semibold text-foreground">What you get:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Full social media management (all platforms)</li>
+                      <li>Targeted paid ad campaigns (Facebook, Instagram, Google)</li>
+                      <li>Email marketing automation & sequences</li>
+                      <li>SEO optimization & content strategy</li>
+                      <li>Monthly analytics & performance reports</li>
+                    </ul>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => setExpandedService(expandedService === 'digital' ? null : 'digital')}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold mb-2 flex items-center gap-1"
+                >
+                  {expandedService === 'digital' ? '− Show Less' : '+ Learn More'}
+                </button>
+                
+                <div className="text-xs text-green-600 font-semibold mb-2">🔥 850+ Campaigns Launched</div>
+                <Link href="/signup">
+                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                    Get Started →
+                  </Button>
+                </Link>
+              </Card>
+            </motion.div>
             
             {/* Content Creation */}
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                <Pencil className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
-              </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Content Creation</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                Professional copywriting, eye-catching graphics, engaging videos, and multimedia content that tells your brand story and drives sales. From social posts to landing pages.
-              </p>
-              
-              {expandedService === 'content' && (
-                <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                  <p className="font-semibold text-foreground">What you get:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Professional copywriting for all channels</li>
-                    <li>Custom graphic design & branded templates</li>
-                    <li>Video editing & production</li>
-                    <li>Social media content calendars</li>
-                    <li>Landing page & website copy</li>
-                  </ul>
+            <motion.div
+              whileHover={{ y: -10 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500 relative overflow-hidden group h-full">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
+                  <Pencil className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
                 </div>
-              )}
-              
-              <button
-                onClick={() => setExpandedService(expandedService === 'content' ? null : 'content')}
-                className="text-xs text-purple-600 hover:text-purple-700 font-semibold mb-2 flex items-center gap-1"
-              >
-                {expandedService === 'content' ? '− Show Less' : '+ Learn More'}
-              </button>
-              
-              <div className="text-xs text-green-600 font-semibold mb-2">⚡ 50K+ Content Pieces</div>
-              <Link href="/signup">
-                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                  Get Started →
-                </Button>
-              </Link>
-            </Card>
+                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Content Creation</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                  Professional copywriting, eye-catching graphics, engaging videos, and multimedia content that tells your brand story and drives sales. From social posts to landing pages.
+                </p>
+                
+                {expandedService === 'content' && (
+                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
+                    <p className="font-semibold text-foreground">What you get:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Professional copywriting for all channels</li>
+                      <li>Custom graphic design & branded templates</li>
+                      <li>Video editing & production</li>
+                      <li>Social media content calendars</li>
+                      <li>Landing page & website copy</li>
+                    </ul>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => setExpandedService(expandedService === 'content' ? null : 'content')}
+                  className="text-xs text-purple-600 hover:text-purple-700 font-semibold mb-2 flex items-center gap-1"
+                >
+                  {expandedService === 'content' ? '− Show Less' : '+ Learn More'}
+                </button>
+                
+                <div className="text-xs text-green-600 font-semibold mb-2">⚡ 50K+ Content Pieces</div>
+                <Link href="/signup">
+                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                    Get Started →
+                  </Button>
+                </Link>
+              </Card>
+            </motion.div>
             
             {/* Web & App Development */}
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-emerald-500 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                <Globe className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
-              </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Web & App Development</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                Modern, responsive websites, native mobile apps, custom CRM systems, and e-commerce platforms that provide seamless user experiences and convert visitors into loyal customers.
-              </p>
-              
-              {expandedService === 'web' && (
-                <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                  <p className="font-semibold text-foreground">What you get:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Custom website design & development</li>
-                    <li>iOS & Android native mobile apps</li>
-                    <li>E-commerce platforms (Shopify, WooCommerce)</li>
-                    <li>Custom CRM & business software</li>
-                    <li>Ongoing maintenance & support</li>
-                  </ul>
+            <motion.div
+              whileHover={{ y: -10 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-emerald-500 relative overflow-hidden group h-full">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
+                  <Globe className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
                 </div>
-              )}
-              
-              <button
-                onClick={() => setExpandedService(expandedService === 'web' ? null : 'web')}
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold mb-2 flex items-center gap-1"
-              >
-                {expandedService === 'web' ? '− Show Less' : '+ Learn More'}
-              </button>
-              
-              <div className="text-xs text-green-600 font-semibold mb-2">🚀 200+ Apps Built</div>
-              <Link href="/signup">
-                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                  Get Started →
-                </Button>
-              </Link>
-            </Card>
+                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Web & App Development</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                  Modern, responsive websites, native mobile apps, custom CRM systems, and e-commerce platforms that provide seamless user experiences and convert visitors into loyal customers.
+                </p>
+                
+                {expandedService === 'web' && (
+                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
+                    <p className="font-semibold text-foreground">What you get:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Custom website design & development</li>
+                      <li>iOS & Android native mobile apps</li>
+                      <li>E-commerce platforms (Shopify, WooCommerce)</li>
+                      <li>Custom CRM & business software</li>
+                      <li>Ongoing maintenance & support</li>
+                    </ul>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => setExpandedService(expandedService === 'web' ? null : 'web')}
+                  className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold mb-2 flex items-center gap-1"
+                >
+                  {expandedService === 'web' ? '− Show Less' : '+ Learn More'}
+                </button>
+                
+                <div className="text-xs text-green-600 font-semibold mb-2">🚀 200+ Apps Built</div>
+                <Link href="/signup">
+                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                    Get Started →
+                  </Button>
+                </Link>
+              </Card>
+            </motion.div>
             
             {/* AI Automation */}
-            <Card className="p-6 md:p-8 bg-white hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                <Bot className="w-8 h-8 md:w-10 md:h-10 text-orange-600" />
-              </div>
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">AI Automation</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                AI-powered chatbots, automated email sequences, intelligent lead scoring, and workflow automation that saves you time, reduces costs, and scales your marketing efforts effortlessly.
-              </p>
-              
-              {expandedService === 'ai' && (
-                <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                  <p className="font-semibold text-foreground">What you get:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>AI chatbot setup & training</li>
-                    <li>Automated email & SMS sequences</li>
-                    <li>Intelligent lead scoring & routing</li>
-                    <li>Workflow automation (Zapier, Make.com)</li>
-                    <li>AI content generation tools</li>
-                  </ul>
+            <motion.div
+              whileHover={{ y: -10 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500 relative overflow-hidden group h-full">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
+                  <Bot className="w-8 h-8 md:w-10 md:h-10 text-orange-600" />
                 </div>
-              )}
-              
-              <button
-                onClick={() => setExpandedService(expandedService === 'ai' ? null : 'ai')}
-                className="text-xs text-orange-600 hover:text-orange-700 font-semibold mb-2 flex items-center gap-1"
-              >
-                {expandedService === 'ai' ? '− Show Less' : '+ Learn More'}
-              </button>
-              
-              <div className="text-xs text-green-600 font-semibold mb-2">🤖 95% Time Saved</div>
-              <Link href="/signup">
-                <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                  Get Started →
-                </Button>
-              </Link>
-            </Card>
+                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">AI Automation</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                  AI-powered chatbots, automated email sequences, intelligent lead scoring, and workflow automation that saves you time, reduces costs, and scales your marketing efforts effortlessly.
+                </p>
+                
+                {expandedService === 'ai' && (
+                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
+                    <p className="font-semibold text-foreground">What you get:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>AI chatbot setup & training</li>
+                      <li>Automated email & SMS sequences</li>
+                      <li>Intelligent lead scoring & routing</li>
+                      <li>Workflow automation (Zapier, Make.com)</li>
+                      <li>AI content generation tools</li>
+                    </ul>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => setExpandedService(expandedService === 'ai' ? null : 'ai')}
+                  className="text-xs text-orange-600 hover:text-orange-700 font-semibold mb-2 flex items-center gap-1"
+                >
+                  {expandedService === 'ai' ? '− Show Less' : '+ Learn More'}
+                </button>
+                
+                <div className="text-xs text-green-600 font-semibold mb-2">🤖 95% Time Saved</div>
+                <Link href="/signup">
+                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                    Get Started →
+                  </Button>
+                </Link>
+              </Card>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -802,90 +896,126 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-4 sm:gap-6 md:gap-8 items-center justify-items-center">
             {/* Social Media */}
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">FB</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Facebook</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
                 <img src={tiktokLogo} alt="TikTok" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">TikTok</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">TW</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Twitter/X</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">YT</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">YouTube</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
                 <img src={linkedinLogo} alt="LinkedIn" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">LinkedIn</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
                 <img src={instagramLogo} alt="Instagram" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Instagram</p>
-            </div>
+            </motion.div>
 
             {/* Search & Ads */}
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
                 <img src={googleAdsLogo} alt="Google Ads" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Google Ads</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">SEO</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">SEO</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">EM</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Email</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">GA</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Analytics</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">CR</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">Conversion</p>
-            </div>
+            </motion.div>
 
-            <div className="text-center group">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group"
+            >
               <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
                 <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">+</span>
               </div>
               <p className="text-xs sm:text-sm font-semibold text-gray-700">More</p>
-            </div>
+            </motion.div>
           </div>
 
           <div className="mt-8 text-center">
@@ -897,18 +1027,44 @@ export default function LandingPage() {
       </section>
 
       {/* Free Social Media Audit Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white relative overflow-hidden">
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 1 }}
+        className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white relative overflow-hidden"
+      >
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="absolute top-0 left-0 w-full h-full">
-          <div className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-          <div className="absolute bottom-10 right-10 w-48 h-48 bg-white/5 rounded-full blur-2xl"></div>
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.1, 0.2, 0.1] 
+            }}
+            transition={{ duration: 10, repeat: Infinity }}
+            className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"
+          ></motion.div>
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.3, 1],
+              opacity: [0.05, 0.1, 0.05] 
+            }}
+            transition={{ duration: 15, repeat: Infinity }}
+            className="absolute bottom-10 right-10 w-48 h-48 bg-white/5 rounded-full blur-2xl"
+          ></motion.div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-pink-500/20 to-yellow-500/20 rounded-full blur-3xl"></div>
         </div>
         
         <div className="container mx-auto max-w-4xl relative z-10">
-          <div className="text-center mb-12">
-            <Badge className="bg-white/20 text-white border-white/30 mb-4">
-              🎯 Free Analysis
+          <motion.div 
+            initial={{ y: 30, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge className="bg-white/20 text-white border-white/30 mb-4 px-4 py-1.5 backdrop-blur-sm">
+              <Sparkles className="w-3 h-3 mr-2 text-yellow-300 animate-pulse" />
+              Free Analysis
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Get Your FREE Social Media Audit
@@ -916,36 +1072,42 @@ export default function LandingPage() {
             <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
               Discover what's holding your social media back. Get a detailed analysis of your online presence in under 60 seconds.
             </p>
-          </div>
+          </motion.div>
 
           {!showResults ? (
-            <Card className="bg-white/10 backdrop-blur border-white/20 shadow-2xl">
-              <CardHeader>
-                <CardTitle className="text-white text-center text-2xl">
-                  Enter Your Details for Instant Analysis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleAuditSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-1">
-                        Website URL 
-                        <span className="text-red-400 text-lg font-bold animate-pulse">*</span>
-                      </label>
-                      <Input
-                        type="url"
-                        placeholder="https://yourwebsite.com"
-                        value={auditForm.website}
-                        onChange={(e) => setAuditForm({...auditForm, website: e.target.value})}
-                        className="bg-white/20 border-2 border-white/30 text-white placeholder:text-white/60 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/40 focus:bg-white/25 transition-all h-12 text-base"
-                        required
-                      />
-                      <p className="text-xs text-blue-100 mt-1.5 flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        Required for audit analysis
-                      </p>
-                    </div>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                <CardHeader>
+                  <CardTitle className="text-white text-center text-2xl">
+                    Enter Your Details for Instant Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  <form onSubmit={handleAuditSubmit} className="space-y-6">
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-1">
+                          Website URL 
+                          <span className="text-red-400 text-lg font-bold animate-pulse">*</span>
+                        </label>
+                        <Input
+                          type="url"
+                          placeholder="https://yourwebsite.com"
+                          value={auditForm.website}
+                          onChange={(e) => setAuditForm({...auditForm, website: e.target.value})}
+                          className="bg-white/20 border-2 border-white/30 text-white placeholder:text-white/60 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/40 focus:bg-white/25 transition-all h-12 text-base"
+                          required
+                        />
+                        <p className="text-xs text-blue-100 mt-1.5 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-green-400" />
+                          Required for audit analysis
+                        </p>
+                      </div>
                     <div>
                       <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-2">
                         Instagram URL 

@@ -11,13 +11,14 @@ import { existsSync } from "fs";
 import { UserRole } from "../rbac";
 
 // Multer configuration
+export const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
+
 const storage_config = multer.diskStorage({
   destination: async function (_req, _file, cb) {
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    if (!existsSync(uploadDir)) {
-      await fs.mkdir(uploadDir, { recursive: true });
+    if (!existsSync(UPLOAD_DIR)) {
+      await fs.mkdir(UPLOAD_DIR, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, UPLOAD_DIR);
   },
   filename: function (_req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);

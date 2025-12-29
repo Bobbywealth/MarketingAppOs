@@ -418,10 +418,26 @@
     position: relative;
   }
 
-  /* Animated Gradient Mesh Background - Disabled for now */
+  /* Animated Gradient Mesh Background */
   .gradient-mesh-animated {
     background-image: var(--gradient-mesh);
     position: relative;
+    background-size: 200% 200%;
+    animation: gradient-flow 15s ease-in-out infinite alternate;
+  }
+
+  @keyframes gradient-flow {
+    0% {
+      background-position: 0% 0%;
+    }
+    100% {
+      background-position: 100% 100%;
+    }
+  }
+
+  /* Animated Blobs */
+  .blob-animation {
+    animation: blob 20s infinite alternate;
   }
 
   .shimmer {

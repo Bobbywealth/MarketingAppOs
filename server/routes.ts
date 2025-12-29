@@ -59,7 +59,8 @@ import {
   notifyAdminsAboutSecurityEvent,
   autoConvertLeadToClient, 
   getMissingFieldsForStage,
-  upload
+  upload,
+  UPLOAD_DIR
 } from "./routes/common";
 
 const objectStorageService = new ObjectStorageService();
@@ -1312,7 +1313,7 @@ export function registerRoutes(app: Express) {
   app.get("/uploads/:filename", async (req: Request, res: Response) => {
     try {
       const filename = req.params.filename;
-      const filePath = path.join(uploadDir, filename);
+      const filePath = path.join(UPLOAD_DIR, filename);
 
       // Check if file exists
       if (!existsSync(filePath)) {
