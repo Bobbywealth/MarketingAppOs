@@ -78,7 +78,9 @@ export const clients = pgTable("clients", {
   displayOrder: integer("display_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_clients_created_at").on(table.createdAt)
+]);
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
   assignedTo: one(users, {
@@ -144,7 +146,10 @@ export const campaigns = pgTable("campaigns", {
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_campaigns_status").on(table.status),
+  index("IDX_campaigns_created_at").on(table.createdAt)
+]);
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   client: one(clients, {
@@ -202,7 +207,12 @@ export const tasks = pgTable("tasks", {
   checklist: jsonb("checklist").$type<Array<{ id: string; text: string; completed: boolean }>>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_tasks_assigned_to_id").on(table.assignedToId),
+  index("IDX_tasks_status").on(table.status),
+  index("IDX_tasks_due_date").on(table.dueDate),
+  index("IDX_tasks_created_at").on(table.createdAt)
+]);
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
   campaign: one(campaigns, {
@@ -321,7 +331,10 @@ export const leads = pgTable("leads", {
   expectedStartDate: timestamp("expected_start_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_leads_created_at").on(table.createdAt),
+  index("IDX_leads_stage").on(table.stage)
+]);
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
   client: one(clients, {

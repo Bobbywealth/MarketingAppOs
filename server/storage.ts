@@ -100,7 +100,7 @@ import {
   type GroupMessage,
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, or, and, gte, count, inArray } from "drizzle-orm";
+import { eq, desc, or, and, gte, lt, count, inArray, sum, sql } from "drizzle-orm";
 
 export interface GroupConversationWithParticipants extends GroupConversation {
   participants: Array<{ id: number; username: string; role: string }>;
@@ -252,6 +252,9 @@ export interface IStorage {
     invoices: Invoice[];
     tickets: Ticket[];
   }>;
+
+  // Optimized dashboard stats
+  getDashboardStats(userId?: number, role?: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1261,6 +1264,226 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNotification(notificationId: string) {
     await db.delete(notifications).where(eq(notifications.id, notificationId));
+  }
+
+  // Optimized dashboard stats
+  async getDashboardStats(userId?: number, role?: string) {
+    const now = new Date();
+    const firstDayOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const firstDayOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Filter for tasks based on role
+    const taskCondition = (role !== "admin" && userId) 
+      ? eq(tasks.assignedToId, userId) 
+      : undefined;
+
+    const [
+      clientsRes,
+      clientsLastMonthRes,
+      activeCampaignsRes,
+      campaignsLastMonthRes,
+      leadsRes,
+      leadsLastMonthRes,
+      taskMetricsRes,
+      tasksTodayRes,
+      recentActivityClients,
+      recentActivityCampaigns,
+      recentActivityTasks,
+      upcomingDeadlinesRes
+    ] = await Promise.all([
+      // Total Clients
+      db.select({ count: count() }).from(clients),
+      db.select({ count: count() }).from(clients).where(lt(clients.createdAt, firstDayOfThisMonth)),
+      
+      // Active Campaigns
+      db.select({ count: count() }).from(campaigns).where(eq(campaigns.status, "active")),
+      db.select({ count: count() }).from(campaigns).where(
+        and(
+          eq(campaigns.status, "active"),
+          gte(campaigns.createdAt, firstDayOfLastMonth),
+          lt(campaigns.createdAt, firstDayOfThisMonth)
+        )
+      ),
+
+      // Leads and Pipeline
+      db.select({ 
+        count: count(),
+        pipelineValue: sum(leads.value)
+      }).from(leads),
+      db.select({ 
+        count: count(),
+        pipelineValue: sum(leads.value)
+      }).from(leads).where(lt(leads.createdAt, firstDayOfThisMonth)),
+
+      // Task Metrics
+      db.select({
+        total: count(),
+        completed: sql`count(*) FILTER (WHERE ${tasks.status} = 'completed')`,
+        pending: sql`count(*) FILTER (WHERE ${tasks.status} = 'todo')`,
+        inProgress: sql`count(*) FILTER (WHERE ${tasks.status} = 'in_progress')`,
+        review: sql`count(*) FILTER (WHERE ${tasks.status} = 'review')`
+      }).from(tasks).where(taskCondition),
+
+      // Tasks Today
+      db.select({
+        total: count(),
+        completed: sql`count(*) FILTER (WHERE ${tasks.status} = 'completed')`,
+        todo: sql`count(*) FILTER (WHERE ${tasks.status} = 'todo')`,
+        inProgress: sql`count(*) FILTER (WHERE ${tasks.status} = 'in_progress')`,
+        review: sql`count(*) FILTER (WHERE ${tasks.status} = 'review')`
+      }).from(tasks).where(
+        and(
+          taskCondition,
+          sql`CAST(${tasks.dueDate} AS DATE) = CURRENT_DATE`
+        )
+      ),
+
+      // Recent Activity - Clients
+      db.select({
+        id: clients.id,
+        name: clients.name,
+        createdAt: clients.createdAt
+      }).from(clients).orderBy(desc(clients.createdAt)).limit(3),
+
+      // Recent Activity - Campaigns
+      db.select({
+        id: campaigns.id,
+        name: campaigns.name,
+        createdAt: campaigns.createdAt
+      }).from(campaigns).orderBy(desc(campaigns.createdAt)).limit(3),
+
+      // Recent Activity - Completed Tasks
+      db.select({
+        id: tasks.id,
+        title: tasks.title,
+        updatedAt: tasks.updatedAt
+      }).from(tasks).where(
+        and(taskCondition, eq(tasks.status, "completed"))
+      ).orderBy(desc(tasks.updatedAt)).limit(3),
+
+      // Upcoming Deadlines
+      db.select({
+        id: tasks.id,
+        title: tasks.title,
+        dueDate: tasks.dueDate
+      }).from(tasks).where(
+        and(
+          taskCondition,
+          gte(tasks.dueDate, now),
+          sql`${tasks.status} != 'completed'`
+        )
+      ).orderBy(tasks.dueDate).limit(5)
+    ]);
+
+    // Aggregate values
+    const totalClients = Number(clientsRes[0]?.count || 0);
+    const clientsLastMonth = Number(clientsLastMonthRes[0]?.count || 0);
+    const activeCampaigns = Number(activeCampaignsRes[0]?.count || 0);
+    const campaignsLastMonth = Number(campaignsLastMonthRes[0]?.count || 0);
+    const totalLeads = Number(leadsRes[0]?.count || 0);
+    const pipelineValue = Number(leadsRes[0]?.pipelineValue || 0);
+    const leadsLastMonth = Number(leadsLastMonthRes[0]?.count || 0);
+    const pipelineValueLastMonth = Number(leadsLastMonthRes[0]?.pipelineValue || 0);
+
+    const taskMetrics = {
+      total: Number(taskMetricsRes[0]?.total || 0),
+      completed: Number(taskMetricsRes[0]?.completed || 0),
+      pending: Number(taskMetricsRes[0]?.pending || 0),
+      inProgress: Number(taskMetricsRes[0]?.inProgress || 0),
+      review: Number(taskMetricsRes[0]?.review || 0),
+      completionPercentage: taskMetricsRes[0]?.total ? Math.round((Number(taskMetricsRes[0]?.completed) / Number(taskMetricsRes[0]?.total)) * 100) : 0
+    };
+
+    const todayTaskMetrics = {
+      total: Number(tasksTodayRes[0]?.total || 0),
+      completed: Number(tasksTodayRes[0]?.completed || 0),
+      todo: Number(tasksTodayRes[0]?.todo || 0),
+      inProgress: Number(tasksTodayRes[0]?.inProgress || 0),
+      review: Number(tasksTodayRes[0]?.review || 0)
+    };
+
+    // Calculate percentage changes
+    const calculateChange = (current: number, previous: number): string => {
+      if (previous === 0) return current > 0 ? "+100" : "0";
+      const change = ((current - previous) / previous) * 100;
+      const rounded = Math.round(change);
+      return rounded > 0 ? `+${rounded}` : `${rounded}`;
+    };
+
+    // Format recent activity
+    const formatActivityTime = (date: Date | null) => {
+      if (!date) return 'Recently';
+      const now = new Date();
+      const diffMs = now.getTime() - new Date(date).getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return `${diffDays}d ago`;
+    };
+
+    const recentActivity: any[] = [];
+    
+    recentActivityClients.forEach(c => {
+      recentActivity.push({
+        type: 'success',
+        title: `Client: ${c.name}`,
+        time: formatActivityTime(c.createdAt),
+        timestamp: c.createdAt
+      });
+    });
+
+    recentActivityCampaigns.forEach(c => {
+      recentActivity.push({
+        type: 'info',
+        title: `Campaign: ${c.name}`,
+        time: formatActivityTime(c.createdAt),
+        timestamp: c.createdAt
+      });
+    });
+
+    recentActivityTasks.forEach(t => {
+      recentActivity.push({
+        type: 'success',
+        title: `Task completed: ${t.title}`,
+        time: formatActivityTime(t.updatedAt),
+        timestamp: t.updatedAt
+      });
+    });
+
+    const sortedActivity = recentActivity
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10);
+
+    // Format deadlines
+    const upcomingDeadlines = upcomingDeadlinesRes.map(t => {
+      const daysUntil = t.dueDate ? Math.floor((new Date(t.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 999;
+      return {
+        title: t.title,
+        date: t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date',
+        urgent: daysUntil <= 3,
+        timestamp: t.dueDate
+      };
+    });
+
+    return {
+      totalClients,
+      activeCampaigns,
+      totalLeads,
+      pipelineValue,
+      monthlyRevenue: 0, // Filled by Stripe on frontend
+      clientsChange: calculateChange(totalClients, clientsLastMonth),
+      campaignsChange: calculateChange(activeCampaigns, campaignsLastMonth),
+      pipelineChange: calculateChange(pipelineValue, pipelineValueLastMonth),
+      revenueChange: "0",
+      recentActivity: sortedActivity,
+      upcomingDeadlines,
+      taskMetrics,
+      todayTaskMetrics
+    };
   }
 
   // Activity logs operations
