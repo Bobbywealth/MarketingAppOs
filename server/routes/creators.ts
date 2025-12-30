@@ -9,13 +9,14 @@ import {
   handleValidationError
 } from "./common";
 import { z } from "zod";
+import { insertCreatorSchema, insertCreatorVisitSchema } from "@shared/schema";
 
 const router = Router();
 
 const internalRoles = [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CREATOR_MANAGER] as const;
 
 // Public creator application endpoint
-router.post("/apply", async (req: Request, res: Response) => {
+router.post("/creators/apply", async (req: Request, res: Response) => {
   try {
     const schema = z.object({
       fullName: z.string().min(1, "Full name is required"),
@@ -48,14 +49,14 @@ router.post("/apply", async (req: Request, res: Response) => {
       } as any)
       .returning();
 
-    // Notify admins... (simplified for now, logic is in routes.ts)
     res.status(201).json({ success: true, id: created.id });
   } catch (error: any) {
     handleValidationError(error, res);
   }
 });
 
-router.get("/", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+// Internal creator management
+router.get("/creators", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
   try {
     const { city, zip, status, minScore } = req.query as any;
     const conditions: any[] = [];
@@ -73,14 +74,57 @@ router.get("/", isAuthenticated, requireRole(...internalRoles), async (req: Requ
   }
 });
 
+router.post("/creators", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const data = insertCreatorSchema.parse(req.body);
+    const [created] = await db.insert(creators).values(data).returning();
+    res.status(201).json(created);
+  } catch (error: any) {
+    handleValidationError(error, res);
+  }
+});
+
+router.get("/creators/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const [row] = await db.select().from(creators).where(eq(creators.id, req.params.id));
+    if (!row) return res.status(404).json({ message: "Creator not found" });
+    res.json(row);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/creators/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const data = insertCreatorSchema.partial().parse(req.body);
+    const [updated] = await db.update(creators).set(data).where(eq(creators.id, req.params.id)).returning();
+    if (!updated) return res.status(404).json({ message: "Creator not found" });
+    res.json(updated);
+  } catch (error: any) {
+    handleValidationError(error, res);
+  }
+});
+
+router.delete("/creators/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const [deleted] = await db.delete(creators).where(eq(creators.id, req.params.id)).returning();
+    if (!deleted) return res.status(404).json({ message: "Creator not found" });
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Visits routes
 router.get("/visits", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
   try {
-    const { clientId, creatorId, status, from, to, uploadOverdue } = req.query as any;
+    const { clientId, creatorId, status, from, to, uploadOverdue, approved, disputeStatus } = req.query as any;
     const conditions: any[] = [];
     if (clientId) conditions.push(eq(creatorVisits.clientId, String(clientId)));
     if (creatorId) conditions.push(eq(creatorVisits.creatorId, String(creatorId)));
     if (status) conditions.push(eq(creatorVisits.status, String(status)));
+    if (approved !== undefined) conditions.push(eq(creatorVisits.approved, approved === "true"));
+    if (disputeStatus) conditions.push(eq(creatorVisits.disputeStatus, String(disputeStatus)));
     if (uploadOverdue === "true") conditions.push(eq(creatorVisits.uploadOverdue, true));
     if (from) conditions.push(sql`${creatorVisits.scheduledStart} >= ${new Date(String(from)).toISOString()}`);
     if (to) conditions.push(sql`${creatorVisits.scheduledStart} <= ${new Date(String(to)).toISOString()}`);
@@ -96,6 +140,9 @@ router.get("/visits", isAuthenticated, requireRole(...internalRoles), async (req
         completedAt: creatorVisits.completedAt,
         uploadReceived: creatorVisits.uploadReceived,
         uploadLinks: creatorVisits.uploadLinks,
+        approved: creatorVisits.approved,
+        disputeStatus: creatorVisits.disputeStatus,
+        paymentReleased: creatorVisits.paymentReleased,
         clientName: clients.name,
         creatorName: creators.fullName,
       })
@@ -111,5 +158,163 @@ router.get("/visits", isAuthenticated, requireRole(...internalRoles), async (req
   }
 });
 
-export default router;
+router.post("/visits", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const data = insertCreatorVisitSchema.parse(req.body);
+    const [created] = await db.insert(creatorVisits).values(data).returning();
+    res.status(201).json(created);
+  } catch (error: any) {
+    handleValidationError(error, res);
+  }
+});
 
+router.get("/visits/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const [row] = await db
+      .select({
+        id: creatorVisits.id,
+        clientId: creatorVisits.clientId,
+        creatorId: creatorVisits.creatorId,
+        scheduledStart: creatorVisits.scheduledStart,
+        scheduledEnd: creatorVisits.scheduledEnd,
+        status: creatorVisits.status,
+        completedAt: creatorVisits.completedAt,
+        uploadReceived: creatorVisits.uploadReceived,
+        uploadLinks: creatorVisits.uploadLinks,
+        approved: creatorVisits.approved,
+        qualityScore: creatorVisits.qualityScore,
+        qualityDetailedScore: creatorVisits.qualityDetailedScore,
+        revisionRequested: creatorVisits.revisionRequested,
+        revisionNotes: creatorVisits.revisionNotes,
+        disputeStatus: creatorVisits.disputeStatus,
+        paymentReleased: creatorVisits.paymentReleased,
+        notes: creatorVisits.notes,
+        clientName: clients.name,
+        creatorName: creators.fullName,
+      })
+      .from(creatorVisits)
+      .innerJoin(clients, eq(creatorVisits.clientId, clients.id))
+      .innerJoin(creators, eq(creatorVisits.creatorId, creators.id))
+      .where(eq(creatorVisits.id, req.params.id));
+    
+    if (!row) return res.status(404).json({ message: "Visit not found" });
+    res.json(row);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/visits/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const data = insertCreatorVisitSchema.partial().parse(req.body);
+    const [updated] = await db.update(creatorVisits).set(data).where(eq(creatorVisits.id, req.params.id)).returning();
+    if (!updated) return res.status(404).json({ message: "Visit not found" });
+    res.json(updated);
+  } catch (error: any) {
+    handleValidationError(error, res);
+  }
+});
+
+// Visit actions
+router.post("/visits/:id/complete", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const [updated] = await db
+      .update(creatorVisits)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(eq(creatorVisits.id, req.params.id))
+      .returning();
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/visits/:id/upload", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const { uploadLinks } = req.body;
+    const [updated] = await db
+      .update(creatorVisits)
+      .set({ 
+        uploadLinks, 
+        uploadReceived: true, 
+        uploadTimestamp: new Date(),
+        status: "completed"
+      })
+      .where(eq(creatorVisits.id, req.params.id))
+      .returning();
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/visits/:id/approve", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+  try {
+    const { qualityScore, qualityDetailedScore } = req.body;
+    const user = req.user as any;
+    const [updated] = await db
+      .update(creatorVisits)
+      .set({ 
+        approved: true, 
+        approvedBy: user.id,
+        qualityScore,
+        qualityDetailedScore,
+        revisionRequested: false
+      })
+      .where(eq(creatorVisits.id, req.params.id))
+      .returning();
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/visits/:id/release-payment", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const [updated] = await db
+      .update(creatorVisits)
+      .set({ 
+        paymentReleased: true, 
+        paymentReleasedAt: new Date()
+      })
+      .where(eq(creatorVisits.id, req.params.id))
+      .returning();
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/visits/:id/request-revision", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+  try {
+    const { revisionNotes } = req.body;
+    const [updated] = await db
+      .update(creatorVisits)
+      .set({ 
+        revisionRequested: true, 
+        revisionNotes,
+        approved: false
+      })
+      .where(eq(creatorVisits.id, req.params.id))
+      .returning();
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/visits/:id/dispute", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+  try {
+    const { disputeStatus } = req.body;
+    const [updated] = await db
+      .update(creatorVisits)
+      .set({ disputeStatus })
+      .where(eq(creatorVisits.id, req.params.id))
+      .returning();
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+export default router;
