@@ -461,35 +461,6 @@ export default function TasksPage() {
     // Filter by selected space (null = show all tasks)
     if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
     
-    // Hide tasks completed TODAY (they'll reappear tomorrow)
-    if (task.status === "completed" && task.completedAt) {
-      const completedDate = new Date(task.completedAt);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      completedDate.setHours(0, 0, 0, 0);
-      
-      // If completed today, hide it
-      if (completedDate.getTime() === today.getTime()) {
-        return false;
-      }
-    }
-    
-    // Hide tasks with future due dates (scheduled for tomorrow or later)
-    // Only hide if status is "todo" (not started yet)
-    if (task.status === "todo" && task.dueDate) {
-      const taskDueDate = toEST(task.dueDate);
-      const nowInEST = nowEST();
-      
-      // Set both to start of day for comparison
-      taskDueDate.setHours(0, 0, 0, 0);
-      nowInEST.setHours(0, 0, 0, 0);
-      
-      // If due date is in the future (tomorrow or later), hide it
-      if (taskDueDate.getTime() > nowInEST.getTime()) {
-        return false;
-      }
-    }
-    
     // Hide all completed tasks if toggle is off
     if (!showCompleted && task.status === "completed") return false;
     return true;
