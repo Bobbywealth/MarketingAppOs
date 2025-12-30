@@ -30,7 +30,186 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
   if (!stripeInstance) {
     throw new Error('Stripe not configured');
   }
-...
+
+  const now = new Date();
+  const start = startDate || new Date(now.getFullYear(), now.getMonth(), 1); // First day of current month
+  const end = endDate || now;
+
+  const startTimestamp = Math.floor(start.getTime() / 1000);
+  const endTimestamp = Math.floor(end.getTime() / 1000);
+
+  try {
+    // Get all data in parallel
+    const [
+      activeSubscriptions,
+      charges,
+      customers,
+      invoices,
+      payouts,
+      balanceTransactions,
+    ] = await Promise.all([
+      // Active subscriptions
+      stripeInstance.subscriptions.list({
+        status: 'active',
+        limit: 100,
+      }),
+      // Charges in date range
+      stripeInstance.charges.list({
+        created: {
+          gte: startTimestamp,
+          lte: endTimestamp,
+        },
+        limit: 100,
+      }),
+      // Customers created in date range
+      stripeInstance.customers.list({
+        created: {
+          gte: startTimestamp,
+          lte: endTimestamp,
+        },
+        limit: 100,
+      }),
+      // Invoices
+      stripeInstance.invoices.list({
+        created: {
+          gte: startTimestamp,
+          lte: endTimestamp,
+        },
+        limit: 100,
+      }),
+      // Payouts
+      stripeInstance.payouts.list({
+        created: {
+          gte: startTimestamp,
+          lte: endTimestamp,
+        },
+        limit: 100,
+      }),
+      // Balance transactions for gross volume
+      stripeInstance.balanceTransactions.list({
+        created: {
+          gte: startTimestamp,
+          lte: endTimestamp,
+        },
+        limit: 100,
+      }),
+    ]);
+
+    // Calculate MRR (Monthly Recurring Revenue)
+    const mrr = activeSubscriptions.data.reduce((total, sub) => {
+      if (sub.items.data.length > 0) {
+        const price = sub.items.data[0].price;
+        if (price && price.recurring?.interval === 'month') {
+          return total + (price.unit_amount || 0);
+        } else if (price && price.recurring?.interval === 'year') {
+          // Convert annual to monthly
+          return total + ((price.unit_amount || 0) / 12);
+        }
+      }
+      return total;
+    }, 0) / 100; // Convert from cents to dollars
+
+    // Calculate gross volume
+    const grossVolume = balanceTransactions.data
+      .filter(tx => tx.type === 'charge')
+      .reduce((total, tx) => total + tx.amount, 0) / 100;
+
+    // Get successful charges for revenue
+    const successfulCharges = charges.data.filter(c => c.status === 'succeeded');
+    const totalRevenue = successfulCharges.reduce((total, c) => total + c.amount, 0) / 100;
+
+    // Get refunded amount
+    const refundedAmount = charges.data
+      .filter(c => c.refunded)
+      .reduce((total, c) => total + (c.amount_refunded || 0), 0) / 100;
+
+    // Calculate customer spending
+    const customerSpending = new Map<string, { name: string; email: string; total: number }>();
+    
+    for (const charge of successfulCharges) {
+      if (charge.customer) {
+        const customerId = typeof charge.customer === 'string' ? charge.customer : charge.customer.id;
+        const current = customerSpending.get(customerId) || { name: '', email: '', total: 0 };
+        current.total += charge.amount / 100;
+        
+        // Get customer details if not already set
+        if (!current.name && typeof charge.customer === 'object') {
+          current.name = charge.customer.name || charge.customer.email || 'Unknown';
+          current.email = charge.customer.email || '';
+        }
+        
+        customerSpending.set(customerId, current);
+      }
+    }
+
+    // Get top customers by spend
+    const topCustomers = Array.from(customerSpending.entries())
+      .map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
+    // Get customer details for top customers if needed
+    const topCustomersWithDetails = await Promise.all(
+      topCustomers.map(async (customer) => {
+        if (!customer.name) {
+          try {
+            const stripeCustomer = await stripeInstance!.customers.retrieve(customer.id);
+            if ('deleted' in stripeCustomer && stripeCustomer.deleted) {
+              return customer;
+            }
+            return {
+              ...customer,
+              name: stripeCustomer.name || stripeCustomer.email || 'Unknown',
+              email: stripeCustomer.email || '',
+            };
+          } catch {
+            return customer;
+          }
+        }
+        return customer;
+      })
+    );
+
+    // Total payouts
+    const totalPayouts = payouts.data.reduce((total, p) => total + p.amount, 0) / 100;
+
+    // Payment status breakdown
+    const paymentBreakdown = {
+      succeeded: charges.data.filter(c => c.status === 'succeeded').length,
+      pending: charges.data.filter(c => c.status === 'pending').length,
+      failed: charges.data.filter(c => c.status === 'failed').length,
+      refunded: charges.data.filter(c => c.refunded).length,
+    };
+
+    return {
+      activeSubscribers: activeSubscriptions.data.length,
+      mrr,
+      grossVolume,
+      totalRevenue,
+      refundedAmount,
+      newCustomers: customers.data.length,
+      totalPayouts,
+      topCustomers: topCustomersWithDetails,
+      paymentBreakdown,
+      recentCharges: successfulCharges.slice(0, 10).map(c => ({
+        id: c.id,
+        amount: c.amount / 100,
+        currency: c.currency.toUpperCase(),
+        customerName: typeof c.customer === 'object' ? (c.customer?.name || c.customer?.email || 'Unknown') : 'Unknown',
+        created: new Date(c.created * 1000).toISOString(),
+        description: c.description || '',
+      })),
+      recentPayouts: payouts.data.slice(0, 10).map(p => ({
+        id: p.id,
+        amount: p.amount / 100,
+        currency: p.currency.toUpperCase(),
+        status: p.status,
+        arrivalDate: new Date(p.arrival_date * 1000).toISOString(),
+        created: new Date(p.created * 1000).toISOString(),
+      })),
+      dateRange: {
+        start: start.toISOString(),
+        end: end.toISOString(),
       },
     };
   } catch (error) {
@@ -216,4 +395,3 @@ export async function createCheckoutSession(params: {
     throw error;
   }
 }
-
