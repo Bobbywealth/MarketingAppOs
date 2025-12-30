@@ -658,6 +658,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(tasks).where(eq(tasks.spaceId, spaceId)).orderBy(desc(tasks.createdAt));
   }
 
+  async getTasksByClient(clientId: string): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.clientId, clientId)).orderBy(desc(tasks.createdAt));
+  }
+
   async createTask(taskData: InsertTask): Promise<Task> {
     const [task] = await db.insert(tasks).values(taskData).returning();
     return task;
