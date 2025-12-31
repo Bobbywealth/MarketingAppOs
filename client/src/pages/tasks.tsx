@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -56,6 +57,7 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 
 export default function TasksPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<"list" | "kanban" | "compact">("compact");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
@@ -73,10 +75,15 @@ export default function TasksPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
-  // Load showCompleted preference from localStorage, default to false (hide completed)
+  // Load showCompleted preference from localStorage.
+  // Default to TRUE so "previous tasks" (mostly completed) aren't accidentally hidden.
   const [showCompleted, setShowCompleted] = useState(() => {
     const saved = localStorage.getItem('tasks-show-completed');
-    return saved !== null ? JSON.parse(saved) : false;
+    try {
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
   });
 
   // Save showCompleted preference to localStorage whenever it changes
@@ -84,9 +91,19 @@ export default function TasksPage() {
     localStorage.setItem('tasks-show-completed', JSON.stringify(showCompleted));
   }, [showCompleted]);
 
-  const { data: tasks = [], isLoading } = useQuery<Task[]>({
+  const { data: tasks = [], isLoading, error: tasksError } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
+
+  // Surface task loading errors instead of silently showing an empty list
+  useEffect(() => {
+    if (!tasksError) return;
+    toast({
+      title: "Failed to load tasks",
+      description: tasksError.message,
+      variant: "destructive",
+    });
+  }, [tasksError, toast]);
 
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
@@ -455,11 +472,19 @@ export default function TasksPage() {
     },
   });
 
-  const filteredTasks = tasks.filter((task) => {
+  const matchesBaseFilters = (task: Task) => {
     if (filterStatus !== "all" && task.status !== filterStatus) return false;
     if (filterPriority !== "all" && task.priority !== filterPriority) return false;
-    // Filter by selected space (null = show all tasks)
     if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
+    return true;
+  };
+
+  const completedHiddenByToggle = !showCompleted
+    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
+    : 0;
+
+  const filteredTasks = tasks.filter((task) => {
+    if (!matchesBaseFilters(task)) return false;
     
     // Hide all completed tasks if toggle is off
     if (!showCompleted && task.status === "completed") return false;
@@ -863,6 +888,36 @@ export default function TasksPage() {
             </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          {tasksError && (
+            <div className="w-full rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium text-destructive">Tasks failed to load</div>
+                <div className="text-muted-foreground truncate">{tasksError.message}</div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] })}
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {!tasksError && completedHiddenByToggle > 0 && (
+            <div className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium">Completed tasks are hidden</div>
+                <div className="text-muted-foreground truncate">
+                  {completedHiddenByToggle} completed tasks match your current filters.
+                </div>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => setShowCompleted(true)}>
+                Show completed
+              </Button>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 rounded-lg border bg-card p-1">
             <Button
               variant={viewMode === "compact" ? "default" : "ghost"}
