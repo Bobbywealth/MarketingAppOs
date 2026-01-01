@@ -89,18 +89,15 @@ router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
       return res.json(tasksList);
     }
 
-    const allTasks = await storage.getTasks();
-    
-    // Filter tasks based on user role for staff
-    let tasksList = allTasks;
     if (role === UserRole.STAFF) {
-      tasksList = allTasks.filter((t) => t.assignedToId === userId);
-      console.log(`🔒 Tasks filtered for STAFF: ${tasksList.length} assigned to user (out of ${allTasks.length} total)`);
-    } else if (role === UserRole.MANAGER || role === UserRole.ADMIN) {
-      console.log(`🔓 ${role} access: showing all ${allTasks.length} tasks`);
+      if (!userId) return res.json([]);
+      const tasksList = await storage.getTasksAssignedToUser(userId);
+      return res.json(tasksList);
     }
-    
-    res.json(tasksList);
+
+    // Admin/Manager: show all tasks
+    const allTasks = await storage.getTasks();
+    res.json(allTasks);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch tasks" });
@@ -132,7 +129,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
         isRead: false,
       });
       
-      await sendPushToUser(task.assignedToId, {
+      void sendPushToUser(task.assignedToId, {
         title: '📋 New Task Assigned',
         body: `${creatorName} assigned you: "${task.title}"`,
         url: `/tasks?taskId=${task.id}`,
@@ -161,7 +158,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
           isRead: false,
         });
         
-        await sendPushToUser(teamMember.id, {
+        void sendPushToUser(teamMember.id, {
           title: '📋 New Task Created',
           body: `${creatorName} created: "${task.title}"`,
           url: `/tasks?taskId=${task.id}`,
@@ -188,7 +185,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
             isRead: false,
           });
           
-          await sendPushToUser(clientUser.id, {
+          void sendPushToUser(clientUser.id, {
             title: '📋 New Task Created',
             body: `New task "${task.title}" has been created for your project`,
             url: '/client-dashboard',
@@ -336,7 +333,7 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
           isRead: false,
         });
         
-        await sendPushToUser(newAssignee.id, {
+        void sendPushToUser(newAssignee.id, {
           title: '📋 New Task Assigned',
           body: `"${task.title}" has been assigned to you`,
           url: `/tasks?taskId=${task.id}`,
@@ -398,7 +395,7 @@ router.post("/tasks/:taskId/comments", isAuthenticated, async (req: Request, res
           actionUrl: `/tasks?taskId=${task.id}`,
           isRead: false,
         });
-        await sendPushToUser(task.assignedToId, {
+        void sendPushToUser(task.assignedToId, {
           title: '💬 New Task Comment',
           body: `${commenterName}: ${validatedData.comment.substring(0, 100)}`,
           url: `/tasks?taskId=${task.id}`,

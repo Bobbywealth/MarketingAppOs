@@ -4971,83 +4971,79 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.post("/api/notifications/check-tasks", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      
-      const tasks = await storage.getTasks();
-      const now = new Date();
-      let notificationsCreated = 0;
+      const rawUserId = user?.id ?? user?.claims?.sub;
+      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
+      if (!Number.isFinite(userId)) {
+        return res.status(400).json({ message: "Invalid user context" });
+      }
 
-      for (const task of tasks) {
-        // Check tasks assigned to current user, created by them, or related to their client
-        const isAssignedToUser = task.assignedToId === userId;
-        const isCreatedByUser = task.createdBy === userId;
-        const isClientTask = task.clientId && task.clientId === userId;
-        
-        if (!isAssignedToUser && !isCreatedByUser && !isClientTask) continue;
-        
-        // Skip completed tasks
-        if (task.status === 'completed') continue;
-        
-        // Check if task has a due date
+      const now = new Date();
+      const dueBy = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const dueTasks = await storage.getDueTasksForAssignee(userId, dueBy);
+
+      const actionUrls = dueTasks.map((t) => `/tasks?taskId=${t.id}`);
+      const existing = await storage.getUnreadNotificationsByActionUrls(userId, actionUrls);
+      const existingKeys = new Set(existing.map((n) => `${n.actionUrl ?? ""}::${n.title}`));
+
+      let notificationsCreated = 0;
+      const { sendPushToUser } = await import("./push.js");
+
+      for (const task of dueTasks) {
         if (!task.dueDate) continue;
-        
+        if (task.status === "completed") continue;
+
         const dueDate = new Date(task.dueDate);
         const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-        
-        // Check if notification already exists for this task
-        const existingNotifications = await storage.getNotifications(userId);
-        const hasNotification = existingNotifications.some(
-          n => n.message.includes(task.title) && !n.isRead
-        );
-        
-        if (hasNotification) continue;
-        
+        const actionUrl = `/tasks?taskId=${task.id}`;
+
         // Past due (overdue)
         if (hoursDiff < 0) {
-          const targetUserId = task.assignedToId || userId;
-          
-          // In-app notification
+          const title = "⏰ Task Overdue!";
+          const key = `${actionUrl}::${title}`;
+          if (existingKeys.has(key)) continue;
+
           await storage.createNotification({
-            userId: targetUserId,
-            type: 'error',
-            title: '⏰ Task Overdue!',
+            userId,
+            type: "error",
+            title,
             message: `Task "${task.title}" is overdue!`,
-            category: 'deadline',
-            actionUrl: `/tasks?taskId=${task.id}`,
+            category: "deadline",
+            actionUrl,
+            isRead: false,
           });
-          
-          // Push notification
-          const { sendPushToUser } = await import('./push.js');
-          await sendPushToUser(targetUserId, {
-            title: '🚨 Task Overdue!',
+
+          void sendPushToUser(userId, {
+            title: "🚨 Task Overdue!",
             body: `"${task.title}" is overdue!`,
-            url: `/tasks?taskId=${task.id}`,
-          }).catch(err => console.error('Failed to send push notification:', err));
-          
+            url: actionUrl,
+          }).catch((err) => console.error("Failed to send push notification:", err));
+
+          existingKeys.add(key);
           notificationsCreated++;
         }
         // Due within 24 hours
-        else if (hoursDiff <= 24 && hoursDiff > 0) {
-          const targetUserId = task.assignedToId || userId;
-          
-          // In-app notification
+        else if (hoursDiff <= 24) {
+          const title = "⚠️ Task Due Soon";
+          const key = `${actionUrl}::${title}`;
+          if (existingKeys.has(key)) continue;
+
           await storage.createNotification({
-            userId: targetUserId,
-            type: 'warning',
-            title: '⚠️ Task Due Soon',
-            message: `Task "${task.title}" is due in ${Math.round(hoursDiff)} hours`,
-            category: 'deadline',
-            actionUrl: `/tasks?taskId=${task.id}`,
+            userId,
+            type: "warning",
+            title,
+            message: `Task "${task.title}" is due in ${Math.max(1, Math.round(hoursDiff))} hours`,
+            category: "deadline",
+            actionUrl,
+            isRead: false,
           });
-          
-          // Push notification
-          const { sendPushToUser } = await import('./push.js');
-          await sendPushToUser(targetUserId, {
-            title: '⏰ Task Due Soon',
-            body: `"${task.title}" is due in ${Math.round(hoursDiff)} hours`,
-            url: `/tasks?taskId=${task.id}`,
-          }).catch(err => console.error('Failed to send push notification:', err));
-          
+
+          void sendPushToUser(userId, {
+            title: "⏰ Task Due Soon",
+            body: `"${task.title}" is due in ${Math.max(1, Math.round(hoursDiff))} hours`,
+            url: actionUrl,
+          }).catch((err) => console.error("Failed to send push notification:", err));
+
+          existingKeys.add(key);
           notificationsCreated++;
         }
       }

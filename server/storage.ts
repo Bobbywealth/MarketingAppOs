@@ -100,7 +100,7 @@ import {
   type GroupMessage,
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, or, and, gte, lt, count, inArray, sum, sql } from "drizzle-orm";
+import { eq, desc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
 
 export interface GroupConversationWithParticipants extends GroupConversation {
   participants: Array<{ id: number; username: string; role: string }>;
@@ -144,7 +144,16 @@ export interface IStorage {
   // Task operations
   getTasks(): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
+  getTasksAssignedToUser(userId: number): Promise<Task[]>;
   getTasksBySpace(spaceId: string): Promise<Task[]>;
+  getTasksByClient(clientId: string): Promise<Task[]>;
+  getDueTasksForAssignee(
+    userId: number,
+    dueBy: Date
+  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>>;
+  getDueTasksForAllAssignees(
+    dueBy: Date
+  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
@@ -242,6 +251,14 @@ export interface IStorage {
   // Push notification history operations
   getPushNotificationHistory(): Promise<PushNotificationHistory[]>;
   createPushNotificationHistory(history: InsertPushNotificationHistory): Promise<PushNotificationHistory>;
+
+  // Notifications operations
+  getNotifications(userId: number): Promise<Notification[]>;
+  getUnreadNotificationsByActionUrls(userId: number, actionUrls: string[]): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(notificationId: string): Promise<void>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
+  deleteNotification(notificationId: string): Promise<void>;
 
   // Global search
   globalSearch(query: string): Promise<{
@@ -654,12 +671,67 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
 
+  async getTasksAssignedToUser(userId: number): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.assignedToId, userId))
+      .orderBy(desc(tasks.createdAt));
+  }
+
   async getTasksBySpace(spaceId: string): Promise<Task[]> {
     return await db.select().from(tasks).where(eq(tasks.spaceId, spaceId)).orderBy(desc(tasks.createdAt));
   }
 
   async getTasksByClient(clientId: string): Promise<Task[]> {
     return await db.select().from(tasks).where(eq(tasks.clientId, clientId)).orderBy(desc(tasks.createdAt));
+  }
+
+  async getDueTasksForAssignee(
+    userId: number,
+    dueBy: Date
+  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>> {
+    return await db
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        dueDate: tasks.dueDate,
+        assignedToId: tasks.assignedToId,
+        status: tasks.status,
+      })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.assignedToId, userId),
+          isNotNull(tasks.dueDate),
+          lte(tasks.dueDate, dueBy),
+          sql`${tasks.status} != 'completed'`
+        )
+      )
+      .orderBy(tasks.dueDate);
+  }
+
+  async getDueTasksForAllAssignees(
+    dueBy: Date
+  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>> {
+    return await db
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        dueDate: tasks.dueDate,
+        assignedToId: tasks.assignedToId,
+        status: tasks.status,
+      })
+      .from(tasks)
+      .where(
+        and(
+          isNotNull(tasks.assignedToId),
+          isNotNull(tasks.dueDate),
+          lte(tasks.dueDate, dueBy),
+          sql`${tasks.status} != 'completed'`
+        )
+      )
+      .orderBy(tasks.dueDate);
   }
 
   async createTask(taskData: InsertTask): Promise<Task> {
@@ -1242,6 +1314,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(notifications.userId, userId))
       .orderBy(desc(notifications.createdAt))
       .limit(50);
+  }
+
+  async getUnreadNotificationsByActionUrls(userId: number, actionUrls: string[]) {
+    if (!actionUrls.length) return [];
+    return await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false),
+          inArray(notifications.actionUrl, actionUrls)
+        )
+      )
+      .orderBy(desc(notifications.createdAt))
+      .limit(200);
   }
 
   async createNotification(notificationData: InsertNotification) {

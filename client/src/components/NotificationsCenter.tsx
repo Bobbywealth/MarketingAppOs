@@ -178,15 +178,8 @@ export function NotificationsCenter() {
 
   // Periodically check for due/overdue tasks
   useEffect(() => {
-    // Check immediately on mount
-    checkTasksMutation.mutate();
-    
-    // Then check every 5 minutes
-    const interval = setInterval(() => {
-      checkTasksMutation.mutate();
-    }, 5 * 60 * 1000); // 5 minutes
-    
-    return () => clearInterval(interval);
+    // No-op: due/overdue task notifications are generated server-side on a schedule.
+    // Keep the manual button (if present in UI) for on-demand checks.
   }, []);
 
   // Request notification permission on mount
