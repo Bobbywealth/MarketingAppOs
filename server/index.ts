@@ -10,6 +10,7 @@ import { startEmailSyncService } from "./emailSyncService";
 import { startVisitsAutomation } from "./visitsAutomation";
 import { startTaskAutomation } from "./taskAutomation";
 import { storage } from "./storage";
+import { ensureMinimumSchema } from "./ensureSchema";
 
 const app = express();
 app.use(express.json());
@@ -48,6 +49,9 @@ app.use((req, res, next) => {
 (async () => {
   const server = createServer(app);
   
+  // Ensure critical schema pieces exist (prevents 500s if prod DB hasn't been migrated yet)
+  await ensureMinimumSchema();
+
   // Initialize services
   initializeStripe();
   initializeEmailService();

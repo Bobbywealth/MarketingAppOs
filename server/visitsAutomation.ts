@@ -4,9 +4,32 @@ import { storage } from "./storage";
 import { UserRole } from "./rbac";
 
 let visitsCron: any = null;
+let creatorVisitsTableChecked = false;
+let creatorVisitsTableExists = false;
+
+async function ensureCreatorVisitsTableExists() {
+  if (creatorVisitsTableChecked) return creatorVisitsTableExists;
+  creatorVisitsTableChecked = true;
+  try {
+    const res = await pool.query(`SELECT to_regclass('public.creator_visits') as regclass;`);
+    creatorVisitsTableExists = !!res.rows?.[0]?.regclass;
+    if (!creatorVisitsTableExists) {
+      console.warn(
+        "⚠️ Visits automation disabled: creator_visits table missing. Run migrations or restart after schema is applied."
+      );
+    }
+  } catch (e) {
+    creatorVisitsTableExists = false;
+    console.warn("⚠️ Visits automation disabled: unable to check creator_visits table existence.");
+  }
+  return creatorVisitsTableExists;
+}
 
 async function markOverdueUploadsAndNotify() {
   try {
+    const ok = await ensureCreatorVisitsTableExists();
+    if (!ok) return;
+
     // Find visits where upload is overdue (completed + upload not received + due date passed)
     const result = await pool.query(
       `
@@ -83,6 +106,7 @@ export function stopVisitsAutomation() {
   visitsCron.stop();
   visitsCron = null;
 }
+
 
 
 
