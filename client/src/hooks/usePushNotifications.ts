@@ -23,10 +23,21 @@ export function usePushNotifications() {
       const existingSubscription = await registration.pushManager.getSubscription();
       
       if (existingSubscription) {
-        // Test if the subscription is still valid by checking the endpoint
+        // We have a browser subscription. Ensure the server also has it stored.
         console.log('Found existing subscription:', existingSubscription.endpoint);
         setIsSubscribed(true);
         setSubscription(existingSubscription);
+
+        // This fixes the common case where the device is subscribed but the DB row is missing
+        // (migrations, account switching, DB restore, etc).
+        try {
+          await apiRequest('POST', '/api/push/subscribe', {
+            subscription: existingSubscription.toJSON(),
+          });
+        } catch (e) {
+          // Don't toast here (it can be noisy on load); just log.
+          console.warn('Failed to sync existing push subscription to server:', e);
+        }
       }
     } catch (error) {
       console.error('Error checking subscription:', error);

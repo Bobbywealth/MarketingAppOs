@@ -5120,7 +5120,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Debug endpoint for checking user's push notification status
   app.get("/api/push/debug-status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const rawUserId = (req.user as any)?.id ?? (req.user as any)?.claims?.sub;
+      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
+      if (!Number.isFinite(userId)) {
+        return res.status(400).json({ error: "Invalid user context" });
+      }
       const user = await storage.getUser(String(userId));
       
       // Get push subscriptions
@@ -5174,7 +5178,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Emergency push subscription cleanup endpoint
   app.post("/api/push/emergency-cleanup", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).id;
+      const rawUserId = (req.user as any)?.id ?? (req.user as any)?.claims?.sub;
+      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
+      if (!Number.isFinite(userId)) {
+        return res.status(400).json({ message: "Invalid user context" });
+      }
       const user = await storage.getUser(String(userId));
 
       console.log(`🚨 Emergency cleanup for user ${userId} (${user?.username})`);
@@ -5209,7 +5217,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.post("/api/push/subscribe", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
+      const rawUserId = user?.id ?? user?.claims?.sub;
+      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
+      if (!Number.isFinite(userId)) {
+        return res.status(400).json({ message: "Invalid user context" });
+      }
       const { subscription } = req.body;
 
       if (!subscription || !subscription.endpoint) {
