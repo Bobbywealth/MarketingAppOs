@@ -806,17 +806,14 @@ export function registerRoutes(app: Express) {
       const { to, subject } = req.body as { to?: string; subject?: string };
       if (!to) return res.status(400).json({ message: "Missing 'to' email address" });
 
-      const { sendEmail } = await import("./emailService.js");
-      const now = new Date();
-      const html = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
-          <h2>✅ SMTP Test Email</h2>
-          <p>This is a test email sent from <strong>Marketing Team App</strong>.</p>
-          <p><strong>Time:</strong> ${now.toISOString()}</p>
-          <p>If you received this, your SMTP settings are working.</p>
-        </div>
-      `;
-      const result = await sendEmail(to, subject || "✅ SMTP Test Email (Marketing Team App)", html);
+      const { sendEmail, emailTemplates } = await import("./emailService.js");
+      const user = req.user as any;
+      const userName = user?.firstName || user?.username || 'Admin';
+      
+      // Use the welcome template as the test email content to show off the new design
+      const template = emailTemplates.welcomeUser(userName, user?.email || 'test@example.com');
+      
+      const result = await sendEmail(to, subject || template.subject, template.html);
       if (!result.success) return res.status(500).json(result);
       res.json(result);
     } catch (e: any) {
