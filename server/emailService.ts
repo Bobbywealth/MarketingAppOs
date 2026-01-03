@@ -18,6 +18,9 @@ export function initializeEmailService() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    ...(process.env.SMTP_TLS_REJECT_UNAUTHORIZED
+      ? { tls: { rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false' } }
+      : {}),
   });
 
   console.log('✅ Email service initialized');
@@ -61,7 +64,7 @@ export const emailTemplates = {
               </ul>
               
               <p style="text-align: center;">
-                <a href="${process.env.APP_URL || 'https://marketingappos.onrender.com'}/auth" class="button">
+                <a href="${process.env.APP_URL || 'https://www.marketingteam.app'}/auth" class="button">
                   Get Started →
                 </a>
               </p>
@@ -155,7 +158,7 @@ export const emailTemplates = {
               </div>
               
               <p style="text-align: center;">
-                <a href="${process.env.APP_URL || 'https://marketingappos.onrender.com'}/clients" class="button">
+                <a href="${process.env.APP_URL || 'https://www.marketingteam.app'}/clients" class="button">
                   View Client →
                 </a>
               </p>
@@ -209,7 +212,7 @@ export const emailTemplates = {
               </div>
               
               <p style="text-align: center;">
-                <a href="${process.env.APP_URL || 'https://marketingappos.onrender.com'}/tasks" class="button">
+                <a href="${process.env.APP_URL || 'https://www.marketingteam.app'}/tasks" class="button">
                   View Task →
                 </a>
               </p>
@@ -260,7 +263,7 @@ export const emailTemplates = {
               </div>
               
               <p style="text-align: center;">
-                <a href="${process.env.APP_URL || 'https://marketingappos.onrender.com'}/tasks" class="button">
+                <a href="${process.env.APP_URL || 'https://www.marketingteam.app'}/tasks" class="button">
                   View Task →
                 </a>
               </p>
@@ -283,11 +286,13 @@ export async function sendEmail(to: string | string[], subject: string, html: st
   }
 
   try {
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
     const info = await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || 'Marketing Team App'}" <${process.env.SMTP_USER}>`,
+      from: `"${process.env.SMTP_FROM_NAME || 'Marketing Team App'}" <${fromEmail}>`,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       html,
+      ...(process.env.SMTP_REPLY_TO ? { replyTo: process.env.SMTP_REPLY_TO } : {}),
     });
 
     console.log('✅ Email sent:', info.messageId);

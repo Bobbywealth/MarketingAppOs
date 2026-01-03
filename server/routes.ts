@@ -760,6 +760,31 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Send a test email (admin-only) to validate SMTP end-to-end
+  app.post("/api/email/send-test", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const { to, subject } = req.body as { to?: string; subject?: string };
+      if (!to) return res.status(400).json({ message: "Missing 'to' email address" });
+
+      const { sendEmail } = await import("./emailService.js");
+      const now = new Date();
+      const html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
+          <h2>✅ SMTP Test Email</h2>
+          <p>This is a test email sent from <strong>Marketing Team App</strong>.</p>
+          <p><strong>Time:</strong> ${now.toISOString()}</p>
+          <p>If you received this, your SMTP settings are working.</p>
+        </div>
+      `;
+      const result = await sendEmail(to, subject || "✅ SMTP Test Email (Marketing Team App)", html);
+      if (!result.success) return res.status(500).json(result);
+      res.json(result);
+    } catch (e: any) {
+      console.error("SMTP test send error:", e);
+      res.status(500).json({ success: false, error: e?.message || "Unknown error" });
+    }
+  });
+
   // Announcements (admin-only): send company-wide announcement
   app.post("/api/announcements", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
@@ -4675,11 +4700,28 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const user = await storage.createUser(userData);
       console.log("User created successfully:", user.id);
       
+      // Email notifications
+      if (user.email) {
+        try {
+          const { emailNotifications } = await import("./emailService.js");
+          // Send welcome email to new user
+          void emailNotifications.sendWelcomeEmail(
+            user.firstName || user.username,
+            user.email
+          ).catch(err => console.error("Failed to send welcome email:", err));
+        } catch (emailErr) {
+          console.error("Error sending welcome email:", emailErr);
+        }
+      }
+
       // Notify all admins about new user registration
       try {
-        const users = await storage.getUsers();
-        const admins = users.filter(u => u.role === UserRole.ADMIN);
+        const allUsers = await storage.getUsers();
+        const admins = allUsers.filter(u => u.role === UserRole.ADMIN);
         const { sendPushToUser } = await import('./push.js');
+        const { emailNotifications } = await import('./emailService.js');
+        
+        const adminEmailsToNotify = [];
         
         for (const admin of admins) {
           // In-app notification
@@ -4699,6 +4741,21 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
             body: `New user "${user.username}" (${user.role}) has been created`,
             url: '/team',
           }).catch(err => console.error('Failed to send push notification:', err));
+
+          // Collect admin emails for those with notification enabled
+          const prefs = await storage.getUserNotificationPreferences(admin.id);
+          if (admin.email && prefs?.emailNotifications !== false) {
+            adminEmailsToNotify.push(admin.email);
+          }
+        }
+
+        if (adminEmailsToNotify.length > 0 && user.email) {
+          void emailNotifications.sendNewUserAlertToAdmins(
+            adminEmailsToNotify,
+            user.username,
+            user.email,
+            user.role
+          ).catch(err => console.error("Failed to send new user admin email alert:", err));
         }
         
         console.log(`✅ Notified ${admins.length} admin(s) about new user registration`);

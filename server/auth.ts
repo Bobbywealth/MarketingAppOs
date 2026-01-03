@@ -109,6 +109,45 @@ export function setupAuth(app: Express) {
         role: "staff", // Always assign "staff" role, admins must be created by existing admins
       });
 
+      // Send welcome email
+      if (user.email) {
+        try {
+          const { emailNotifications } = await import("./emailService.js");
+          void emailNotifications.sendWelcomeEmail(
+            user.firstName || user.username,
+            user.email
+          ).catch(err => console.error("Failed to send welcome email:", err));
+          
+          // Also notify admins about new user registration via email
+          const allUsers = await storage.getUsers();
+          const adminEmails = allUsers
+            .filter(u => u.role === UserRole.ADMIN && u.email)
+            .map(u => u.email as string);
+          
+          if (adminEmails.length > 0) {
+            // Filter admins who have email notifications enabled
+            const adminsToNotify = [];
+            for (const admin of allUsers.filter(u => u.role === UserRole.ADMIN && u.email)) {
+              const prefs = await storage.getUserNotificationPreferences(admin.id);
+              if (prefs?.emailNotifications !== false) {
+                adminsToNotify.push(admin.email as string);
+              }
+            }
+            
+            if (adminsToNotify.length > 0) {
+              void emailNotifications.sendNewUserAlertToAdmins(
+                adminsToNotify,
+                user.username,
+                user.email,
+                user.role
+              ).catch(err => console.error("Failed to send new user admin email alert:", err));
+            }
+          }
+        } catch (emailErr) {
+          console.error("Error sending user registration emails:", emailErr);
+        }
+      }
+
       req.login(user, (err) => {
         if (err) return next(err);
         res.status(201).json({

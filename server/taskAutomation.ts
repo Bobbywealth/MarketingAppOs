@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { storage } from "./storage";
 import { sendPushToUser } from "./push";
+import { emailNotifications } from "./emailService";
 
 export function startTaskAutomation() {
   // Run every 15 minutes to generate due/overdue notifications without client polling.
@@ -26,6 +27,15 @@ export function startTaskAutomation() {
         const existing = await storage.getUnreadNotificationsByActionUrls(userId, actionUrls);
         const existingKeys = new Set(existing.map((n) => `${n.actionUrl ?? ""}::${n.title}`));
 
+        const prefs = await storage.getUserNotificationPreferences(userId).catch(() => undefined);
+        const emailEnabled = (prefs?.emailNotifications ?? true) && (prefs?.taskUpdates ?? true) && (prefs?.dueDateReminders ?? true);
+        const user = emailEnabled ? await storage.getUser(String(userId)).catch(() => undefined) : undefined;
+        const userEmail = emailEnabled ? user?.email : undefined;
+        const userName =
+          (user?.firstName || user?.lastName)
+            ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
+            : (user?.username || "there");
+
         for (const task of userTasks) {
           if (!task.dueDate) continue;
           if (task.status === "completed") continue;
@@ -50,6 +60,12 @@ export function startTaskAutomation() {
               isRead: false,
             });
 
+            if (emailEnabled && userEmail) {
+              void emailNotifications
+                .sendTaskDueReminder(userName, userEmail, task.title, task.dueDate)
+                .catch((err) => console.error("Failed to send task overdue email:", err));
+            }
+
             void sendPushToUser(userId, {
               title: "🚨 Task Overdue!",
               body: `"${task.title}" is overdue!`,
@@ -73,6 +89,12 @@ export function startTaskAutomation() {
               actionUrl,
               isRead: false,
             });
+
+            if (emailEnabled && userEmail) {
+              void emailNotifications
+                .sendTaskDueReminder(userName, userEmail, task.title, task.dueDate)
+                .catch((err) => console.error("Failed to send task due-soon email:", err));
+            }
 
             void sendPushToUser(userId, {
               title: "⏰ Task Due Soon",
@@ -116,6 +138,22 @@ export function startTaskAutomation() {
             actionUrl: `/tasks?taskId=${task.id}`,
             isRead: false,
           });
+
+          const prefs = await storage.getUserNotificationPreferences(task.assignedToId).catch(() => undefined);
+          const emailEnabled = (prefs?.emailNotifications ?? true) && (prefs?.taskUpdates ?? true) && (prefs?.dueDateReminders ?? true);
+          if (emailEnabled) {
+            const user = await storage.getUser(String(task.assignedToId)).catch(() => undefined);
+            const userEmail = user?.email;
+            const userName =
+              (user?.firstName || user?.lastName)
+                ? `${user?.firstName || ""} ${user?.lastName || ""}`.trim()
+                : (user?.username || "there");
+            if (userEmail && task.dueDate) {
+              void emailNotifications
+                .sendTaskDueReminder(userName, userEmail, task.title, task.dueDate)
+                .catch((err) => console.error("Failed to send task due-tomorrow email:", err));
+            }
+          }
 
           void sendPushToUser(task.assignedToId, {
             title: '📅 Task Due Tomorrow',

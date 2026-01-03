@@ -134,6 +134,31 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
         body: `${creatorName} assigned you: "${task.title}"`,
         url: `/tasks?taskId=${task.id}`,
       }).catch(err => console.error('Failed to send push notification:', err));
+
+      // Email notification
+      try {
+        const assignee = await storage.getUser(String(task.assignedToId));
+        if (assignee?.email) {
+          const { emailNotifications } = await import('../emailService.js');
+          const assigneeName = assignee.firstName || assignee.username || 'there';
+          
+          // Respect preferences
+          const prefs = await storage.getUserNotificationPreferences(assignee.id);
+          if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
+            void emailNotifications.sendTaskAssignedEmail(
+              assigneeName,
+              assignee.email,
+              task.title,
+              task.description || '',
+              task.priority || 'normal',
+              task.dueDate ? task.dueDate.toISOString() : null,
+              creatorName
+            ).catch(err => console.error('Failed to send task assignment email:', err));
+          }
+        }
+      } catch (emailErr) {
+        console.error('Error triggered during task assignment email:', emailErr);
+      }
     }
     
     // Notify all team members (admin, manager, staff) about new task
@@ -338,6 +363,28 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
           body: `"${task.title}" has been assigned to you`,
           url: `/tasks?taskId=${task.id}`,
         }).catch(err => console.error('Failed to send push:', err));
+
+        // Email notification
+        try {
+          const { emailNotifications } = await import('../emailService.js');
+          const assigneeName = newAssignee.firstName || newAssignee.username || 'there';
+          
+          // Respect preferences
+          const prefs = await storage.getUserNotificationPreferences(newAssignee.id);
+          if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
+            void emailNotifications.sendTaskAssignedEmail(
+              assigneeName,
+              newAssignee.email,
+              task.title,
+              task.description || '',
+              task.priority || 'normal',
+              task.dueDate ? (task.dueDate as any).toISOString() : null,
+              actorName
+            ).catch(err => console.error('Failed to send task assignment email:', err));
+          }
+        } catch (emailErr) {
+          console.error('Error triggered during task re-assignment email:', emailErr);
+        }
       }
     }
     

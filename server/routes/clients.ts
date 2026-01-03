@@ -74,6 +74,36 @@ router.post("/", isAuthenticated, requirePermission("canManageClients"), async (
         'success'
       );
     }
+
+    // Email alert to admins
+    try {
+      const allUsers = await storage.getUsers();
+      const admins = allUsers.filter(u => u.role === UserRole.ADMIN && u.email);
+      
+      if (admins.length > 0) {
+        const { emailNotifications } = await import('../emailService.js');
+        
+        // Filter admins who have email notifications enabled
+        const adminsToNotify = [];
+        for (const admin of admins) {
+          const prefs = await storage.getUserNotificationPreferences(admin.id);
+          if (prefs?.emailNotifications !== false) {
+            adminsToNotify.push(admin.email as string);
+          }
+        }
+        
+        if (adminsToNotify.length > 0) {
+          void emailNotifications.sendNewClientAlert(
+            adminsToNotify,
+            client.name,
+            client.company || '',
+            client.email || ''
+          ).catch(err => console.error('Failed to send new client email alert:', err));
+        }
+      }
+    } catch (notifError) {
+      console.error('Failed to notify admins about new client via email:', notifError);
+    }
     
     res.status(201).json(client);
   } catch (error) {
