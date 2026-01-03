@@ -7,6 +7,7 @@ export enum UserRole {
   STAFF = "staff",
   SALES_AGENT = "sales_agent",
   CREATOR_MANAGER = "creator_manager",
+  CREATOR = "creator",
   CLIENT = "client",
 }
 
@@ -76,6 +77,17 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canManageInvoices: false,
     canManageTickets: false,
     canViewReports: true,
+    canManageSettings: false,
+  },
+  [UserRole.CREATOR]: {
+    canManageUsers: false,
+    canManageClients: false,
+    canManageCampaigns: false,
+    canManageLeads: false,
+    canManageContent: true, // Creators manage their own content uploads
+    canManageInvoices: false,
+    canManageTickets: true,
+    canViewReports: false,
     canManageSettings: false,
   },
   [UserRole.CLIENT]: {

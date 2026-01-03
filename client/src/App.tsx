@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
+import { DashboardSwitcher } from "@/components/DashboardSwitcher";
 // NotificationPermissionPrompt removed - using Native Web Push
 import { PWAInstallButton } from "@/components/PWAInstallButton";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -76,6 +77,8 @@ const CreatorDetail = lazy(() => import("@/pages/creator-detail"));
 const CreatorEdit = lazy(() => import("@/pages/creator-edit"));
 const CreatorSignup = lazy(() => import("@/pages/creator-signup"));
 const CreatorSignupRedirect = lazy(() => import("@/pages/creator-signup-redirect"));
+const CreatorDashboard = lazy(() => import("@/pages/creator-dashboard"));
+const CreatorCourse = lazy(() => import("@/pages/creator-course"));
 const Visits = lazy(() => import("@/pages/visits"));
 const VisitNew = lazy(() => import("@/pages/visit-new"));
 const VisitDetail = lazy(() => import("@/pages/visit-detail"));
@@ -91,14 +94,14 @@ function PageLoader() {
 
 function Router() {
   const { user } = useAuth();
-  const isClient = user?.role === 'client';
-  const isSalesAgent = user?.role === 'sales_agent';
-  const isInternal = !!user && !isClient && !isSalesAgent; // admin/manager/staff/creator_manager
+  // Role override for testing
+  const overrideRole = localStorage.getItem('admin_role_override');
+  const effectiveRole = (user?.role === 'admin' && overrideRole) ? overrideRole : user?.role;
   
-  // Track page views for non-authenticated pages
-  if (!user) {
-    usePageTracking();
-  }
+  const isClient = effectiveRole === 'client';
+  const isSalesAgent = effectiveRole === 'sales_agent';
+  const isCreator = effectiveRole === 'creator';
+  const isInternal = !!user && !isClient && !isSalesAgent && !isCreator; // admin/manager/staff/creator_manager
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -117,6 +120,10 @@ function Router() {
         {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
         {/* Sales Agent-specific routes */}
         {isSalesAgent && <ProtectedRoute path="/" component={SalesDashboard} />}
+        {/* Creator-specific routes */}
+        {isCreator && <ProtectedRoute path="/" component={CreatorDashboard} />}
+        {isCreator && <ProtectedRoute path="/course" component={CreatorCourse} />}
+        
         {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
         {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
         {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
@@ -253,6 +260,7 @@ function AppContent() {
               
               {/* Right: Actions */}
               <div className="flex items-center gap-1 md:gap-2 ml-auto">
+                {user?.role === 'admin' && <DashboardSwitcher />}
                 <NotificationsCenter />
                 {!isMobile && <ThemeToggle />}
               </div>

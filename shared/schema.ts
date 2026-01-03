@@ -34,8 +34,9 @@ export const users = pgTable("users", {
   email: text("email"),
   firstName: text("first_name"),
   lastName: text("last_name"),
-  role: text("role").notNull().default("staff"), // admin, staff, client
+  role: text("role").notNull().default("staff"), // admin, staff, client, sales_agent, creator
   clientId: varchar("client_id"), // Links to clients table for client role users
+  creatorId: varchar("creator_id"), // Links to creators table for creator role users
   customPermissions: jsonb("custom_permissions"), // Individual sidebar permissions: { dashboard: true, clients: false, etc. }
   // googleAccessToken: text("google_access_token"),
   // googleRefreshToken: text("google_refresh_token"),

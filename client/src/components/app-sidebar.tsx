@@ -120,6 +120,35 @@ const clientTools: SidebarNavItem[] = [
   },
 ];
 
+// Creator-specific navigation
+const creatorTools: SidebarNavItem[] = [
+  {
+    title: "Dashboard",
+    url: "/",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Training Course",
+    url: "/course",
+    icon: BookOpen,
+  },
+  {
+    title: "My Visits",
+    url: "/visits",
+    icon: Calendar,
+  },
+  {
+    title: "Support Tickets",
+    url: "/tickets",
+    icon: Ticket,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
+];
+
 // Sales Agent-specific navigation
 const salesAgentTools: SidebarNavItem[] = [
   {
@@ -468,8 +497,14 @@ export function AppSidebar() {
   const { user } = useAuth();
   const { setOpenMobile, state, toggleSidebar, isMobile } = useSidebar();
   const { canAccess, canSeeSidebarItem } = usePermissions();
-  const isClient = (user as any)?.role === 'client';
-  const isSalesAgent = (user as any)?.role === 'sales_agent';
+
+  // Role override for testing
+  const overrideRole = localStorage.getItem('admin_role_override');
+  const effectiveRole = (user?.role === 'admin' && overrideRole) ? overrideRole : user?.role;
+
+  const isClient = effectiveRole === 'client';
+  const isSalesAgent = effectiveRole === 'sales_agent';
+  const isCreator = effectiveRole === 'creator';
   const isCollapsed = state === "collapsed" && !isMobile;
 
   // Fetch unread message counts
