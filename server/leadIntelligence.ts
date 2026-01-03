@@ -2,13 +2,32 @@ import OpenAI from "openai";
 import { storage } from "./storage";
 import { Lead } from "@shared/schema";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai: OpenAI | null = null;
+
+function getOpenAIClient() {
+  if (openai) return openai;
+  
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn("⚠️ OPENAI_API_KEY is not set. AI features will be disabled.");
+    return null;
+  }
+  
+  openai = new OpenAI({ apiKey });
+  return openai;
+}
 
 /**
  * Uses AI to analyze a lead based on their company and website
  */
 export async function analyzeLeadWithAI(leadId: string) {
   try {
+    const client = getOpenAIClient();
+    if (!client) {
+      console.error("Cannot analyze lead: OpenAI client not initialized (missing API key)");
+      return null;
+    }
+
     const lead = await storage.getLead(leadId);
     if (!lead) throw new Error("Lead not found");
 
