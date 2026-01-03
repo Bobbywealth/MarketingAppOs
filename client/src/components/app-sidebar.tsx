@@ -27,6 +27,7 @@ import {
   LineChart,
   User,
   Percent,
+  Zap,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
