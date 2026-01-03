@@ -84,28 +84,28 @@ export default function CreatorCourse() {
         <div className="space-y-6">
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <MessageCircle className="h-6 w-6 text-purple-500" />
-            2. How to Work with Restaurants
+            2. Professionalism & Restaurant Access
           </h2>
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
-              <CardTitle>Professional On-Site Etiquette</CardTitle>
+              <CardTitle>How to Get the Best Access</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p>Getting great content is only half the job. Building a relationship with the restaurant owner ensures you get invited back.</p>
+              <p>Getting the best content often means getting behind the counter or into the kitchen. Here is how you earn that trust:</p>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="p-4 bg-white dark:bg-slate-900 rounded-lg border">
                   <h3 className="font-bold mb-2 flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    The Introduction
+                    The "Kitchen Hook"
                   </h3>
-                  <p className="text-sm text-muted-foreground">Always check in with the manager first. Say: "Hi, I'm [Name] from the Marketing Team. I'm here to capture content for your social media today."</p>
+                  <p className="text-sm text-muted-foreground">Ask: "The lighting in the dining room is okay, but could I grab 30 seconds of the chef plating this in the kitchen? The steam looks incredible under those heat lamps."</p>
                 </div>
                 <div className="p-4 bg-white dark:bg-slate-900 rounded-lg border">
                   <h3 className="font-bold mb-2 flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Don't Disrupt
+                    Offer to Tag Them
                   </h3>
-                  <p className="text-sm text-muted-foreground">Stay out of the way of servers and customers. Your goal is to be a "fly on the wall" while capturing the vibe.</p>
+                  <p className="text-sm text-muted-foreground">Remind them: "I'll be sending this to the marketing team to post on your official pages. If you have a personal handle or a chef's account, let me know so we can tag you!"</p>
                 </div>
               </div>
             </CardContent>

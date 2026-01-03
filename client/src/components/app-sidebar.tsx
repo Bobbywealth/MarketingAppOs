@@ -641,6 +641,83 @@ export function AppSidebar() {
     );
   }
 
+  // For creators, show creator-specific menu
+  if (isCreator) {
+    return (
+      <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
+        <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
+          <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
+            {isCollapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-full flex justify-center">
+                      <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Marketing Team App</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Logo variant="auto" size="xl" className="!h-24 !w-auto mx-auto" />
+            )}
+          </Link>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup className="mt-4">
+            <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+              Creator Menu
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="px-2 gap-1">
+                {creatorTools.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <NavItem
+                      item={item}
+                      isActive={location === item.url}
+                      isCollapsed={isCollapsed}
+                      onClick={handleLinkClick}
+                    />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="p-4 border-t border-border/50">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 mb-2">
+            <div className="relative">
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background"></div>
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{(user as any)?.username || "Creator"}</p>
+                <p className="text-xs text-muted-foreground truncate capitalize">Creator</p>
+              </div>
+            )}
+          </div>
+          {!isCollapsed && (
+            <a
+              href={logoutUrl}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out</span>
+            </a>
+          )}
+        </SidebarFooter>
+      </Sidebar>
+    );
+  }
+
   // For sales agents, show sales-specific menu
   if (isSalesAgent) {
     return (

@@ -16,13 +16,17 @@ export interface RolePermissions {
 export function usePermissions() {
   const { user } = useAuth();
 
-  const role = (user as any)?.role || "staff";
+  // Role override for testing
+  const overrideRole = localStorage.getItem('admin_role_override');
+  const role = (user?.role === 'admin' && overrideRole) ? overrideRole : (user as any)?.role || "staff";
+  
   const customSidebarPermissions = (user as any)?.customPermissions as Record<string, boolean> | undefined;
   const isAdmin = role === "admin";
   const isManager = role === "manager";
   const isStaff = role === "staff";
   const isSalesAgent = role === "sales_agent";
   const isCreatorManager = role === "creator_manager";
+  const isCreator = role === "creator";
   const isClient = role === "client";
 
   // Compute permissions based on role (matches server/rbac.ts)
@@ -31,9 +35,9 @@ export function usePermissions() {
     canManageClients: isAdmin || isManager || isStaff || isSalesAgent || isCreatorManager,
     canManageCampaigns: isAdmin || isManager || isStaff,
     canManageLeads: isAdmin || isManager || isStaff || isSalesAgent,
-    canManageContent: isAdmin || isManager || isStaff || isCreatorManager,
+    canManageContent: isAdmin || isManager || isStaff || isCreatorManager || isCreator,
     canManageInvoices: isAdmin || isManager, // Staff and sales agents cannot manage invoices
-    canManageTickets: isAdmin || isManager || isStaff || isSalesAgent,
+    canManageTickets: isAdmin || isManager || isStaff || isSalesAgent || isCreator || isClient,
     canViewReports: isAdmin || isManager || isCreatorManager, // Staff and sales agents cannot view full reports
     canManageSettings: isAdmin,
   };
@@ -54,6 +58,7 @@ export function usePermissions() {
     isStaff,
     isSalesAgent,
     isCreatorManager,
+    isCreator,
     isClient,
     canAccess: (permission: keyof RolePermissions) => permissions[permission],
     canSeeSidebarItem,
