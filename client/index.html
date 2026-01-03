@@ -30,6 +30,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MTA CRM" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Marketing Team" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="color-scheme" content="light dark" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -37,10 +40,19 @@
     <!-- App Icons -->
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icon-192x192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-192x192.png" />
     
-    <!-- Splash Screens for iOS -->
-    <link rel="apple-touch-startup-image" href="/icon-512x512.png" />
+    <!-- Splash Screens for iOS (best-effort fallback using existing asset) -->
+    <!-- For a perfect iOS install UX, generate dedicated splash images per device size. -->
+    <link rel="apple-touch-startup-image" href="/icon-512x512.png" media="(orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icon-512x512.png" media="(orientation: landscape)" />
+    
+    <!-- Windows Tiles (best-effort) -->
+    <meta name="msapplication-TileColor" content="#3b82f6" />
+    <meta name="msapplication-TileImage" content="/icon-192x192.png" />
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
