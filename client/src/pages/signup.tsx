@@ -36,7 +36,16 @@ import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 const signupSchema = z.object({
   // Company Information
   company: z.string().min(1, "Company name is required"),
-  website: z.string().url("Must be a valid URL").or(z.literal("")),
+  website: z.preprocess(
+    (val) => {
+      if (val === null || val === undefined) return "";
+      if (typeof val !== "string") return val;
+      const s = val.trim();
+      if (!s) return "";
+      return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+    },
+    z.string().url("Must be a valid URL").or(z.literal(""))
+  ),
   industry: z.string().optional(),
   companySize: z.string().optional(),
   
@@ -80,6 +89,7 @@ export default function SignupPage() {
   const [discountCode, setDiscountCode] = useState("");
   const [validDiscount, setValidDiscount] = useState<any>(null);
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
 
   // Fetch subscription packages
   const { data: packages } = useQuery({
@@ -141,12 +151,15 @@ export default function SignupPage() {
     mutationFn: async (data: SignupFormData) => {
       const response = await apiRequest("POST", "/api/signup-simple", data);
       const result = await response.json();
+      if (!result?.success) {
+        throw new Error(result?.message || "Failed to save your signup details");
+      }
       return result;
     },
     onSuccess: (result) => {
       toast({
-        title: "🎉 Account Created!",
-        description: "Welcome! Choose your package to get started.",
+        title: "✅ Details Saved!",
+        description: "Next: choose your package to get started.",
       });
       setStep(4); // Go directly to package selection
     },
@@ -235,6 +248,8 @@ export default function SignupPage() {
   };
 
   const nextStep = async () => {
+    if (isAdvancing) return;
+    setIsAdvancing(true);
     const fields = step === 1 
       ? ["name", "email", "phone"] as const
       : step === 2 
@@ -243,30 +258,34 @@ export default function SignupPage() {
       ? ["company", "website", "industry", "companySize"] as const
       : [];
     
-    const isValid = await form.trigger(fields);
-    if (isValid) {
-      // Capture lead early after step 1 (contact info completed)
-      if (step === 1) {
-        const formData = form.getValues();
-        const leadData = {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          company: formData.company || "Not provided yet",
-          website: formData.website || undefined,
-          industry: formData.industry || undefined,
-        };
-        console.log("📝 Capturing early lead with data:", leadData);
-        earlyLeadCaptureMutation.mutate(leadData);
+    try {
+      const isValid = await form.trigger(fields);
+      if (isValid) {
+        // Capture lead early after step 1 (contact info completed)
+        if (step === 1) {
+          const formData = form.getValues();
+          const leadData = {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            company: formData.company || "Not provided yet",
+            website: formData.website || undefined,
+            industry: formData.industry || undefined,
+          };
+          console.log("📝 Capturing early lead with data:", leadData);
+          earlyLeadCaptureMutation.mutate(leadData);
+        }
+        
+        // If on step 3 (company info), submit the form to create account and go to package selection
+        if (step === 3) {
+          const formData = form.getValues();
+          signupMutation.mutate(formData);
+        } else {
+          setStep(step + 1);
+        }
       }
-      
-      // If on step 3 (company info), submit the form to create account and go to package selection
-      if (step === 3) {
-        const formData = form.getValues();
-        signupMutation.mutate(formData);
-      } else {
-        setStep(step + 1);
-      }
+    } finally {
+      setIsAdvancing(false);
     }
   };
 
@@ -1220,6 +1239,7 @@ export default function SignupPage() {
                     <Button
                       type="button"
                       onClick={nextStep}
+                      disabled={isAdvancing || earlyLeadCaptureMutation.isPending}
                       className="ml-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                       data-testid="button-next"
                     >

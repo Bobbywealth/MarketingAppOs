@@ -1,5 +1,6 @@
 import { db } from "./server/db.js";
 import { users } from "./shared/schema.js";
+import { eq } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 
@@ -13,20 +14,52 @@ async function hashPassword(password: string) {
 
 async function createAdminUser() {
   try {
-    const hashedPassword = await hashPassword("admin123");
-    
+    const username = (process.env.ADMIN_USERNAME || "admin2").trim();
+    const password = process.env.ADMIN_PASSWORD;
+    const email = (process.env.ADMIN_EMAIL || "admin2@marketingteam.app").trim();
+    const firstName = (process.env.ADMIN_FIRST_NAME || "Admin").trim();
+    const lastName = (process.env.ADMIN_LAST_NAME || "User 2").trim();
+
+    if (!password || password.trim().length < 8) {
+      console.error("❌ ADMIN_PASSWORD is required and must be at least 8 characters.");
+      console.error('   Example: ADMIN_PASSWORD="your-strong-password" node --import tsx create-admin2.ts');
+      process.exit(1);
+    }
+
+    const hashedPassword = await hashPassword(password.trim());
+
+    const [existing] = await db.select().from(users).where(eq(users.username, username)).limit(1);
+
+    if (existing) {
+      await db
+        .update(users)
+        .set({
+          password: hashedPassword,
+          role: "admin",
+          email,
+          firstName,
+          lastName,
+        })
+        .where(eq(users.username, username));
+
+      console.log("✅ Admin user updated successfully!");
+      console.log(`Username: ${username}`);
+      console.log("Password: (updated)");
+      process.exit(0);
+    }
+
     await db.insert(users).values({
-      username: "admin2",
+      username,
       password: hashedPassword,
       role: "admin",
-      email: "admin2@marketingteam.app",
-      firstName: "Admin",
-      lastName: "User 2",
+      email,
+      firstName,
+      lastName,
     });
-    
-    console.log("✅ Admin user admin2 created successfully!");
-    console.log("Username: admin2");
-    console.log("Password: admin123");
+
+    console.log("✅ Admin user created successfully!");
+    console.log(`Username: ${username}`);
+    console.log("Password: (set)");
     process.exit(0);
   } catch (error) {
     console.error("❌ Error creating admin user:", error);

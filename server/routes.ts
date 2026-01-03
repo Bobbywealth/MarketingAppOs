@@ -37,6 +37,7 @@ import {
   creatorVisits,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
+import { earlyLeadSchema, requiredWebsiteSchema, signupAuditSchema, signupSimpleSchema } from "./validators/publicSignup";
 import Stripe from "stripe";
 import * as microsoftAuth from "./microsoftAuth";
 import multer from "multer";
@@ -1444,30 +1445,18 @@ export function registerRoutes(app: Express) {
   // Early lead capture endpoint (captures lead after step 2)
   app.post("/api/early-lead", async (req: Request, res: Response) => {
     try {
-      const earlyLeadSchema = z.object({
-        name: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().min(1),
-        company: z.string().min(1),
-        website: z.string().optional(),
-        industry: z.string().optional(),
-      });
-
       const data = earlyLeadSchema.parse(req.body);
 
       // Check if lead with this email already exists
-      let existingLead = null;
       try {
-        const existingLeads = await storage.getLeads();
-        existingLead = existingLeads.find(l => l.email === data.email);
+        const existingLead = await storage.getLeadByEmail(data.email);
+        if (existingLead) {
+          // Lead already exists, don't create duplicate
+          return res.json({ success: true, leadId: existingLead.id, duplicate: true });
+        }
       } catch (getLeadsError) {
         console.error('⚠️ Error fetching existing leads, continuing with creation:', getLeadsError);
         // Continue anyway - we'll handle duplicates if they occur
-      }
-
-      if (existingLead) {
-        // Lead already exists, don't create duplicate
-        return res.json({ success: true, leadId: existingLead.id, duplicate: true });
       }
 
       // Create early lead capture
@@ -1476,7 +1465,7 @@ export function registerRoutes(app: Express) {
         email: data.email,
         phone: data.phone,
         company: data.company,
-        website: data.website || null,
+        website: data.website ?? null,
         source: "website",
         stage: "prospect",
         score: "warm", // warm lead since they started signup
@@ -1573,6 +1562,13 @@ This lead will be updated if they complete the full signup process.`,
         message: error?.message,
         stack: error?.stack,
       });
+      if (error instanceof ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
       return res.status(500).json({ 
         success: false, 
         message: "Failed to create lead. Please try again." 
@@ -1584,7 +1580,7 @@ This lead will be updated if they complete the full signup process.`,
   app.post("/api/social-audit", async (req: Request, res: Response) => {
     try {
       const auditSchema = z.object({
-        website: z.string().url("Must be a valid URL"),
+        website: requiredWebsiteSchema,
         instagramUrl: z.string().optional(),
         tiktokUrl: z.string().optional(),
         facebookUrl: z.string().optional(),
@@ -1629,34 +1625,11 @@ This lead will be updated if they complete the full signup process.`,
   // Simplified signup endpoint (no audit, direct to package selection)
   app.post("/api/signup-simple", async (req: Request, res: Response) => {
     try {
-      const signupSchema = z.object({
-        company: z.string().min(1),
-        website: z.string().optional(),
-        industry: z.string().optional(),
-        companySize: z.string().optional(),
-        name: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().min(1),
-        services: z.array(z.string()).min(1),
-        budget: z.string().optional(),
-        webDevType: z.string().optional(),
-        webDevFeatures: z.array(z.string()).optional(),
-        webDevTimeline: z.string().optional(),
-        webDevBudget: z.string().optional(),
-        appPlatforms: z.array(z.string()).optional(),
-        appType: z.string().optional(),
-        appFeatures: z.array(z.string()).optional(),
-        appTimeline: z.string().optional(),
-        appBudget: z.string().optional(),
-        notes: z.string().optional(),
-      });
-
-      const data = signupSchema.parse(req.body);
+      const data = signupSimpleSchema.parse(req.body);
       console.log('📝 Processing simplified signup for:', data.email);
 
       // Check for existing lead and update it
-      const existingLeads = await storage.getLeads();
-      const existingLead = existingLeads.find(l => l.email === data.email);
+      const existingLead = await storage.getLeadByEmail(data.email);
 
       if (existingLead) {
         // Update existing lead with complete information
@@ -1724,7 +1697,7 @@ Lead completed signup process and is ready for package selection.`;
         email: data.email,
         phone: data.phone,
         company: data.company,
-        website: data.website || null,
+        website: data.website ?? null,
           source: "website",
           stage: "qualified",
           score: "hot",
@@ -1809,27 +1782,7 @@ This lead completed the full signup process and is ready for package selection.`
   // Public signup endpoint (no authentication required)
   app.post("/api/signup", async (req: Request, res: Response) => {
     try {
-      const signupSchema = z.object({
-        company: z.string().min(1),
-        website: z.string().optional(),
-        industry: z.string().optional(),
-        companySize: z.string().optional(),
-        name: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().min(1),
-        services: z.array(z.string()),
-        budget: z.string().optional(),
-        socialPlatforms: z.array(z.string()).optional(),
-        instagramUrl: z.string().optional(),
-        facebookUrl: z.string().optional(),
-        tiktokUrl: z.string().optional(),
-        linkedinUrl: z.string().optional(),
-        twitterUrl: z.string().optional(),
-        youtubeUrl: z.string().optional(),
-        notes: z.string().optional(),
-      });
-
-      const data = signupSchema.parse(req.body);
+      const data = signupAuditSchema.parse(req.body);
 
       // Generate automated audit report in background
       let auditReport: any = null;
@@ -1880,8 +1833,7 @@ ${auditReport?.socialMedia && auditReport.socialMedia.length > 0 ? '\n\n📱 SOC
 ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
 
         // Check if early lead capture exists
-        const existingLeads = await storage.getLeads();
-        const existingLead = existingLeads.find(l => l.email === data.email);
+        const existingLead = await storage.getLeadByEmail(data.email);
 
         let leadId: string;
         
@@ -1910,7 +1862,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
             email: data.email,
             phone: data.phone,
             company: data.company,
-            website: data.website || null,
+            website: data.website ?? null,
             source: "website",
             stage: "qualified",
             score: leadScore,

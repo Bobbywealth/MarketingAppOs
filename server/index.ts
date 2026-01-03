@@ -40,10 +40,22 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const publicSignupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // Limit each IP to 60 public signup requests per 15 minutes
+  message: "Too many signup requests, please try again in a few minutes",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use("/api", generalLimiter);
 app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
 app.use("/api/auth", authLimiter);
+app.use("/api/signup", publicSignupLimiter);
+app.use("/api/signup-simple", publicSignupLimiter);
+app.use("/api/early-lead", publicSignupLimiter);
+app.use("/api/social-audit", publicSignupLimiter);
 
 app.use(express.json({ limit: "10kb" })); // Limit body size to prevent DoS
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));

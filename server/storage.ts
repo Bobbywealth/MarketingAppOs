@@ -186,6 +186,7 @@ export interface IStorage {
   // Lead operations
   getLeads(): Promise<Lead[]>;
   getLead(id: string): Promise<Lead | undefined>;
+  getLeadByEmail(email: string): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, data: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
@@ -867,6 +868,17 @@ export class DatabaseStorage implements IStorage {
 
   async getLead(id: string): Promise<Lead | undefined> {
     const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead;
+  }
+
+  async getLeadByEmail(email: string): Promise<Lead | undefined> {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) return undefined;
+    const [lead] = await db
+      .select()
+      .from(leads)
+      .where(sql`LOWER(${leads.email}) = ${normalized}`)
+      .limit(1);
     return lead;
   }
 

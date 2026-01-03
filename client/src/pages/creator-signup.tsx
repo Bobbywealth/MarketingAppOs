@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, MapPin, DollarSign, Clock, Mail, Phone, User } from "lucide-react";
+import { CheckCircle, MapPin, DollarSign, Clock, Mail, Phone, User, Lock } from "lucide-react";
 import { HeaderLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
@@ -24,6 +24,8 @@ export default function CreatorSignupPage() {
     fullName: "",
     phone: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     homeCity: "",
     baseZip: "",
     serviceZipCodes: "",
@@ -34,10 +36,17 @@ export default function CreatorSignupPage() {
 
   const applyMutation = useMutation({
     mutationFn: async () => {
+      if (form.password.trim().length < 8) {
+        throw new Error("Password must be at least 8 characters.");
+      }
+      if (form.password !== form.confirmPassword) {
+        throw new Error("Passwords do not match.");
+      }
       const payload: any = {
         fullName: form.fullName.trim(),
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        password: form.password,
         homeCity: form.homeCity.trim() || null,
         baseZip: form.baseZip.trim() || null,
         serviceZipCodes: form.serviceZipCodes.trim()
@@ -47,29 +56,21 @@ export default function CreatorSignupPage() {
         ratePerVisitCents: form.ratePerVisitCents.trim() ? Math.round(Number(form.ratePerVisitCents) * 100) : null, // Convert dollars to cents
         availabilityNotes: form.availabilityNotes.trim() || null,
       };
-      const res = await apiRequest("POST", "/api/creators/apply", payload);
+      const res = await apiRequest("POST", "/api/creators/signup", payload);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (user: any) => {
+      // Ensure the app immediately "knows" the user is logged in.
+      queryClient.setQueryData(["/api/user"], user);
       toast({
-        title: "✅ Application Submitted!",
-        description: "Thank you for applying! We'll review your application and get back to you soon.",
+        title: "🎉 Account created!",
+        description: "You're signed up and logged in. Redirecting you to your dashboard…",
       });
-      setForm({
-        fullName: "",
-        phone: "",
-        email: "",
-        homeCity: "",
-        baseZip: "",
-        serviceZipCodes: "",
-        serviceRadiusMiles: "",
-        ratePerVisitCents: "",
-        availabilityNotes: "",
-      });
+      setTimeout(() => setLocation("/"), 400);
     },
     onError: (e: any) => {
       toast({
-        title: "Application Failed",
+        title: "Signup Failed",
         description: e?.message || "Please check your information and try again.",
         variant: "destructive",
       });
@@ -137,9 +138,9 @@ export default function CreatorSignupPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Creator Application</CardTitle>
+            <CardTitle>Create Your Creator Account</CardTitle>
             <CardDescription>
-              Please provide your information below. All fields marked with * are required.
+              Create your login (email + password) and tell us a bit about your availability. All fields marked with * are required.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -176,6 +177,9 @@ export default function CreatorSignupPage() {
                     required
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  You’ll log in using this email in the “Username” field.
+                </p>
               </div>
             </div>
 
@@ -218,6 +222,50 @@ export default function CreatorSignupPage() {
                 <p className="text-xs text-muted-foreground">
                   Enter your desired rate per visit in US dollars
                 </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  Password *
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    className="pl-10"
+                    placeholder="At least 8 characters"
+                    required
+                    minLength={8}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  Confirm Password *
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    className="pl-10"
+                    placeholder="Re-enter password"
+                    required
+                    minLength={8}
+                  />
+                </div>
+                {form.confirmPassword && form.password !== form.confirmPassword && (
+                  <p className="text-xs text-destructive">
+                    Passwords do not match.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -289,7 +337,15 @@ export default function CreatorSignupPage() {
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 onClick={() => applyMutation.mutate()}
-                disabled={applyMutation.isPending || !form.fullName.trim() || !form.email.trim() || !form.phone.trim() || !form.ratePerVisitCents.trim()}
+                disabled={
+                  applyMutation.isPending ||
+                  !form.fullName.trim() ||
+                  !form.email.trim() ||
+                  !form.phone.trim() ||
+                  !form.ratePerVisitCents.trim() ||
+                  form.password.trim().length < 8 ||
+                  form.password !== form.confirmPassword
+                }
                 className="flex-1 min-h-[44px]"
                 size="lg"
               >
@@ -298,7 +354,7 @@ export default function CreatorSignupPage() {
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Submit Application
+                    Create Account
                   </>
                 )}
               </Button>
@@ -316,10 +372,10 @@ export default function CreatorSignupPage() {
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center gap-2 text-green-800">
                   <CheckCircle className="w-5 h-5" />
-                  <p className="font-semibold">Application Submitted Successfully!</p>
+                  <p className="font-semibold">Account Created Successfully!</p>
                 </div>
                 <p className="text-sm text-green-700 mt-2">
-                  We've received your application and will review it shortly. You'll hear back from us via email.
+                  You’re signed in now. If you ever need to log in again, use your email as your username.
                 </p>
               </div>
             )}

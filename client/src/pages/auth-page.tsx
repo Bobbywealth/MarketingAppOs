@@ -105,11 +105,12 @@ export default function AuthPage() {
                 <CardContent>
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-username">Username</Label>
+                      <Label htmlFor="login-username">Email or Username</Label>
                       <Input
                         id="login-username"
                         data-testid="input-login-username"
                         type="text"
+                        placeholder="you@example.com"
                         value={loginData.username}
                         onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
                         required
@@ -121,7 +122,7 @@ export default function AuthPage() {
                         <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
                           <DialogTrigger asChild>
                             <Button
-                              variant="link"
+                              variant="ghost"
                               className="p-0 h-auto text-xs text-primary hover:underline"
                               type="button"
                             >
@@ -247,10 +248,10 @@ export default function AuthPage() {
                         value={registerData.password}
                         onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                         required
-                        minLength={6}
+                        minLength={8}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Minimum 6 characters
+                        Minimum 8 characters
                       </p>
                     </div>
                     <Button

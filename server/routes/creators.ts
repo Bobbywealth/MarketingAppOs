@@ -1,9 +1,10 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { db, pool } from "../db";
-import { creators, creatorVisits, clientCreators, clients } from "@shared/schema";
+import { creators, creatorVisits, clientCreators, clients, users } from "@shared/schema";
 import { eq, and, or, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
+import { hashPassword } from "../auth";
 import { requireRole, UserRole } from "../rbac";
 import { 
   handleValidationError
@@ -51,6 +52,121 @@ router.post("/creators/apply", async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, id: created.id });
   } catch (error: any) {
+    handleValidationError(error, res);
+  }
+});
+
+/**
+ * Public creator SIGNUP endpoint:
+ * - Creates a creators row (status: inactive, pending notes)
+ * - Creates a users row with role=creator and creatorId linked
+ * - Logs the user in (session cookie) so they can immediately access creator dashboard
+ */
+router.post("/creators/signup", async (req: Request, res: Response, next: any) => {
+  try {
+    const schema = z.object({
+      fullName: z.string().min(1, "Full name is required"),
+      phone: z.string().min(1, "Phone is required"),
+      email: z.string().email("Valid email is required"),
+      password: z.string().min(8, "Password must be at least 8 characters"),
+
+      homeCity: z.string().optional().nullable(),
+      baseZip: z.string().optional().nullable(),
+      serviceZipCodes: z.array(z.string()).optional().nullable(),
+      serviceRadiusMiles: z.number().int().positive().optional().nullable(),
+      ratePerVisitCents: z.number().int().positive().optional().nullable(),
+      availabilityNotes: z.string().optional().nullable(),
+    });
+
+    const data = schema.parse(req.body);
+
+    const normalizedEmail = data.email.trim().toLowerCase();
+    const username = normalizedEmail; // creators log in with their email in the username field
+
+    const nameParts = data.fullName.trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || data.fullName.trim();
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null;
+
+    const hashedPassword = await hashPassword(data.password);
+
+    let createdUser: any = null;
+    let createdCreator: any = null;
+
+    await db.transaction(async (tx) => {
+      // Prevent duplicate accounts (by username/email).
+      const existing = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(or(eq(users.username, username), eq(users.email, normalizedEmail)))
+        .limit(1);
+
+      if (existing.length > 0) {
+        const err: any = new Error("An account already exists for this email. Please log in instead.");
+        err.status = 409;
+        throw err;
+      }
+
+      // Create creator profile
+      const [creator] = await tx
+        .insert(creators)
+        .values({
+          fullName: data.fullName.trim(),
+          phone: data.phone.trim(),
+          email: normalizedEmail,
+          homeCity: data.homeCity?.trim() || null,
+          baseZip: data.baseZip?.trim() || null,
+          serviceZipCodes: data.serviceZipCodes ?? null,
+          serviceRadiusMiles: data.serviceRadiusMiles ?? null,
+          ratePerVisitCents: data.ratePerVisitCents ?? 7500,
+          availabilityNotes: data.availabilityNotes?.trim() || null,
+          status: "inactive",
+          performanceScore: "5.0",
+          notes: `[PENDING APPLICATION] Creator account created via public signup on ${new Date().toISOString()}.`,
+        } as any)
+        .returning();
+
+      createdCreator = creator;
+
+      // Create login user linked to creator
+      const [user] = await tx
+        .insert(users)
+        .values({
+          username,
+          password: hashedPassword,
+          email: normalizedEmail,
+          firstName,
+          lastName,
+          role: UserRole.CREATOR,
+          creatorId: creator.id,
+        } as any)
+        .returning();
+
+      createdUser = user;
+    });
+
+    // Auto-login creator after successful signup
+    req.login(createdUser, (err: any) => {
+      if (err) return next(err);
+      res.status(201).json({
+        id: createdUser.id,
+        username: createdUser.username,
+        email: createdUser.email,
+        firstName: createdUser.firstName,
+        lastName: createdUser.lastName,
+        profileImageUrl: (createdUser as any).profileImageUrl,
+        role: createdUser.role,
+        customPermissions: createdUser.customPermissions,
+        creatorId: createdUser.creatorId,
+        createdAt: createdUser.createdAt,
+        updatedAt: (createdUser as any).updatedAt,
+        // Helpful metadata for client UX (not required)
+        creatorProfileId: createdCreator?.id,
+      });
+    });
+  } catch (error: any) {
+    if (error?.status === 409) {
+      return res.status(409).json({ message: error.message });
+    }
     handleValidationError(error, res);
   }
 });
