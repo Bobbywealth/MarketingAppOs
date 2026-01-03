@@ -17,6 +17,16 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS checklist JSONB DEFAULT '[]'::jsonb;`
   );
 
+  // User columns: creator_id and client_id (critical for role-based access)
+  await safeQuery(
+    "users.creator_id column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS creator_id VARCHAR;`
+  );
+  await safeQuery(
+    "users.client_id column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS client_id VARCHAR;`
+  );
+
   // Creators table (required for visits module)
   await safeQuery(
     "creators table",
@@ -49,7 +59,7 @@ export async function ensureMinimumSchema() {
     `
     CREATE TABLE IF NOT EXISTS client_creators (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      client_id VARCHAR NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
       creator_id UUID NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
       role VARCHAR NOT NULL,
       active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -71,7 +81,7 @@ export async function ensureMinimumSchema() {
     `
     CREATE TABLE IF NOT EXISTS creator_visits (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      client_id VARCHAR NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
       creator_id UUID NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
       scheduled_start TIMESTAMP NOT NULL,
       scheduled_end TIMESTAMP NOT NULL,
