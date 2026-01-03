@@ -27,9 +27,10 @@ Set these in your production environment (or local `.env`):
 
 ## How to test SMTP (end-to-end)
 
-1) Confirm SMTP is configured:
+1) Confirm SMTP is configured and check admin emails:
 
 - `GET /api/email/test` (admin-only)
+- **Check the `adminsWithEmails` field**: If your username isn't in this list, you won't receive admin alerts (like "New Client Added"). Go to your **Profile/Settings** and ensure your email is saved.
 
 2) Send a real test email:
 
@@ -41,6 +42,14 @@ Body:
 { "to": "you@yourdomain.com", "subject": "SMTP test" }
 ```
 
-If it returns `{ success: true, messageId: "..." }` and you receive the email, SMTP is working.
+## Troubleshooting Outlook / M365
+
+- **SMTP AUTH Enabled**: Ensure you followed the steps to enable SMTP AUTH in the M365 Admin Center.
+- **App Passwords**: If you have Multi-Factor Authentication (MFA) enabled, you **must** use an App Password, not your regular password.
+- **From Address**: Outlook typically requires the `SMTP_FROM_EMAIL` to match your `SMTP_USER` exactly.
+- **Port 587 vs 465**: 
+  - For port `587`: Set `SMTP_SECURE=false` (this app uses STARTTLS automatically).
+  - For port `465`: Set `SMTP_SECURE=true`.
+- **Render Logs**: Check your Render service logs for `❌ Email send error`. If you see "Authentication unsuccessful", it's almost always an incorrect password or SMTP AUTH being disabled for that specific mailbox.
 
 
