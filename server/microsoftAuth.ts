@@ -14,7 +14,15 @@ const pca = new ConfidentialClientApplication(msalConfig);
 
 const REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:5000/api/auth/microsoft/callback';
 // 'offline_access' is REQUIRED to get refresh tokens for persistent login
-const SCOPES = ['offline_access', 'User.Read', 'Mail.Read', 'Mail.ReadWrite', 'Mail.Send'];
+// NOTE: Adding calendar scopes requires users to re-consent once.
+const SCOPES = [
+  'offline_access',
+  'User.Read',
+  'Mail.Read',
+  'Mail.ReadWrite',
+  'Mail.Send',
+  'Calendars.ReadWrite',
+];
 
 export function getAuthUrl(state?: string): string {
   const authCodeUrlParameters: AuthorizationUrlRequest = {
@@ -90,6 +98,123 @@ export function getGraphClient(accessToken: string): Client {
       done(null, accessToken);
     },
   });
+}
+
+// Calendar operations (Microsoft Graph)
+type GraphDateTime = { dateTime: string; timeZone?: string };
+type GraphLocation = { displayName?: string };
+type GraphAttendee = { emailAddress?: { address?: string; name?: string }; type?: string };
+
+function getCalendarUserPath(): string {
+  // If you want to force a specific mailbox/calendar (e.g. business@wolfpaqmarketing.app),
+  // set MICROSOFT_CALENDAR_MAILBOX to that email/UPN.
+  const mailbox = (process.env.MICROSOFT_CALENDAR_MAILBOX || '').trim();
+  if (mailbox) return `/users/${encodeURIComponent(mailbox)}`;
+  return '/me';
+}
+
+export async function listCalendarView(
+  accessToken: string,
+  startIso: string,
+  endIso: string,
+  timeZone: string = 'America/New_York'
+) {
+  const client = getGraphClient(accessToken);
+  const base = getCalendarUserPath();
+
+  try {
+    const events = await client
+      .api(`${base}/calendarView`)
+      .header('Prefer', `outlook.timezone="${timeZone}"`)
+      .query({
+        startDateTime: startIso,
+        endDateTime: endIso,
+        $top: 200,
+        $orderby: 'start/dateTime',
+      })
+      .select('id,subject,bodyPreview,start,end,location,attendees,webLink,onlineMeeting')
+      .get();
+
+    return events.value || [];
+  } catch (error) {
+    console.error('Error fetching calendar events:', error);
+    throw error;
+  }
+}
+
+export async function createCalendarEvent(
+  accessToken: string,
+  event: {
+    subject: string;
+    bodyPreview?: string;
+    start: GraphDateTime;
+    end: GraphDateTime;
+    location?: GraphLocation;
+    attendees?: GraphAttendee[];
+  }
+) {
+  const client = getGraphClient(accessToken);
+  const base = getCalendarUserPath();
+
+  try {
+    return await client.api(`${base}/events`).post({
+      subject: event.subject,
+      body: event.bodyPreview
+        ? { contentType: 'Text', content: event.bodyPreview }
+        : undefined,
+      start: event.start,
+      end: event.end,
+      location: event.location,
+      attendees: event.attendees,
+    });
+  } catch (error) {
+    console.error('Error creating calendar event:', error);
+    throw error;
+  }
+}
+
+export async function updateCalendarEvent(
+  accessToken: string,
+  eventId: string,
+  patch: {
+    subject?: string;
+    bodyPreview?: string;
+    start?: GraphDateTime;
+    end?: GraphDateTime;
+    location?: GraphLocation;
+  }
+) {
+  const client = getGraphClient(accessToken);
+  const base = getCalendarUserPath();
+
+  try {
+    await client.api(`${base}/events/${eventId}`).patch({
+      subject: patch.subject,
+      body: patch.bodyPreview
+        ? { contentType: 'Text', content: patch.bodyPreview }
+        : undefined,
+      start: patch.start,
+      end: patch.end,
+      location: patch.location,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating calendar event:', error);
+    throw error;
+  }
+}
+
+export async function deleteCalendarEvent(accessToken: string, eventId: string) {
+  const client = getGraphClient(accessToken);
+  const base = getCalendarUserPath();
+
+  try {
+    await client.api(`${base}/events/${eventId}`).delete();
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting calendar event:', error);
+    throw error;
+  }
 }
 
 // Email operations

@@ -110,6 +110,13 @@ export default function CompanyCalendarPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarStart = startOfWeek(monthStart);
+  const calendarEnd = endOfWeek(monthEnd);
+  const eventsQueryUrl = `/api/calendar/events?start=${encodeURIComponent(
+    calendarStart.toISOString()
+  )}&end=${encodeURIComponent(calendarEnd.toISOString())}`;
   
   // Form state
   const [formData, setFormData] = useState({
@@ -122,9 +129,14 @@ export default function CompanyCalendarPage() {
     syncWithGoogle: false,
   });
 
+  // Real connection status (Outlook/Microsoft Graph via existing email account connection)
+  const { data: calendarConnection } = useQuery<{ connected: boolean; provider: string | null; email?: string }>({
+    queryKey: ["/api/calendar/connection"],
+  });
+
   // Fetch calendar events from API
   const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
-    queryKey: ["/api/calendar/events"],
+    queryKey: [eventsQueryUrl],
   });
 
   // Update last sync time when events load
@@ -139,7 +151,7 @@ export default function CompanyCalendarPage() {
       return await apiRequest("POST", "/api/calendar/events", eventData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
+      queryClient.invalidateQueries({ queryKey: [eventsQueryUrl] });
       setIsCreateDialogOpen(false);
       resetForm();
       toast({
@@ -161,7 +173,7 @@ export default function CompanyCalendarPage() {
       return await apiRequest("PATCH", `/api/calendar/events/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
+      queryClient.invalidateQueries({ queryKey: [eventsQueryUrl] });
       setIsViewDialogOpen(false);
       setIsEditMode(false);
       setSelectedEvent(null);
@@ -184,7 +196,7 @@ export default function CompanyCalendarPage() {
       return await apiRequest("DELETE", `/api/calendar/events/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
+      queryClient.invalidateQueries({ queryKey: [eventsQueryUrl] });
       setIsViewDialogOpen(false);
       setSelectedEvent(null);
       toast({
@@ -234,10 +246,6 @@ export default function CompanyCalendarPage() {
     });
   };
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart);
-  const calendarEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -332,7 +340,7 @@ export default function CompanyCalendarPage() {
       title: "🔄 Syncing...",
       description: "Refreshing calendar data from Google",
     });
-    await queryClient.invalidateQueries({ queryKey: ["/api/calendar/events"] });
+    await queryClient.invalidateQueries({ queryKey: [eventsQueryUrl] });
     setLastSyncTime(new Date());
     toast({
       title: "✅ Synced!",
@@ -341,10 +349,8 @@ export default function CompanyCalendarPage() {
   };
 
   const handleGoogleSync = () => {
-    toast({
-      title: "Coming soon",
-      description: "Google Calendar integration will be available soon",
-    });
+    // Connect Outlook (Microsoft) account; callback will redirect back here.
+    window.location.href = "/api/auth/microsoft?redirect=/company-calendar";
   };
 
   const filteredUpcomingEvents = eventTypeFilter === "all" 
@@ -690,14 +696,22 @@ export default function CompanyCalendarPage() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Card className="hover-elevate transition-all duration-300 cursor-pointer border-emerald-500/50 bg-emerald-500/5">
+              <Card className={`hover-elevate transition-all duration-300 cursor-pointer ${
+                calendarConnection?.connected ? "border-emerald-500/50 bg-emerald-500/5" : ""
+              }`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Google Sync</p>
-                      <p className="text-sm font-semibold text-emerald-500 flex items-center gap-1">
-                        Connected ✓
-                      </p>
+                      <p className="text-sm text-muted-foreground">Outlook Sync</p>
+                      {calendarConnection?.connected ? (
+                        <p className="text-sm font-semibold text-emerald-500 flex items-center gap-1">
+                          Connected ✓
+                        </p>
+                      ) : (
+                        <p className="text-sm font-semibold text-muted-foreground">
+                          Not connected
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
                         {format(lastSyncTime, "h:mm a")}
                       </p>
@@ -707,6 +721,7 @@ export default function CompanyCalendarPage() {
                       size="icon" 
                       className="p-3 bg-emerald-500/10 rounded-lg hover:bg-emerald-500/20"
                       onClick={handleManualSync}
+                      disabled={!calendarConnection?.connected}
                     >
                       <RefreshCw className="w-6 h-6 text-emerald-500" />
                     </Button>
@@ -715,7 +730,13 @@ export default function CompanyCalendarPage() {
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Last synced: {format(lastSyncTime, "PPp")}<br/>Click refresh to sync now</p>
+              <p>
+                {calendarConnection?.connected
+                  ? `Connected as ${calendarConnection.email || "Outlook account"}`
+                  : "Connect your Outlook account to show real events"}
+                <br />
+                Last synced: {format(lastSyncTime, "PPp")}
+              </p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -912,11 +933,11 @@ export default function CompanyCalendarPage() {
                   <CalendarIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
                   <p className="text-muted-foreground mb-2">No upcoming events</p>
                   <p className="text-sm text-muted-foreground">
-                    Create events or sync with Google Calendar
+                    Create events or connect Outlook Calendar
                   </p>
                   <Button className="mt-4" onClick={handleGoogleSync} size="sm">
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    Connect Google Calendar
+                    Connect Outlook Calendar
                   </Button>
                 </div>
               ) : (

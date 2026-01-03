@@ -1905,9 +1905,13 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
     try {
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
+      const redirectTo =
+        typeof req.query.redirect === "string" && req.query.redirect.trim()
+          ? req.query.redirect.trim()
+          : "/emails";
       
       // Generate auth URL with state containing user ID
-      const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+      const state = Buffer.from(JSON.stringify({ userId, redirectTo })).toString('base64');
       const authUrl = await microsoftAuth.getAuthUrl(state);
       
       res.redirect(authUrl);
@@ -1934,6 +1938,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       // Decode state to get user ID
       const stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
       const userId = stateData.userId;
+      const redirectTo = stateData.redirectTo || "/emails";
 
       // Save or update email account in database
       const existingAccount = await storage.getEmailAccountByUserId(userId);
@@ -1960,7 +1965,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       }
 
       // Redirect back to emails page with success message
-      res.redirect('/emails?connected=true');
+      res.redirect(`${redirectTo}?connected=true`);
     } catch (error) {
       console.error('Error in Microsoft callback:', error);
       res.redirect('/emails?error=auth_failed');
@@ -2804,8 +2809,82 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Calendar Events routes
+  app.get("/api/calendar/connection", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ connected: false, provider: null });
+
+      const account = await storage.getEmailAccountByUserId(Number(userId));
+      if (account?.isActive && account.provider === "microsoft") {
+        return res.json({
+          connected: true,
+          provider: "microsoft",
+          email: account.email,
+        });
+      }
+
+      return res.json({ connected: false, provider: null });
+    } catch (e) {
+      console.error("Error checking calendar connection:", e);
+      res.status(500).json({ connected: false, provider: null });
+    }
+  });
+
   app.get("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+
+      // If user has an active Microsoft account connected, pull from Outlook Calendar.
+      // Otherwise, fall back to local DB events.
+      const account = await storage.getEmailAccountByUserId(Number(userId));
+      const start =
+        typeof req.query.start === "string" && req.query.start ? req.query.start : null;
+      const end =
+        typeof req.query.end === "string" && req.query.end ? req.query.end : null;
+
+      if (account?.isActive && account.provider === "microsoft") {
+        // Default to "this month" if no range provided
+        const now = new Date();
+        const startIso = start ? new Date(start).toISOString() : new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const endIso = end ? new Date(end).toISOString() : new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+        // Refresh token if needed
+        let accessToken = account.accessToken;
+        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
+        if (!accessToken || (expiresAt && expiresAt < new Date())) {
+          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+          accessToken = refreshed.accessToken;
+          await storage.updateEmailAccount(account.id, {
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            tokenExpiresAt: refreshed.expiresOn,
+          });
+        }
+
+        const graphEvents = await microsoftAuth.listCalendarView(accessToken!, startIso, endIso);
+        const mapped = (graphEvents || []).map((e: any) => ({
+          id: e.id,
+          title: e.subject || "(No title)",
+          description: e.bodyPreview || null,
+          start: e.start?.dateTime ? new Date(e.start.dateTime).toISOString() : null,
+          end: e.end?.dateTime ? new Date(e.end.dateTime).toISOString() : null,
+          location: e.location?.displayName || null,
+          attendees: Array.isArray(e.attendees)
+            ? e.attendees
+                .map((a: any) => a?.emailAddress?.address)
+                .filter(Boolean)
+            : [],
+          type: "meeting",
+          googleEventId: null,
+          meetLink: e.onlineMeeting?.joinUrl || e.webLink || null,
+        }));
+
+        return res.json(mapped.filter((x: any) => x.start && x.end));
+      }
+
       const events = await storage.getCalendarEvents();
       res.json(events);
     } catch (error) {
@@ -2817,11 +2896,51 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.post("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+
+      const account = await storage.getEmailAccountByUserId(Number(userId));
+      const wantsExternal = Boolean(req.body?.syncWithGoogle); // UI field; treat as "sync with external calendar"
+
+      if (wantsExternal && account?.isActive && account.provider === "microsoft") {
+        // Refresh token if needed
+        let accessToken = account.accessToken;
+        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
+        if (!accessToken || (expiresAt && expiresAt < new Date())) {
+          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+          accessToken = refreshed.accessToken;
+          await storage.updateEmailAccount(account.id, {
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            tokenExpiresAt: refreshed.expiresOn,
+          });
+        }
+
+        const created = await microsoftAuth.createCalendarEvent(accessToken!, {
+          subject: req.body.title,
+          bodyPreview: req.body.description || undefined,
+          start: { dateTime: new Date(req.body.start).toISOString(), timeZone: "America/New_York" },
+          end: { dateTime: new Date(req.body.end).toISOString(), timeZone: "America/New_York" },
+          location: req.body.location ? { displayName: req.body.location } : undefined,
+        });
+
+        return res.status(201).json({
+          id: created.id,
+          title: created.subject || req.body.title,
+          description: created.bodyPreview || req.body.description || null,
+          start: created.start?.dateTime ? new Date(created.start.dateTime).toISOString() : new Date(req.body.start).toISOString(),
+          end: created.end?.dateTime ? new Date(created.end.dateTime).toISOString() : new Date(req.body.end).toISOString(),
+          location: created.location?.displayName || req.body.location || null,
+          attendees: [],
+          type: req.body.type || "meeting",
+          googleEventId: null,
+          meetLink: created.onlineMeeting?.joinUrl || created.webLink || null,
+        });
+      }
 
       const eventData = {
         ...req.body,
-        createdBy: userId,
+        createdBy: Number(userId),
         start: new Date(req.body.start),
         end: new Date(req.body.end),
       };
@@ -2836,6 +2955,36 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.patch("/api/calendar/events/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+
+      const account = await storage.getEmailAccountByUserId(Number(userId));
+
+      if (account?.isActive && account.provider === "microsoft") {
+        let accessToken = account.accessToken;
+        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
+        if (!accessToken || (expiresAt && expiresAt < new Date())) {
+          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+          accessToken = refreshed.accessToken;
+          await storage.updateEmailAccount(account.id, {
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            tokenExpiresAt: refreshed.expiresOn,
+          });
+        }
+
+        await microsoftAuth.updateCalendarEvent(accessToken!, req.params.id, {
+          subject: req.body.title,
+          bodyPreview: req.body.description || undefined,
+          start: req.body.start ? { dateTime: new Date(req.body.start).toISOString(), timeZone: "America/New_York" } : undefined,
+          end: req.body.end ? { dateTime: new Date(req.body.end).toISOString(), timeZone: "America/New_York" } : undefined,
+          location: req.body.location ? { displayName: req.body.location } : undefined,
+        });
+
+        return res.json({ success: true });
+      }
+
       const event = await storage.updateCalendarEvent(req.params.id, req.body);
       res.json(event);
     } catch (error) {
@@ -2846,6 +2995,27 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.delete("/api/calendar/events/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
+      const userId = user?.id;
+      if (!userId) return res.status(401).json({ message: "User not authenticated" });
+
+      const account = await storage.getEmailAccountByUserId(Number(userId));
+      if (account?.isActive && account.provider === "microsoft") {
+        let accessToken = account.accessToken;
+        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
+        if (!accessToken || (expiresAt && expiresAt < new Date())) {
+          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+          accessToken = refreshed.accessToken;
+          await storage.updateEmailAccount(account.id, {
+            accessToken: refreshed.accessToken,
+            refreshToken: refreshed.refreshToken,
+            tokenExpiresAt: refreshed.expiresOn,
+          });
+        }
+        await microsoftAuth.deleteCalendarEvent(accessToken!, req.params.id);
+        return res.status(204).send();
+      }
+
       await storage.deleteCalendarEvent(req.params.id);
       res.status(204).send();
     } catch (error) {

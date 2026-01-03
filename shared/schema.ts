@@ -38,13 +38,17 @@ export const users = pgTable("users", {
   clientId: varchar("client_id"), // Links to clients table for client role users
   creatorId: varchar("creator_id"), // Links to creators table for creator role users
   customPermissions: jsonb("custom_permissions"), // Individual sidebar permissions: { dashboard: true, clients: false, etc. }
-  // googleAccessToken: text("google_access_token"),
-  // googleRefreshToken: text("google_refresh_token"),
-  // googleCalendarConnected: boolean("google_calendar_connected").default(false),
+  // Google Calendar OAuth (used for Company Calendar sync)
+  googleAccessToken: text("google_access_token"),
+  googleRefreshToken: text("google_refresh_token"),
+  googleTokenExpiry: timestamp("google_token_expiry"),
+  googleCalendarConnected: boolean("google_calendar_connected").default(false),
   lastSeen: timestamp("last_seen"),
   resetPasswordToken: text("reset_password_token"),
   resetPasswordExpires: timestamp("reset_password_expires"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  profileImageUrl: text("profile_image_url"),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

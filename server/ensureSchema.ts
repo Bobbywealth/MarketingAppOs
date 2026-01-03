@@ -27,6 +27,34 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS client_id VARCHAR;`
   );
 
+  // Google Calendar OAuth columns (Company Calendar sync)
+  await safeQuery(
+    "users.google_access_token column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS google_access_token TEXT;`
+  );
+  await safeQuery(
+    "users.google_refresh_token column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS google_refresh_token TEXT;`
+  );
+  await safeQuery(
+    "users.google_token_expiry column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS google_token_expiry TIMESTAMP;`
+  );
+  await safeQuery(
+    "users.google_calendar_connected column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS google_calendar_connected BOOLEAN DEFAULT FALSE;`
+  );
+
+  // These are referenced widely in the app; ensure they exist to prevent runtime errors on older DBs.
+  await safeQuery(
+    "users.updated_at column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`
+  );
+  await safeQuery(
+    "users.profile_image_url column",
+    `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS profile_image_url TEXT;`
+  );
+
   // Creators table (required for visits module)
   await safeQuery(
     "creators table",
