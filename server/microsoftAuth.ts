@@ -48,20 +48,38 @@ export async function getTokenFromCode(code: string): Promise<any> {
 }
 
 export async function refreshAccessToken(refreshToken: string): Promise<any> {
+  if (!refreshToken) {
+    throw new Error('No refresh token provided');
+  }
+
   try {
     const refreshTokenRequest = {
       refreshToken,
-      scopes: SCOPES,
+      // For refresh requests, we exclude 'offline_access' as it's only for the initial request
+      // and can sometimes cause AADSTS9002313 (malformed request)
+      scopes: SCOPES.filter(s => s !== 'offline_access'),
+      redirectUri: REDIRECT_URI,
     };
 
+    console.log(`[MicrosoftAuth] Attempting to refresh token (RT length: ${refreshToken.length})`);
     const response = await pca.acquireTokenByRefreshToken(refreshTokenRequest);
+    
+    if (!response) {
+      throw new Error('No response from Microsoft during token refresh');
+    }
+
     return {
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       expiresOn: response.expiresOn,
     };
-  } catch (error) {
-    console.error('Error refreshing token:', error);
+  } catch (error: any) {
+    console.error('Error refreshing token:', {
+      message: error.message,
+      errorCode: error.errorCode,
+      subError: error.subError,
+      stack: error.stack
+    });
     throw error;
   }
 }
