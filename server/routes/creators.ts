@@ -59,6 +59,13 @@ router.post("/creators/apply", async (req: Request, res: Response) => {
 router.get("/creators", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
   try {
     const { city, zip, status, minScore } = req.query as any;
+    const user = req.user as any;
+
+    // If a creator is logged in, they can only see their own profile in a list if we allowed them, 
+    // but this is an internal management route. 
+    // However, if we want creators to see their own info, we might need a /me endpoint or similar.
+    // For now, let's keep this internal.
+
     const conditions: any[] = [];
     if (city) conditions.push(eq(creators.homeCity, String(city)));
     if (zip) conditions.push(or(eq(creators.baseZip, String(zip)), sql`${creators.serviceZipCodes} @> ARRAY[${String(zip)}]::text[]`));
@@ -116,9 +123,19 @@ router.delete("/creators/:id", isAuthenticated, requireRole(UserRole.ADMIN), asy
 });
 
 // Visits routes
-router.get("/visits", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+router.get("/visits", isAuthenticated, requireRole(...internalRoles, UserRole.CREATOR), async (req: Request, res: Response) => {
   try {
-    const { clientId, creatorId, status, from, to, uploadOverdue, approved, disputeStatus } = req.query as any;
+    const user = req.user as any;
+    let { clientId, creatorId, status, from, to, uploadOverdue, approved, disputeStatus } = req.query as any;
+
+    // Enforcement: Creators can ONLY see their own visits
+    if (user.role === UserRole.CREATOR) {
+      if (!user.creatorId) {
+        return res.status(403).json({ message: "No creator ID associated with this user" });
+      }
+      creatorId = user.creatorId;
+    }
+
     const conditions: any[] = [];
     if (clientId) conditions.push(eq(creatorVisits.clientId, String(clientId)));
     if (creatorId) conditions.push(eq(creatorVisits.creatorId, String(creatorId)));

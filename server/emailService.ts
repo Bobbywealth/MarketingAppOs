@@ -28,7 +28,7 @@ export function initializeEmailService() {
 }
 
 // Premium Email Wrapper
-function renderEmail(title: string, content: string, themeColor: string = '#3b82f6') {
+function renderEmail(title: string, content: string, themeColor: string = '#1a1a1a') {
   const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
   const logoUrl = `${appUrl}/logo.png`;
 
@@ -42,16 +42,13 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f3f4f6; }
         .wrapper { width: 100%; table-layout: fixed; background-color: #f3f4f6; padding-bottom: 40px; }
         .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        .header { background: linear-gradient(135deg, ${themeColor} 0%, #8b5cf6 100%); color: white; padding: 40px 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; }
+        .header { background: #1a1a1a; color: white; padding: 40px 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: #ffffff; }
         .content { padding: 40px 30px; background-color: #ffffff; }
         .footer { text-align: center; padding: 30px; color: #6b7280; font-size: 14px; }
         .footer img { height: 32px; margin-bottom: 16px; opacity: 0.8; }
-        .button { display: inline-block; background-color: ${themeColor}; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 24px 0; transition: transform 0.2s; }
+        .button { display: inline-block; background-color: #1a1a1a; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 24px 0; }
         .card { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
-        .info-label { color: #6b7280; font-size: 13px; font-weight: 500; margin-bottom: 4px; }
-        .info-value { color: #111827; font-size: 15px; font-weight: 600; margin-bottom: 16px; }
         hr { border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0; }
       </style>
     </head>
@@ -65,9 +62,8 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
             ${content}
           </div>
           <div class="footer">
-            <img src="${logoUrl}" alt="Marketing Team App">
-            <p>© ${new Date().getFullYear()} Marketing Team App. All rights reserved.</p>
-            <p>123 Marketing Way, Creative Suite 100</p>
+            <p>© ${new Date().getFullYear()} Wolfpaq Marketing. All rights reserved.</p>
+            <p>business@wolfpaqmarketing.app</p>
           </div>
         </div>
       </div>
@@ -78,6 +74,7 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
 
 // Email template functions
 export const emailTemplates = {
+  // ... rest of the code ...
   // Welcome email for new users
   welcomeUser: (userName: string, userEmail: string) => {
     const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
@@ -250,21 +247,33 @@ export const emailTemplates = {
   },
 };
 
+// Marketing Email Template
+export const marketingTemplates = {
+  broadcast: (subject: string, content: string) => {
+    return {
+      subject,
+      html: renderEmail(subject, content, '#1a1a1a')
+    };
+  }
+};
+
 // Send email function
-export async function sendEmail(to: string | string[], subject: string, html: string) {
+export async function sendEmail(to: string | string[], subject: string, html: string, options?: { from?: string, fromName?: string }) {
   if (!transporter) {
     console.warn('⚠️  Email not sent - service not configured');
     return { success: false, message: 'Email service not configured' };
   }
 
   try {
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+    const fromEmail = options?.from || 'business@wolfpaqmarketing.app';
+    const fromName = options?.fromName || 'Wolfpaq Marketing';
+    
     const info = await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || 'Marketing Team App'}" <${fromEmail}>`,
+      from: `"${fromName}" <${fromEmail}>`,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       html,
-      ...(process.env.SMTP_REPLY_TO ? { replyTo: process.env.SMTP_REPLY_TO } : {}),
+      ...(process.env.SMTP_REPLY_TO ? { replyTo: process.env.SMTP_REPLY_TO } : { replyTo: fromEmail }),
     });
 
     console.log('✅ Email sent:', info.messageId);

@@ -9,6 +9,9 @@ import { useLocation } from "wouter";
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { InteractiveCard } from "@/components/ui/interactive-card";
+import { Celebration } from "@/components/Celebration";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -95,9 +98,19 @@ export default function Dashboard() {
     const hour = new Date().getHours();
     const displayName = user?.firstName || user?.username?.split(' ')[0] || 'there';
     
-    if (hour < 12) return `Good morning, ${displayName}`;
-    if (hour < 18) return `Good afternoon, ${displayName}`;
-    return `Good evening, ${displayName}`;
+    const playfulGreetings = [
+      "Ready to crush it",
+      "Let's make some magic",
+      "Time to shine",
+      "You're doing amazing",
+      "Let's win today",
+      "Welcome back, Rockstar"
+    ];
+    const playfulGreeting = playfulGreetings[Math.floor(Math.random() * playfulGreetings.length)];
+    
+    if (hour < 12) return `Good morning, ${displayName}! ${playfulGreeting}`;
+    if (hour < 18) return `Good afternoon, ${displayName}! ${playfulGreeting}`;
+    return `Good evening, ${displayName}! ${playfulGreeting}`;
   };
 
   const getCurrentDate = () => {
@@ -287,6 +300,7 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={async () => { await refetch(); }}>
+      <Celebration active={stats?.taskMetrics?.completionPercentage === 100} />
       <div className="min-h-full gradient-mesh overflow-x-hidden">
         <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 xl:p-12 space-y-6 md:space-y-8">
         {/* Premium Header with Welcome Message */}
@@ -378,75 +392,83 @@ export default function Dashboard() {
         {/* Staff Personal Stats - Simple View */}
         {user?.role === 'staff' && stats && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
-            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/tasks')}>
-              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                  My Tasks
-                </CardTitle>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md flex-shrink-0">
-                  <ListTodo className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative p-4 md:p-6 pt-0">
-                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
-                  {stats?.taskMetrics?.total || 0}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {stats?.taskMetrics?.completionPercentage || 0}% Complete
-                </p>
-              </CardContent>
-            </Card>
+            <InteractiveCard className="group">
+              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer h-full" onClick={() => navigate('/tasks')}>
+                <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                  <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                    My Tasks
+                  </CardTitle>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md flex-shrink-0">
+                    <ListTodo className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative p-4 md:p-6 pt-0">
+                  <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                    <NumberTicker value={stats?.taskMetrics?.total || 0} />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {stats?.taskMetrics?.completionPercentage || 0}% Complete
+                  </p>
+                </CardContent>
+              </Card>
+            </InteractiveCard>
 
-            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/leads')}>
-              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                  My Leads
-                </CardTitle>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md flex-shrink-0">
-                  <Users className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative p-4 md:p-6 pt-0">
-                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
-                  0
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Assigned to you</p>
-              </CardContent>
-            </Card>
+            <InteractiveCard className="group">
+              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer h-full" onClick={() => navigate('/leads')}>
+                <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                  <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                    My Leads
+                  </CardTitle>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md flex-shrink-0">
+                    <Users className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative p-4 md:p-6 pt-0">
+                  <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                    <NumberTicker value={0} />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Assigned to you</p>
+                </CardContent>
+              </Card>
+            </InteractiveCard>
 
-            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/messages')}>
-              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                  Messages
-                </CardTitle>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md flex-shrink-0">
-                  <Activity className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative p-4 md:p-6 pt-0">
-                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
-                  0
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Unread</p>
-              </CardContent>
-            </Card>
+            <InteractiveCard className="group">
+              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer h-full" onClick={() => navigate('/messages')}>
+                <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                  <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                    Messages
+                  </CardTitle>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md flex-shrink-0">
+                    <Activity className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative p-4 md:p-6 pt-0">
+                  <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                    <NumberTicker value={0} />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">Unread</p>
+                </CardContent>
+              </Card>
+            </InteractiveCard>
 
-            <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer" onClick={() => navigate('/company-calendar')}>
-              <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                  Deadlines
-                </CardTitle>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-md flex-shrink-0">
-                  <Clock className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent className="relative p-4 md:p-6 pt-0">
-                <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
-                  0
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">This week</p>
-              </CardContent>
-            </Card>
+            <InteractiveCard className="group">
+              <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer h-full" onClick={() => navigate('/company-calendar')}>
+                <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                  <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                    Deadlines
+                  </CardTitle>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-md flex-shrink-0">
+                    <Clock className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative p-4 md:p-6 pt-0">
+                  <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
+                    <NumberTicker value={0} />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">This week</p>
+                </CardContent>
+              </Card>
+            </InteractiveCard>
           </div>
         )}
 
@@ -457,57 +479,68 @@ export default function Dashboard() {
             {visibleMetrics.map((metric) => (
               <Tooltip key={metric.title}>
                 <TooltipTrigger asChild>
-                  <Card 
-                    onClick={() => navigate(metric.link)}
-                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer"
-                    data-testid={`card-metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  <InteractiveCard
+                    className="group"
                   >
-                    {/* Gradient Background Overlay */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${metric.iconBg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                    
-                    <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
-                      <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                        {metric.title}
-                      </CardTitle>
-                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${metric.gradientFrom} ${metric.gradientTo} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
-                        <metric.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="relative p-4 md:p-6 pt-0 space-y-3">
-                      <div className="flex items-end justify-between gap-2">
-                        <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono" data-testid={`metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                          {metric.value}
-                        </div>
-                        <div className={`flex items-center gap-0.5 text-xs md:text-sm font-semibold px-2 py-0.5 md:px-2.5 md:py-1 rounded-full flex-shrink-0 ${
-                          metric.changeType === 'positive' 
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                        }`}>
-                          {metric.changeType === 'positive' ? (
-                            <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4" />
-                          ) : (
-                            <ArrowDownRight className="w-3 h-3 md:w-4 md:h-4" />
-                          )}
-                          <span className="text-xs md:text-sm">{metric.change}</span>
-                        </div>
-                      </div>
+                    <Card 
+                      onClick={() => navigate(metric.link)}
+                      className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer h-full"
+                      data-testid={`card-metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      {/* Gradient Background Overlay */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${metric.iconBg} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
                       
-                      {/* Mini Sparkline Chart */}
-                      <div className="h-8 -mx-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={metric.sparklineData}>
-                            <Line 
-                              type="monotone" 
-                              dataKey="value" 
-                              stroke={metric.changeType === 'positive' ? '#10b981' : '#ef4444'}
-                              strokeWidth={2}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <CardHeader className="relative flex flex-row items-center justify-between gap-2 pb-2 md:pb-3 p-4 md:p-6">
+                        <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                          {metric.title}
+                        </CardTitle>
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${metric.gradientFrom} ${metric.gradientTo} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
+                          <metric.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="relative p-4 md:p-6 pt-0 space-y-3">
+                        <div className="flex items-end justify-between gap-2">
+                          <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono" data-testid={`metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {typeof metric.displayValue === 'number' ? (
+                              <NumberTicker 
+                                value={metric.displayValue} 
+                                prefix={metric.title.includes('Revenue') || metric.title.includes('Value') ? '$' : ''}
+                                suffix={metric.title.includes('Revenue') || metric.title.includes('Value') ? (metric.displayValue >= 1000 ? 'k' : '') : ''}
+                                decimalPlaces={metric.title.includes('Revenue') || metric.title.includes('Value') ? (metric.displayValue >= 1000 ? 1 : 0) : 0}
+                              />
+                            ) : metric.value}
+                          </div>
+                          <div className={`flex items-center gap-0.5 text-xs md:text-sm font-semibold px-2 py-0.5 md:px-2.5 md:py-1 rounded-full flex-shrink-0 ${
+                            metric.changeType === 'positive' 
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                          }`}>
+                            {metric.changeType === 'positive' ? (
+                              <ArrowUpRight className="w-3 h-3 md:w-4 md:h-4" />
+                            ) : (
+                              <ArrowDownRight className="w-3 h-3 md:w-4 md:h-4" />
+                            )}
+                            <span className="text-xs md:text-sm">{metric.change}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Mini Sparkline Chart */}
+                        <div className="h-8 -mx-2">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={metric.sparklineData}>
+                              <Line 
+                                type="monotone" 
+                                dataKey="value" 
+                                stroke={metric.changeType === 'positive' ? '#10b981' : '#ef4444'}
+                                strokeWidth={2}
+                                dot={false}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </InteractiveCard>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{metric.tooltip}</p>

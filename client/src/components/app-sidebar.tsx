@@ -65,6 +65,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Moon, Sun } from "lucide-react";
+import { motion } from "framer-motion";
 
 type SidebarNavItem = {
   title: string;
@@ -281,6 +282,13 @@ const operationsTools: SidebarNavItem[] = [
     sidebarKey: "campaigns" as const,
   },
   {
+    title: "Marketing Center",
+    url: "/marketing-center",
+    icon: Zap,
+    roles: ["admin"] as const,
+    sidebarKey: "marketingCenter" as const,
+  },
+  {
     title: "Content Calendar",
     url: "/content",
     icon: Calendar,
@@ -433,13 +441,17 @@ function NavItem({
           isActive ? 'h-6 opacity-100' : 'group-hover:h-4 group-hover:opacity-50'
         }`} />
         
-        <div className={`transition-all duration-300 ${
-          isActive 
-            ? 'text-primary scale-110' 
-            : 'text-zinc-400 group-hover:text-primary group-hover:scale-110'
-        }`}>
+        <motion.div 
+          className={`transition-all duration-300 ${
+            isActive 
+              ? 'text-primary' 
+              : 'text-zinc-400 group-hover:text-primary'
+          }`}
+          whileHover={{ scale: 1.2, rotate: 5 }}
+          whileTap={{ scale: 0.9 }}
+        >
           <Icon className="w-5 h-5" />
-        </div>
+        </motion.div>
         
         {!isCollapsed && (
           <>

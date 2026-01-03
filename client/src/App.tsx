@@ -42,6 +42,7 @@ const Clients = lazy(() => import("@/pages/clients"));
 const ClientDetail = lazy(() => import("@/pages/client-detail"));
 const AdminSocialStats = lazy(() => import("@/pages/admin-social-stats"));
 const Campaigns = lazy(() => import("@/pages/campaigns"));
+const MarketingCenter = lazy(() => import("@/pages/marketing-center"));
 const Tasks = lazy(() => import("@/pages/tasks"));
 const Leads = lazy(() => import("@/pages/leads"));
 const Content = lazy(() => import("@/pages/content"));
@@ -79,6 +80,8 @@ const CreatorSignup = lazy(() => import("@/pages/creator-signup"));
 const CreatorSignupRedirect = lazy(() => import("@/pages/creator-signup-redirect"));
 const CreatorDashboard = lazy(() => import("@/pages/creator-dashboard"));
 const CreatorCourse = lazy(() => import("@/pages/creator-course"));
+const CreatorMasteringContent = lazy(() => import("@/pages/creator-mastering-content"));
+const CreatorVisits = lazy(() => import("@/pages/creator-visits"));
 const Visits = lazy(() => import("@/pages/visits"));
 const VisitNew = lazy(() => import("@/pages/visit-new"));
 const VisitDetail = lazy(() => import("@/pages/visit-detail"));
@@ -123,6 +126,9 @@ function Router() {
         {/* Creator-specific routes */}
         {isCreator && <ProtectedRoute path="/" component={CreatorDashboard} />}
         {isCreator && <ProtectedRoute path="/course" component={CreatorCourse} />}
+        {isCreator && <ProtectedRoute path="/training/mastering-content" component={CreatorMasteringContent} />}
+        {isCreator && <ProtectedRoute path="/visits" component={CreatorVisits} />}
+        {isCreator && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
         
         {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
         {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
@@ -135,6 +141,7 @@ function Router() {
         {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
         {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
         {isInternal && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
+        {isInternal && <ProtectedRoute path="/marketing-center" component={MarketingCenter} />}
         {isInternal && <ProtectedRoute path="/campaigns" component={Campaigns} />}
         {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
         {!isClient && <ProtectedRoute path="/leads" component={Leads} />}

@@ -48,6 +48,7 @@ import clientsRouter from "./routes/clients";
 import marketingRouter from "./routes/marketing";
 import creatorsRouter from "./routes/creators";
 import tasksRouter from "./routes/tasks";
+import marketingCenterRouter from "./routes/marketing-center";
 import { 
   getCurrentUserContext, 
   getAccessibleClientOr404, 
@@ -702,6 +703,7 @@ async function processAICommand(message: string, userId: number): Promise<{
 export function registerRoutes(app: Express) {
   // Mount modularized routers
   app.use("/api/leads", leadsRouter);
+  app.use("/api/marketing-center", marketingCenterRouter);
   app.use("/api/clients", clientsRouter);
   app.use("/api", marketingRouter);
   app.use("/api", creatorsRouter);

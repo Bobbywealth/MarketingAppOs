@@ -171,10 +171,12 @@ export default function CreatorDashboard() {
                       <span>80%</span>
                     </div>
                     <Progress value={80} className="h-1.5" />
-                    <Button variant="ghost" className="w-full justify-between group-hover:bg-primary/5">
-                      Continue Learning
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    <Link href="/training/mastering-content">
+                      <Button variant="ghost" className="w-full justify-between group-hover:bg-primary/5">
+                        Continue Learning
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

@@ -201,6 +201,17 @@ export default function VisitDetailPage() {
                   <div className="text-sm">${(Number(creator?.ratePerVisitCents || 0) / 100).toFixed(2)}</div>
                 </div>
               </CardContent>
+              {visit.revisionRequested && visit.revisionNotes && (
+                <CardContent className="pt-0">
+                  <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-800 dark:text-red-400 font-bold mb-1">
+                      <RefreshCw className="h-4 w-4" />
+                      Revision Requested
+                    </div>
+                    <p className="text-sm text-red-700 dark:text-red-300/80">{visit.revisionNotes}</p>
+                  </div>
+                </CardContent>
+              )}
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -235,83 +246,96 @@ export default function VisitDetailPage() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Quality Score (1–5)</Label>
-                      <Input type="number" min={1} max={5} value={qualityScore} onChange={(e) => setQualityScore(e.target.value)} />
-                    </div>
-                    <div className="flex items-end">
-                      <Button className="w-full" variant="outline" disabled={approveVisit.isPending} onClick={() => approveVisit.mutate()}>
-                        <ShieldCheck className="w-4 h-4 mr-2" />
-                        Approve
+                  {/* Creator-only or Admin-only sections */}
+                  {(user as any)?.role !== "creator" ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Quality Score (1–5)</Label>
+                          <Input type="number" min={1} max={5} value={qualityScore} onChange={(e) => setQualityScore(e.target.value)} />
+                        </div>
+                        <div className="flex items-end">
+                          <Button className="w-full" variant="outline" disabled={approveVisit.isPending} onClick={() => approveVisit.mutate()}>
+                            <ShieldCheck className="w-4 h-4 mr-2" />
+                            Approve
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t">
+                        <Label>Revision Requests</Label>
+                        <Textarea 
+                          placeholder="Specify what needs to be changed..." 
+                          value={revisionNotes} 
+                          onChange={(e) => setRevisionNotes(e.target.value)} 
+                          rows={2} 
+                        />
+                        <Button 
+                          className="w-full" 
+                          variant="ghost" 
+                          disabled={requestRevision.isPending || !revisionNotes.trim()} 
+                          onClick={() => requestRevision.mutate()}
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Request Revision
+                        </Button>
+                      </div>
+
+                      {["admin", "manager"].includes((user as any)?.role) && (
+                        <div className="space-y-2 pt-2 border-t">
+                          <Label>Dispute Management</Label>
+                          <div className="flex gap-2">
+                            {visit.disputeStatus !== "pending" ? (
+                              <Button 
+                                className="flex-1" 
+                                variant="destructive" 
+                                disabled={updateDispute.isPending} 
+                                onClick={() => updateDispute.mutate("pending")}
+                              >
+                                <AlertTriangle className="w-4 h-4 mr-2" />
+                                Open Dispute
+                              </Button>
+                            ) : (
+                              <Button 
+                                className="flex-1" 
+                                variant="outline" 
+                                disabled={updateDispute.isPending} 
+                                onClick={() => updateDispute.mutate("resolved")}
+                              >
+                                Resolve Dispute
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        disabled={!canReleasePayment || releasePayment.isPending || !["admin", "manager"].includes((user as any)?.role)}
+                        onClick={() => releasePayment.mutate()}
+                      >
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Release Payment
                       </Button>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2 pt-2 border-t">
-                    <Label>Revision Requests</Label>
-                    <Textarea 
-                      placeholder="Specify what needs to be changed..." 
-                      value={revisionNotes} 
-                      onChange={(e) => setRevisionNotes(e.target.value)} 
-                      rows={2} 
-                    />
-                    <Button 
-                      className="w-full" 
-                      variant="ghost" 
-                      disabled={requestRevision.isPending || !revisionNotes.trim()} 
-                      onClick={() => requestRevision.mutate()}
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Request Revision
-                    </Button>
-                  </div>
-
-                  {["admin", "manager"].includes((user as any)?.role) && (
-                    <div className="space-y-2 pt-2 border-t">
-                      <Label>Dispute Management</Label>
-                      <div className="flex gap-2">
-                        {visit.disputeStatus !== "pending" ? (
-                          <Button 
-                            className="flex-1" 
-                            variant="destructive" 
-                            disabled={updateDispute.isPending} 
-                            onClick={() => updateDispute.mutate("pending")}
-                          >
-                            <AlertTriangle className="w-4 h-4 mr-2" />
-                            Open Dispute
-                          </Button>
-                        ) : (
-                          <Button 
-                            className="flex-1" 
-                            variant="outline" 
-                            disabled={updateDispute.isPending} 
-                            onClick={() => updateDispute.mutate("resolved")}
-                          >
-                            Resolve Dispute
-                          </Button>
-                        )}
+                      <div className="space-y-2">
+                        <Label>Internal Notes</Label>
+                        <Textarea defaultValue={visit.notes || ""} onChange={(e) => setNotes(e.target.value)} rows={3} />
+                        <Button className="w-full" variant="secondary" disabled={patchNotes.isPending} onClick={() => patchNotes.mutate()}>
+                          Save Notes
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-lg border border-amber-200 dark:border-amber-900/30 flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-bold text-amber-900 dark:text-amber-400">Creator View</p>
+                        <p className="text-amber-700 dark:text-amber-500/80">Some management actions are restricted to administrators. Use the "Record Upload" section to submit your content.</p>
                       </div>
                     </div>
                   )}
-
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    disabled={!canReleasePayment || releasePayment.isPending || !["admin", "manager"].includes((user as any)?.role)}
-                    onClick={() => releasePayment.mutate()}
-                  >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Release Payment
-                  </Button>
-
-                  <div className="space-y-2">
-                    <Label>Internal Notes</Label>
-                    <Textarea defaultValue={visit.notes || ""} onChange={(e) => setNotes(e.target.value)} rows={3} />
-                    <Button className="w-full" variant="secondary" disabled={patchNotes.isPending} onClick={() => patchNotes.mutate()}>
-                      Save Notes
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
 
@@ -322,7 +346,7 @@ export default function VisitDetailPage() {
                 <CardContent className="space-y-2">
                   {Array.isArray(visit.uploadLinks) && visit.uploadLinks.length > 0 ? (
                     visit.uploadLinks.map((l: string, idx: number) => (
-                      <a key={idx} href={l} target="_blank" rel="noreferrer" className="block text-sm underline">
+                      <a key={idx} href={l} target="_blank" rel="noreferrer" className="block text-sm underline text-primary">
                         {l}
                       </a>
                     ))

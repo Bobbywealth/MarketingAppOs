@@ -30,6 +30,8 @@ import {
   secondMe,
   secondMeContent,
   pageViews,
+  marketingBroadcasts,
+  marketingBroadcastRecipients,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -98,6 +100,10 @@ import {
   groupMessages,
   type GroupConversation,
   type GroupMessage,
+  type MarketingBroadcast,
+  type InsertMarketingBroadcast,
+  type MarketingBroadcastRecipient,
+  type InsertMarketingBroadcastRecipient,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
@@ -272,6 +278,15 @@ export interface IStorage {
 
   // Optimized dashboard stats
   getDashboardStats(userId?: number, role?: string): Promise<any>;
+
+  // Marketing Broadcast operations
+  getMarketingBroadcasts(): Promise<MarketingBroadcast[]>;
+  getMarketingBroadcast(id: string): Promise<MarketingBroadcast | undefined>;
+  createMarketingBroadcast(data: InsertMarketingBroadcast): Promise<MarketingBroadcast>;
+  updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast>;
+  getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
+  createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
+  updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1964,6 +1979,50 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
     
     return result;
+  }
+
+  // Marketing Broadcast operations
+  async getMarketingBroadcasts(): Promise<MarketingBroadcast[]> {
+    return await db.select().from(marketingBroadcasts).orderBy(desc(marketingBroadcasts.createdAt));
+  }
+
+  async getMarketingBroadcast(id: string): Promise<MarketingBroadcast | undefined> {
+    const [broadcast] = await db.select().from(marketingBroadcasts).where(eq(marketingBroadcasts.id, id));
+    return broadcast;
+  }
+
+  async createMarketingBroadcast(data: InsertMarketingBroadcast): Promise<MarketingBroadcast> {
+    const [broadcast] = await db.insert(marketingBroadcasts).values(data).returning();
+    return broadcast;
+  }
+
+  async updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast> {
+    const [broadcast] = await db
+      .update(marketingBroadcasts)
+      .set(data)
+      .where(eq(marketingBroadcasts.id, id))
+      .returning();
+    if (!broadcast) throw new Error("Marketing broadcast not found");
+    return broadcast;
+  }
+
+  async getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]> {
+    return await db.select().from(marketingBroadcastRecipients).where(eq(marketingBroadcastRecipients.broadcastId, broadcastId));
+  }
+
+  async createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient> {
+    const [recipient] = await db.insert(marketingBroadcastRecipients).values(data).returning();
+    return recipient;
+  }
+
+  async updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient> {
+    const [recipient] = await db
+      .update(marketingBroadcastRecipients)
+      .set(data)
+      .where(eq(marketingBroadcastRecipients.id, id))
+      .returning();
+    if (!recipient) throw new Error("Marketing broadcast recipient not found");
+    return recipient;
   }
 }
 

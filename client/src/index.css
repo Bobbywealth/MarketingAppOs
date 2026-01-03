@@ -94,11 +94,13 @@
   /* Premium Visual Effects */
   --orange: 25 95% 53%;
   --purple: 250 70% 60%;
+  --pink: 330 81% 60%;
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.18);
-  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 60% / 0.2) 0px, transparent 50%),
-                   radial-gradient(at 100% 100%, hsl(25 95% 53% / 0.15) 0px, transparent 50%);
-  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 60% / 0.25) 0px, transparent 50%),
+                   radial-gradient(at 100% 100%, hsl(25 95% 53% / 0.2) 0px, transparent 50%),
+                   radial-gradient(at 100% 0%, hsl(330 81% 60% / 0.15) 0px, transparent 50%);
+  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
 
   /* Landing Page Color System */
   --landing-primary: 217 91% 60%;
@@ -260,10 +262,11 @@
   /* Premium Visual Effects - Dark Mode Enhanced */
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.05);
-  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 68% / 0.12) 0px, transparent 50%),
-                   radial-gradient(at 100% 100%, hsl(262 83% 70% / 0.08) 0px, transparent 50%),
+  --gradient-mesh: radial-gradient(at 0% 0%, hsl(217 91% 68% / 0.15) 0px, transparent 50%),
+                   radial-gradient(at 100% 100%, hsl(262 83% 70% / 0.12) 0px, transparent 50%),
+                   radial-gradient(at 0% 100%, hsl(330 81% 60% / 0.1) 0px, transparent 50%),
                    radial-gradient(at 50% 50%, hsl(0 0% 0% / 0.3) 0px, transparent 100%);
-  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  --shimmer-gradient: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
 }
 
 @layer base {

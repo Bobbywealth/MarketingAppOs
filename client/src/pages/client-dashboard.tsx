@@ -6,6 +6,8 @@ import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { InteractiveCard } from "@/components/ui/interactive-card";
 
 export default function ClientDashboard() {
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
@@ -142,22 +144,26 @@ export default function ClientDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {metrics.map((metric) => (
             <Link key={metric.title} href={metric.link}>
-              <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift cursor-pointer">
-                <div className={`absolute inset-0 bg-gradient-to-br ${metric.gradient} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
-                
-                <CardHeader className="relative flex flex-row items-center justify-between pb-2 p-3 sm:p-6">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    {metric.title}
-                  </CardTitle>
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br ${metric.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                    <metric.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
-                </CardHeader>
-                <CardContent className="relative p-3 sm:p-6 pt-0">
-                  <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">{metric.value}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{metric.description}</p>
-                </CardContent>
-              </Card>
+              <InteractiveCard className="group h-full">
+                <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift cursor-pointer h-full">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${metric.gradient} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
+                  
+                  <CardHeader className="relative flex flex-row items-center justify-between pb-2 p-3 sm:p-6">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                      {metric.title}
+                    </CardTitle>
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br ${metric.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
+                      <metric.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative p-3 sm:p-6 pt-0">
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">
+                      <NumberTicker value={metric.value} />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{metric.description}</p>
+                  </CardContent>
+                </Card>
+              </InteractiveCard>
             </Link>
           ))}
         </div>

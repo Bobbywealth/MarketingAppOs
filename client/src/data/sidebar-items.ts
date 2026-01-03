@@ -13,6 +13,7 @@ export const sidebarPermissionList = [
   { key: "socialStats", label: "Social Stats", category: "Operations" },
   { key: "leads", label: "Leads", category: "Operations" },
   { key: "campaigns", label: "Campaigns", category: "Operations" },
+  { key: "marketingCenter", label: "Marketing Center", category: "Operations" },
   { key: "content", label: "Content Calendar", category: "Operations" },
   { key: "visits", label: "Visits", category: "Operations" },
   { key: "creators", label: "Creators", category: "Operations" },

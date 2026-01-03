@@ -77,6 +77,9 @@ export const clients = pgTable("clients", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   displayOrder: integer("display_order").default(0),
+  optInEmail: boolean("opt_in_email").default(true),
+  optInSms: boolean("opt_in_sms").default(true),
+  lastMarketingReceived: timestamp("last_marketing_received"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -330,6 +333,9 @@ export const leads = pgTable("leads", {
   // Sprint 1: Closed Won required fields
   packageId: varchar("package_id"), // Selected subscription package (string/FK)
   expectedStartDate: timestamp("expected_start_date"),
+  optInEmail: boolean("opt_in_email").default(true),
+  optInSms: boolean("opt_in_sms").default(true),
+  lastMarketingReceived: timestamp("last_marketing_received"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -465,6 +471,59 @@ export const creatorVisitsRelations = relations(creatorVisits, ({ one }) => ({
   client: one(clients, { fields: [creatorVisits.clientId], references: [clients.id] }),
   creator: one(creators, { fields: [creatorVisits.creatorId], references: [creators.id] }),
   approver: one(users, { fields: [creatorVisits.approvedBy], references: [users.id] }),
+}));
+
+// Marketing Broadcasts table
+export const marketingBroadcasts = pgTable("marketing_broadcasts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type").notNull(), // 'email', 'sms'
+  status: varchar("status").notNull().default("pending"), // 'pending', 'sending', 'completed', 'failed'
+  subject: varchar("subject"),
+  content: text("content").notNull(),
+  audience: varchar("audience").notNull(), // 'all', 'leads', 'clients', 'specific'
+  filters: jsonb("filters"), // { tags: [], industries: [] }
+  totalRecipients: integer("total_recipients").default(0),
+  successCount: integer("success_count").default(0),
+  failedCount: integer("failed_count").default(0),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  scheduledAt: timestamp("scheduled_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const marketingBroadcastsRelations = relations(marketingBroadcasts, ({ one, many }) => ({
+  author: one(users, {
+    fields: [marketingBroadcasts.createdBy],
+    references: [users.id],
+  }),
+  recipients: many(marketingBroadcastRecipients),
+}));
+
+export const marketingBroadcastRecipients = pgTable("marketing_broadcast_recipients", {
+  id: serial("id").primaryKey(),
+  broadcastId: varchar("broadcast_id")
+    .references(() => marketingBroadcasts.id, { onDelete: "cascade" })
+    .notNull(),
+  leadId: varchar("lead_id").references(() => leads.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  status: varchar("status").notNull().default("pending"), // 'pending', 'sent', 'failed'
+  errorMessage: text("error_message"),
+  sentAt: timestamp("sent_at"),
+});
+
+export const marketingBroadcastRecipientsRelations = relations(marketingBroadcastRecipients, ({ one }) => ({
+  broadcast: one(marketingBroadcasts, {
+    fields: [marketingBroadcastRecipients.broadcastId],
+    references: [marketingBroadcasts.id],
+  }),
+  lead: one(leads, {
+    fields: [marketingBroadcastRecipients.leadId],
+    references: [leads.id],
+  }),
+  client: one(clients, {
+    fields: [marketingBroadcastRecipients.clientId],
+    references: [clients.id],
+  }),
 }));
 
 // Content Posts table (Content Calendar)
@@ -1382,3 +1441,11 @@ export type ClientCreator = typeof clientCreators.$inferSelect;
 export const insertCreatorVisitSchema = createInsertSchema(creatorVisits).omit({ id: true, createdAt: true });
 export type InsertCreatorVisit = z.infer<typeof insertCreatorVisitSchema>;
 export type CreatorVisit = typeof creatorVisits.$inferSelect;
+
+export const insertMarketingBroadcastSchema = createInsertSchema(marketingBroadcasts).omit({ id: true, createdAt: true });
+export type InsertMarketingBroadcast = z.infer<typeof insertMarketingBroadcastSchema>;
+export type MarketingBroadcast = typeof marketingBroadcasts.$inferSelect;
+
+export const insertMarketingBroadcastRecipientSchema = createInsertSchema(marketingBroadcastRecipients).omit({ id: true });
+export type InsertMarketingBroadcastRecipient = z.infer<typeof insertMarketingBroadcastRecipientSchema>;
+export type MarketingBroadcastRecipient = typeof marketingBroadcastRecipients.$inferSelect;
