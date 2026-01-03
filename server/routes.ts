@@ -403,6 +403,35 @@ async function processAICommand(message: string, userId: number): Promise<{
             createdAt: new Date(),
             updatedAt: new Date(),
           });
+
+          // Email alert to admins
+          try {
+            const allUsers = await storage.getUsers();
+            const admins = allUsers.filter(u => u.role === UserRole.ADMIN && u.email);
+            
+            if (admins.length > 0) {
+              const { emailNotifications } = await import('./emailService.js');
+              const adminsToNotify = [];
+              for (const admin of admins) {
+                const prefs = await storage.getUserNotificationPreferences(admin.id);
+                if (prefs?.emailNotifications !== false) {
+                  adminsToNotify.push(admin.email as string);
+                }
+              }
+              
+              if (adminsToNotify.length > 0) {
+                void emailNotifications.sendNewClientAlert(
+                  adminsToNotify,
+                  newClient.name,
+                  newClient.company || '',
+                  newClient.email || ''
+                ).catch(err => console.error('Failed to send AI client email alert:', err));
+              }
+            }
+          } catch (notifError) {
+            console.error('Failed to notify admins about new AI client via email:', notifError);
+          }
+
           return {
             success: true,
             response: `Awesome! 🎉 I just added "${newClient.name}" to your client list!${emailMatch ? ` I saved their email too: ${emailMatch[1]}` : ''}`,
@@ -754,7 +783,18 @@ export function registerRoutes(app: Express) {
   app.get("/api/email/test", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
       const ok = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-      res.json({ configured: ok, host: process.env.SMTP_HOST || null, from: process.env.SMTP_USER || null, secure: process.env.SMTP_SECURE === 'true' });
+      const allUsers = await storage.getUsers();
+      const admins = allUsers.filter(u => u.role === UserRole.ADMIN);
+      const adminsWithEmails = admins.filter(u => u.email).map(u => u.username);
+      
+      res.json({ 
+        configured: ok, 
+        host: process.env.SMTP_HOST || null, 
+        user: process.env.SMTP_USER || null, 
+        secure: process.env.SMTP_SECURE === 'true',
+        adminsFound: admins.length,
+        adminsWithEmails: adminsWithEmails
+      });
     } catch (e: any) {
       res.status(500).json({ configured: false, error: e?.message || 'Unknown error' });
     }
