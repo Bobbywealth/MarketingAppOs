@@ -46,6 +46,7 @@ router.get("/broadcasts", async (_req: Request, res: Response) => {
     const broadcasts = await storage.getMarketingBroadcasts();
     res.json(broadcasts);
   } catch (error) {
+    console.error("Error fetching broadcast history:", error);
     res.status(500).json({ message: "Failed to fetch broadcast history" });
   }
 });

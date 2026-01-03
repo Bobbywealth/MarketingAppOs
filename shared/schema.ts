@@ -42,6 +42,8 @@ export const users = pgTable("users", {
   // googleRefreshToken: text("google_refresh_token"),
   // googleCalendarConnected: boolean("google_calendar_connected").default(false),
   lastSeen: timestamp("last_seen"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordExpires: timestamp("reset_password_expires"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -986,7 +988,7 @@ export const subscriptionPackages = pgTable("subscription_packages", {
 // Zod schemas for validation
 export const upsertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true }).extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 export const insertClientSchema = createInsertSchema(clients)
   .omit({ id: true, createdAt: true, updatedAt: true })

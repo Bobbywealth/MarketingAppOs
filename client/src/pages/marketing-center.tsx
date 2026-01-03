@@ -51,7 +51,7 @@ export default function MarketingCenter() {
     queryKey: ["/api/marketing-center/broadcasts"],
     refetchInterval: (data) => {
       // Refresh frequently if any broadcast is still sending
-      return data?.some(b => b.status === 'sending') ? 3000 : false;
+      return Array.isArray(data) && data.some(b => b.status === 'sending') ? 3000 : false;
     }
   });
 

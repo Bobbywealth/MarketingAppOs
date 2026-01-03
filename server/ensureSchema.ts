@@ -121,6 +121,38 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS content_posts ADD COLUMN IF NOT EXISTS visit_id UUID REFERENCES creator_visits(id) ON DELETE SET NULL;`
   );
   await safeQuery("idx_content_posts_visit_id", `CREATE INDEX IF NOT EXISTS idx_content_posts_visit_id ON content_posts(visit_id);`);
+
+  // Marketing opt-in columns
+  await safeQuery(
+    "clients.opt_in_email column",
+    `ALTER TABLE IF EXISTS clients ADD COLUMN IF NOT EXISTS opt_in_email BOOLEAN DEFAULT TRUE;`
+  );
+  await safeQuery(
+    "clients.opt_in_sms column",
+    `ALTER TABLE IF EXISTS clients ADD COLUMN IF NOT EXISTS opt_in_sms BOOLEAN DEFAULT TRUE;`
+  );
+  await safeQuery(
+    "clients.last_marketing_received column",
+    `ALTER TABLE IF EXISTS clients ADD COLUMN IF NOT EXISTS last_marketing_received TIMESTAMP;`
+  );
+  await safeQuery(
+    "leads.opt_in_email column",
+    `ALTER TABLE IF EXISTS leads ADD COLUMN IF NOT EXISTS opt_in_email BOOLEAN DEFAULT TRUE;`
+  );
+  await safeQuery(
+    "leads.opt_in_sms column",
+    `ALTER TABLE IF EXISTS leads ADD COLUMN IF NOT EXISTS opt_in_sms BOOLEAN DEFAULT TRUE;`
+  );
+  await safeQuery(
+    "leads.last_marketing_received column",
+    `ALTER TABLE IF EXISTS leads ADD COLUMN IF NOT EXISTS last_marketing_received TIMESTAMP;`
+  );
+
+  // Creator visits dispute status
+  await safeQuery(
+    "creator_visits.dispute_status column",
+    `ALTER TABLE IF EXISTS creator_visits ADD COLUMN IF NOT EXISTS dispute_status VARCHAR DEFAULT 'none';`
+  );
 }
 
 

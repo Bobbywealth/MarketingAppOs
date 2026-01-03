@@ -52,6 +52,16 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ display_order already exists or error:', e.message);
       }
+
+      // Add Marketing opt-in and tracking columns to clients
+      try {
+        await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS opt_in_email BOOLEAN DEFAULT true;`);
+        await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS opt_in_sms BOOLEAN DEFAULT true;`);
+        await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS last_marketing_received TIMESTAMP;`);
+        console.log('✅ Added marketing tracking columns to clients');
+      } catch (e) {
+        console.log('⚠️ marketing tracking columns for clients already exist or error:', e.message);
+      }
       
       // Add client_id to leads table
       try {
@@ -59,6 +69,16 @@ async function runMigrations() {
         console.log('✅ Added client_id to leads');
       } catch (e) {
         console.log('⚠️ client_id in leads already exists or error:', e.message);
+      }
+
+      // Add Marketing opt-in and tracking columns to leads
+      try {
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS opt_in_email BOOLEAN DEFAULT true;`);
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS opt_in_sms BOOLEAN DEFAULT true;`);
+        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_marketing_received TIMESTAMP;`);
+        console.log('✅ Added marketing tracking columns to leads');
+      } catch (e) {
+        console.log('⚠️ marketing tracking columns for leads already exist or error:', e.message);
       }
       
       // Create subscription_packages table

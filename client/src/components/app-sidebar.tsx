@@ -106,7 +106,7 @@ const clientTools: SidebarNavItem[] = [
     icon: DollarSign,
   },
   {
-    title: "Second Me",
+    title: "AI Digital Twin",
     url: "/second-me",
     icon: Sparkles,
   },
@@ -194,11 +194,6 @@ const salesAgentTools: SidebarNavItem[] = [
     icon: Mail,
   },
   {
-    title: "Support Tickets",
-    url: "/tickets",
-    icon: Ticket,
-  },
-  {
     title: "Settings",
     url: "/settings",
     icon: Settings,
@@ -206,7 +201,7 @@ const salesAgentTools: SidebarNavItem[] = [
 ];
 
 // Reordered for better workflow logic - Team communication tools together
-const companyTools: SidebarNavItem[] = [
+const communicationTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
     url: "/",
@@ -226,7 +221,7 @@ const companyTools: SidebarNavItem[] = [
     url: "/messages",
     icon: MessageSquare,
     permission: null,
-    badgeKey: "messages", // Will fetch unread count
+    badgeKey: "messages",
     sidebarKey: "messages" as const,
   },
   {
@@ -234,7 +229,7 @@ const companyTools: SidebarNavItem[] = [
     url: "/emails",
     icon: Mail,
     permission: null,
-    badgeKey: "emails", // Will fetch unread count
+    badgeKey: "emails",
     sidebarKey: "emails" as const,
   },
   {
@@ -253,34 +248,13 @@ const companyTools: SidebarNavItem[] = [
   },
 ];
 
-const operationsTools: SidebarNavItem[] = [
-  {
-    title: "Clients",
-    url: "/clients",
-    icon: Users,
-    permission: "canManageClients" as const,
-    sidebarKey: "clients" as const,
-  },
-  {
-    title: "Social Stats",
-    url: "/admin/social-stats",
-    icon: LineChart,
-    permission: "canManageClients" as const,
-    sidebarKey: "socialStats" as const,
-  },
+const growthTools: SidebarNavItem[] = [
   {
     title: "Leads",
     url: "/leads",
     icon: UserPlus,
     permission: "canManageLeads" as const,
     sidebarKey: "leads" as const,
-  },
-  {
-    title: "Campaigns",
-    url: "/campaigns",
-    icon: Megaphone,
-    permission: "canManageCampaigns" as const,
-    sidebarKey: "campaigns" as const,
   },
   {
     title: "Marketing Center",
@@ -290,19 +264,28 @@ const operationsTools: SidebarNavItem[] = [
     sidebarKey: "marketingCenter" as const,
   },
   {
+    title: "Campaigns",
+    url: "/campaigns",
+    icon: Megaphone,
+    permission: "canManageCampaigns" as const,
+    sidebarKey: "campaigns" as const,
+  },
+  {
+    title: "Website Projects",
+    url: "/website-projects",
+    icon: Globe,
+    permission: "canManageClients" as const,
+    sidebarKey: "websiteProjects" as const,
+  },
+];
+
+const contentCreatorsTools: SidebarNavItem[] = [
+  {
     title: "Content Calendar",
     url: "/content",
     icon: Calendar,
     permission: "canManageContent" as const,
     sidebarKey: "content" as const,
-  },
-  {
-    title: "Visits",
-    url: "/visits",
-    icon: Calendar,
-    permission: "canManageClients" as const,
-    sidebarKey: "visits" as const,
-    roles: ["admin", "manager", "staff", "creator_manager"] as const,
   },
   {
     title: "Creators",
@@ -313,18 +296,36 @@ const operationsTools: SidebarNavItem[] = [
     roles: ["admin", "manager", "staff", "creator_manager"] as const,
   },
   {
+    title: "Visits",
+    url: "/visits",
+    icon: Calendar,
+    permission: "canManageClients" as const,
+    sidebarKey: "visits" as const,
+    roles: ["admin", "manager", "staff", "creator_manager"] as const,
+  },
+  {
+    title: "AI Digital Twin",
+    url: "/admin-second-me",
+    icon: Sparkles,
+    permission: "canManageClients" as const,
+    sidebarKey: "secondMe" as const,
+  },
+];
+
+const managementTools: SidebarNavItem[] = [
+  {
+    title: "Clients",
+    url: "/clients",
+    icon: Users,
+    permission: "canManageClients" as const,
+    sidebarKey: "clients" as const,
+  },
+  {
     title: "Tasks",
     url: "/tasks",
     icon: ListTodo,
     permission: null,
     sidebarKey: "tasks" as const,
-  },
-  {
-    title: "Onboarding",
-    url: "/onboarding",
-    icon: ClipboardCheck,
-    permission: "canManageClients" as const,
-    sidebarKey: "onboarding" as const,
   },
   {
     title: "Support Tickets",
@@ -334,28 +335,28 @@ const operationsTools: SidebarNavItem[] = [
     sidebarKey: "tickets" as const,
   },
   {
-    title: "Website Projects",
-    url: "/website-projects",
-    icon: Globe,
+    title: "Onboarding",
+    url: "/onboarding",
+    icon: ClipboardCheck,
     permission: "canManageClients" as const,
-    sidebarKey: "websiteProjects" as const,
-  },
-  {
-    title: "Second Me",
-    url: "/admin-second-me",
-    icon: Sparkles,
-    permission: "canManageClients" as const,
-    sidebarKey: "secondMe" as const,
+    sidebarKey: "onboarding" as const,
   },
 ];
 
-const businessTools: SidebarNavItem[] = [
+const intelligenceFinanceTools: SidebarNavItem[] = [
   {
     title: "Analytics",
     url: "/analytics",
     icon: BarChart3,
     permission: "canManageClients" as const,
     sidebarKey: "analytics" as const,
+  },
+  {
+    title: "Social Stats",
+    url: "/admin/social-stats",
+    icon: LineChart,
+    permission: "canManageClients" as const,
+    sidebarKey: "socialStats" as const,
   },
   {
     title: "Invoices & Billing",
@@ -386,18 +387,18 @@ const businessTools: SidebarNavItem[] = [
     sidebarKey: "discountCodes" as const,
   },
   {
-    title: "Training",
-    url: "/training",
-    icon: BookOpen,
-    permission: "canManageUsers" as const,
-    sidebarKey: "training" as const,
-  },
-  {
     title: "AI Business Manager",
     url: "/ai-manager",
     icon: Sparkles,
     roles: ["admin"] as const,
     sidebarKey: "aiManager" as const,
+  },
+  {
+    title: "Training",
+    url: "/training",
+    icon: BookOpen,
+    permission: "canManageUsers" as const,
+    sidebarKey: "training" as const,
   },
   {
     title: "Push Notifications",
@@ -807,7 +808,7 @@ export function AppSidebar() {
   }
 
   // For staff/managers/admins, show full menu
-  const filteredCompanyTools = companyTools.filter(item => {
+  const filteredCommunication = communicationTools.filter(item => {
     if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
       return false;
     }
@@ -815,7 +816,7 @@ export function AppSidebar() {
     return canAccess(item.permission);
   });
 
-  const filteredOperations = operationsTools.filter(item => {
+  const filteredGrowth = growthTools.filter(item => {
     if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
       return false;
     }
@@ -826,7 +827,29 @@ export function AppSidebar() {
     return canAccess(item.permission);
   });
 
-  const filteredBusiness = businessTools.filter(item => {
+  const filteredContentCreators = contentCreatorsTools.filter(item => {
+    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
+      return false;
+    }
+    if (item.roles) {
+      return item.roles.includes((user as any)?.role as any);
+    }
+    if (!item.permission) return true;
+    return canAccess(item.permission);
+  });
+
+  const filteredManagement = managementTools.filter(item => {
+    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
+      return false;
+    }
+    if (item.roles) {
+      return item.roles.includes((user as any)?.role as any);
+    }
+    if (!item.permission) return true;
+    return canAccess(item.permission);
+  });
+
+  const filteredIntelligenceFinance = intelligenceFinanceTools.filter(item => {
     if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
       return false;
     }
@@ -901,14 +924,14 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="data-[collapsible=icon]:overflow-hidden">
-        {/* Company Tools Section */}
+        {/* Communication Section */}
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Company
+            Communication
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-2 gap-1">
-              {filteredCompanyTools.map((item) => (
+              {filteredCommunication.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem
                     item={item}
@@ -928,14 +951,14 @@ export function AppSidebar() {
           <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
         </div>
 
-        {/* Operations Section */}
+        {/* Growth Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Operations
+            Growth
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-2 gap-1">
-              {filteredOperations.map((item) => (
+              {filteredGrowth.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem
                     item={item}
@@ -955,14 +978,68 @@ export function AppSidebar() {
           <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
         </div>
 
-        {/* Business Section */}
+        {/* Content & Creators Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Business
+            Content & Creators
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="px-2 gap-1">
-              {filteredBusiness.map((item) => (
+              {filteredContentCreators.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <NavItem
+                    item={item}
+                    isActive={location === item.url}
+                    isCollapsed={isCollapsed}
+                    onClick={handleLinkClick}
+                    badgeCount={getBadgeCount((item as any).badgeKey)}
+                  />
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Divider */}
+        <div className="px-4 my-4">
+          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
+        </div>
+
+        {/* Management Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Management
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="px-2 gap-1">
+              {filteredManagement.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <NavItem
+                    item={item}
+                    isActive={location === item.url}
+                    isCollapsed={isCollapsed}
+                    onClick={handleLinkClick}
+                    badgeCount={getBadgeCount((item as any).badgeKey)}
+                  />
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Divider */}
+        <div className="px-4 my-4">
+          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
+        </div>
+
+        {/* Intelligence & Finance Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Intelligence & Finance
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="px-2 gap-1">
+              {filteredIntelligenceFinance.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem
                     item={item}

@@ -76,6 +76,16 @@ export async function notifyAdminsAboutSecurityEvent(title: string, message: str
         body: message,
         url: '/settings',
       }).catch(err => console.error(`Failed to send push to admin ${admin.id}:`, err));
+
+      // Send email alert to admins
+      if (admin.email) {
+        try {
+          const { emailNotifications } = await import('../emailService');
+          await emailNotifications.sendSecurityAlertEmail(admin.email, title, message);
+        } catch (emailErr) {
+          console.error(`Failed to send security email to admin ${admin.id}:`, emailErr);
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to notify admins about security event:', error);
@@ -129,6 +139,29 @@ export async function notifyAdminsAboutAction(
         body: message,
         url: actionUrl,
       }).catch(err => console.error(`Failed to send push to admin ${admin.id}:`, err));
+
+      // Send email alert to admins
+      if (admin.email) {
+        try {
+          const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+          const fullActionUrl = actionUrl?.startsWith('http') ? actionUrl : `${appUrl}${actionUrl || '/dashboard'}`;
+          const { emailNotifications } = await import('../emailService');
+          
+          // Only send if admin has notifications enabled
+          const prefs = await storage.getUserNotificationPreferences(admin.id).catch(() => null);
+          if (prefs?.emailNotifications !== false) {
+            await emailNotifications.sendActionAlertEmail(
+              admin.email, 
+              title, 
+              message, 
+              fullActionUrl,
+              type
+            );
+          }
+        } catch (emailErr) {
+          console.error(`Failed to send action email to admin ${admin.id}:`, emailErr);
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to notify admins:', error);

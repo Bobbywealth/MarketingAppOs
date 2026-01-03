@@ -36,11 +36,29 @@ async function comparePasswords(supplied: string, stored: string) {
 export { comparePasswords };
 
 export function setupAuth(app: Express) {
+  // Ensure SESSION_SECRET is set
+  if (!process.env.SESSION_SECRET) {
+    console.error("❌ CRITICAL: SESSION_SECRET is not set in environment variables!");
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
+    }
+  }
+
   // Ensure presence column exists to avoid login errors on upgraded schemas
   pool
     .query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`)
     .then(() => console.log('✅ ensured users.last_seen exists'))
     .catch((e) => console.error('⚠️ could not ensure users.last_seen:', e.message));
+  
+  // Ensure password reset columns exist
+  pool
+    .query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_expires TIMESTAMP;
+    `)
+    .then(() => console.log('✅ ensured password reset columns exist'))
+    .catch((e) => console.error('⚠️ could not ensure password reset columns:', e.message));
+
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
@@ -58,7 +76,7 @@ export function setupAuth(app: Express) {
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
       domain: process.env.COOKIE_DOMAIN || undefined, // e.g. .marketingteam.app
       maxAge: sessionTtl,
     },
@@ -175,7 +193,7 @@ export function setupAuth(app: Express) {
       if (!user) {
         // Track failed login attempt
         try {
-          const { notifyAdminsAboutSecurityEvent } = await import('./routes.js');
+          const { notifyAdminsAboutSecurityEvent } = await import('./routes/common.js');
           await notifyAdminsAboutSecurityEvent(
             '🚨 Failed Login Attempt',
             `Failed login attempt from IP: ${req.ip} with username: ${req.body.username || 'unknown'}`,
@@ -271,9 +289,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email is required" });
       }
 
-      // Find user by email (need to add this to storage)
-      const users = await storage.getUsers();
-      const user = users.find(u => u.email === email);
+      const user = await storage.getUserByEmail(email);
 
       // Always return success to prevent email enumeration
       if (!user) {
@@ -282,22 +298,36 @@ export function setupAuth(app: Express) {
       }
 
       // Generate reset token (random string)
-      const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const resetToken = randomBytes(20).toString("hex");
       const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
-      // Store reset token (for now, just log it - you can add to DB later)
-      console.log(`
-═══════════════════════════════════════════════
-🔐 PASSWORD RESET REQUEST
-═══════════════════════════════════════════════
-User: ${user.username}
-Email: ${email}
-Reset Token: ${resetToken}
-Expires: ${resetTokenExpiry.toLocaleString()}
+      // Store reset token in DB
+      await storage.updateUserResetToken(user.id, resetToken, resetTokenExpiry);
 
-Reset URL: http://localhost:5000/reset-password?token=${resetToken}
-═══════════════════════════════════════════════
+      // In a real app, you'd send an email here
+      const appUrl = process.env.APP_URL || `http://${req.headers.host}`;
+      const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+
+      console.log(`
+   ═══════════════════════════════════════════════
+   🔐 PASSWORD RESET REQUEST
+   ═══════════════════════════════════════════════
+   User: ${user.username}
+   Email: ${email}
+   Reset Token: ${resetToken}
+   Expires: ${resetTokenExpiry.toLocaleString()}
+   
+   Reset URL: ${resetUrl}
+   ═══════════════════════════════════════════════
       `);
+
+      // Actually try to send the email if email service is configured
+      try {
+        const { emailNotifications } = await import("./emailService.js");
+        await emailNotifications.sendPasswordResetEmail(email, resetUrl);
+      } catch (emailErr) {
+        console.error("Failed to send password reset email:", emailErr);
+      }
 
       res.json({ 
         message: "If that email exists, a reset link has been sent.",
@@ -319,15 +349,33 @@ Reset URL: http://localhost:5000/reset-password?token=${resetToken}
         return res.status(400).json({ message: "Token and new password are required" });
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      if (password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
       }
 
-      // In a real app, you'd verify the token from database
-      // For now, this is a simplified version
-      console.log(`Password reset attempted with token: ${token}`);
+      const user = await storage.getUserByResetToken(token);
       
-      // You would validate token and update password here
+      if (!user) {
+        return res.status(400).json({ message: "Password reset token is invalid or has expired." });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      await storage.updateUserPassword(user.id, hashedPassword);
+
+      // Log the password change activity
+      try {
+        await storage.createActivityLog({
+          userId: user.id,
+          activityType: "password_reset",
+          description: `${user.username} reset their password`,
+          metadata: {
+            ip: req.ip,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log password reset activity:", error);
+      }
+      
       res.json({ message: "Password reset successful. You can now login with your new password." });
     } catch (error) {
       console.error("Password reset confirmation error:", error);

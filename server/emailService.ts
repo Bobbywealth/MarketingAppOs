@@ -245,6 +245,139 @@ export const emailTemplates = {
       html: renderEmail('Task Deadline Alert', content, themeColor)
     };
   },
+
+  // Task completed notification
+  taskCompleted: (actorName: string, taskTitle: string, taskUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Task Completed ✅</h2>
+      <p><strong>${actorName}</strong> has marked a task as completed.</p>
+      
+      <div class="card" style="border-left: 4px solid #10b981;">
+        <h3 style="margin: 0; font-size: 18px;">${taskTitle}</h3>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="${taskUrl}" class="button" style="background-color: #10b981;">View Task Details →</a>
+      </div>
+    `;
+    return {
+      subject: `✅ Task Completed: ${taskTitle}`,
+      html: renderEmail('Task Completed', content, '#10b981')
+    };
+  },
+
+  // Task comment notification
+  taskCommented: (commenterName: string, taskTitle: string, comment: string, taskUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">New Comment 💬</h2>
+      <p><strong>${commenterName}</strong> commented on <strong>${taskTitle}</strong>:</p>
+      
+      <div class="card" style="font-style: italic; color: #4b5563;">
+        "${comment.length > 200 ? comment.substring(0, 200) + '...' : comment}"
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="${taskUrl}" class="button">Reply to Comment →</a>
+      </div>
+    `;
+    return {
+      subject: `💬 New Comment on: ${taskTitle}`,
+      html: renderEmail('New Task Comment', content, '#3b82f6')
+    };
+  },
+
+  // Announcement notification
+  announcement: (title: string, message: string, actionUrl?: string) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">📣 Team Announcement</h2>
+      <h3 style="color: #1a1a1a; font-size: 20px; margin-bottom: 16px;">${title}</h3>
+      
+      <div class="card" style="background-color: #f0fdfa; border: 1px solid #ccfbf1;">
+        <p style="white-space: pre-wrap; margin: 0;">${message}</p>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="${appUrl}${actionUrl || '/dashboard'}" class="button" style="background-color: #0d9488;">View in Dashboard →</a>
+      </div>
+    `;
+    return {
+      subject: `📣 Announcement: ${title}`,
+      html: renderEmail('New Announcement', content, '#0d9488')
+    };
+  },
+
+  // Security alert notification
+  securityAlert: (title: string, message: string) => {
+    const content = `
+      <h2 style="margin-top: 0; color: #dc2626;">🚨 Security Alert</h2>
+      <p>A security-related event was detected in your account.</p>
+      
+      <div class="card" style="border: 1px solid #fee2e2; background-color: #fef2f2;">
+        <h3 style="margin-top: 0; font-size: 16px; color: #991b1b;">${title}</h3>
+        <p style="margin-bottom: 0; color: #b91c1c;">${message}</p>
+      </div>
+      
+      <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+        If you did not expect this, please review your account security settings immediately.
+      </p>
+    `;
+    return {
+      subject: `🚨 Security Alert: ${title}`,
+      html: renderEmail('Security Alert', content, '#dc2626')
+    };
+  },
+
+  // Password reset notification
+  passwordReset: (resetUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">🔐 Password Reset Request</h2>
+      <p>We received a request to reset your password for the Marketing Team App.</p>
+      
+      <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+      
+      <div style="text-align: center;">
+        <a href="${resetUrl}" class="button" style="background-color: #1a1a1a;">Reset Your Password →</a>
+      </div>
+      
+      <div class="card">
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">
+          If the button doesn't work, copy and paste this link into your browser:
+          <br>
+          <span style="word-break: break-all;">${resetUrl}</span>
+        </p>
+      </div>
+      
+      <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+        If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+      </p>
+    `;
+    return {
+      subject: '🔐 Password Reset Request',
+      html: renderEmail('Password Reset', content, '#1a1a1a')
+    };
+  },
+
+  // General action alert (for admins)
+  actionAlert: (title: string, message: string, actionUrl: string, type: string = 'info') => {
+    let themeColor = '#1a1a1a';
+    if (type === 'success') themeColor = '#10b981';
+    if (type === 'warning') themeColor = '#f59e0b';
+    if (type === 'error') themeColor = '#ef4444';
+
+    const content = `
+      <h2 style="margin-top: 0;">Action Required / Update</h2>
+      <p>${message}</p>
+      
+      <div style="text-align: center;">
+        <a href="${actionUrl}" class="button" style="background-color: ${themeColor};">Review Details →</a>
+      </div>
+    `;
+    return {
+      subject: `${title}`,
+      html: renderEmail(title, content, themeColor)
+    };
+  },
 };
 
 // Marketing Email Template
@@ -313,5 +446,35 @@ export const emailNotifications = {
     
     const { subject, html } = emailTemplates.taskDueReminder(assigneeName, assigneeEmail, taskTitle, dueDate, hoursUntilDue);
     return sendEmail(assigneeEmail, subject, html);
+  },
+
+  async sendTaskCompletedEmail(toEmail: string, actorName: string, taskTitle: string, taskUrl: string) {
+    const { subject, html } = emailTemplates.taskCompleted(actorName, taskTitle, taskUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendTaskCommentEmail(toEmail: string, commenterName: string, taskTitle: string, comment: string, taskUrl: string) {
+    const { subject, html } = emailTemplates.taskCommented(commenterName, taskTitle, comment, taskUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendAnnouncementEmail(toEmail: string | string[], title: string, message: string, actionUrl?: string) {
+    const { subject, html } = emailTemplates.announcement(title, message, actionUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendSecurityAlertEmail(toEmail: string | string[], title: string, message: string) {
+    const { subject, html } = emailTemplates.securityAlert(title, message);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendActionAlertEmail(toEmail: string | string[], title: string, message: string, actionUrl: string, type: string = 'info') {
+    const { subject, html } = emailTemplates.actionAlert(title, message, actionUrl, type);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendPasswordResetEmail(toEmail: string, resetUrl: string) {
+    const { subject, html } = emailTemplates.passwordReset(resetUrl);
+    return sendEmail(toEmail, subject, html);
   },
 };

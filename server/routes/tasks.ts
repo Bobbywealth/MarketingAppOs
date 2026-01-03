@@ -188,6 +188,26 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
           body: `${creatorName} created: "${task.title}"`,
           url: `/tasks?taskId=${task.id}`,
         }).catch(err => console.error('Failed to send push notification:', err));
+
+        // Email notification for team members
+        if (teamMember.email) {
+          try {
+            const { emailNotifications } = await import('../emailService.js');
+            const prefs = await storage.getUserNotificationPreferences(teamMember.id).catch(() => null);
+            if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
+              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+              void emailNotifications.sendActionAlertEmail(
+                teamMember.email,
+                '📋 New Task Created',
+                `${creatorName} created a new task: "${task.title}"`,
+                `${appUrl}/tasks?taskId=${task.id}`,
+                'info'
+              ).catch(err => console.error(`Failed to send task creation email to ${teamMember.username}:`, err));
+            }
+          } catch (e) {
+            console.error('Email error in task creation:', e);
+          }
+        }
       }
     } catch (teamNotifError) {
       console.error('Failed to notify team about task:', teamNotifError);
@@ -339,6 +359,27 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
           actionUrl: `/tasks?taskId=${task.id}`,
           isRead: false,
         });
+
+        // Email notification for checklist update
+        try {
+          const assignee = await storage.getUser(String(task.assignedToId));
+          if (assignee?.email) {
+            const { emailNotifications } = await import('../emailService.js');
+            const prefs = await storage.getUserNotificationPreferences(assignee.id).catch(() => null);
+            if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
+              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+              void emailNotifications.sendActionAlertEmail(
+                assignee.email,
+                '✅ Checklist Updated',
+                `${actorName} completed: ${newlyCompleted.map(i => i.text).join(", ")} on task "${task.title}"`,
+                `${appUrl}/tasks?taskId=${task.id}`,
+                'success'
+              ).catch(err => console.error(`Failed to send checklist email to ${assignee.username}:`, err));
+            }
+          }
+        } catch (e) {
+          console.error('Email error in checklist notification:', e);
+        }
       }
     }
 
@@ -447,6 +488,27 @@ router.post("/tasks/:taskId/comments", isAuthenticated, async (req: Request, res
           body: `${commenterName}: ${validatedData.comment.substring(0, 100)}`,
           url: `/tasks?taskId=${task.id}`,
         }).catch(err => console.error('Failed to send push:', err));
+
+        // Email notification for task comment
+        try {
+          const assignee = await storage.getUser(String(task.assignedToId));
+          if (assignee?.email) {
+            const { emailNotifications } = await import('../emailService.js');
+            const prefs = await storage.getUserNotificationPreferences(assignee.id).catch(() => null);
+            if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
+              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+              void emailNotifications.sendTaskCommentEmail(
+                assignee.email,
+                commenterName,
+                task.title,
+                validatedData.comment,
+                `${appUrl}/tasks?taskId=${task.id}`
+              ).catch(err => console.error(`Failed to send comment email to ${assignee.username}:`, err));
+            }
+          }
+        } catch (e) {
+          console.error('Email error in comment notification:', e);
+        }
       }
     }
     

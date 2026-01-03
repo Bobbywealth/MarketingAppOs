@@ -756,6 +756,26 @@ export function registerRoutes(app: Express) {
               body: `User uploaded file: "${req.file.originalname}"`,
               url: '/content',
             }).catch(err => console.error('Failed to send push notification:', err));
+
+            // Email notification to admin
+            if (admin.email) {
+              try {
+                const { emailNotifications } = await import('./emailService.js');
+                const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+                const prefs = await storage.getUserNotificationPreferences(admin.id).catch(() => null);
+                if (prefs?.emailNotifications !== false) {
+                  void emailNotifications.sendActionAlertEmail(
+                    admin.email,
+                    '📁 File Uploaded',
+                    `User uploaded a new file: "${req.file.originalname}"`,
+                    `${appUrl}/content`,
+                    'info'
+                  ).catch(err => console.error(`Failed to send file upload email to ${admin.username}:`, err));
+                }
+              } catch (e) {
+                console.error(`Email error for file upload to ${admin.username}:`, e);
+              }
+            }
           }
         }
         
@@ -833,6 +853,7 @@ export function registerRoutes(app: Express) {
       }
       const users = await storage.getUsers();
       const { sendPushToUser } = await import('./push.js');
+      const { emailNotifications } = await import('./emailService.js');
       let count = 0;
       for (const user of users) {
         await storage.createNotification({
@@ -849,6 +870,19 @@ export function registerRoutes(app: Express) {
           body: message.substring(0, 120),
           url: '/dashboard',
         }).catch(err => console.error('Failed to send push notification:', err));
+
+        // Send email for announcement
+        if (user.email) {
+          try {
+            const prefs = await storage.getUserNotificationPreferences(user.id).catch(() => null);
+            if (prefs?.emailNotifications !== false) {
+              void emailNotifications.sendAnnouncementEmail(user.email, title, message, '/dashboard')
+                .catch(err => console.error(`Failed to send announcement email to ${user.username}:`, err));
+            }
+          } catch (e) {
+            console.error(`Email error for announcement to ${user.username}:`, e);
+          }
+        }
         count++;
       }
       res.status(201).json({ message: 'Announcement sent', recipients: count });
@@ -1043,6 +1077,26 @@ export function registerRoutes(app: Express) {
             body: `${name} completed checkout${packageId ? ` (${packageId})` : ''}`,
             url: '/clients',
           }).catch(() => {});
+
+          // Email notification to admin/manager
+          if (u.email) {
+            try {
+              const { emailNotifications } = await import('./emailService.js');
+              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+              const prefs = await storage.getUserNotificationPreferences(u.id).catch(() => null);
+              if (prefs?.emailNotifications !== false) {
+                void emailNotifications.sendActionAlertEmail(
+                  u.email,
+                  '🧾 New Paying Client',
+                  `${name} just subscribed${packageId ? ` to package ${packageId}` : ""}.`,
+                  `${appUrl}/clients?search=${encodeURIComponent(name)}`,
+                  'success'
+                ).catch(err => console.error(`Failed to send payment email to ${u.username}:`, err));
+              }
+            } catch (e) {
+              console.error(`Email error for payment to ${u.username}:`, e);
+            }
+          }
         }
       } catch (e) {
         console.warn("⚠️ Failed sending notifications for Stripe confirm:", e);
@@ -1338,7 +1392,7 @@ export function registerRoutes(app: Express) {
   });
 
   // File download/serve endpoint
-  app.get("/uploads/:filename", async (req: Request, res: Response) => {
+  app.get("/uploads/:filename", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const filename = req.params.filename;
       const filePath = path.join(UPLOAD_DIR, filename);
@@ -1485,6 +1539,26 @@ This lead will be updated if they complete the full signup process.`,
             body: `${lead.name}${lead.company ? ` from ${lead.company}` : ''} - Started signup process`,
             url: '/leads',
           }).catch(err => console.error('Failed to send push notification:', err));
+
+          // Email notification to admin/manager
+          if (user.email) {
+            try {
+              const { emailNotifications } = await import('./emailService.js');
+              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+              const prefs = await storage.getUserNotificationPreferences(user.id).catch(() => null);
+              if (prefs?.emailNotifications !== false) {
+                void emailNotifications.sendActionAlertEmail(
+                  user.email,
+                  '🎯 New Early Lead',
+                  `${lead.name}${lead.company ? ` from ${lead.company}` : ''} started the signup process. Follow up to encourage completion!`,
+                  `${appUrl}/leads?leadId=${lead.id}`,
+                  'info'
+                ).catch(err => console.error(`Failed to send early lead email to ${user.username}:`, err));
+              }
+            } catch (e) {
+              console.error(`Email error for early lead to ${user.username}:`, e);
+            }
+          }
         }
         console.log(`✅ Notifications sent to ${adminsAndManagers.length} admins/managers`);
       } catch (notifError) {
@@ -3337,7 +3411,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   // Content post routes
   // Debug endpoint to check content_posts table structure
-  app.get("/api/debug/content-posts-table", async (_req: Request, res: Response) => {
+  app.get("/api/debug/content-posts-table", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
       console.log("🔍 Checking content_posts table structure...");
       
