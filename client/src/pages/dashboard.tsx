@@ -12,6 +12,7 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { InteractiveCard } from "@/components/ui/interactive-card";
 import { Celebration } from "@/components/Celebration";
+import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -304,7 +305,12 @@ export default function Dashboard() {
       <div className="min-h-full gradient-mesh overflow-x-hidden">
         <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 xl:p-12 space-y-6 md:space-y-8">
         {/* Premium Header with Welcome Message */}
-        <div className="space-y-2 md:space-y-3">
+        <motion.div
+          className="space-y-2 md:space-y-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+        >
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
@@ -316,7 +322,7 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Ops Control Widgets */}
         {isOps && (
@@ -482,6 +488,11 @@ export default function Dashboard() {
                   <InteractiveCard
                     className="group"
                   >
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.22, ease: "easeOut" }}
+                    >
                     <Card 
                       onClick={() => navigate(metric.link)}
                       className="relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 card-hover-lift gradient-border cursor-pointer h-full"
@@ -540,6 +551,7 @@ export default function Dashboard() {
                         </div>
                       </CardContent>
                     </Card>
+                    </motion.div>
                   </InteractiveCard>
                 </TooltipTrigger>
                 <TooltipContent>

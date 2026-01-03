@@ -44,6 +44,13 @@ export function GlobalSearch() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  // App-wide keyboard shortcut hook can dispatch this event
+  useEffect(() => {
+    const openSearch = () => setOpen(true);
+    window.addEventListener("mta:open-global-search", openSearch as EventListener);
+    return () => window.removeEventListener("mta:open-global-search", openSearch as EventListener);
+  }, []);
+
   const handleSelect = useCallback((path: string) => {
     setOpen(false);
     setSearchQuery("");
@@ -65,6 +72,7 @@ export function GlobalSearch() {
         variant="outline"
         className="relative w-10 h-10 p-0 md:w-40 lg:w-64 md:px-4 md:py-2 md:justify-start text-sm text-muted-foreground rounded-xl border-2 hover:bg-primary/10 hover:border-primary transition-all"
         onClick={() => setOpen(true)}
+        aria-label="Open global search"
         data-testid="button-global-search"
       >
         <Search className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />

@@ -15,7 +15,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { usePageTracking } from "@/hooks/usePageTracking";
-import { Menu, Loader2 } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
@@ -23,6 +23,12 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Logo } from "@/components/Logo";
 import { MobileNav } from "@/components/MobileNav";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { RouteSkeleton } from "@/components/RouteSkeleton";
+import { AnimatePresence } from "framer-motion";
+import { PageTransition } from "@/components/PageTransition";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { UpdateBanner } from "@/components/UpdateBanner";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 // Lazy load all pages for better mobile performance
 const AuthPage = lazy(() => import("@/pages/auth-page"));
@@ -89,9 +95,7 @@ const VisitDetail = lazy(() => import("@/pages/visit-detail"));
 // Loading fallback component
 function PageLoader() {
   return (
-    <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
+    <RouteSkeleton />
   );
 }
 
@@ -201,12 +205,25 @@ function HamburgerMenu() {
 function AppContent() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [routeLocation] = useLocation();
   const isMobile = useIsMobile();
   const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications();
   const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
   
   // Track page views automatically
   usePageTracking();
+
+  // Keyboard shortcuts (desktop): Cmd/Ctrl+K opens search, g+t tasks, g+m messages
+  useKeyboardShortcuts({
+    enabled: !isMobile && !!user,
+    onGoToSearch: () => {
+      try {
+        window.dispatchEvent(new CustomEvent("mta:open-global-search"));
+      } catch {}
+    },
+    onGoToTasks: () => setLocation("/tasks"),
+    onGoToMessages: () => setLocation("/messages"),
+  });
 
   // Handle navigation from push notifications
   useEffect(() => {
@@ -223,6 +240,13 @@ function AppContent() {
       navigator.serviceWorker?.removeEventListener('message', handleMessage);
     };
   }, [setLocation]);
+
+  // Persist last visited route for offline retry UX
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("mta:lastUrl", routeLocation);
+    } catch {}
+  }, [routeLocation]);
 
   const sidebarStyle = {
     "--sidebar-width": "16.25rem", // 260px - wider for better readability
@@ -253,6 +277,8 @@ function AppContent() {
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
+            <UpdateBanner />
+            <OfflineBanner />
             <header className="sticky top-0 z-50 flex items-center gap-2 px-3 md:px-6 py-3 md:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               {/* Left: Hamburger + Logo (logo only on mobile) */}
               <div className="flex items-center gap-2 md:gap-3">
@@ -284,7 +310,11 @@ function AppContent() {
               </div>
             )}
             <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
-              <Router />
+              <AnimatePresence mode="wait" initial={false}>
+                <PageTransition routeKey={routeLocation}>
+                  <Router />
+                </PageTransition>
+              </AnimatePresence>
             </main>
           </div>
         </div>

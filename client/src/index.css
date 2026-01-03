@@ -1034,6 +1034,13 @@
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
   }
 
+  /* Dark mode: subtle interactive glow (premium, not noisy) */
+  .dark a:hover,
+  .dark button:hover:not(:disabled),
+  .dark [role="button"]:hover:not(:disabled) {
+    filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.08));
+  }
+
   /* Gradient Heading with Glow */
   .dark-gradient-heading {
     background: linear-gradient(90deg, hsl(217 91% 68%), hsl(262 83% 70%));

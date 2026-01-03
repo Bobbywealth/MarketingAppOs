@@ -1,10 +1,30 @@
-import { useEffect, useState } from 'react';
-import { LoadingLogo } from '@/components/Logo';
+import { useEffect, useMemo, useState } from "react";
+import { LoadingLogo } from "@/components/Logo";
 
 export function LoadingScreen() {
   const [progress, setProgress] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(!!mq?.matches);
+    update();
+    mq?.addEventListener?.("change", update);
+    return () => mq?.removeEventListener?.("change", update);
+  }, []);
+
+  const statusText = useMemo(() => {
+    if (progress < 25) return "Preparing your workspace…";
+    if (progress < 55) return "Loading your dashboards…";
+    if (progress < 85) return "Syncing essentials…";
+    return "Almost ready…";
+  }, [progress]);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      setProgress(100);
+      return;
+    }
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -16,69 +36,91 @@ export function LoadingScreen() {
     }, 100);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [reducedMotion]);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-background">
-      {/* Animated background blobs */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+    <div
+      className="fixed inset-0 z-[9999] grid place-items-center bg-background overflow-hidden"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading application"
+    >
+      {/* Morphing gradient background (disabled with reduced-motion) */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-[36%] bg-primary/20 blur-3xl animate-blob" />
+        <div
+          className="absolute -bottom-48 -right-48 h-[620px] w-[620px] rounded-[44%] bg-blue-500/15 blur-3xl animate-blob"
+          style={{ animationDelay: "1.2s" }}
+        />
+        <div
+          className="absolute top-1/3 right-1/3 h-[420px] w-[420px] rounded-[40%] bg-purple-500/10 blur-3xl animate-blob"
+          style={{ animationDelay: "2.1s" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background" />
       </div>
 
-      {/* Content */}
-      <div className="relative flex flex-col items-center gap-8 p-8">
-        {/* Logo */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-          <LoadingLogo className="relative animate-float drop-shadow-2xl" />
-        </div>
-
-        {/* App Name */}
-        <div className="text-center space-y-3">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent animate-pulse">
-            Marketing Team App
-          </h1>
-          <p className="text-base md:text-lg font-medium text-foreground/80">
-            {progress < 30 && "🚀 Initializing your workspace..."}
-            {progress >= 30 && progress < 60 && "📊 Loading your data..."}
-            {progress >= 60 && progress < 90 && "✨ Almost ready..."}
-            {progress >= 90 && "🎉 Welcome back!"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Your complete marketing management solution
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-64 md:w-80">
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-primary via-blue-500 to-primary transition-all duration-300 ease-out rounded-full"
-              style={{ 
-                width: `${progress}%`,
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 2s infinite'
-              }}
-            />
+      <div className="relative w-full max-w-md px-6">
+        <div className="rounded-2xl border bg-card/70 backdrop-blur-xl shadow-2xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl" />
+              <div className="relative rounded-2xl border bg-background/60 p-3">
+                <LoadingLogo className={reducedMotion ? "drop-shadow-xl" : "animate-float drop-shadow-2xl"} />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold tracking-tight">
+                Marketing Team App
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {statusText}
+              </p>
+            </div>
           </div>
-          <div className="mt-2 text-center">
-            <span className="text-xs font-medium text-muted-foreground">{progress}%</span>
-          </div>
-        </div>
 
-        {/* Loading spinner */}
-        <div className="flex gap-2">
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="mt-6">
+            <div className="h-2 rounded-full bg-muted/70 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary via-blue-500 to-primary transition-[width] duration-300 ease-out"
+                style={{
+                  width: `${progress}%`,
+                  backgroundSize: "200% 100%",
+                  animation: reducedMotion ? "none" : "mta-shimmer 1.8s linear infinite",
+                }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>Loading</span>
+              <span>{progress}%</span>
+            </div>
+
+            {!reducedMotion && (
+              <div className="mt-5 flex justify-center gap-2" aria-hidden="true">
+                <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
+                <div className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       <style>{`
-        @keyframes shimmer {
+        @keyframes mta-shimmer {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }
+        }
+        @keyframes mta-blob {
+          0%   { transform: translate(0px, 0px) scale(1) rotate(0deg); border-radius: 36% 64% 62% 38% / 42% 43% 57% 58%; }
+          33%  { transform: translate(18px, -14px) scale(1.08) rotate(60deg); border-radius: 58% 42% 40% 60% / 55% 46% 54% 45%; }
+          66%  { transform: translate(-16px, 12px) scale(0.95) rotate(120deg); border-radius: 42% 58% 60% 40% / 44% 58% 42% 56%; }
+          100% { transform: translate(0px, 0px) scale(1) rotate(180deg); border-radius: 36% 64% 62% 38% / 42% 43% 57% 58%; }
+        }
+        .animate-blob {
+          animation: mta-blob 14s ease-in-out infinite alternate;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-blob, .animate-float, .animate-bounce { animation: none !important; }
         }
       `}</style>
     </div>
