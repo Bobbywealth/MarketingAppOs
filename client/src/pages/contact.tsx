@@ -124,7 +124,7 @@ export default function ContactPage() {
                   Book Your Call Now
                 </Button>
                 <p className="text-sm text-gray-500 mt-4">
-                  ✓ 30-minute strategy session • ✓ No credit card required • ✓ Instant confirmation
+                  ✓ 30-minute strategy session • ✓ Instant confirmation
                 </p>
               </div>
             </CardContent>

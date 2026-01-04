@@ -38,6 +38,7 @@ export default function MarketingCenter() {
   const [activeTab, setActiveTab] = useState("composer");
   const [broadcastType, setBroadcastType] = useState<"email" | "sms">("email");
   const [audience, setAudience] = useState("all");
+  const [customRecipient, setCustomRecipient] = useState("");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
   
@@ -90,10 +91,15 @@ export default function MarketingCenter() {
       toast({ title: "Subject Required", description: "Please enter an email subject.", variant: "destructive" });
       return;
     }
+    if (audience === 'individual' && !customRecipient.trim()) {
+      toast({ title: "Recipient Required", description: `Please enter a recipient ${broadcastType === 'email' ? 'email' : 'phone number'}.`, variant: "destructive" });
+      return;
+    }
 
     sendBroadcastMutation.mutate({
       type: broadcastType,
       audience,
+      customRecipient: audience === 'individual' ? customRecipient : null,
       subject: broadcastType === 'email' ? subject : null,
       content,
       status: 'sending'
@@ -101,6 +107,7 @@ export default function MarketingCenter() {
   };
 
   const getRecipientCount = () => {
+    if (audience === 'individual') return customRecipient ? 1 : 0;
     if (!stats) return 0;
     if (audience === 'all') return stats.leads.optedIn + stats.clients.optedIn;
     if (audience === 'leads') return stats.leads.optedIn;
@@ -191,17 +198,32 @@ export default function MarketingCenter() {
                           <SelectItem value="all">All Customers (Leads + Clients)</SelectItem>
                           <SelectItem value="leads">Leads Only</SelectItem>
                           <SelectItem value="clients">Clients Only</SelectItem>
+                          <SelectItem value="individual">Send to Individual</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sender Account</Label>
-                      <Input 
-                        disabled 
-                        value={broadcastType === 'email' ? "business@wolfpaqmarketing.app" : "Twilio Official"} 
-                        className="h-12 glass border-2 font-semibold text-primary"
-                      />
-                    </div>
+                    {audience === 'individual' ? (
+                      <div className="space-y-2 animate-in slide-in-from-left-2 duration-300">
+                        <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                          {broadcastType === 'email' ? 'Recipient Email' : 'Recipient Phone Number'}
+                        </Label>
+                        <Input 
+                          placeholder={broadcastType === 'email' ? "hello@example.com" : "+1234567890"}
+                          value={customRecipient}
+                          onChange={(e) => setCustomRecipient(e.target.value)}
+                          className="h-12 glass border-2 font-semibold"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sender Account</Label>
+                        <Input 
+                          disabled 
+                          value={broadcastType === 'email' ? "business@wolfpaqmarketing.app" : "Twilio Official"} 
+                          className="h-12 glass border-2 font-semibold text-primary"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {broadcastType === 'email' && (
@@ -352,7 +374,7 @@ export default function MarketingCenter() {
                             {broadcast.type === 'email' ? broadcast.subject : broadcast.content.substring(0, 50) + '...'}
                           </h3>
                           <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
-                            {broadcast.audience}
+                            {broadcast.audience === 'individual' ? `Individual: ${broadcast.customRecipient}` : broadcast.audience}
                           </Badge>
                           {broadcast.status === 'sending' ? (
                             <Badge className="bg-primary animate-pulse font-black uppercase text-[10px]">Sending...</Badge>

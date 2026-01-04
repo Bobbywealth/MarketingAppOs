@@ -108,7 +108,7 @@ export default function ClientSecondMeDashboard() {
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="text-green-500">✓</span>
-                    <span>No credit card required</span>
+                    <span>Free account setup</span>
                   </li>
                 </ul>
               </div>

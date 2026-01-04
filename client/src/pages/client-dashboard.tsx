@@ -18,6 +18,15 @@ export default function ClientDashboard() {
     enabled: !!user,
   });
 
+  const { data: client } = useQuery({
+    queryKey: [`/api/clients/${user?.clientId}`],
+    enabled: !!user?.clientId,
+  });
+
+  const brandAssets = (client as any)?.brandAssets || {};
+  const socialCredentials = (client as any)?.socialCredentials || {};
+  const primaryColor = brandAssets.primaryColor || "#3B82F6";
+
   const { data: contentPosts = [] } = useQuery({
     queryKey: ["/api/content-posts"],
     enabled: !!user,
@@ -128,16 +137,21 @@ export default function ClientDashboard() {
   ];
 
   return (
-    <div className="min-h-full gradient-mesh overflow-x-hidden">
+    <div className="min-h-full gradient-mesh overflow-x-hidden" style={{ "--primary-brand": primaryColor } as any}>
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 xl:p-12 space-y-6 sm:space-y-8">
         {/* Welcome Header */}
-        <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple">
-            {getGreeting()}! 👋
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Here's an overview of your content and activity
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" style={{ color: primaryColor }}>
+              {getGreeting()}! 👋
+            </h1>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              Here's an overview of your content and activity
+            </p>
+          </div>
+          {brandAssets.logoUrl && (
+            <img src={brandAssets.logoUrl} alt="Brand Logo" className="h-12 w-auto object-contain" />
+          )}
         </div>
 
         {/* Metrics Grid */}
@@ -146,13 +160,19 @@ export default function ClientDashboard() {
             <Link key={metric.title} href={metric.link}>
               <InteractiveCard className="group h-full">
                 <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift cursor-pointer h-full">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${metric.gradient} opacity-5 group-hover:opacity-10 transition-opacity`}></div>
+                  <div 
+                    className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity"
+                    style={{ backgroundColor: primaryColor }}
+                  ></div>
                   
                   <CardHeader className="relative flex flex-row items-center justify-between pb-2 p-3 sm:p-6">
                     <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       {metric.title}
                     </CardTitle>
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br ${metric.gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
+                    <div 
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform"
+                      style={{ backgroundColor: primaryColor }}
+                    >
                       <metric.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
                   </CardHeader>
@@ -192,14 +212,14 @@ export default function ClientDashboard() {
           <CardContent className="relative p-4 sm:p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Instagram */}
-              <div className="space-y-3">
+              <div className="space-y-3 p-4 rounded-xl bg-background/50 border border-border/50">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center">
                     <ImageIcon className="w-4 h-4 text-white" />
                   </div>
                   <span className="font-semibold">Instagram</span>
-                  <Badge variant="secondary" className="ml-auto text-xs">
-                    Not Connected
+                  <Badge variant={socialCredentials["Social Media Management"] ? "default" : "secondary"} className="ml-auto text-xs">
+                    {socialCredentials["Social Media Management"] ? "Credentialed" : "Not Connected"}
                   </Badge>
                 </div>
                 <div className="space-y-2 pl-10">
@@ -207,9 +227,14 @@ export default function ClientDashboard() {
                     <span className="text-muted-foreground">Posts</span>
                     <span className="font-medium">0</span>
                   </div>
+                  {socialCredentials["Social Media Management"] && (
+                    <p className="text-[10px] text-green-600 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Login info received
+                    </p>
+                  )}
                   <Link href="/client-analytics">
-                    <Button variant="ghost" size="sm" className="w-full text-xs">
-                      Connect Account
+                    <Button variant="ghost" size="sm" className="w-full text-xs h-8">
+                      {socialCredentials["Social Media Management"] ? "View Details" : "Connect Account"}
                     </Button>
                   </Link>
                 </div>

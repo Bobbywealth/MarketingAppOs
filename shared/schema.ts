@@ -80,6 +80,8 @@ export const clients = pgTable("clients", {
   lastVisitDate: timestamp("last_visit_date"),
   notes: text("notes"),
   socialLinks: jsonb("social_links"), // {twitter, facebook, instagram, linkedin}
+  socialCredentials: jsonb("social_credentials"), // {platform: {username, password}}
+  brandAssets: jsonb("brand_assets"), // {primaryColor, secondaryColor, logoUrl, brandVoice}
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   displayOrder: integer("display_order").default(0),
@@ -320,6 +322,8 @@ export const leads = pgTable("leads", {
   needs: jsonb("needs").$type<string[]>().default([]), // What the business needs: social_media, content, website, ads, branding, google_optimization, crm, not_sure
   status: varchar("status").default("research_completed"), // research_completed, missing_info, needs_review, ready_for_outreach
   sourceMetadata: jsonb("source_metadata"), // {campaign_id, ad_id, form_name, etc.}
+  socialCredentials: jsonb("social_credentials"), // {platform: {username, password}}
+  brandAssets: jsonb("brand_assets"), // {primaryColor, secondaryColor, logoUrl, brandVoice}
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
   // Contact tracking fields
@@ -479,6 +483,96 @@ export const creatorVisitsRelations = relations(creatorVisits, ({ one }) => ({
   approver: one(users, { fields: [creatorVisits.approvedBy], references: [users.id] }),
 }));
 
+// ===== Courses + Learning Management =====
+
+export const courses = pgTable("courses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creatorId: varchar("creator_id").references(() => creators.id).notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  thumbnailUrl: varchar("thumbnail_url"),
+  status: varchar("status").notNull().default("draft"), // draft | published | archived
+  category: varchar("category"),
+  difficulty: varchar("difficulty").default("beginner"), // beginner | intermediate | advanced
+  price: integer("price").default(0), // in cents
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const courseModules = pgTable("course_modules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id, { onDelete: "cascade" }).notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const courseLessons = pgTable("course_lessons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  moduleId: varchar("module_id").references(() => courseModules.id, { onDelete: "cascade" }).notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  contentUrl: varchar("content_url"), // video URL or document path
+  contentType: varchar("content_type").notNull().default("video"), // video | document | quiz | text
+  textContent: text("text_content"), // For text-based lessons
+  order: integer("order").notNull().default(0),
+  duration: integer("duration"), // estimated time in minutes
+  isFree: boolean("is_free").default(false), // Preview lesson
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const courseEnrollments = pgTable("course_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  courseId: varchar("course_id").references(() => courses.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  progress: jsonb("progress").$type<Record<string, boolean>>().default({}), // { lessonId: true }
+  status: varchar("status").notNull().default("enrolled"), // enrolled | completed | dropped
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const coursesRelations = relations(courses, ({ one, many }) => ({
+  creator: one(creators, { fields: [courses.creatorId], references: [creators.id] }),
+  modules: many(courseModules),
+  enrollments: many(courseEnrollments),
+}));
+
+export const courseModulesRelations = relations(courseModules, ({ one, many }) => ({
+  course: one(courses, { fields: [courseModules.courseId], references: [courses.id] }),
+  lessons: many(courseLessons),
+}));
+
+export const courseLessonsRelations = relations(courseLessons, ({ one }) => ({
+  module: one(courseModules, { fields: [courseLessons.moduleId], references: [courseModules.id] }),
+}));
+
+export const courseEnrollmentsRelations = relations(courseEnrollments, ({ one }) => ({
+  course: one(courses, { fields: [courseEnrollments.courseId], references: [courses.id] }),
+  user: one(users, { fields: [courseEnrollments.userId], references: [users.id] }),
+}));
+
+// Zod schemas for validation
+export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCourseModuleSchema = createInsertSchema(courseModules).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCourseLessonSchema = createInsertSchema(courseLessons).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCourseEnrollmentSchema = createInsertSchema(courseEnrollments).omit({ id: true, enrolledAt: true });
+
+// TypeScript types
+export type Course = typeof courses.$inferSelect;
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
+
+export type CourseModule = typeof courseModules.$inferSelect;
+export type InsertCourseModule = z.infer<typeof insertCourseModuleSchema>;
+
+export type CourseLesson = typeof courseLessons.$inferSelect;
+export type InsertCourseLesson = z.infer<typeof insertCourseLessonSchema>;
+
+export type CourseEnrollment = typeof courseEnrollments.$inferSelect;
+export type InsertCourseEnrollment = z.infer<typeof insertCourseEnrollmentSchema>;
+
 // Marketing Broadcasts table
 export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -486,7 +580,8 @@ export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   status: varchar("status").notNull().default("pending"), // 'pending', 'sending', 'completed', 'failed'
   subject: varchar("subject"),
   content: text("content").notNull(),
-  audience: varchar("audience").notNull(), // 'all', 'leads', 'clients', 'specific'
+  audience: varchar("audience").notNull(), // 'all', 'leads', 'clients', 'specific', 'individual'
+  customRecipient: text("custom_recipient"), // Specific email or phone number for 'individual' audience
   filters: jsonb("filters"), // { tags: [], industries: [] }
   totalRecipients: integer("total_recipients").default(0),
   successCount: integer("success_count").default(0),
@@ -512,6 +607,7 @@ export const marketingBroadcastRecipients = pgTable("marketing_broadcast_recipie
     .notNull(),
   leadId: varchar("lead_id").references(() => leads.id),
   clientId: varchar("client_id").references(() => clients.id),
+  customRecipient: text("custom_recipient"),
   status: varchar("status").notNull().default("pending"), // 'pending', 'sent', 'failed'
   errorMessage: text("error_message"),
   sentAt: timestamp("sent_at"),
@@ -541,6 +637,7 @@ export const contentPosts = pgTable("content_posts", {
   title: varchar("title").notNull(),
   content: text("content").notNull(),
   mediaUrls: text("media_urls").array(),
+  contentLink: text("content_link"),
   scheduledFor: timestamp("scheduled_for"),
   approvalStatus: varchar("approval_status").notNull().default("pending"), // draft, pending, approved, rejected, published
   approvedBy: varchar("approved_by"),
@@ -1057,6 +1154,7 @@ export const insertContentPostSchema = createInsertSchema(contentPosts)
   .extend({
     platforms: z.array(z.enum(['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube'])).min(1, "Select at least one platform"),
     mediaUrls: z.array(z.string()).optional(),
+    contentLink: z.string().url("Must be a valid URL").optional().nullable().or(z.literal("")),
     scheduledFor: z.preprocess(
       (val) => {
         if (val === null || val === undefined || val === '') return null;

@@ -52,6 +52,18 @@ export const signupSimpleSchema = z.object({
   appFeatures: z.array(z.string().trim().min(1)).optional(),
   appTimeline: z.string().trim().optional(),
   appBudget: z.string().trim().optional(),
+  
+  socialCredentials: z.record(z.object({
+    username: z.string().trim().min(1, "Username is required"),
+    password: z.string().trim().min(1, "Password is required"),
+  })).optional(),
+  
+  brandAssets: z.object({
+    primaryColor: z.string().trim().optional(),
+    secondaryColor: z.string().trim().optional(),
+    logoUrl: z.string().trim().optional(),
+    brandVoice: z.string().trim().optional(),
+  }).optional(),
 
   notes: z.string().trim().optional(),
 });

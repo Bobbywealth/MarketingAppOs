@@ -140,6 +140,20 @@
   }
 }
 
+/* Slide Up Animation for Live Feed */
+@keyframes slide-up {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 15s linear infinite;
+}
+
 .animate-float {
   animation: float 6s ease-in-out infinite;
 

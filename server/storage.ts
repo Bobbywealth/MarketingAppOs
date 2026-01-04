@@ -32,6 +32,10 @@ import {
   pageViews,
   marketingBroadcasts,
   marketingBroadcastRecipients,
+  courses,
+  courseModules,
+  courseLessons,
+  courseEnrollments,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -95,6 +99,14 @@ import {
   type InsertSecondMe,
   type SecondMeContent,
   type InsertSecondMeContent,
+  type Course,
+  type InsertCourse,
+  type CourseModule,
+  type InsertCourseModule,
+  type CourseLesson,
+  type InsertCourseLesson,
+  type CourseEnrollment,
+  type InsertCourseEnrollment,
   groupConversations,
   groupConversationMembers,
   groupMessages,
@@ -292,6 +304,32 @@ export interface IStorage {
   getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
   createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
   updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
+
+  // Course operations
+  getCourses(creatorId?: string): Promise<Course[]>;
+  getCourse(id: string): Promise<Course | undefined>;
+  getCourseWithContent(id: string): Promise<Course & { modules: (CourseModule & { lessons: CourseLesson[] })[] }>;
+  createCourse(course: InsertCourse): Promise<Course>;
+  updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
+  deleteCourse(id: string): Promise<void>;
+
+  // Course Module operations
+  getCourseModules(courseId: string): Promise<CourseModule[]>;
+  createCourseModule(module: InsertCourseModule): Promise<CourseModule>;
+  updateCourseModule(id: string, data: Partial<InsertCourseModule>): Promise<CourseModule>;
+  deleteCourseModule(id: string): Promise<void>;
+
+  // Course Lesson operations
+  getCourseLessons(moduleId: string): Promise<CourseLesson[]>;
+  createCourseLesson(lesson: InsertCourseLesson): Promise<CourseLesson>;
+  updateCourseLesson(id: string, data: Partial<InsertCourseLesson>): Promise<CourseLesson>;
+  deleteCourseLesson(id: string): Promise<void>;
+
+  // Course Enrollment operations
+  getCourseEnrollment(courseId: string, userId: number): Promise<CourseEnrollment | undefined>;
+  getUserEnrollments(userId: number): Promise<(CourseEnrollment & { course: Course })[]>;
+  enrollInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment>;
+  updateCourseEnrollment(id: string, data: Partial<InsertCourseEnrollment>): Promise<CourseEnrollment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2079,6 +2117,140 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!recipient) throw new Error("Marketing broadcast recipient not found");
     return recipient;
+  }
+
+  // Course operations
+  async getCourses(creatorId?: string): Promise<Course[]> {
+    if (creatorId) {
+      return await db.select().from(courses).where(eq(courses.creatorId, creatorId)).orderBy(desc(courses.createdAt));
+    }
+    return await db.select().from(courses).orderBy(desc(courses.createdAt));
+  }
+
+  async getCourse(id: string): Promise<Course | undefined> {
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    return course;
+  }
+
+  async getCourseWithContent(id: string): Promise<Course & { modules: (CourseModule & { lessons: CourseLesson[] })[] }> {
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    if (!course) throw new Error("Course not found");
+
+    const modules = await db.select().from(courseModules).where(eq(courseModules.courseId, id)).orderBy(courseModules.order);
+    
+    const modulesWithLessons = await Promise.all(modules.map(async (module) => {
+      const lessons = await db.select().from(courseLessons).where(eq(courseLessons.moduleId, module.id)).orderBy(courseLessons.order);
+      return { ...module, lessons };
+    }));
+
+    return { ...course, modules: modulesWithLessons };
+  }
+
+  async createCourse(courseData: InsertCourse): Promise<Course> {
+    const [course] = await db.insert(courses).values(courseData).returning();
+    return course;
+  }
+
+  async updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course> {
+    const [course] = await db
+      .update(courses)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courses.id, id))
+      .returning();
+    if (!course) throw new Error("Course not found");
+    return course;
+  }
+
+  async deleteCourse(id: string): Promise<void> {
+    await db.delete(courses).where(eq(courses.id, id));
+  }
+
+  // Course Module operations
+  async getCourseModules(courseId: string): Promise<CourseModule[]> {
+    return await db.select().from(courseModules).where(eq(courseModules.courseId, courseId)).orderBy(courseModules.order);
+  }
+
+  async createCourseModule(moduleData: InsertCourseModule): Promise<CourseModule> {
+    const [module] = await db.insert(courseModules).values(moduleData).returning();
+    return module;
+  }
+
+  async updateCourseModule(id: string, data: Partial<InsertCourseModule>): Promise<CourseModule> {
+    const [module] = await db
+      .update(courseModules)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courseModules.id, id))
+      .returning();
+    if (!module) throw new Error("Course module not found");
+    return module;
+  }
+
+  async deleteCourseModule(id: string): Promise<void> {
+    await db.delete(courseModules).where(eq(courseModules.id, id));
+  }
+
+  // Course Lesson operations
+  async getCourseLessons(moduleId: string): Promise<CourseLesson[]> {
+    return await db.select().from(courseLessons).where(eq(courseLessons.moduleId, moduleId)).orderBy(courseLessons.order);
+  }
+
+  async createCourseLesson(lessonData: InsertCourseLesson): Promise<CourseLesson> {
+    const [lesson] = await db.insert(courseLessons).values(lessonData).returning();
+    return lesson;
+  }
+
+  async updateCourseLesson(id: string, data: Partial<InsertCourseLesson>): Promise<CourseLesson> {
+    const [lesson] = await db
+      .update(courseLessons)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(courseLessons.id, id))
+      .returning();
+    if (!lesson) throw new Error("Course lesson not found");
+    return lesson;
+  }
+
+  async deleteCourseLesson(id: string): Promise<void> {
+    await db.delete(courseLessons).where(eq(courseLessons.id, id));
+  }
+
+  // Course Enrollment operations
+  async getCourseEnrollment(courseId: string, userId: number): Promise<CourseEnrollment | undefined> {
+    const [enrollment] = await db
+      .select()
+      .from(courseEnrollments)
+      .where(and(eq(courseEnrollments.courseId, courseId), eq(courseEnrollments.userId, userId)));
+    return enrollment;
+  }
+
+  async getUserEnrollments(userId: number): Promise<(CourseEnrollment & { course: Course })[]> {
+    const enrollmentsList = await db
+      .select({
+        enrollment: courseEnrollments,
+        course: courses
+      })
+      .from(courseEnrollments)
+      .innerJoin(courses, eq(courseEnrollments.courseId, courses.id))
+      .where(eq(courseEnrollments.userId, userId));
+    
+    return enrollmentsList.map(item => ({
+      ...item.enrollment,
+      course: item.course
+    }));
+  }
+
+  async enrollInCourse(enrollmentData: InsertCourseEnrollment): Promise<CourseEnrollment> {
+    const [enrollment] = await db.insert(courseEnrollments).values(enrollmentData).returning();
+    return enrollment;
+  }
+
+  async updateCourseEnrollment(id: string, data: Partial<InsertCourseEnrollment>): Promise<CourseEnrollment> {
+    const [enrollment] = await db
+      .update(courseEnrollments)
+      .set(data)
+      .where(eq(courseEnrollments.id, id))
+      .returning();
+    if (!enrollment) throw new Error("Enrollment not found");
+    return enrollment;
   }
 }
 

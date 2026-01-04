@@ -117,31 +117,46 @@ async function processBroadcast(broadcastId: string) {
       });
     }
 
-    const total = targetLeads.length + targetClients.length;
+    // 1.5 Handle Individual Recipient
+    const individualRecipients: { email?: string; phone?: string; type: 'individual' }[] = [];
+    if (broadcast.audience === 'individual' && broadcast.customRecipient) {
+      if (broadcast.type === 'email') {
+        individualRecipients.push({ email: broadcast.customRecipient, type: 'individual' });
+      } else {
+        individualRecipients.push({ phone: broadcast.customRecipient, type: 'individual' });
+      }
+    }
+
+    const total = targetLeads.length + targetClients.length + individualRecipients.length;
     await storage.updateMarketingBroadcast(broadcastId, { totalRecipients: total });
 
     let successCount = 0;
     let failedCount = 0;
 
     // 2. Loop and send
-    const recipients = [...targetLeads.map(l => ({ ...l, type: 'lead' })), ...targetClients.map(c => ({ ...c, type: 'client' }))];
+    const recipients = [
+      ...targetLeads.map(l => ({ ...l, type: 'lead' })), 
+      ...targetClients.map(c => ({ ...c, type: 'client' })),
+      ...individualRecipients
+    ];
 
     for (const recipient of recipients) {
       try {
         let result;
         if (broadcast.type === 'email') {
           const { subject, html } = marketingTemplates.broadcast(broadcast.subject || 'Wolfpaq Marketing', broadcast.content);
-          result = await sendEmail(recipient.email!, subject, html);
+          result = await sendEmail((recipient as any).email!, subject, html);
         } else {
-          result = await sendSms(recipient.phone!, broadcast.content);
+          result = await sendSms((recipient as any).phone!, broadcast.content);
         }
 
         if (result.success) {
           successCount++;
           await storage.createMarketingBroadcastRecipient({
             broadcastId,
-            leadId: recipient.type === 'lead' ? recipient.id : null,
-            clientId: recipient.type === 'client' ? recipient.id : null,
+            leadId: recipient.type === 'lead' ? (recipient as any).id : null,
+            clientId: recipient.type === 'client' ? (recipient as any).id : null,
+            customRecipient: recipient.type === 'individual' ? (broadcast.type === 'email' ? (recipient as any).email : (recipient as any).phone) : null,
             status: 'sent',
             sentAt: new Date(),
           });
@@ -149,8 +164,9 @@ async function processBroadcast(broadcastId: string) {
           failedCount++;
           await storage.createMarketingBroadcastRecipient({
             broadcastId,
-            leadId: recipient.type === 'lead' ? recipient.id : null,
-            clientId: recipient.type === 'client' ? recipient.id : null,
+            leadId: recipient.type === 'lead' ? (recipient as any).id : null,
+            clientId: recipient.type === 'client' ? (recipient as any).id : null,
+            customRecipient: recipient.type === 'individual' ? (broadcast.type === 'email' ? (recipient as any).email : (recipient as any).phone) : null,
             status: 'failed',
             errorMessage: result.error || result.message,
           });
@@ -159,8 +175,9 @@ async function processBroadcast(broadcastId: string) {
         failedCount++;
         await storage.createMarketingBroadcastRecipient({
           broadcastId,
-          leadId: recipient.type === 'lead' ? recipient.id : null,
-          clientId: recipient.type === 'client' ? recipient.id : null,
+          leadId: recipient.type === 'lead' ? (recipient as any).id : null,
+          clientId: recipient.type === 'client' ? (recipient as any).id : null,
+          customRecipient: recipient.type === 'individual' ? (broadcast.type === 'email' ? (recipient as any).email : (recipient as any).phone) : null,
           status: 'failed',
           errorMessage: err.message,
         });

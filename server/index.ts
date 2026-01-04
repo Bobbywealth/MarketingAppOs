@@ -19,7 +19,12 @@ import { ensureMinimumSchema } from "./ensureSchema";
 const app = express();
 
 // Security Middleware
-app.use(helmet()); // Sets various HTTP headers for security
+// In development, relax CSP for Vite HMR; in production, use strict defaults
+const isDev = process.env.NODE_ENV === 'development';
+app.use(helmet({
+  contentSecurityPolicy: isDev ? false : undefined,
+  crossOriginEmbedderPolicy: isDev ? false : undefined,
+})); // Sets various HTTP headers for security
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 

@@ -86,6 +86,8 @@ const CreatorSignup = lazy(() => import("@/pages/creator-signup"));
 const CreatorSignupRedirect = lazy(() => import("@/pages/creator-signup-redirect"));
 const CreatorDashboard = lazy(() => import("@/pages/creator-dashboard"));
 const CreatorCourse = lazy(() => import("@/pages/creator-course"));
+const ManageCourses = lazy(() => import("@/pages/creator/ManageCourses"));
+const EditCourse = lazy(() => import("@/pages/creator/EditCourse"));
 const CreatorMasteringContent = lazy(() => import("@/pages/creator-mastering-content"));
 const CreatorVisits = lazy(() => import("@/pages/creator-visits"));
 const Visits = lazy(() => import("@/pages/visits"));
@@ -130,7 +132,10 @@ function Router() {
         {/* Creator-specific routes */}
         {isCreator && <ProtectedRoute path="/" component={CreatorDashboard} />}
         {isCreator && <ProtectedRoute path="/course" component={CreatorCourse} />}
+        {isCreator && <ProtectedRoute path="/manage-courses" component={ManageCourses} />}
+        {isCreator && <ProtectedRoute path="/manage-courses/:id" component={EditCourse} />}
         {isCreator && <ProtectedRoute path="/training/mastering-content" component={CreatorMasteringContent} />}
+        <ProtectedRoute path="/course/:id" component={CreatorCourse} />
         {isCreator && <ProtectedRoute path="/visits" component={CreatorVisits} />}
         {isCreator && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
         

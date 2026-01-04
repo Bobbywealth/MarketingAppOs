@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Download, Edit, Trash2 } from "lucide-react";
+import { Plus, Check, X, Calendar, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Download, Edit, Trash2, Globe } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ const formSchema = z.object({
   title: z.string().optional(),
   caption: z.string().optional(),
   mediaUrl: z.string().optional(),
+  contentLink: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   scheduledFor: z.string().optional(),
 });
 
@@ -45,6 +46,7 @@ export default function Content() {
   const [draggedPost, setDraggedPost] = useState<ContentPost | null>(null);
   const [dragOverDay, setDragOverDay] = useState<Date | null>(null);
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
+  const [mediaSource, setMediaSource] = useState<"upload" | "link">("upload");
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -54,6 +56,7 @@ export default function Content() {
       platforms: [],
       title: "",
       caption: "",
+      contentLink: "",
       scheduledFor: "",
     },
   });
@@ -230,7 +233,8 @@ export default function Content() {
       platforms: values.platforms,
       title: values.title || "Untitled Post",
       content: values.caption || "",
-      mediaUrls: uploadedMediaUrl ? [uploadedMediaUrl] : (values.mediaUrl ? [values.mediaUrl] : []),
+      mediaUrls: mediaSource === "upload" && uploadedMediaUrl ? [uploadedMediaUrl] : [],
+      contentLink: mediaSource === "link" ? values.contentLink : null,
       scheduledFor: values.scheduledFor || null,
       approvalStatus: editingPost?.approvalStatus || "draft",
     };
@@ -255,12 +259,16 @@ export default function Content() {
       platforms: Array.isArray(post.platforms) ? post.platforms : [],
       title: post.title || "",
       caption: post.content || "",
+      contentLink: post.contentLink || "",
       scheduledFor: post.scheduledFor ? format(new Date(post.scheduledFor), "yyyy-MM-dd'T'HH:mm") : "",
     });
     
     // Set media URL if exists
-    if (post.mediaUrl) {
-      setUploadedMediaUrl(post.mediaUrl);
+    if (post.mediaUrls && post.mediaUrls.length > 0) {
+      setUploadedMediaUrl(post.mediaUrls[0]);
+      setMediaSource("upload");
+    } else if (post.contentLink) {
+      setMediaSource("link");
     }
     
     setDialogOpen(true);
@@ -580,43 +588,87 @@ export default function Content() {
                       )}
                     />
 
-                    {/* Media Upload */}
-                    <div className="space-y-2">
-                      <Label>Media (Image or Video)</Label>
-                      <div className="flex items-center gap-4">
-                        <SimpleUploader
-                          onUploadComplete={(url) => {
-                            setUploadedMediaUrl(url);
-                          }}
-                          accept="image/*,video/*"
-                          maxSizeMB={50}
-                          buttonText={uploadedMediaUrl ? "Change Media" : "Upload Media"}
-                        />
-                      </div>
-                      {uploadedMediaUrl && (
-                        <div className="relative w-full h-32 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-                          {uploadedMediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                            <img src={uploadedMediaUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
-                          ) : uploadedMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i) ? (
-                            <video src={uploadedMediaUrl} className="max-w-full max-h-full" controls />
-                          ) : (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <ImageIcon className="w-6 h-6" />
-                              <span className="text-sm">Media uploaded</span>
-                            </div>
-                          )}
+                    {/* Media Section */}
+                    <div className="space-y-4 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base font-semibold">Content Media</Label>
+                        <div className="flex items-center gap-2 bg-muted p-1 rounded-lg">
                           <Button
                             type="button"
                             size="sm"
-                            variant="destructive"
-                            className="absolute top-2 right-2"
-                            onClick={() => setUploadedMediaUrl(null)}
+                            variant={mediaSource === "upload" ? "default" : "ghost"}
+                            className="h-7 px-3 text-xs"
+                            onClick={() => setMediaSource("upload")}
                           >
-                            <X className="w-3 h-3" />
+                            Upload
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={mediaSource === "link" ? "default" : "ghost"}
+                            className="h-7 px-3 text-xs"
+                            onClick={() => setMediaSource("link")}
+                          >
+                            Link
                           </Button>
                         </div>
+                      </div>
+
+                      {mediaSource === "upload" ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-4">
+                            <SimpleUploader
+                              onUploadComplete={(url) => {
+                                setUploadedMediaUrl(url);
+                              }}
+                              accept="image/*,video/*"
+                              maxSizeMB={100}
+                              buttonText={uploadedMediaUrl ? "Change Media" : "Upload Media"}
+                            />
+                          </div>
+                          {uploadedMediaUrl && (
+                            <div className="relative w-full h-32 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                              {uploadedMediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                <img src={uploadedMediaUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                              ) : uploadedMediaUrl.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                                <video src={uploadedMediaUrl} className="max-w-full max-h-full" controls />
+                              ) : (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <ImageIcon className="w-6 h-6" />
+                                  <span className="text-sm">Media uploaded</span>
+                                </div>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                className="absolute top-2 right-2"
+                                onClick={() => setUploadedMediaUrl(null)}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground">Upload an image or video (max 100MB, suitable for ~1 min videos)</p>
+                        </div>
+                      ) : (
+                        <FormField
+                          control={form.control}
+                          name="contentLink"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>External Content Link (e.g. Google Drive, Dropbox)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="https://drive.google.com/..." />
+                              </FormControl>
+                              <FormDescription>
+                                Provide a link to the content stored on an external platform.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       )}
-                      <p className="text-xs text-muted-foreground">Upload an image or video for this post (max 50MB)</p>
                     </div>
 
                     <FormField
@@ -858,10 +910,26 @@ export default function Content() {
                               }}
                               title="Download media"
                             >
-                              <Download className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        )}
+                                <Download className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ) : (post as any).contentLink ? (
+                            <div className="w-full h-20 rounded border bg-muted/50 flex flex-col items-center justify-center p-2 text-center group relative">
+                              <Globe className="w-6 h-6 text-blue-500 mb-1" />
+                              <p className="text-[10px] font-medium text-blue-600 truncate w-full">External Link</p>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open((post as any).contentLink, '_blank');
+                                }}
+                              >
+                                Open Link
+                              </Button>
+                            </div>
+                          ) : null}
                         
                         <p className="text-xs font-medium text-muted-foreground">{getClientName(post.clientId)}</p>
                         <p className="text-xs line-clamp-2">{post.caption}</p>

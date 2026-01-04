@@ -135,6 +135,11 @@ const creatorTools: SidebarNavItem[] = [
     icon: BookOpen,
   },
   {
+    title: "Manage Courses",
+    url: "/manage-courses",
+    icon: LayoutDashboard,
+  },
+  {
     title: "My Visits",
     url: "/visits",
     icon: Calendar,

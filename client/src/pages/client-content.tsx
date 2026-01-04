@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Instagram, Facebook, Twitter, Linkedin, ChevronLeft, ChevronRight, Grid3x3, List, CheckCircle2, Clock, XCircle, Upload, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Instagram, Facebook, Twitter, Linkedin, ChevronLeft, ChevronRight, Grid3x3, List, CheckCircle2, Clock, XCircle, Upload, Plus, Image as ImageIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -21,6 +21,7 @@ interface ContentPost {
   title?: string;
   content: string;
   mediaUrls?: string[];
+  contentLink?: string;
   scheduledFor: string;
   approvalStatus: string;
   approvedBy?: string;
@@ -33,10 +34,19 @@ export default function ClientContent() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedPost, setSelectedPost] = useState<ContentPost | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    platform: "",
+  const [mediaSource, setMediaSource] = useState<"upload" | "link">("upload");
+  const [uploadForm, setUploadForm] = useState<{
+    platforms: string[];
+    caption: string;
+    mediaUrl: string;
+    contentLink: string;
+    scheduledFor: string;
+    scheduledTime: string;
+  }>({
+    platforms: [],
     caption: "",
     mediaUrl: "",
+    contentLink: "",
     scheduledFor: "",
     scheduledTime: "",
   });
@@ -84,10 +94,19 @@ export default function ClientContent() {
   const handleUploadSubmit = () => {
     console.log("📤 Client uploading content:", uploadForm);
     
-    if (!uploadForm.platform || !uploadForm.caption) {
+    if (uploadForm.platforms.length === 0 || !uploadForm.caption) {
       toast({
         title: "Missing Fields",
-        description: "Please select a platform and add a caption.",
+        description: "Please select at least one platform and add a caption.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (mediaSource === "link" && !uploadForm.contentLink) {
+      toast({
+        title: "Link Required",
+        description: "Please provide a valid content link.",
         variant: "destructive",
       });
       return;
@@ -99,12 +118,13 @@ export default function ClientContent() {
 
     // Format data to match backend schema
     const postData = {
-      platforms: [uploadForm.platform], // Backend expects array
-      title: uploadForm.caption.substring(0, 50) || "Client Upload", // Use first part of caption as title
-      content: uploadForm.caption, // Backend expects 'content' not 'caption'
-      mediaUrls: uploadForm.mediaUrl ? [uploadForm.mediaUrl] : [], // Backend expects array
+      platforms: uploadForm.platforms,
+      title: uploadForm.caption.substring(0, 50) || "Client Upload",
+      content: uploadForm.caption,
+      mediaUrls: mediaSource === "upload" && uploadForm.mediaUrl ? [uploadForm.mediaUrl] : [],
+      contentLink: mediaSource === "link" ? uploadForm.contentLink : null,
       scheduledFor: scheduledDateTime,
-      approvalStatus: "pending", // Client-uploaded content starts as pending
+      approvalStatus: "pending",
     };
 
     console.log("📤 Formatted post data:", postData);
@@ -432,13 +452,32 @@ export default function ClientContent() {
           </DialogHeader>
           {selectedPost && (
             <div className="space-y-4">
-              {selectedPost.mediaUrls && selectedPost.mediaUrls.length > 0 && (
-                <img 
-                  src={selectedPost.mediaUrls[0]} 
-                  alt="Post preview" 
-                  className="w-full rounded-lg object-cover max-h-96"
-                />
-              )}
+              {selectedPost.mediaUrls && selectedPost.mediaUrls.length > 0 ? (
+                <div className="relative group">
+                  {selectedPost.mediaUrls[0].match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                    <img 
+                      src={selectedPost.mediaUrls[0]} 
+                      alt="Post preview" 
+                      className="w-full rounded-lg object-cover max-h-96"
+                    />
+                  ) : selectedPost.mediaUrls[0].match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                    <video src={selectedPost.mediaUrls[0]} className="w-full rounded-lg max-h-96" controls />
+                  ) : (
+                    <div className="w-full h-48 rounded-lg bg-muted flex items-center justify-center">
+                      <ImageIcon className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              ) : selectedPost.contentLink ? (
+                <div className="w-full h-48 rounded-lg bg-blue-50 border-2 border-dashed border-blue-200 flex flex-col items-center justify-center p-6 text-center">
+                  <Grid3x3 className="w-12 h-12 text-blue-500 mb-4" />
+                  <h4 className="font-bold text-blue-900 mb-2">External Content Link</h4>
+                  <p className="text-sm text-blue-700 mb-4 truncate w-full max-w-md">{selectedPost.contentLink}</p>
+                  <Button onClick={() => window.open(selectedPost.contentLink, '_blank')}>
+                    Open in New Tab
+                  </Button>
+                </div>
+              ) : null}
               <div>
                 <h4 className="font-semibold mb-2">Caption</h4>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
@@ -491,21 +530,35 @@ export default function ClientContent() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="platform">Platform *</Label>
-              <Select
-                value={uploadForm.platform}
-                onValueChange={(value) => setUploadForm({ ...uploadForm, platform: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select platform" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instagram">Instagram</SelectItem>
-                  <SelectItem value="facebook">Facebook</SelectItem>
-                  <SelectItem value="twitter">Twitter</SelectItem>
-                  <SelectItem value="linkedin">LinkedIn</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="mb-2 block">Platforms *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'facebook', label: 'Facebook', icon: '📘' },
+                  { id: 'instagram', label: 'Instagram', icon: '📷' },
+                  { id: 'twitter', label: 'Twitter/X', icon: '🐦' },
+                  { id: 'linkedin', label: 'LinkedIn', icon: '💼' },
+                  { id: 'tiktok', label: 'TikTok', icon: '🎵' },
+                  { id: 'youtube', label: 'YouTube', icon: '▶️' },
+                ].map((p) => (
+                  <div key={p.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`p-${p.id}`}
+                      checked={uploadForm.platforms.includes(p.id)}
+                      onChange={(e) => {
+                        const newPlatforms = e.target.checked
+                          ? [...uploadForm.platforms, p.id]
+                          : uploadForm.platforms.filter(id => id !== p.id);
+                        setUploadForm({ ...uploadForm, platforms: newPlatforms });
+                      }}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <label htmlFor={`p-${p.id}`} className="text-sm cursor-pointer">
+                      {p.icon} {p.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div>
@@ -519,21 +572,65 @@ export default function ClientContent() {
               />
             </div>
 
-            <div>
-              <Label>Upload Media (Optional)</Label>
-              <p className="text-sm text-muted-foreground mb-2">
-                Upload photos or videos for this post
-              </p>
-              <SimpleUploader
-                onUploadComplete={(url) => setUploadForm({ ...uploadForm, mediaUrl: url })}
-              />
-              {uploadForm.mediaUrl && (
-                <div className="mt-2">
-                  <img 
-                    src={uploadForm.mediaUrl} 
-                    alt="Uploaded content" 
-                    className="w-full rounded-lg object-cover max-h-64"
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Content Media</Label>
+                <div className="flex items-center gap-2 bg-muted p-1 rounded-lg">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={mediaSource === "upload" ? "default" : "ghost"}
+                    className="h-7 px-3 text-xs"
+                    onClick={() => setMediaSource("upload")}
+                  >
+                    Upload
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={mediaSource === "link" ? "default" : "ghost"}
+                    className="h-7 px-3 text-xs"
+                    onClick={() => setMediaSource("link")}
+                  >
+                    Link
+                  </Button>
+                </div>
+              </div>
+
+              {mediaSource === "upload" ? (
+                <div className="space-y-2">
+                  <SimpleUploader
+                    onUploadComplete={(url) => setUploadForm({ ...uploadForm, mediaUrl: url })}
+                    maxSizeMB={100}
+                    buttonText={uploadForm.mediaUrl ? "Change Media" : "Upload Media"}
                   />
+                  {uploadForm.mediaUrl && (
+                    <div className="mt-2 relative">
+                      {uploadForm.mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                        <img 
+                          src={uploadForm.mediaUrl} 
+                          alt="Uploaded content" 
+                          className="w-full rounded-lg object-cover max-h-64"
+                        />
+                      ) : (
+                        <div className="w-full h-32 rounded-lg bg-muted flex items-center justify-center">
+                          <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">Upload an image or video (max 100MB)</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="content-link">External Content Link</Label>
+                  <Input
+                    id="content-link"
+                    placeholder="https://drive.google.com/..."
+                    value={uploadForm.contentLink}
+                    onChange={(e) => setUploadForm({ ...uploadForm, contentLink: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Provide a link to content on Google Drive, Dropbox, etc.</p>
                 </div>
               )}
             </div>

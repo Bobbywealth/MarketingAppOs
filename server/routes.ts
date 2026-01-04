@@ -48,6 +48,7 @@ import leadsRouter from "./routes/leads";
 import clientsRouter from "./routes/clients";
 import marketingRouter from "./routes/marketing";
 import creatorsRouter from "./routes/creators";
+import coursesRouter from "./routes/courses";
 import tasksRouter from "./routes/tasks";
 import marketingCenterRouter from "./routes/marketing-center";
 import { 
@@ -708,6 +709,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/clients", clientsRouter);
   app.use("/api", marketingRouter);
   app.use("/api", creatorsRouter);
+  app.use("/api/courses", coursesRouter);
   app.use("/api", tasksRouter);
 
   // File upload endpoint
@@ -1668,6 +1670,8 @@ Lead completed signup process and is ready for package selection.`;
           stage: "qualified",
           score: "hot",
           notes: updatedNotes,
+          socialCredentials: data.socialCredentials,
+          brandAssets: data.brandAssets,
           sourceMetadata: { 
             ...(existingLead.sourceMetadata as object || {}),
             completedSignup: true,
@@ -1703,7 +1707,7 @@ Lead completed signup process and is ready for package selection.`;
           score: "hot",
           value: null,
           notes: `🎯 NEW SIGNUP - QUALIFIED LEAD
-
+  
 📋 COMPANY INFO:
 • Website: ${data.website || 'Not provided'}
 • Industry: ${data.industry || 'Not specified'}
@@ -1738,7 +1742,9 @@ ${data.notes}
 ---
 This lead completed the full signup process and is ready for package selection.`,
           clientId: null,
-        assignedToId: null,
+          assignedToId: null,
+          socialCredentials: data.socialCredentials,
+          brandAssets: data.brandAssets,
           sourceMetadata: { 
             type: "signup_complete",
             services: data.services,

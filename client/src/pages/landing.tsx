@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,37 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot, ChevronLeft, ChevronRight, Menu, X, Play, ShieldCheck, Rocket, BarChart3 } from "lucide-react";
+
+// Counter Component for Trust Indicators
+function Counter({ value, suffix = "", duration = 2 }: { value: number, suffix?: string, duration?: number }) {
+  const [count, setCount] = useState(0);
+  const nodeRef = useRef(null);
+  const isVisible = useInView(nodeRef, { once: true });
+
+  useEffect(() => {
+    if (isVisible) {
+      let start = 0;
+      const end = value;
+      if (start === end) return;
+
+      let totalMiliseconds = duration * 1000;
+      let incrementTime = (totalMiliseconds / end);
+
+      let timer = setInterval(() => {
+        start += 1;
+        setCount(start);
+        if (start === end) clearInterval(timer);
+      }, incrementTime);
+
+      return () => clearInterval(timer);
+    }
+  }, [isVisible, value, duration]);
+
+  return <span ref={nodeRef}>{count}{suffix}</span>;
+}
+
+import { useInView } from "framer-motion";
 import { HeaderLogo, FooterLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import {
@@ -42,6 +72,43 @@ import instagramLogo from "@assets/instagram-logo.png";
 import tiktokLogo from "@assets/tiktok-logo.png";
 import linkedinLogo from "@assets/linkedin-logo.png";
 import googleAdsLogo from "@assets/google-ads-logo.png";
+
+// Live Feed Mockup Data
+const LIVE_ACTIVITIES = [
+  { name: "Alpha Tech", action: "started a new campaign", time: "just now", icon: Rocket },
+  { name: "Sarah J.", action: "reached 10k followers", time: "2m ago", icon: Star },
+  { name: "Zen Fitness", action: "generated 45 new leads", time: "5m ago", icon: Users },
+  { name: "Urban Eats", action: "launched new website", time: "12m ago", icon: Globe },
+];
+
+// Platform Logo Cloud Component
+function LogoCloud() {
+  const logos = [
+    { name: "Instagram", icon: instagramLogo },
+    { name: "TikTok", icon: tiktokLogo },
+    { name: "LinkedIn", icon: linkedinLogo },
+    { name: "Google Ads", icon: googleAdsLogo },
+  ];
+
+  return (
+    <div className="py-12 border-y bg-white/30 backdrop-blur-sm overflow-hidden">
+      <div className="container mx-auto px-4">
+        <p className="text-center text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Powering growth across every major platform</p>
+        <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-50">
+          {logos.map((logo) => (
+            <motion.img 
+              key={logo.name}
+              whileHover={{ opacity: 1, scale: 1.1, filter: "grayscale(0%)" }}
+              src={logo.icon} 
+              alt={logo.name} 
+              className="h-8 md:h-12 grayscale transition-all duration-300 cursor-pointer" 
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -489,7 +556,7 @@ export default function LandingPage() {
                     <SheetClose asChild>
                       <Link href="/signup" className="block">
                         <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white" data-testid="button-signup-mobile">
-                          Start Free Trial
+                          Get Started
                         </Button>
                       </Link>
                     </SheetClose>
@@ -504,7 +571,7 @@ export default function LandingPage() {
             </Link>
             <Link href="/signup">
               <Button size="sm" className="gap-1 md:gap-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30" data-testid="button-get-started-header">
-                Start Free Trial
+                Get Started
                 <ArrowRight className="w-3 h-3 md:w-4 md:h-4" />
               </Button>
             </Link>
@@ -513,135 +580,163 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative py-16 md:py-24 lg:py-32 px-4 overflow-hidden gradient-animate-hero hero-glow flex items-center min-h-[80vh] md:min-h-[85vh]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.3),transparent_50%)]"></div>
+      <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32 px-4 overflow-hidden min-h-[90vh] flex items-center">
+        {/* Background Decorative Elements */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1),transparent_50%)]"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
         
-        {/* Animated Background Shapes */}
+        {/* Animated Orbs */}
         <motion.div 
           animate={{ 
-            y: [0, -20, 0],
-            rotate: [0, 10, 0]
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
           }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-20 left-[10%] w-12 h-12 bg-white/10 rounded-lg blur-sm pointer-events-none"
-        ></motion.div>
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] pointer-events-none"
+        />
         <motion.div 
           animate={{ 
-            y: [0, 30, 0],
-            rotate: [0, -20, 0]
+            scale: [1, 1.3, 1],
+            opacity: [0.2, 0.4, 0.2],
           }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-40 left-[20%] w-16 h-16 bg-blue-400/10 rounded-full blur-md pointer-events-none"
-        ></motion.div>
-        <motion.div 
-          animate={{ 
-            y: [0, -40, 0],
-            rotate: [0, 15, 0]
-          }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-40 right-[15%] w-20 h-20 bg-purple-400/10 rounded-full blur-xl pointer-events-none"
-        ></motion.div>
-        
-        <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none"
+        />
+
         <div className="container mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
-            <div className="text-white space-y-4 md:space-y-6 slide-in-left text-center lg:text-left max-w-full">
-              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/50 text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 inline-block mx-auto lg:mx-0">
-                <span className="animate-pulse">🔥 </span>
-                <span className="hidden sm:inline">Limited Spots Available - Book This Month</span>
-                <span className="sm:hidden">Only 3 Spots Left!</span>
-              </Badge>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight text-shadow-soft px-2">
-                Your Remote <br className="hidden sm:block" />
-                Digital Marketing <br className="hidden sm:block" />
-                <span className="relative inline-block min-w-[150px]">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={heroWordIndex}
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -20, opacity: 0 }}
-                      transition={{ duration: 0.5, ease: "easeOut" }}
-                      className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent inline-block"
-                    >
-                      {heroWords[heroWordIndex]}
-                    </motion.span>
-                  </AnimatePresence>
-                </span>
-              </h1>
-              <p className="text-lg sm:text-xl md:text-2xl font-semibold text-white mb-2 px-2 sm:px-4">
-                Stop Wasting Money on Marketing That Doesn't Work
-              </p>
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-blue-50 leading-relaxed max-w-xl mx-auto lg:mx-0 px-2 sm:px-6 lg:px-0">
-                Join 500+ businesses, influencers, and entrepreneurs who've 3X'd their results with our proven marketing system. 
-                <span className="font-semibold text-white block mt-1">Guaranteed results or your money back.</span>
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4 justify-center lg:justify-start items-stretch sm:items-center w-full px-2 sm:px-4 lg:px-0">
-                <Link href="/signup" className="w-full sm:w-auto">
-                  <Button size="lg" className="gap-2 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 shadow-xl hover:shadow-2xl transition-all px-6 sm:px-8 md:px-10 py-6 md:py-7 font-bold text-base md:text-lg" data-testid="button-get-started-hero">
-                    <span className="hidden sm:inline">🚀 Start Free Trial (Only 3 Spots Left)</span>
-                    <span className="sm:hidden">🚀 Start Free Trial</span>
-                    <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
-                  </Button>
-                </Link>
-                <Link href="/contact" className="w-full sm:w-auto">
-                  <Button 
-                    size="lg" 
-                    variant="outline" 
-                    className="w-full sm:w-auto glass-effect border-white/30 text-white hover:bg-white/20 hover:border-white/40 shadow-lg px-6 md:px-8 py-6 md:py-7 font-semibold text-base md:text-lg" 
-                    data-testid="button-login-hero"
-                  >
-                    📞 Book Strategy Call
-                  </Button>
-                </Link>
-              </div>
-              <div className="text-center lg:text-left pt-2 px-2 sm:px-6 lg:px-0">
-                <Link
-                  href="/signup/creator"
-                  className="text-sm text-blue-100/90 hover:text-white underline underline-offset-4"
-                  data-testid="link-creator-apply-hero"
-                >
-                  Are you a creator? Apply here →
-                </Link>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-blue-100 pt-4 px-4">
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="font-semibold">30-day money-back guarantee</span>
-                </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="font-semibold">No credit card required</span>
-                </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="font-semibold">Cancel anytime</span>
-                </div>
-              </div>
-              <div className="mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 mx-4">
-                <p className="text-sm text-blue-100 text-center">
-                  <span className="font-semibold text-white">⚡ Join 500+ successful clients</span> • Average 310% ROI increase • 98% satisfaction rate
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-7 text-center lg:text-left space-y-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Badge className="bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 border-blue-600/20 px-4 py-1.5 rounded-full text-sm font-bold backdrop-blur-sm mb-6">
+                  <Sparkles className="w-4 h-4 mr-2 inline-block animate-pulse" />
+                  The Future of Remote Marketing
+                </Badge>
+                
+                <h1 className="text-5xl md:text-7xl xl:text-8xl font-black tracking-tighter leading-[0.9] mb-8">
+                  Your Digital <br />
+                  <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent italic">
+                    Marketing Force
+                  </span>
+                </h1>
+
+                <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto lg:mx-0 leading-tight mb-10">
+                  Stop hiring freelancers. Start scaling with an entire elite marketing team for the price of one junior employee.
                 </p>
-              </div>
-            </div>
-            <div className="hidden lg:block relative slide-in-right">
-              <div className="relative animate-float">
-                <div className="absolute -top-4 -right-4 w-72 h-72 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-4 -left-4 w-72 h-72 bg-gradient-to-tr from-purple-400/30 to-pink-600/30 rounded-full blur-3xl"></div>
-                <div className="relative z-10 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                  <img 
-                    src={heroImage} 
-                    alt="Marketing Dashboard Analytics" 
-                    className="w-full h-auto transform hover:scale-105 transition-transform duration-700"
-                    data-testid="img-hero-dashboard"
-                  />
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/signup">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-8 rounded-2xl text-xl font-bold shadow-2xl shadow-blue-600/20 group w-full sm:w-auto">
+                    Get Started <ArrowRight className="ml-2 w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Link href="/contact">
+                      <Button size="lg" variant="outline" className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-2 border-slate-200 dark:border-slate-800 px-10 py-8 rounded-2xl text-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto">
+                        Book a Strategy Call
+                      </Button>
+                    </Link>
+                  </motion.div>
                 </div>
-              </div>
+
+                <div className="pt-10 flex flex-wrap items-center justify-center lg:justify-start gap-8 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
+                  <img src={instagramLogo} alt="Instagram" className="h-6 md:h-8" />
+                  <img src={tiktokLogo} alt="TikTok" className="h-6 md:h-8" />
+                  <img src={linkedinLogo} alt="LinkedIn" className="h-6 md:h-8" />
+                  <img src={googleAdsLogo} alt="Google Ads" className="h-6 md:h-8" />
+                </div>
+
+                {/* Live Activity Feed */}
+                <div className="mt-12 hidden lg:block overflow-hidden h-10 relative">
+                  <div className="flex flex-col animate-[slide-up_10s_linear_infinite]">
+                    {[...LIVE_ACTIVITIES, ...LIVE_ACTIVITIES].map((activity, i) => (
+                      <div key={i} className="flex items-center gap-3 h-10 text-slate-500 dark:text-slate-400 text-sm">
+                        <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600">
+                          <activity.icon className="w-3 h-3" />
+                        </div>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{activity.name}</span>
+                        <span>{activity.action}</span>
+                        <span className="text-xs opacity-50">• {activity.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="lg:col-span-5 relative">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, rotateY: 20 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="relative z-10"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-[2.5rem] blur-3xl -z-10 transform rotate-6 scale-110"></div>
+                <div className="relative bg-white/10 dark:bg-slate-900/10 backdrop-blur-sm border border-white/20 dark:border-slate-800/50 p-2 rounded-[2.5rem] shadow-2xl shadow-blue-500/10">
+                  <div className="rounded-[2rem] overflow-hidden shadow-inner ring-1 ring-black/5">
+                    <img 
+                      src={heroImage} 
+                      alt="Marketing Dashboard" 
+                      className="w-full h-auto object-cover"
+                    />
+                  </div>
+                  
+                  {/* Floating Elements on Image */}
+                  <motion.div 
+                    animate={{ y: [0, -15, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute -top-6 -right-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 hidden sm:block"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Growth</p>
+                        <p className="text-lg font-black">+214%</p>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div 
+                    animate={{ y: [0, 15, 0] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    className="absolute -bottom-6 -left-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 hidden sm:block"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Active Leads</p>
+                        <p className="text-lg font-black">1,482</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
+
+        {/* Scroll Indicator */}
+        <motion.div 
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40 hover:opacity-100 transition-opacity cursor-pointer hidden md:flex"
+          onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Explore</span>
+          <div className="w-px h-12 bg-gradient-to-b from-blue-600 to-transparent"></div>
+        </motion.div>
       </section>
+
+      <LogoCloud />
 
       {/* Trust Indicators Section - Positioned High */}
       <motion.section 
@@ -649,234 +744,227 @@ export default function LandingPage() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 0.8 }}
-        className="py-12 px-4 bg-white/80 backdrop-blur-sm border-y relative z-20"
+        className="py-16 px-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border-y border-white/20 dark:border-slate-800/50 relative z-20"
       >
         <div className="container mx-auto max-w-6xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="text-center"
+              whileHover={{ y: -5 }}
+              className="text-center group"
             >
-              <div className="text-3xl md:text-4xl font-bold text-blue-600 mb-2">850+</div>
-              <p className="text-sm text-muted-foreground">Successful Campaigns</p>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-500/10 mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">
+                <Rocket className="w-6 h-6 text-blue-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={850} suffix="+" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Campaigns</p>
             </motion.div>
+            
             <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="text-center"
+              whileHover={{ y: -5 }}
+              className="text-center group"
             >
-              <div className="text-3xl md:text-4xl font-bold text-green-600 mb-2">4.2M+</div>
-              <p className="text-sm text-muted-foreground">Leads Generated</p>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-green-500/10 mb-4 group-hover:bg-green-500 group-hover:text-white transition-all duration-300">
+                <Users className="w-6 h-6 text-green-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={4} suffix="M+" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Leads Generated</p>
             </motion.div>
+
             <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="text-center"
+              whileHover={{ y: -5 }}
+              className="text-center group"
             >
-              <div className="text-3xl md:text-4xl font-bold text-orange-600 mb-2">310%</div>
-              <p className="text-sm text-muted-foreground">Avg ROI Increase</p>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-orange-500/10 mb-4 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                <BarChart3 className="w-6 h-6 text-orange-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-orange-600 to-red-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={310} suffix="%" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Avg ROI Increase</p>
             </motion.div>
+
             <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="text-center"
+              whileHover={{ y: -5 }}
+              className="text-center group"
             >
-              <div className="text-3xl md:text-4xl font-bold text-purple-600 mb-2">98%</div>
-              <p className="text-sm text-muted-foreground">Client Satisfaction</p>
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-purple-500/10 mb-4 group-hover:bg-purple-500 group-hover:text-white transition-all duration-300">
+                <ShieldCheck className="w-6 h-6 text-purple-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={98} suffix="%" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Satisfaction</p>
             </motion.div>
           </div>
         </div>
       </motion.section>
 
 
-      {/* Our Services */}
-      <section className="py-12 md:py-16 px-4 relative z-20">
-        <div className="container mx-auto">
+      {/* Our Services - Bento Grid Style */}
+      <section className="py-24 md:py-32 px-4 relative z-20 overflow-hidden" id="services">
+        <div className="container mx-auto max-w-7xl">
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-16 md:mb-24"
           >
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Our Services</p>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Everything You Need to Win Online
+            <Badge variant="outline" className="mb-4 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-4 py-1 rounded-full font-bold uppercase tracking-wider text-[10px]">
+              Our Capabilities
+            </Badge>
+            <h2 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
+              Scale Your Brand with <br />
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent italic tracking-tight">Modern Marketing</span>
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              From strategy to execution, we deliver results-driven marketing that grows your business, brand, or career.
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+              We've consolidated every essential growth tool into one high-performance team. No more managing multiple agencies or freelancers.
             </p>
           </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 stagger-fade-in">
-            {/* Digital Marketing */}
+
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 md:gap-6">
+            {/* Main Feature: Digital Marketing (Large) */}
             <motion.div
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-4 md:row-span-2 group"
             >
-              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-blue-500 relative overflow-hidden group h-full">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
+              <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-blue-500/5 hover:shadow-blue-500/10 transition-all duration-500 overflow-hidden flex flex-col">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <TrendingUp className="w-48 h-48 text-blue-600 rotate-12" />
                 </div>
-                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Digital Marketing</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                  Social media management, paid advertising, email marketing campaigns, and SEO optimization that actually convert visitors into customers and grow your audience organically.
-                </p>
-                
-                {expandedService === 'digital' && (
-                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                    <p className="font-semibold text-foreground">What you get:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Full social media management (all platforms)</li>
-                      <li>Targeted paid ad campaigns (Facebook, Instagram, Google)</li>
-                      <li>Email marketing automation & sequences</li>
-                      <li>SEO optimization & content strategy</li>
-                      <li>Monthly analytics & performance reports</li>
-                    </ul>
+                <CardContent className="p-8 md:p-12 flex flex-col h-full relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mb-8 shadow-xl shadow-blue-600/20 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="w-8 h-8 text-white" />
                   </div>
-                )}
-                
-                <button
-                  onClick={() => setExpandedService(expandedService === 'digital' ? null : 'digital')}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold mb-2 flex items-center gap-1"
-                >
-                  {expandedService === 'digital' ? '− Show Less' : '+ Learn More'}
-                </button>
-                
-                <div className="text-xs text-green-600 font-semibold mb-2">🔥 850+ Campaigns Launched</div>
-                <Link href="/signup">
-                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                    Get Started →
-                  </Button>
-                </Link>
+                  <div className="flex-1">
+                    <h3 className="text-3xl font-extrabold mb-4 group-hover:text-blue-600 transition-colors">Growth Marketing & Ads</h3>
+                    <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-8 max-w-xl">
+                      We don't just "run ads"—we build high-converting growth engines. From pixel tracking to creative optimization, we handle the full funnel.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                      {['Social Ads', 'Google Search', 'Retargeting', 'Email Funnels'].map(item => (
+                        <div key={item} className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Link href="/signup">
+                    <Button className="w-fit bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-6 h-auto font-bold group shadow-lg shadow-blue-600/20">
+                      Get Started <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                </CardContent>
               </Card>
             </motion.div>
-            
-            {/* Content Creation */}
+
+            {/* Feature: Content Creation (Medium) */}
             <motion.div
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-2 group"
             >
-              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-purple-500 relative overflow-hidden group h-full">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                  <Pencil className="w-8 h-8 md:w-10 md:h-10 text-purple-600" />
+              <Card className="h-full border-0 bg-purple-600 text-white shadow-2xl shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-500 overflow-hidden min-h-[300px]">
+                <div className="absolute -bottom-10 -right-10 opacity-20 group-hover:scale-110 transition-transform duration-700">
+                  <Pencil className="w-40 h-40" />
                 </div>
-                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Content Creation</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                  Professional copywriting, eye-catching graphics, engaging videos, and multimedia content that tells your brand story and drives sales. From social posts to landing pages.
-                </p>
-                
-                {expandedService === 'content' && (
-                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                    <p className="font-semibold text-foreground">What you get:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Professional copywriting for all channels</li>
-                      <li>Custom graphic design & branded templates</li>
-                      <li>Video editing & production</li>
-                      <li>Social media content calendars</li>
-                      <li>Landing page & website copy</li>
-                    </ul>
+                <CardContent className="p-8 relative z-10 flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
+                    <Pencil className="w-6 h-6 text-white" />
                   </div>
-                )}
-                
-                <button
-                  onClick={() => setExpandedService(expandedService === 'content' ? null : 'content')}
-                  className="text-xs text-purple-600 hover:text-purple-700 font-semibold mb-2 flex items-center gap-1"
-                >
-                  {expandedService === 'content' ? '− Show Less' : '+ Learn More'}
-                </button>
-                
-                <div className="text-xs text-green-600 font-semibold mb-2">⚡ 50K+ Content Pieces</div>
-                <Link href="/signup">
-                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                    Get Started →
-                  </Button>
-                </Link>
+                  <h3 className="text-2xl font-bold mb-2">Content Engine</h3>
+                  <p className="text-purple-100 leading-relaxed mb-6">
+                    Viral-worthy reels, professional copy, and stunning graphics delivered weekly.
+                  </p>
+                  <div className="mt-auto">
+                    <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 py-1.5 px-3">Unlimited Requests</Badge>
+                  </div>
+                </CardContent>
               </Card>
             </motion.div>
-            
-            {/* Web & App Development */}
+
+            {/* Feature: AI Automation (Small) */}
             <motion.div
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-2 group"
             >
-              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-emerald-500 relative overflow-hidden group h-full">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                  <Globe className="w-8 h-8 md:w-10 md:h-10 text-emerald-600" />
-                </div>
-                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">Web & App Development</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                  Modern, responsive websites, native mobile apps, custom CRM systems, and e-commerce platforms that provide seamless user experiences and convert visitors into loyal customers.
-                </p>
-                
-                {expandedService === 'web' && (
-                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                    <p className="font-semibold text-foreground">What you get:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Custom website design & development</li>
-                      <li>iOS & Android native mobile apps</li>
-                      <li>E-commerce platforms (Shopify, WooCommerce)</li>
-                      <li>Custom CRM & business software</li>
-                      <li>Ongoing maintenance & support</li>
-                    </ul>
+              <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-orange-500/5 hover:shadow-orange-500/10 transition-all duration-500">
+                <CardContent className="p-8">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20">
+                    <Bot className="w-6 h-6 text-white" />
                   </div>
-                )}
-                
-                <button
-                  onClick={() => setExpandedService(expandedService === 'web' ? null : 'web')}
-                  className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold mb-2 flex items-center gap-1"
-                >
-                  {expandedService === 'web' ? '− Show Less' : '+ Learn More'}
-                </button>
-                
-                <div className="text-xs text-green-600 font-semibold mb-2">🚀 200+ Apps Built</div>
-                <Link href="/signup">
-                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                    Get Started →
-                  </Button>
-                </Link>
+                  <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+                    AI Systems
+                    <Badge className="bg-orange-100 text-orange-600 text-[10px] uppercase border-0 font-bold">Beta</Badge>
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                    Custom AI chatbots and workflow automations that save you 20+ hours per week.
+                  </p>
+                </CardContent>
               </Card>
             </motion.div>
-            
-            {/* AI Automation */}
+
+            {/* Feature: Web & Apps (Wide) */}
             <motion.div
-              whileHover={{ y: -10 }}
-              transition={{ type: "spring", stiffness: 300 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-3 group"
             >
-              <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm hover-lift shadow-lg hover:shadow-2xl transition-all duration-300 border-t-4 border-t-orange-500 relative overflow-hidden group h-full">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-500/10 to-transparent rounded-full -translate-y-10 translate-x-10 group-hover:scale-110 transition-transform"></div>
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-4 md:mb-6 shadow-md group-hover:scale-110 transition-transform">
-                  <Bot className="w-8 h-8 md:w-10 md:h-10 text-orange-600" />
-                </div>
-                <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">AI Automation</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                  AI-powered chatbots, automated email sequences, intelligent lead scoring, and workflow automation that saves you time, reduces costs, and scales your marketing efforts effortlessly.
-                </p>
-                
-                {expandedService === 'ai' && (
-                  <div className="mb-3 text-sm text-muted-foreground space-y-2 border-t pt-3 animate-in fade-in slide-in-from-top-2">
-                    <p className="font-semibold text-foreground">What you get:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>AI chatbot setup & training</li>
-                      <li>Automated email & SMS sequences</li>
-                      <li>Intelligent lead scoring & routing</li>
-                      <li>Workflow automation (Zapier, Make.com)</li>
-                      <li>AI content generation tools</li>
-                    </ul>
+              <Card className="h-full border-0 bg-slate-900 text-white shadow-2xl transition-all duration-500 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>
+                <CardContent className="p-8 flex items-center gap-8 relative z-10 h-full">
+                  <div className="flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/20">
+                      <Globe className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2">High-Perf Web</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Custom websites and web-apps built for speed, SEO, and conversion from day one.
+                    </p>
                   </div>
-                )}
-                
-                <button
-                  onClick={() => setExpandedService(expandedService === 'ai' ? null : 'ai')}
-                  className="text-xs text-orange-600 hover:text-orange-700 font-semibold mb-2 flex items-center gap-1"
-                >
-                  {expandedService === 'ai' ? '− Show Less' : '+ Learn More'}
-                </button>
-                
-                <div className="text-xs text-green-600 font-semibold mb-2">🤖 95% Time Saved</div>
-                <Link href="/signup">
-                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                    Get Started →
-                  </Button>
-                </Link>
+                  <div className="hidden sm:block w-32 h-32 rounded-full border-4 border-dashed border-emerald-500/30 animate-[spin_20s_linear_infinite] flex items-center justify-center shrink-0">
+                    <Zap className="w-12 h-12 text-emerald-500 shadow-glow shadow-emerald-500/50" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Feature: SEO (Small) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-3 group"
+            >
+              <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-green-500/5 hover:shadow-green-500/10 transition-all duration-500">
+                <CardContent className="p-8 flex items-center gap-6">
+                  <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0 shadow-lg shadow-green-500/20">
+                    <Target className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold mb-1 group-hover:text-green-600 transition-colors">SEO Dominance</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">Rank #1 for your high-value keywords and stay there with our evergreen strategies.</p>
+                  </div>
+                </CardContent>
               </Card>
             </motion.div>
           </div>
@@ -1028,207 +1116,131 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Free Social Media Audit Section */}
+      {/* Free Social Audit Section - Modernized */}
       <motion.section 
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1 }}
-        className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white relative overflow-hidden"
+        id="audit"
+        className="py-24 md:py-32 px-4 relative overflow-hidden bg-slate-50 dark:bg-slate-950"
       >
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="absolute top-0 left-0 w-full h-full">
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.1, 0.2, 0.1] 
-            }}
-            transition={{ duration: 10, repeat: Infinity }}
-            className="absolute top-10 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl"
-          ></motion.div>
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.3, 1],
-              opacity: [0.05, 0.1, 0.05] 
-            }}
-            transition={{ duration: 15, repeat: Infinity }}
-            className="absolute bottom-10 right-10 w-48 h-48 bg-white/5 rounded-full blur-2xl"
-          ></motion.div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-pink-500/20 to-yellow-500/20 rounded-full blur-3xl"></div>
-        </div>
-        
-        <div className="container mx-auto max-w-4xl relative z-10">
-          <motion.div 
-            initial={{ y: 30, opacity: 0 }}
-            whileInView={{ y: 0, opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <Badge className="bg-white/20 text-white border-white/30 mb-4 px-4 py-1.5 backdrop-blur-sm">
-              <Sparkles className="w-3 h-3 mr-2 text-yellow-300 animate-pulse" />
-              Free Analysis
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Get Your FREE Social Media Audit
-            </h2>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
-              Discover what's holding your social media back. Get a detailed analysis of your online presence in under 60 seconds.
-            </p>
-          </motion.div>
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div 
+              initial={{ x: -30, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              <Badge className="bg-orange-500/10 text-orange-600 mb-6 px-4 py-1.5 rounded-full font-bold uppercase tracking-widest text-[10px]">
+                Diagnostic Engine
+              </Badge>
+              <h2 className="text-4xl md:text-6xl font-black mb-8 leading-[1.1] tracking-tighter text-slate-900 dark:text-white">
+                Is your social media <br />
+                <span className="text-orange-500">working or wasting?</span>
+              </h2>
+              <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                Most businesses are one small tweak away from doubling their engagement. Our AI-powered diagnostic engine scans your presence and identifies the exact growth bottlenecks.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-6">
+                {[
+                  { label: "Data-Points Scanned", val: "50+" },
+                  { label: "Analysis Time", val: "< 60s" },
+                  { label: "Cost", val: "$0.00" },
+                  { label: "Insights", val: "Actionable" }
+                ].map((stat, i) => (
+                  <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                    <p className="text-2xl font-black text-slate-900 dark:text-white">{stat.val}</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
 
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
-            viewport={{ once: true }}
-          >
-            {!showResults ? (
-              <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-                <CardHeader>
-                  <CardTitle className="text-white text-center text-2xl">
-                    Enter Your Details for Instant Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  <form onSubmit={handleAuditSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-1">
-                          Website URL 
-                          <span className="text-red-400 text-lg font-bold animate-pulse">*</span>
-                        </label>
-                        <Input
-                          type="url"
-                          placeholder="https://yourwebsite.com"
-                          value={auditForm.website}
-                          onChange={(e) => setAuditForm({...auditForm, website: e.target.value})}
-                          className="bg-white/20 border-2 border-white/30 text-white placeholder:text-white/60 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/40 focus:bg-white/25 transition-all h-12 text-base"
-                          required
-                        />
-                        <p className="text-xs text-blue-100 mt-1.5 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3 text-green-400" />
-                          Required for audit analysis
-                        </p>
-                      </div>
-                    <div>
-                      <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-2">
-                        Instagram URL 
-                        <span className="text-white/60 text-xs font-normal">(Optional)</span>
-                      </label>
-                      <Input
-                        type="url"
-                        placeholder="https://instagram.com/yourusername"
-                        value={auditForm.instagramUrl}
-                        onChange={(e) => setAuditForm({...auditForm, instagramUrl: e.target.value})}
-                        className="bg-white/20 border-2 border-white/30 text-white placeholder:text-white/50 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/40 focus:bg-white/25 transition-all h-12 text-base"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-2">
-                        TikTok URL 
-                        <span className="text-white/60 text-xs font-normal">(Optional)</span>
-                      </label>
-                      <Input
-                        type="url"
-                        placeholder="https://tiktok.com/@yourusername"
-                        value={auditForm.tiktokUrl}
-                        onChange={(e) => setAuditForm({...auditForm, tiktokUrl: e.target.value})}
-                        className="bg-white/20 border-2 border-white/30 text-white placeholder:text-white/50 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/40 focus:bg-white/25 transition-all h-12 text-base"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-2">
-                        Facebook URL 
-                        <span className="text-white/60 text-xs font-normal">(Optional)</span>
-                      </label>
-                      <Input
-                        type="url"
-                        placeholder="https://facebook.com/yourpage"
-                        value={auditForm.facebookUrl}
-                        onChange={(e) => setAuditForm({...auditForm, facebookUrl: e.target.value})}
-                        className="bg-white/20 border-2 border-white/30 text-white placeholder:text-white/50 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/40 focus:bg-white/25 transition-all h-12 text-base"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="text-center">
-                    <Button 
-                      type="submit" 
-                      size="lg"
-                      disabled={auditMutation.isPending}
-                      className="bg-white text-blue-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg px-12 py-6 shadow-xl hover:shadow-2xl transition-all"
-                    >
-                      {auditMutation.isPending ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
-                          Analyzing Your Social Media...
-                        </>
-                      ) : (
-                        <>
-                          🚀 Get My FREE Audit Now
-                        </>
-                      )}
-                    </Button>
-                    <p className="text-blue-100 text-sm mt-4 flex flex-wrap justify-center gap-4">
-                      <span>✅ No signup required</span>
-                      <span>✅ Instant results</span>
-                      <span>✅ 100% Free</span>
-                    </p>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="bg-white/10 backdrop-blur border-white/20 shadow-2xl">
-              <CardHeader>
-                <CardTitle className="text-white text-center text-2xl">
-                  🎉 Your Social Media Audit Results
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-white">
-                {auditResults && (
-                  <div className="space-y-6">
-                    <div className="grid md:grid-cols-3 gap-6">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-yellow-300">
-                          {auditResults.summary?.totalIssues || 0}
+            <motion.div
+              initial={{ x: 30, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              {!showResults ? (
+                <Card className="border-0 bg-white dark:bg-slate-900 shadow-3xl rounded-[2.5rem] overflow-hidden p-1 relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <CardContent className="p-8 md:p-12 relative z-10">
+                    <h3 className="text-2xl font-bold mb-8 text-center">Run Your Growth Scan</h3>
+                    <form onSubmit={handleAuditSubmit} className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                          <Input
+                            type="url"
+                            placeholder="Website URL (required)"
+                            value={auditForm.website}
+                            onChange={(e) => setAuditForm({...auditForm, website: e.target.value})}
+                            className="pl-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-14 text-lg rounded-xl focus:ring-orange-500"
+                            required
+                          />
                         </div>
-                        <div className="text-blue-100">Issues Found</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-green-300">
-                          {auditResults.summary?.score || 0}/100
+                        <div className="relative">
+                          <img src={instagramLogo} alt="IG" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 grayscale opacity-50" />
+                          <Input
+                            type="url"
+                            placeholder="Instagram URL (optional)"
+                            value={auditForm.instagramUrl}
+                            onChange={(e) => setAuditForm({...auditForm, instagramUrl: e.target.value})}
+                            className="pl-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-14 text-lg rounded-xl focus:ring-orange-500"
+                          />
                         </div>
-                        <div className="text-blue-100">Overall Score</div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-300">
-                          {auditResults.summary?.opportunities || 0}
-                        </div>
-                        <div className="text-blue-100">Opportunities</div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
                       <Button 
-                        onClick={() => setShowResults(false)}
-                        variant="outline"
-                        className="border-white/30 text-white hover:bg-white/20 mr-4"
+                        type="submit" 
+                        size="lg"
+                        disabled={auditMutation.isPending}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black text-lg h-16 rounded-xl shadow-xl shadow-orange-500/20"
                       >
-                        ← Run Another Audit
+                        {auditMutation.isPending ? (
+                          <span className="flex items-center gap-3">
+                            <span className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></span>
+                            SCANNING SYSTEMS...
+                          </span>
+                        ) : "START ENGINE SCAN →"}
                       </Button>
-                      <Link href="/signup">
-                        <Button className="bg-white text-blue-600 hover:bg-gray-100 font-bold">
-                          🎯 Get Professional Help →
-                        </Button>
-                      </Link>
+                      <p className="text-center text-xs text-slate-400 font-medium">
+                        We never share your data. 100% private analysis.
+                      </p>
+                    </form>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-0 bg-slate-900 text-white shadow-3xl rounded-[2.5rem] p-12 overflow-hidden">
+                  <div className="text-center space-y-8">
+                    <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-glow shadow-green-500/50">
+                      <CheckCircle className="w-12 h-12 text-white" />
                     </div>
+                    <h3 className="text-3xl font-black">Analysis Complete!</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                        <p className="text-4xl font-black text-green-400">{auditResults.summary?.score || 72}</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Efficiency Score</p>
+                      </div>
+                      <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                        <p className="text-4xl font-black text-orange-400">{auditResults.summary?.totalIssues || 12}</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Key Bottlenecks</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => setShowResults(false)}
+                      variant="ghost"
+                      className="text-slate-400 hover:text-white"
+                    >
+                      ← Run New Scan
+                    </Button>
+                    <Link href="/signup">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 h-16 rounded-xl font-black text-lg shadow-xl shadow-blue-600/20">
+                        Fix All Bottlenecks Now
+                      </Button>
+                    </Link>
                   </div>
-                )}
-                </CardContent>
-              </Card>
-            )}
-          </motion.div>
+                </Card>
+              )}
+            </motion.div>
+          </div>
         </div>
       </motion.section>
 
@@ -1280,13 +1292,13 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Guarantees Row */}
+          {/* Core Values Row */}
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="p-6 text-center hover-lift bg-gradient-to-br from-white to-blue-50 border-blue-100">
-              <div className="text-4xl mb-3">🛡️</div>
-              <h3 className="font-bold text-lg mb-2">30-Day Guarantee</h3>
+              <div className="text-4xl mb-3">🎯</div>
+              <h3 className="font-bold text-lg mb-2">Professional Results</h3>
               <p className="text-sm text-muted-foreground">
-                Full refund if you're not satisfied with our work. No questions asked.
+                We're obsessed with your ROI. Every campaign is designed to deliver measurable business growth.
               </p>
             </Card>
 
@@ -1357,11 +1369,10 @@ export default function LandingPage() {
           <div className="mt-16 text-center">
             <Link href="/signup">
               <Button size="lg" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-lg px-10 py-6 shadow-xl">
-                Start Free Trial
+                Get Started
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
-            <p className="text-sm text-muted-foreground mt-4">No credit card required • 14-day free trial</p>
           </div>
         </div>
       </section>
@@ -1460,7 +1471,7 @@ export default function LandingPage() {
                               : "bg-blue-600 hover:bg-blue-700"
                           }`}
                         >
-                          {pkg.buttonText || "Start Free Trial"}
+                          {pkg.buttonText || "Get Started"}
                         </Button>
                       </Link>
                     </Card>
@@ -1606,7 +1617,7 @@ export default function LandingPage() {
               </ul>
               <Link href="/signup">
                 <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700" size="lg">
-                  Start Free Trial
+                  Get Started
                 </Button>
               </Link>
             </Card>
@@ -1743,73 +1754,73 @@ export default function LandingPage() {
       </section>
 
       {/* Why Choose Us Section */}
-      <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Why Marketing Teams Choose Us</h2>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              We're obsessed with results, transparency, and building long-term partnerships.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="text-center p-6 bg-white/10 backdrop-blur rounded-xl border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Fast Implementation</h3>
-              <p className="text-blue-100">Most campaigns launch within 7-10 days. Need it faster? We can move quicker for urgent projects.</p>
-            </div>
-            <div className="text-center p-6 bg-white/10 backdrop-blur rounded-xl border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Results Guaranteed</h3>
-              <p className="text-blue-100">30-day money-back guarantee. If you don't see measurable improvements, we refund every penny.</p>
-            </div>
-            <div className="text-center p-6 bg-white/10 backdrop-blur rounded-xl border border-white/20 hover:bg-white/15 transition-all">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Dedicated Team</h3>
-              <p className="text-blue-100">Work with a full marketing team: strategist, designer, copywriter, and campaign manager.</p>
-            </div>
-          </div>
+      <section className="py-24 md:py-32 px-4 relative overflow-hidden bg-slate-900 text-white">
+        {/* Animated background lines */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-blue-500 to-transparent"></div>
+          <div className="absolute top-0 left-2/4 w-px h-full bg-gradient-to-b from-transparent via-purple-500 to-transparent"></div>
+          <div className="absolute top-0 left-3/4 w-px h-full bg-gradient-to-b from-transparent via-blue-500 to-transparent"></div>
         </div>
-      </section>
 
-      {/* Risk Reversal Section */}
-      <section className="py-16 px-4 bg-gradient-to-br from-green-50 to-blue-50">
-        <div className="container mx-auto max-w-4xl text-center">
-          <div className="bg-white p-12 rounded-2xl shadow-2xl border-2 border-green-200">
-            <div className="text-6xl mb-6">🛡️</div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
-              Your Success is Our Guarantee
-            </h2>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              We're so confident in our results that we guarantee them. If you don't see measurable improvements within 30 days, we'll refund every penny.
-            </p>
-            <div className="grid md:grid-cols-3 gap-6 text-left">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-green-500 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">30-Day Money Back</h3>
-                  <p className="text-sm text-gray-600">Full refund if not satisfied</p>
-                </div>
+        <div className="container mx-auto max-w-7xl relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <Badge className="bg-blue-500 text-white mb-6 border-0">Why MarketingOS?</Badge>
+              <h2 className="text-4xl md:text-6xl font-black mb-8 leading-[1.1]">
+                We're not an agency. <br />
+                <span className="text-blue-500">We're your core growth team.</span>
+              </h2>
+              <p className="text-xl text-slate-400 mb-12 leading-relaxed">
+                Traditional agencies are slow, expensive, and often disconnected. We built MarketingOS to give you an elite, high-speed marketing department that lives inside your business.
+              </p>
+              
+              <div className="space-y-8">
+                {[
+                  { title: "Real-Time Collaboration", desc: "No more waiting for email replies. Chat with your team directly via our platform.", icon: MessageSquare },
+                  { title: "Infinite Scalability", desc: "Scale your creative and ad spend up or down instantly as your business grows.", icon: TrendingUp },
+                  { title: "Data-First Decisioning", desc: "Every campaign is backed by deep analytics and cross-platform data intelligence.", icon: BarChart3 }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
+                      <item.icon className="w-7 h-7 text-blue-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold mb-2">{item.title}</h4>
+                      <p className="text-slate-400 leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-green-500 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Results Guarantee</h3>
-                  <p className="text-sm text-gray-600">Or we work for free</p>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-600/20 blur-[120px] rounded-full"></div>
+              <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50 p-8 md:p-12 relative z-10 rounded-[2.5rem] shadow-3xl">
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
+                    <ShieldCheck className="w-10 h-10 text-green-500" />
+                  </div>
+                  <h3 className="text-3xl font-black mb-4">Performance Focused</h3>
+                  <p className="text-slate-400 leading-relaxed italic">
+                    "We don't just provide services; we deliver measurable results that impact your bottom line every single day."
+                  </p>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-green-500 mt-1" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">No Long-Term Contracts</h3>
-                  <p className="text-sm text-gray-600">Cancel anytime</p>
+                <Separator className="bg-slate-700 mb-8" />
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-white mb-1">100%</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Transparency</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-blue-500 mb-1">24/7</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Dashboards</p>
+                  </div>
                 </div>
+                <Link href="/signup">
+                  <Button className="w-full mt-10 bg-white text-slate-900 hover:bg-slate-100 h-16 rounded-2xl font-black text-lg">
+                    Join the Elite 1%
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
@@ -1942,7 +1953,7 @@ export default function LandingPage() {
                   We stand behind our work 100%. Here's what happens:
                 </p>
                 <ul className="list-disc pl-5 space-y-2">
-                  <li><strong>30-day money-back guarantee:</strong> Full refund if not satisfied</li>
+                  <li><strong>High-speed implementation:</strong> Most campaigns launch in 7-10 days</li>
                   <li><strong>Fast pivots:</strong> If something's not working, we adjust immediately</li>
                   <li><strong>No contracts:</strong> You're never stuck with us</li>
                   <li><strong>Dedicated support:</strong> Your success is our priority</li>
@@ -2039,7 +2050,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
             <Link href="/signup">
               <Button size="lg" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-xl px-12 py-7 shadow-2xl font-bold">
-                Start Free Trial
+                Get Started
                 <ArrowRight className="w-6 h-6 ml-2" />
               </Button>
             </Link>
@@ -2055,7 +2066,6 @@ export default function LandingPage() {
           </div>
           <p className="text-base text-blue-100 flex flex-wrap justify-center gap-6">
             <span>✓ No long-term contracts</span>
-            <span>✓ 14-day free trial</span>
             <span>✓ Cancel anytime</span>
           </p>
         </div>
@@ -2067,7 +2077,7 @@ export default function LandingPage() {
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105">
             <Link href="/signup">
               <Button size="sm" className="bg-transparent hover:bg-white/20 text-white font-bold border-0 gap-2">
-                🚀 Start Free Trial
+                🚀 Get Started
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
@@ -2082,11 +2092,11 @@ export default function LandingPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1">
                 <p className="text-sm font-semibold">🚀 Only 3 Spots Left</p>
-                <p className="text-xs opacity-90">Start your free trial today</p>
+                <p className="text-xs opacity-90">Scale your brand today</p>
               </div>
               <Link href="/signup">
                 <Button size="sm" className="bg-white text-orange-600 hover:bg-gray-100 font-bold border-0 shrink-0">
-                  Start Trial
+                  Get Started
                 </Button>
               </Link>
             </div>

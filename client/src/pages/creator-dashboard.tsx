@@ -29,8 +29,24 @@ export default function CreatorDashboard() {
     enabled: !!user?.creatorId,
   });
 
+  const { data: courses = [] } = useQuery<Course[]>({
+    queryKey: ["/api/courses"],
+  });
+
+  const { data: enrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/courses/enrollments/me"],
+    enabled: !!user,
+  });
+
   const upcomingVisits = visits.filter(v => v.status === 'scheduled');
   const completedVisits = visits.filter(v => v.status === 'completed').length;
+
+  const getProgress = (courseId: string) => {
+    const enrollment = enrollments.find(e => e.courseId === courseId);
+    if (!enrollment) return 0;
+    // This is a simplification, ideally we'd know total lessons
+    return enrollment.status === 'completed' ? 100 : 25; 
+  };
 
   return (
     <div className="min-h-full bg-slate-50/50 dark:bg-slate-950/50 p-4 md:p-8 space-y-8">
@@ -151,61 +167,61 @@ export default function CreatorDashboard() {
 
           {/* Training Courses */}
           <div className="space-y-4">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Training & Courses
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
-                <CardHeader className="pb-2">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center mb-2">
-                    <Camera className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <CardTitle className="text-lg">Mastering Content Creation</CardTitle>
-                  <CardDescription>Learn how to film, edit, and post high-performing reels.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 mt-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span>Progress</span>
-                      <span>80%</span>
-                    </div>
-                    <Progress value={80} className="h-1.5" />
-                    <Link href="/training/mastering-content">
-                      <Button variant="ghost" className="w-full justify-between group-hover:bg-primary/5">
-                        Continue Learning
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer group border-primary/40 bg-primary/5">
-                <CardHeader className="pb-2">
-                  <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/20 flex items-center justify-center mb-2">
-                    <Utensils className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <CardTitle className="text-lg text-primary">Working with Restaurants</CardTitle>
-                  <CardDescription>Professional etiquette and how to get the best shots on site.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 mt-2">
-                    <div className="flex items-center justify-between text-xs font-semibold text-primary">
-                      <span>New Course</span>
-                      <span>0%</span>
-                    </div>
-                    <Progress value={0} className="h-1.5" />
-                    <Link href="/course">
-                      <Button variant="default" className="w-full justify-between mt-2">
-                        Start Course
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Training & Courses
+              </h2>
+              {user?.role === 'creator' && (
+                <Link href="/manage-courses">
+                  <Button variant="outline" size="sm">Manage My Courses</Button>
+                </Link>
+              )}
             </div>
+            
+            {courses.length === 0 ? (
+              <Card className="border-dashed py-12 text-center">
+                <p className="text-muted-foreground">No courses available at this time.</p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {courses.filter(c => c.status === 'published' || c.creatorId === user?.creatorId).map((course) => {
+                  const progress = getProgress(course.id);
+                  const isEnrolled = enrollments.some(e => e.courseId === course.id);
+                  
+                  return (
+                    <Card key={course.id} className="hover:border-primary/50 transition-colors cursor-pointer group">
+                      <CardHeader className="pb-2">
+                        <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center mb-2">
+                          <Camera className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <CardTitle className="text-lg">{course.title}</CardTitle>
+                        <CardDescription className="line-clamp-2">{course.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3 mt-2">
+                          {isEnrolled && (
+                            <>
+                              <div className="flex items-center justify-between text-xs">
+                                <span>Progress</span>
+                                <span>{progress}%</span>
+                              </div>
+                              <Progress value={progress} className="h-1.5" />
+                            </>
+                          )}
+                          <Link href={`/course/${course.id}`}>
+                            <Button variant={isEnrolled ? "ghost" : "default"} className="w-full justify-between group-hover:bg-primary/5">
+                              {isEnrolled ? "Continue Learning" : "Start Course"}
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
