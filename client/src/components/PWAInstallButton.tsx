@@ -11,6 +11,23 @@ export function PWAInstallButton() {
     return localStorage.getItem("pwa_install_dismissed") === "true";
   });
 
+  const isStandalone = useMemo(() => {
+    return (
+      window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      (window.navigator as any).standalone === true
+    );
+  }, []);
+
+  const isIOS = useMemo(() => {
+    const ua = window.navigator.userAgent || "";
+    return /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+  }, []);
+
+  const isAndroid = useMemo(() => {
+    const ua = window.navigator.userAgent || "";
+    return /Android/.test(ua);
+  }, []);
+
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
@@ -43,23 +60,6 @@ export function PWAInstallButton() {
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, [dismissed, isIOS, isStandalone]);
-
-  const isStandalone = useMemo(() => {
-    return (
-      window.matchMedia?.("(display-mode: standalone)")?.matches ||
-      (window.navigator as any).standalone === true
-    );
-  }, []);
-
-  const isIOS = useMemo(() => {
-    const ua = window.navigator.userAgent || "";
-    return /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
-  }, []);
-
-  const isAndroid = useMemo(() => {
-    const ua = window.navigator.userAgent || "";
-    return /Android/.test(ua);
-  }, []);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;

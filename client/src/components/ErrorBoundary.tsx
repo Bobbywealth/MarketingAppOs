@@ -79,7 +79,7 @@ function DefaultErrorFallback({ error, resetError }: { error?: Error; resetError
               Reload Page
             </Button>
           </div>
-          {process.env.NODE_ENV === 'development' && error && (
+          {import.meta.env.DEV && error && (
             <details className="mt-4 text-left">
               <summary className="cursor-pointer text-sm text-muted-foreground">
                 Error Details (Development)

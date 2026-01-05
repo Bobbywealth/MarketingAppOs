@@ -14,16 +14,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { UserRole } from "./roles";
 
-export enum UserRole {
-  ADMIN = "admin",
-  MANAGER = "manager",
-  STAFF = "staff",
-  SALES_AGENT = "sales_agent",
-  CREATOR_MANAGER = "creator_manager",
-  CREATOR = "creator",
-  CLIENT = "client",
-}
+export { UserRole };
 
 // Session storage table (required for Replit Auth)
 export const sessions = pgTable(

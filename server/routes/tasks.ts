@@ -3,7 +3,7 @@ import { storage } from "../storage";
 import { db, pool } from "../db";
 import { tasks, taskSpaces, taskComments } from "@shared/schema";
 import { rolePermissions } from "../rbac";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 import { eq, and, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { requireRole, requirePermission } from "../rbac";

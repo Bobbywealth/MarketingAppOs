@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { pool } from "./db";
 import { storage } from "./storage";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 
 let visitsCron: any = null;
 let creatorVisitsTableChecked = false;

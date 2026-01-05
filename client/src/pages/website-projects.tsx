@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { WebsiteProject, InsertWebsiteProject, Client } from "@shared/schema";
-import { insertWebsiteProjectSchema } from "@shared/schema";
+import { insertWebsiteProjectSchema } from "@shared/validation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";

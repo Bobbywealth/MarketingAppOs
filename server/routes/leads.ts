@@ -5,7 +5,7 @@ import { leads } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { requirePermission } from "../rbac";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 import { 
   getCurrentUserContext, 
   getAccessibleLeadOr404 

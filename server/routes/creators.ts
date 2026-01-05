@@ -6,7 +6,7 @@ import { eq, and, or, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { hashPassword } from "../auth";
 import { requireRole } from "../rbac";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 import { 
   handleValidationError
 } from "./common";

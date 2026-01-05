@@ -3,7 +3,7 @@ import { storage } from "../storage";
 import { db } from "../db";
 import { leads } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 
 export function getCurrentUserContext(req: Request): { userId: number | null; role: string | null } {
   const anyReq = req as any;

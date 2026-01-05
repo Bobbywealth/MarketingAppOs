@@ -5,7 +5,7 @@ import { clients, creators, clientCreators, creatorVisits, onboardingTasks, clie
 import { eq, and, or, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { requirePermission, requireRole } from "../rbac";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 import { 
   getCurrentUserContext, 
   getAccessibleClientOr404 

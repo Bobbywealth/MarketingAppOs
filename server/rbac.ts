@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 
 export interface RolePermissions {
   canManageUsers: boolean;

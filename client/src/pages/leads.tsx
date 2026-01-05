@@ -606,19 +606,19 @@ export default function LeadsPage() {
 
   return (
     <PullToRefresh onRefresh={async () => { await refetch(); }}>
-      <div className="flex flex-col h-screen overflow-hidden">
-      {/* Compact Sticky Header - Fixed at top */}
-      <div className="flex-shrink-0 border-b bg-background shadow-sm">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3">
-        <div>
-            <h1 className="text-2xl font-bold">Leads</h1>
-            <p className="text-sm text-muted-foreground">Track your sales pipeline</p>
-        </div>
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col h-screen overflow-hidden bg-background">
+      {/* Compact Sticky Header - Fixed at top with blur effect */}
+      <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-20 shadow-sm">
+        <div className="flex items-center justify-between px-4 md:px-6 py-2 md:py-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Leads</h1>
+            <p className="text-xs md:text-sm text-muted-foreground hidden md:block">Track your sales pipeline</p>
+          </div>
+          <div className="flex items-center gap-1.5 md:gap-2">
             <Button 
               variant="ghost" 
               size="sm"
-              className="gap-2 hidden md:flex" 
+              className="gap-2 hidden lg:flex" 
               onClick={() => {
                 const link = document.createElement('a');
                 link.href = '/lead-import-template.csv';
@@ -629,17 +629,17 @@ export default function LeadsPage() {
               <Download className="w-4 h-4" />
               Template
             </Button>
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
-              <Upload className="w-4 h-4" />
-              <span className="hidden md:inline">Import</span>
+            <Button variant="outline" size="sm" className="gap-2 h-9 px-3" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="w-3.5 h-3.5 md:w-4 h-4" />
+              <span className="hidden sm:inline text-xs md:text-sm">Import</span>
             </Button>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
-              <UserPlus className="w-4 h-4" />
-                  <span className="hidden md:inline">Add Lead</span>
-            </Button>
-          </DialogTrigger>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-2 h-9 px-3 shadow-sm">
+                  <UserPlus className="w-3.5 h-3.5 md:w-4 h-4" />
+                  <span className="hidden sm:inline text-xs md:text-sm">Add Lead</span>
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden p-0">
             <div className="flex flex-col h-full max-h-[85vh]">
             <DialogHeader className="px-6 pt-6 pb-4">
@@ -2142,25 +2142,25 @@ export default function LeadsPage() {
       </Dialog>
       </div>
 
-      {/* Modern Horizontal Filter Bar - Fixed below header */}
-      <div className="flex-shrink-0 border-b bg-muted/30">
-        <div className="px-4 md:px-6 py-3">
-          <div className="flex flex-col md:flex-row items-center gap-3">
+      {/* Modern Horizontal Filter Bar - Fixed below header with mobile optimization */}
+      <div className="flex-shrink-0 border-b bg-muted/20 backdrop-blur-sm sticky top-[57px] md:top-[65px] z-10">
+        <div className="px-4 md:px-6 py-2 md:py-3">
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-3">
             {/* Search */}
             <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search leads..."
-                className="pl-10"
+                className="pl-10 h-10 md:h-9 bg-background/50"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             
-            {/* Filters */}
-            <div className="flex items-center gap-2 w-full md:w-auto">
+            {/* Filters & View Toggle */}
+            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full md:w-[140px]">
+                <SelectTrigger className="h-10 md:h-9 min-w-[120px] md:w-[130px] bg-background/50">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2175,7 +2175,7 @@ export default function LeadsPage() {
               </Select>
 
               <Select value={filterIndustry} onValueChange={setFilterIndustry}>
-                <SelectTrigger className="w-full md:w-[140px]">
+                <SelectTrigger className="h-10 md:h-9 min-w-[120px] md:w-[130px] bg-background/50">
                   <SelectValue placeholder="Industry" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2191,15 +2191,13 @@ export default function LeadsPage() {
               </Select>
 
               {/* View Mode Toggle */}
-              <div className="flex border rounded-lg overflow-hidden ml-auto shrink-0">
+              <div className="flex border rounded-lg overflow-hidden shrink-0 ml-auto md:ml-0 bg-background/50">
                 <Button
                   variant={viewMode === "card" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("card")}
-                  className="rounded-none min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
+                  className="rounded-none h-10 w-10 md:h-9 md:w-9 px-0"
                   title="Card view"
-                  aria-label="Switch to card view"
-                  type="button"
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </Button>
@@ -2207,10 +2205,8 @@ export default function LeadsPage() {
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("list")}
-                  className="rounded-none min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
+                  className="rounded-none h-10 w-10 md:h-9 md:w-9 px-0"
                   title="List view"
-                  aria-label="Switch to list view"
-                  type="button"
                 >
                   <List className="w-4 h-4" />
                 </Button>
@@ -2218,10 +2214,8 @@ export default function LeadsPage() {
                   variant={viewMode === "kanban" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("kanban")}
-                  className="rounded-none min-h-[44px] min-w-[44px] px-3 md:min-h-0 md:min-w-0 md:px-2 touch-manipulation active:opacity-70"
+                  className="rounded-none h-10 w-10 md:h-9 md:w-9 px-0"
                   title="Kanban view"
-                  aria-label="Switch to kanban view"
-                  type="button"
                 >
                   <Columns3 className="w-4 h-4" />
                 </Button>
@@ -2229,53 +2223,53 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          {/* Quick Filter Chips */}
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+          {/* Quick Filter Chips - Horizontal Scroll on Mobile */}
+          <div className="flex gap-1.5 mt-2 md:mt-3 overflow-x-auto pb-1 scrollbar-hide snap-x">
             <Badge
               variant={quickFilterStage === "prospect" ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              className="cursor-pointer whitespace-nowrap px-2.5 py-1 text-[11px] md:text-xs snap-start"
               onClick={() => setQuickFilterStage(q => q === "prospect" ? null : "prospect")}
             >
               🎯 Prospect
             </Badge>
             <Badge
               variant={quickFilterStage === "qualified" ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              className="cursor-pointer whitespace-nowrap px-2.5 py-1 text-[11px] md:text-xs snap-start"
               onClick={() => setQuickFilterStage(q => q === "qualified" ? null : "qualified")}
             >
               ✅ Qualified
             </Badge>
             <Badge
               variant={quickFilterScore === "hot" ? "destructive" : "outline"}
-              className="cursor-pointer hover:bg-destructive/80 transition-colors"
+              className="cursor-pointer whitespace-nowrap px-2.5 py-1 text-[11px] md:text-xs snap-start"
               onClick={() => setQuickFilterScore(q => q === "hot" ? null : "hot")}
             >
               🔥 Hot
             </Badge>
             <Badge
               variant={quickFilterScore === "warm" ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              className="cursor-pointer whitespace-nowrap px-2.5 py-1 text-[11px] md:text-xs snap-start"
               onClick={() => setQuickFilterScore(q => q === "warm" ? null : "warm")}
             >
               ☀️ Warm
             </Badge>
             <Badge
               variant={quickFilterScore === "cold" ? "secondary" : "outline"}
-              className="cursor-pointer hover:bg-secondary/80 transition-colors"
+              className="cursor-pointer whitespace-nowrap px-2.5 py-1 text-[11px] md:text-xs snap-start"
               onClick={() => setQuickFilterScore(q => q === "cold" ? null : "cold")}
             >
               ❄️ Cold
             </Badge>
             <Badge
-              variant={quickFilterSource === "website" ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/80 transition-colors"
-              onClick={() => setQuickFilterSource(q => q === "website" ? null : "website")}
+              variant={quickFilterSource === "website_form" ? "default" : "outline"}
+              className="cursor-pointer whitespace-nowrap px-2.5 py-1 text-[11px] md:text-xs snap-start"
+              onClick={() => setQuickFilterSource(q => q === "website_form" ? null : "website_form")}
             >
               🌐 Website
             </Badge>
             <Badge
               variant={quickFilterSource === "referral" ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/80 transition-colors"
+              className="cursor-pointer whitespace-nowrap px-2.5 py-1 text-[11px] md:text-xs snap-start"
               onClick={() => setQuickFilterSource(q => q === "referral" ? null : "referral")}
             >
               👥 Referral
@@ -2285,95 +2279,95 @@ export default function LeadsPage() {
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Stats Cards - 6 Column Grid */}
-        <div className="px-4 md:px-6 py-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Leads</p>
-                <p className="text-2xl font-bold">{leadStats.total}</p>
-              </div>
-              <div className="p-3 bg-blue-500/10 rounded-lg">
-                <Target className="w-6 h-6 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex-1 overflow-y-auto bg-muted/5">
+        {/* Stats Cards - Horizontal Scroll on Mobile */}
+        <div className="px-4 md:px-6 py-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+          <div className="flex md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 min-w-max md:min-w-0">
+            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Total</p>
+                    <p className="text-xl md:text-2xl font-bold">{leadStats.total}</p>
+                  </div>
+                  <div className="p-2 md:p-3 bg-blue-500/10 rounded-xl">
+                    <Target className="w-5 h-5 md:w-6 h-6 text-blue-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">New</p>
-                <p className="text-2xl font-bold">{leadStats.new}</p>
-              </div>
-              <div className="p-3 bg-purple-500/10 rounded-lg">
-                <Zap className="w-6 h-6 text-purple-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">New</p>
+                    <p className="text-xl md:text-2xl font-bold">{leadStats.new}</p>
+                  </div>
+                  <div className="p-2 md:p-3 bg-purple-500/10 rounded-xl">
+                    <Zap className="w-5 h-5 md:w-6 h-6 text-purple-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Contacted</p>
-                <p className="text-2xl font-bold">{leadStats.contacted}</p>
-              </div>
-              <div className="p-3 bg-indigo-500/10 rounded-lg">
-                <MessageSquare className="w-6 h-6 text-indigo-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Contacted</p>
+                    <p className="text-xl md:text-2xl font-bold">{leadStats.contacted}</p>
+                  </div>
+                  <div className="p-2 md:p-3 bg-indigo-500/10 rounded-xl">
+                    <MessageSquare className="w-5 h-5 md:w-6 h-6 text-indigo-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Qualified</p>
-                <p className="text-2xl font-bold">{leadStats.qualified}</p>
-              </div>
-              <div className="p-3 bg-green-500/10 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Qualified</p>
+                    <p className="text-xl md:text-2xl font-bold">{leadStats.qualified}</p>
+                  </div>
+                  <div className="p-2 md:p-3 bg-green-500/10 rounded-xl">
+                    <CheckCircle2 className="w-5 h-5 md:w-6 h-6 text-green-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Converted</p>
-                <p className="text-2xl font-bold">{leadStats.converted}</p>
-              </div>
-              <div className="p-3 bg-emerald-500/10 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-emerald-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Won</p>
+                    <p className="text-xl md:text-2xl font-bold">{leadStats.converted}</p>
+                  </div>
+                  <div className="p-2 md:p-3 bg-emerald-500/10 rounded-xl">
+                    <TrendingUp className="w-5 h-5 md:w-6 h-6 text-emerald-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="hover-elevate">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Lost</p>
-                <p className="text-2xl font-bold">{leadStats.lost}</p>
-              </div>
-              <div className="p-3 bg-red-500/10 rounded-lg">
-                <XCircle className="w-6 h-6 text-red-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Lost</p>
+                    <p className="text-xl md:text-2xl font-bold">{leadStats.lost}</p>
+                  </div>
+                  <div className="p-2 md:p-3 bg-red-500/10 rounded-xl">
+                    <XCircle className="w-5 h-5 md:w-6 h-6 text-red-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
       {/* Leads Content Area */}
       <div className="flex-1 px-4 md:px-6 py-4 space-y-4">

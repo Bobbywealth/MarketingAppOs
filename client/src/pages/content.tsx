@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { ContentPost, Client, InsertContentPost } from "@shared/schema";
-import { insertContentPostSchema } from "@shared/schema";
+import { insertContentPostSchema } from "@shared/validation";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks, subWeeks, startOfDay, startOfMonth, endOfMonth, addMonths, subMonths, addDays, subDays, isSameMonth } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";

@@ -5,7 +5,7 @@ import { sql, eq, and, or } from "drizzle-orm";
 import { isAuthenticated, hashPassword } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, rolePermissions } from "./rbac";
-import { UserRole } from "@shared/schema";
+import { UserRole } from "@shared/roles";
 import { AuditService } from "./auditService";
 import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
