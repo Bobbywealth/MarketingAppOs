@@ -1187,27 +1187,52 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ message: "Code and discount percentage are required" });
       }
 
+      // Check if code already exists in database first
+      const existingDbResult = await pool.query(
+        "SELECT id FROM discount_codes WHERE code = $1",
+        [code.toUpperCase()]
+      );
+      if (existingDbResult.rows.length > 0) {
+        return res.status(400).json({ message: "Discount code already exists in database" });
+      }
+
       // Create Stripe coupon first
       let stripeCouponId = null;
       if (stripe) {
         try {
-          const couponData: any = {
-            percent_off: parseFloat(discountPercentage),
-            name: code,
-            id: code.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-          };
+          const couponId = code.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          
+          // Try to retrieve existing coupon first to avoid "already exists" error
+          try {
+            const existingCoupon = await stripe.coupons.retrieve(couponId);
+            stripeCouponId = existingCoupon.id;
+            console.log(`Using existing Stripe coupon: ${stripeCouponId}`);
+          } catch (e: any) {
+            // If not found (404), create it
+            if (e.status === 404 || e.code === 'resource_missing') {
+              const couponData: any = {
+                percent_off: parseFloat(discountPercentage),
+                name: code,
+                id: couponId,
+              };
 
-          if (durationMonths) {
-            couponData.duration = 'repeating';
-            couponData.duration_in_months = parseInt(durationMonths);
-          } else {
-            couponData.duration = 'once';
+              if (durationMonths) {
+                couponData.duration = 'repeating';
+                couponData.duration_in_months = parseInt(durationMonths);
+              } else {
+                couponData.duration = 'once';
+              }
+
+              const coupon = await stripe.coupons.create(couponData);
+              stripeCouponId = coupon.id;
+              console.log(`Created new Stripe coupon: ${stripeCouponId}`);
+            } else {
+              // Some other Stripe error
+              throw e;
+            }
           }
-
-          const coupon = await stripe.coupons.create(couponData);
-          stripeCouponId = coupon.id;
         } catch (stripeError: any) {
-          console.error("Stripe coupon creation error:", stripeError);
+          console.error("Stripe coupon error:", stripeError);
           return res.status(400).json({ message: `Stripe error: ${stripeError.message}` });
         }
       }
