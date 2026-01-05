@@ -39,6 +39,7 @@ async function createAdminUser() {
           email,
           firstName,
           lastName,
+          emailVerified: true,
         })
         .where(eq(users.username, username));
 
@@ -55,6 +56,7 @@ async function createAdminUser() {
       email,
       firstName,
       lastName,
+      emailVerified: true,
     });
 
     console.log("✅ Admin user created successfully!");

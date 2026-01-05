@@ -256,8 +256,10 @@ function AppContent() {
   }, [routeLocation]);
 
   // Force email verification if logged in but not verified
+  // Exempt admins and managers from being blocked by verification screen
   useEffect(() => {
-    if (user && !user.emailVerified && routeLocation !== "/verify-email") {
+    const isExempt = user?.role === 'admin' || user?.role === 'manager';
+    if (user && !user.emailVerified && !isExempt && routeLocation !== "/verify-email") {
       setLocation("/verify-email");
     }
   }, [user, routeLocation, setLocation]);
