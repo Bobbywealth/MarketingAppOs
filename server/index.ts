@@ -31,7 +31,7 @@ app.use(helmet({
       "script-src": ["'self'", "'unsafe-inline'", "https://player.vimeo.com", "https://apis.google.com"],
       "img-src": ["'self'", "data:", "https://vimeo.com", "https://*.vimeocdn.com", "https://*.googleapis.com", "https://*.gstatic.com"],
       "connect-src": ["'self'", "https://vimeo.com", "https://*.vimeocdn.com", "https://*.googleapis.com", "https://*.gstatic.com"],
-      "font-src": ["'self'", "https://*.googleapis.com", "https://*.gstatic.com", "data:"],
+      "font-src": ["'self'", "https://*.googleapis.com", "https://*.gstatic.com", "https://r2cdn.perplexity.ai", "data:"],
       "style-src": ["'self'", "'unsafe-inline'", "https://*.googleapis.com"],
     },
   },
