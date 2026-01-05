@@ -889,7 +889,7 @@ export default function Content() {
                           </Badge>
                         </div>
                         
-                        {post.mediaUrl && (
+                        {post.mediaUrl ? (
                           <div className="relative w-full h-20 rounded border overflow-hidden bg-muted group">
                             {post.mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                               <img src={post.mediaUrl} alt="Post media" className="w-full h-full object-cover" />

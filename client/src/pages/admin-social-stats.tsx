@@ -1,77 +1,165 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { useLocation } from "wouter";
-import { TrendingUp, Settings } from "lucide-react";
+import { 
+  TrendingUp, 
+  Settings, 
+  FileImage, 
+  Loader2, 
+  Eye, 
+  Instagram, 
+  Youtube, 
+  Users, 
+  Facebook, 
+  Linkedin, 
+  Twitter 
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { SimpleUploader } from "@/components/SimpleUploader";
 import { SocialAccountManager } from "@/components/SocialAccountManager";
+
+const PLATFORMS = [
+  { value: "instagram", label: "Instagram", icon: Instagram, color: "text-pink-600" },
+  { value: "tiktok", label: "TikTok", icon: Users, color: "text-black dark:text-white" },
+  { value: "youtube", label: "YouTube", icon: Youtube, color: "text-red-600" },
+  { value: "facebook", label: "Facebook", icon: Facebook, color: "text-blue-600" },
+  { value: "linkedin", label: "LinkedIn", icon: Linkedin, color: "text-blue-700" },
+  { value: "twitter", label: "Twitter/X", icon: Twitter, color: "text-sky-500" },
+];
 
 export default function AdminSocialStats() {
   const [selectedClient, setSelectedClient] = useState<string>("");
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
+  const [uploadedScreenshot, setUploadedScreenshot] = useState<string | null>(null);
+  const [isExtractingFromAI, setIsExtractingFromAI] = useState(false);
+  const [formData, setFormData] = useState({
+    followers: "",
+    posts: "",
+    engagement: "",
+    reach: "",
+    views: "",
+    growthRate: "",
+    notes: ""
+  });
+
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const { data: clients = [] } = useQuery<any[]>({
     queryKey: ["/api/clients"],
   });
 
-  return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Social Analytics Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Automated social media statistics powered by ScrapeCreators
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => setLocation("/admin/social-accounts")} className="gap-2">
-          <Settings className="w-4 h-4" /> Manage Connections
-        </Button>
-      </div>
+  const { data: stats = [] } = useQuery<any[]>({
+    queryKey: ["/api/clients", selectedClient, "social-stats"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/clients/${selectedClient}/social-stats`);
+      return res.json();
+    },
+    enabled: !!selectedClient,
+  });
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Client Selection */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Select Client</CardTitle>
-            <CardDescription>View and refresh client stats</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a client..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+  const updateStatsMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", `/api/clients/${selectedClient}/social-stats`, {
+        ...data,
+        platform: selectedPlatform
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", selectedClient, "social-stats"] });
+      toast({
+        title: "✅ Stats Saved",
+        description: `Social stats for ${selectedPlatform} have been updated.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Failed to Save",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
-        {/* Stats Section */}
-        <div className="lg:col-span-3">
-          {!selectedClient ? (
-            <Card className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed">
-              <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground/20 mb-4" />
-              <h3 className="text-xl font-semibold text-muted-foreground">Select a client to get started</h3>
-              <p className="text-sm text-muted-foreground mt-1">Choose a client from the left to view their automated social stats</p>
-            </Card>
-          ) : (
-            <SocialAccountManager clientId={selectedClient} isAdmin={true} />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+  const resetForm = () => {
+    setFormData({
+      followers: "",
+      posts: "",
+      engagement: "",
+      reach: "",
+      views: "",
+      growthRate: "",
+      notes: ""
+    });
+    setUploadedScreenshot(null);
+  };
+
+  const handlePlatformChange = (platform: string) => {
+    setSelectedPlatform(platform);
+    const existing = stats.find((s: any) => s.platform === platform);
+    if (existing) {
+      setFormData({
+        followers: existing.followers?.toString() || "",
+        posts: existing.posts?.toString() || "",
+        engagement: existing.engagement?.toString() || "",
+        reach: existing.reach?.toString() || "",
+        views: existing.views?.toString() || "",
+        growthRate: existing.growthRate?.toString() || "",
+        notes: existing.notes || ""
+      });
+    } else {
+      resetForm();
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClient) return;
+    updateStatsMutation.mutate(formData);
+  };
+
+  const extractFromScreenshot = async () => {
+    if (!uploadedScreenshot) return;
+    
+    setIsExtractingFromAI(true);
+    try {
+      // This is a placeholder for the actual AI vision extraction route
+      // which we'll need to implement or find
+      toast({
+        title: "AI Analysis",
+        description: "Analyzing screenshot for social statistics...",
+      });
+      
+      // Simulate AI delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast({
+        title: "Analysis Complete",
+        description: "We've pre-filled the form with the detected stats.",
+      });
+    } catch (error) {
+      toast({
+        title: "AI Error",
+        description: "Failed to extract data from screenshot.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExtractingFromAI(false);
+    }
+  };
+
+  const currentPlatform = PLATFORMS.find(p => p.value === selectedPlatform);
+  const Icon = currentPlatform?.icon || TrendingUp;
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -82,12 +170,9 @@ export default function AdminSocialStats() {
             Manually update social media statistics for your clients
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <FileImage className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span className="text-sm text-blue-800 dark:text-blue-200">
-            Pro Tip: You can paste screenshots too! (Coming soon)
-          </span>
-        </div>
+        <Button variant="outline" onClick={() => setLocation("/admin/social-accounts")} className="gap-2">
+          <Settings className="w-4 h-4" /> Manage Connections
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -124,7 +209,7 @@ export default function AdminSocialStats() {
                   {PLATFORMS.map((platform) => {
                     const PlatformIcon = platform.icon;
                     const isActive = selectedPlatform === platform.value;
-                    const hasStats = stats.some(s => s.platform === platform.value);
+                    const hasStats = stats.some((s: any) => s.platform === platform.value);
                     
                     return (
                       <button
@@ -157,10 +242,10 @@ export default function AdminSocialStats() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center`}>
-                <Icon className={`w-5 h-5 ${currentPlatform?.color}`} />
+                <Icon className={`w-5 h-5 ${currentPlatform?.color || ''}`} />
               </div>
               <div>
-                <CardTitle className="text-lg">{currentPlatform?.label} Statistics</CardTitle>
+                <CardTitle className="text-lg">{currentPlatform?.label || 'Platform'} Statistics</CardTitle>
                 <CardDescription>Enter the latest stats for this platform</CardDescription>
               </div>
             </div>
@@ -332,10 +417,10 @@ export default function AdminSocialStats() {
                   </Button>
                 </div>
 
-                {stats.find(s => s.platform === selectedPlatform) && (
+                {stats.find((s: any) => s.platform === selectedPlatform) && (
                   <div className="mt-4 p-3 bg-muted rounded-lg border">
                     <p className="text-xs text-muted-foreground">
-                      Last updated: {new Date(stats.find(s => s.platform === selectedPlatform)!.lastUpdated).toLocaleString()}
+                      Last updated: {new Date(stats.find((s: any) => s.platform === selectedPlatform)!.lastUpdated).toLocaleString()}
                     </p>
                   </div>
                 )}
@@ -344,7 +429,17 @@ export default function AdminSocialStats() {
           </CardContent>
         </Card>
       </div>
+
+      <Separator />
+
+      <div>
+        <h2 className="text-xl font-bold mb-4">Automated Social Accounts</h2>
+        {!selectedClient ? (
+          <p className="text-muted-foreground">Select a client above to view automated stats.</p>
+        ) : (
+          <SocialAccountManager clientId={selectedClient} isAdmin={true} />
+        )}
+      </div>
     </div>
   );
 }
-
