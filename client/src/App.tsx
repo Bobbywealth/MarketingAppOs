@@ -11,6 +11,7 @@ import { NotificationsCenter } from "@/components/NotificationsCenter";
 import { DashboardSwitcher } from "@/components/DashboardSwitcher";
 // NotificationPermissionPrompt removed - using Native Web Push
 import { PWAInstallButton } from "@/components/PWAInstallButton";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -270,11 +271,19 @@ function AppContent() {
   };
 
   if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-spinner"></div>
-      </div>
-    );
+    const publicPages = ["/", "/signup", "/signup/creator", "/contact", "/blog", "/auth", "/login"];
+    const isPublicPage = publicPages.includes(window.location.pathname) || 
+                         window.location.pathname.startsWith("/signup/");
+    
+    if (isPublicPage) {
+      return (
+        <div className="h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-spinner"></div>
+        </div>
+      );
+    }
+    
+    return <LoadingScreen />;
   }
 
   if (!user) {
