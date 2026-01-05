@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation, useRoute, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -33,7 +34,10 @@ import {
   Activity,
   DollarSign,
   Receipt,
-  Plus
+  Plus,
+  ExternalLink,
+  Info,
+  History
 } from "lucide-react";
 import {
   Dialog,
@@ -141,6 +145,8 @@ export default function CreatorDetailPage() {
   const pendingPayoutCents = visits
     .filter(v => v.status === 'completed' && !v.paymentReleased)
     .reduce((sum, v) => sum + (creator?.ratePerVisitCents || 0), 0);
+
+  const acceptMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/creators/${creatorId}/accept`, {});
       return res.json();
