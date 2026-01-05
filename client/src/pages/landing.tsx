@@ -377,7 +377,12 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background overflow-x-hidden scroll-smooth relative">
       <AnimatedBackground />
       {/* Header */}
-      <header className="border-b sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm">
+      <motion.header
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="border-b sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-sm supports-[backdrop-filter]:bg-white/60"
+      >
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <HeaderLogo />
@@ -470,13 +475,31 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Mobile Menu */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
-                  <Menu className="h-6 w-6" />
+            {/* Mobile actions (CTA + Menu) */}
+            <div className="flex items-center gap-2 md:hidden">
+              <Link href="/signup">
+                <Button
+                  size="sm"
+                  className="gap-2 text-xs bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 px-3 h-9 rounded-full font-black"
+                  data-testid="button-get-started-header"
+                >
+                  Get Started
+                  <ArrowRight className="w-3 h-3" />
                 </Button>
-              </SheetTrigger>
+              </Link>
+
+              {/* Mobile Menu */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-full border-2 bg-white/60 hover:bg-white/80 backdrop-blur-md"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
               <SheetContent side="right" className="w-[85vw] sm:w-[400px] border-l-0 p-0 overflow-hidden">
                 <div className="flex flex-col h-full bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
                   <div className="p-6 border-b bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
@@ -558,21 +581,30 @@ export default function LandingPage() {
                   </div>
                 </div>
               </SheetContent>
-            </Sheet>
-            
+              </Sheet>
+            </div>
+
             {/* Desktop buttons */}
-            <Link href="/login">
-              <Button className="hidden md:inline-flex bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-login-header">Login</Button>
-            </Link>
-            <Link href="/signup" className="hidden xs:block">
-              <Button size="sm" className="gap-1 md:gap-2 text-[10px] xs:text-xs md:text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 px-2 xs:px-3 md:px-4 h-8 xs:h-9 md:h-10 rounded-full font-bold" data-testid="button-get-started-header">
-                Get Started
-                <ArrowRight className="w-2.5 h-2.5 xs:w-3 xs:h-3 md:w-4 md:h-4" />
-              </Button>
-            </Link>
+            <div className="hidden md:flex items-center gap-3">
+              <Link href="/login">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-login-header">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button
+                  size="sm"
+                  className="gap-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 px-4 h-10 rounded-full font-black"
+                  data-testid="button-get-started-header"
+                >
+                  Get Started
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Hero Section */}
       <section className="relative pt-12 pb-16 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32 px-4 overflow-hidden min-h-[80vh] md:min-h-[90vh] flex items-center">

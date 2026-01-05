@@ -152,6 +152,42 @@ export default function CreatorSignupPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 overflow-x-hidden">
+      {/* Floating header (matches landing vibe) */}
+      <motion.header
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-[#0f172a]/50"
+      >
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center">
+            <HeaderLogo />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              onClick={() => {
+                document.getElementById("apply-now")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              Apply
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              aria-label="Login"
+              onClick={() => setLocation("/login")}
+            >
+              <User className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </motion.header>
+
       {/* Cinematic Hero Section */}
       <div className="bg-[#0f172a] text-white pt-16 pb-24 md:pt-24 md:pb-32 relative overflow-hidden">
         {/* Background Decorative Elements */}
