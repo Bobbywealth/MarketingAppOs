@@ -16,18 +16,19 @@ const PAGE_META_MAP: Record<string, PageMeta> = {
     description: "Your all-in-one platform for marketing strategy, content, and growth. Manage your brand like a pro."
   },
   "/creator-signup": {
-    title: "The Creator Opportunity | Join Marketing Team",
-    description: "🎥 Turn your content into a career. We're looking for elite creators to capture high-impact content for the world's fastest growing brands. Apply now to join the network.",
-    image: "https://www.marketingteam.app/icon-512x512.png" 
+    title: "🎥 Join the Elite Creator Network | Marketing Team",
+    description: "Turn your passion for content into a professional career. Capture high-impact media for top brands. High-pay, pro workflow, and elite support. Apply now! 🚀✨",
+    image: "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=1200&auto=format&fit=crop" 
   },
   "/signup/creator": {
-    title: "Join as a Content Creator | Marketing Team",
-    description: "Ready to start capturing high-impact content? Complete your application to join our elite creator network and work with top brands. 🎥✨",
-    image: "https://www.marketingteam.app/icon-512x512.png" 
+    title: "🎥 Join the Elite Creator Network | Marketing Team",
+    description: "Turn your passion for content into a professional career. Capture high-impact media for top brands. High-pay, pro workflow, and elite support. Apply now! 🚀✨",
+    image: "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=1200&auto=format&fit=crop" 
   },
   "/signup": {
-    title: "Get Started | Marketing Team App",
-    description: "Join the future of marketing. Sign up today to scale your brand with a dedicated remote digital marketing team. 🚀"
+    title: "🚀 Scale Your Brand | Join Marketing Team",
+    description: "Get a dedicated remote digital marketing team to handle your strategy, content, and growth. Stop guessing and start scaling today. 📈",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200&auto=format&fit=crop"
   },
   "/login": {
     title: "Login | Marketing Team App",
@@ -56,13 +57,16 @@ const PAGE_META_MAP: Record<string, PageMeta> = {
 };
 
 export function getMetaForPath(path: string): PageMeta {
+  // Normalize path: remove query strings and trailing slashes
+  const cleanPath = path.split('?')[0].replace(/\/$/, '') || "/";
+
   // Try to find an exact match
-  if (PAGE_META_MAP[path]) {
-    return PAGE_META_MAP[path];
+  if (PAGE_META_MAP[cleanPath]) {
+    return PAGE_META_MAP[cleanPath];
   }
 
   // Handle dynamic paths or defaults
-  if (path.startsWith("/blog/")) {
+  if (cleanPath.startsWith("/blog/")) {
     return {
       title: "Marketing Insights | Blog",
       description: "Read the latest about digital marketing, content strategy, and business growth."
