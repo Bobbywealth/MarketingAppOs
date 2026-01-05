@@ -20,6 +20,23 @@ const PAGE_META_MAP: Record<string, PageMeta> = {
     description: "🎥 Turn your content into a career. We're looking for elite creators to capture high-impact content for the world's fastest growing brands. Apply now to join the network.",
     image: "https://www.marketingteam.app/icon-512x512.png" 
   },
+  "/signup/creator": {
+    title: "Join as a Content Creator | Marketing Team",
+    description: "Ready to start capturing high-impact content? Complete your application to join our elite creator network and work with top brands. 🎥✨",
+    image: "https://www.marketingteam.app/icon-512x512.png" 
+  },
+  "/signup": {
+    title: "Get Started | Marketing Team App",
+    description: "Join the future of marketing. Sign up today to scale your brand with a dedicated remote digital marketing team. 🚀"
+  },
+  "/login": {
+    title: "Login | Marketing Team App",
+    description: "Welcome back. Log in to your Marketing Team dashboard to manage your growth and content."
+  },
+  "/auth": {
+    title: "Login or Sign Up | Marketing Team App",
+    description: "Access your Marketing Team dashboard. Join the elite network of brands and creators."
+  },
   "/creators": {
     title: "Meet the Creators | Marketing Team App",
     description: "Explore our network of top-tier talent. Professional content that doesn't just look good—it converts. 🚀"
