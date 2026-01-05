@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, Shield, User, UserPlus, Star, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Shield, User, UserPlus, Star, ChevronDown, Users } from "lucide-react";
 
 export function DashboardSwitcher() {
   const [activeRole, setActiveRole] = useState<string | null>(
@@ -17,6 +17,7 @@ export function DashboardSwitcher() {
 
   const roles = [
     { id: "admin", label: "Admin View", icon: Shield },
+    { id: "staff", label: "Staff View", icon: Users },
     { id: "client", label: "Client View", icon: User },
     { id: "sales_agent", label: "Sales Agent View", icon: UserPlus },
     { id: "creator", label: "Creator View", icon: Star },
