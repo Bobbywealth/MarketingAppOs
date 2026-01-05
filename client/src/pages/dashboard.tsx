@@ -910,7 +910,7 @@ export default function Dashboard() {
       </div>
 
       {/* Floating Action Button (FAB) */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-[80px] md:bottom-6 right-6 z-50">
         <div className="relative group">
           <Button
             size="lg"

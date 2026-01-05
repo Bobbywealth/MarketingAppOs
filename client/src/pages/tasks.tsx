@@ -1647,8 +1647,7 @@ export default function TasksPage() {
           <Button
             size="lg"
             onClick={() => setIsChatOpen(true)}
-            style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9999 }}
-            className="rounded-full w-14 h-14 md:w-16 md:h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
+            className="fixed bottom-[80px] md:bottom-6 right-6 z-[9999] rounded-full w-14 h-14 md:w-16 md:h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
           >
             <Sparkles className="w-6 h-6 md:w-7 md:h-7" />
           </Button>
@@ -1674,7 +1673,7 @@ export default function TasksPage() {
 
       {/* Bulk Action Bar */}
       {selectedTaskIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-[85px] md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center gap-3 border-r pr-6">
             <span className="text-sm font-bold text-primary">{selectedTaskIds.size} selected</span>
             <Button variant="ghost" size="sm" onClick={() => setSelectedTaskIds(new Set())} className="h-7 text-xs">

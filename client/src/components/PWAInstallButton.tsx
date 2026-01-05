@@ -94,7 +94,7 @@ export function PWAInstallButton() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 50, scale: 0.9 }}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        className="fixed bottom-6 left-4 right-4 md:left-auto md:right-8 md:bottom-8 md:w-[420px] z-[100]"
+        className="fixed bottom-[80px] md:bottom-8 left-4 right-4 md:left-auto md:right-8 md:w-[420px] z-[100]"
       >
         <div className="bg-white dark:bg-slate-900 border-2 border-primary/20 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] p-6 flex items-center gap-5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
