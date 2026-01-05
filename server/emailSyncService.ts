@@ -79,8 +79,8 @@ async function syncEmailsForUser(storage: IStorage, userId: number) {
               isImportant: msg.importance === 'high' || msg.isImportant || false,
               hasAttachments: msg.hasAttachments || false,
               userId,
-              receivedAt: msg.receivedDateTime ? new Date(msg.receivedDateTime).toISOString() : new Date().toISOString(),
-              sentAt: msg.sentDateTime ? new Date(msg.sentDateTime).toISOString() : undefined,
+              receivedAt: msg.receivedDateTime ? new Date(msg.receivedDateTime) : new Date(),
+              sentAt: msg.sentDateTime ? new Date(msg.sentDateTime) : undefined,
             } as any);
             syncedCount++;
           }
