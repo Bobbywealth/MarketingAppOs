@@ -8,6 +8,7 @@ import { requireRole, requirePermission, UserRole, rolePermissions } from "./rba
 import { AuditService } from "./auditService";
 import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
+import { emailNotifications } from "./emailService";
 import { dialpadService } from "./dialpadService";
 import { processAIChat } from "./aiManager";
 import {
@@ -968,6 +969,60 @@ export function registerRoutes(app: Express) {
       res.status(500).json({
         success: false,
         message: error.message || "Failed to create checkout session",
+      });
+    }
+  });
+
+  // Create Stripe Checkout Session and send email to client
+  app.post("/api/send-enrollment-email", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const { packageId, clientId, email, name } = req.body;
+
+      if (!packageId || !email || !name) {
+        return res.status(400).json({ message: "Missing required fields: packageId, email, name" });
+      }
+
+      // Get the package details
+      const pkg = await storage.getSubscriptionPackage(packageId);
+      if (!pkg) {
+        return res.status(404).json({ message: "Package not found" });
+      }
+
+      // Get the app's base URL
+      const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+      // Create Stripe checkout session
+      const session = await createCheckoutSession({
+        packageId: pkg.id,
+        packageName: pkg.name,
+        packagePrice: pkg.price,
+        clientEmail: email,
+        clientName: name,
+        successUrl: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${baseUrl}/signup?canceled=true`,
+      });
+
+      // Send the enrollment invitation email
+      const emailResult = await emailNotifications.sendEnrollmentInvitation(
+        email,
+        name,
+        pkg.name,
+        session.checkoutUrl!
+      );
+
+      if (!emailResult.success) {
+        throw new Error(emailResult.message || "Failed to send email");
+      }
+
+      res.json({
+        success: true,
+        message: "Enrollment email sent successfully",
+      });
+    } catch (error: any) {
+      console.error('Send enrollment email error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to send enrollment email",
       });
     }
   });

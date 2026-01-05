@@ -147,6 +147,31 @@ export const emailTemplates = {
     };
   },
 
+  // Enrollment invitation for new clients
+  enrollmentInvitation: (clientName: string, packageName: string, checkoutUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Welcome, ${clientName}! 👋</h2>
+      <p>We're excited to have you on board. To get started with your <strong>${packageName}</strong>, please complete your enrollment and set up your payment method.</p>
+      
+      <div class="card">
+        <div class="info-label">SELECTED PACKAGE</div>
+        <div class="info-value">${packageName}</div>
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">Securely add your card on file to activate your services and start your journey with us.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${checkoutUrl}" class="button" style="background-color: #3b82f6;">Finish Enrollment & Pay →</a>
+      </div>
+      
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">If you have any questions about the package or the enrollment process, please don't hesitate to reach out.</p>
+    `;
+    return {
+      subject: `🚀 Finish your enrollment for ${packageName}`,
+      html: renderEmail('Complete Your Enrollment', content, '#3b82f6')
+    };
+  },
+
   // Alert admin about new user signup
   newUserAlert: (adminName: string, newUserName: string, newUserEmail: string, newUserRole: string) => {
     const content = `
@@ -516,6 +541,11 @@ export const emailNotifications = {
 
   async sendVerificationEmail(userName: string, toEmail: string, verifyUrl: string) {
     const { subject, html } = emailTemplates.verifyEmail(userName, verifyUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendEnrollmentInvitation(toEmail: string, clientName: string, packageName: string, checkoutUrl: string) {
+    const { subject, html } = emailTemplates.enrollmentInvitation(clientName, packageName, checkoutUrl);
     return sendEmail(toEmail, subject, html);
   },
 };

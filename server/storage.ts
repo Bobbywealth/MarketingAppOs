@@ -922,7 +922,9 @@ export class DatabaseStorage implements IStorage {
 
   // Lead operations
   async getLeads(): Promise<Lead[]> {
-    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+    const leadsList = await db.select().from(leads).orderBy(desc(leads.createdAt));
+    console.log("🔍 getLeads() called - Found", leadsList.length, "leads");
+    return leadsList;
   }
 
   async getLead(id: string): Promise<Lead | undefined> {

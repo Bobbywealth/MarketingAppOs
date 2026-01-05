@@ -1,4 +1,4 @@
-import { pool } from "./server/db";
+import { pool } from "./server/db.ts";
 
 async function checkLeads() {
   try {

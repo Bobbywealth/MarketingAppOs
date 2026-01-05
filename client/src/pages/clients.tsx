@@ -65,24 +65,34 @@ export default function Clients() {
       
       const clientData = await response.json();
       
-      // If a subscription package was selected, redirect to Stripe checkout
+      // Handle different payment methods if a package was selected
       if (variables.subscriptionPackageId && variables.subscriptionPackageId !== "none") {
-        try {
-          toast({ title: "Client created! Redirecting to payment..." });
-          
-          const checkoutResponse = await apiRequest("POST", "/api/create-checkout-session", {
-            packageId: variables.subscriptionPackageId,
-            email: variables.email,
-            name: variables.name,
-            clientId: clientData.id,
-          });
-          
-          const checkoutData = await checkoutResponse.json();
-          
-          if (checkoutData.success && checkoutData.checkoutUrl) {
-            // Redirect to Stripe checkout
-            window.location.href = checkoutData.checkoutUrl;
-          } else {
+        if (variables.paymentMethod === "stripe") {
+          try {
+            toast({ title: "Client created! Redirecting to payment..." });
+            
+            const checkoutResponse = await apiRequest("POST", "/api/create-checkout-session", {
+              packageId: variables.subscriptionPackageId,
+              email: variables.email,
+              name: variables.name,
+              clientId: clientData.id,
+            });
+            
+            const checkoutData = await checkoutResponse.json();
+            
+            if (checkoutData.success && checkoutData.checkoutUrl) {
+              // Redirect to Stripe checkout
+              window.location.href = checkoutData.checkoutUrl;
+            } else {
+              toast({ 
+                title: "Client created, but payment setup failed", 
+                description: "You can set up payment later",
+                variant: "destructive" 
+              });
+              setDialogOpen(false);
+            }
+          } catch (error) {
+            console.error("Checkout error:", error);
             toast({ 
               title: "Client created, but payment setup failed", 
               description: "You can set up payment later",
@@ -90,14 +100,44 @@ export default function Clients() {
             });
             setDialogOpen(false);
           }
-        } catch (error) {
-          console.error("Checkout error:", error);
-          toast({ 
-            title: "Client created, but payment setup failed", 
-            description: "You can set up payment later",
-            variant: "destructive" 
-          });
+        } else if (variables.paymentMethod === "email") {
+          try {
+            toast({ title: "Client created! Sending enrollment email..." });
+            
+            const emailResponse = await apiRequest("POST", "/api/send-enrollment-email", {
+              packageId: variables.subscriptionPackageId,
+              email: variables.email,
+              name: variables.name,
+              clientId: clientData.id,
+            });
+            
+            const emailData = await emailResponse.json();
+            
+            if (emailData.success) {
+              toast({ title: "✅ Enrollment email sent successfully" });
+              setDialogOpen(false);
+              setPaymentMethod("none");
+            } else {
+              toast({ 
+                title: "Client created, but email failed", 
+                description: emailData.message || "Failed to send enrollment email",
+                variant: "destructive" 
+              });
+              setDialogOpen(false);
+            }
+          } catch (error) {
+            console.error("Email error:", error);
+            toast({ 
+              title: "Client created, but email failed", 
+              description: "Failed to send enrollment email",
+              variant: "destructive" 
+            });
+            setDialogOpen(false);
+          }
+        } else {
           setDialogOpen(false);
+          setPaymentMethod("none");
+          toast({ title: "Client created successfully" });
         }
       } else {
         setDialogOpen(false);
@@ -451,7 +491,8 @@ export default function Clients() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">None (Set up later)</SelectItem>
-                            <SelectItem value="stripe">Stripe (Automated Billing)</SelectItem>
+                            <SelectItem value="stripe">Pay Now (Redirect to Stripe)</SelectItem>
+                            <SelectItem value="email">Email Enrollment Link to Client</SelectItem>
                             <SelectItem value="manual">Manual Invoice</SelectItem>
                           </SelectContent>
                         </Select>

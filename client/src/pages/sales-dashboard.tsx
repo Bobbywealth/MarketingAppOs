@@ -217,7 +217,7 @@ export default function SalesDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-emerald-600">${lead.value.toLocaleString()}</p>
+                      <p className="font-bold text-emerald-600">${Number(lead.value).toLocaleString()}</p>
                       <Link href={`/leads/${lead.id}`}>
                         <Button variant="ghost" size="sm" className="mt-2">
                           View <ArrowRight className="w-3 h-3 ml-1" />

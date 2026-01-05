@@ -67,6 +67,7 @@ export default function Pipeline() {
   const { data: leads, isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
   });
+  console.log("DEBUG: pipeline leads received:", leads?.length, leads);
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {
@@ -379,7 +380,7 @@ export default function Pipeline() {
                       )}
                       {lead.value && (
                         <p className="text-sm font-semibold text-primary">
-                          ${lead.value.toLocaleString()}
+                          ${Number(lead.value).toLocaleString()}
                         </p>
                       )}
                       {lead.email && (

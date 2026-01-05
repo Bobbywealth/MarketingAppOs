@@ -36,6 +36,7 @@ router.get("/", isAuthenticated, requirePermission("canManageLeads"), async (_re
       return res.json(scoped);
     }
     const all = await storage.getLeads();
+    console.log("DEBUG: API /api/leads returning", all.length, "leads");
     res.json(all);
   } catch (error) {
     console.error(error);

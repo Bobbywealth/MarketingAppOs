@@ -336,6 +336,7 @@ export default function LeadsPage() {
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
+  console.log("DEBUG: leads received from API:", leads.length, leads);
 
   // Populate editTags when editing a lead
   useEffect(() => {
@@ -624,7 +625,8 @@ export default function LeadsPage() {
       lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = filterStatus === "all" || lead.stage === filterStatus;
-    const matchesIndustry = filterIndustry === "all" || !filterIndustry || lead.industry === filterIndustry;
+    const matchesIndustry = filterIndustry === "all" || !filterIndustry || 
+      lead.industry?.toLowerCase() === filterIndustry.toLowerCase();
     
     // Quick filters
     const matchesQuickStage = !quickFilterStage || lead.stage === quickFilterStage;
