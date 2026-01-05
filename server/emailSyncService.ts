@@ -1,6 +1,6 @@
 import cron from 'node-cron';
-import * as microsoftAuth from './microsoftAuth.js';
-import type { IStorage } from './storage.js';
+import * as microsoftAuth from './microsoftAuth';
+import type { IStorage } from './storage';
 
 let syncInterval: NodeJS.Timeout | null = null;
 let cronJob: cron.ScheduledTask | null = null;

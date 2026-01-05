@@ -81,7 +81,7 @@ router.post("/", isAuthenticated, requirePermission("canManageClients"), async (
       const admins = allUsers.filter(u => u.role === UserRole.ADMIN && u.email);
       
       if (admins.length > 0) {
-        const { emailNotifications } = await import('../emailService.js');
+        const { emailNotifications } = await import('../emailService');
         
         // Filter admins who have email notifications enabled
         const adminsToNotify = [];

@@ -18,4 +18,3 @@ export const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined
 });
 export const db = drizzle(pool, { schema });
-1

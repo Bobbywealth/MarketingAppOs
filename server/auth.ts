@@ -151,7 +151,7 @@ export function setupAuth(app: Express) {
       // Send welcome and verification emails
       if (user.email) {
         try {
-          const { emailNotifications } = await import("./emailService.js");
+          const { emailNotifications } = await import("./emailService");
           
           // Send verification email
           const appUrl = process.env.APP_URL || `http://${req.headers.host}`;
@@ -226,7 +226,7 @@ export function setupAuth(app: Express) {
       if (!user) {
         // Track failed login attempt
         try {
-          const { notifyAdminsAboutSecurityEvent } = await import('./routes/common.js');
+          const { notifyAdminsAboutSecurityEvent } = await import('./routes/common');
           await notifyAdminsAboutSecurityEvent(
             '🚨 Failed Login Attempt',
             `Failed login attempt from IP: ${req.ip} with username: ${req.body.username || 'unknown'}`,
@@ -357,7 +357,7 @@ export function setupAuth(app: Express) {
 
       // Actually try to send the email if email service is configured
       try {
-        const { emailNotifications } = await import("./emailService.js");
+        const { emailNotifications } = await import("./emailService");
         await emailNotifications.sendPasswordResetEmail(email, resetUrl);
       } catch (emailErr) {
         console.error("Failed to send password reset email:", emailErr);
@@ -481,7 +481,7 @@ export function setupAuth(app: Express) {
       const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
       
       try {
-        const { emailNotifications } = await import("./emailService.js");
+        const { emailNotifications } = await import("./emailService");
         await emailNotifications.sendVerificationEmail(
           user.firstName || user.username,
           user.email,

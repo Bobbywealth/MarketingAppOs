@@ -111,7 +111,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
     console.log("✅ Validation passed, creating task:", validatedData);
     const task = await storage.createTask(validatedData);
     
-    const { sendPushToUser } = await import('../push.js');
+    const { sendPushToUser } = await import('../push');
     
     // Enhanced task creation notifications
     const user = req.user as any;
@@ -139,7 +139,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
       try {
         const assignee = await storage.getUser(String(task.assignedToId));
         if (assignee?.email) {
-          const { emailNotifications } = await import('../emailService.js');
+          const { emailNotifications } = await import('../emailService');
           const assigneeName = assignee.firstName || assignee.username || 'there';
           
           // Respect preferences
@@ -192,7 +192,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
         // Email notification for team members
         if (teamMember.email) {
           try {
-            const { emailNotifications } = await import('../emailService.js');
+            const { emailNotifications } = await import('../emailService');
             const prefs = await storage.getUserNotificationPreferences(teamMember.id).catch(() => null);
             if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
               const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
@@ -328,7 +328,7 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
     const { userId: currentUserId, role: actorRole } = getCurrentUserContext(req);
     const currentUser = req.user as any;
     const actorName = currentUser?.firstName || currentUser?.username || 'A team member';
-    const { sendPushToUser } = await import('../push.js');
+    const { sendPushToUser } = await import('../push');
     
     if (validatedData.status === 'completed' && existingTask.status !== 'completed' && actorRole !== UserRole.ADMIN) {
       await notifyAdminsAboutAction(
@@ -364,7 +364,7 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
         try {
           const assignee = await storage.getUser(String(task.assignedToId));
           if (assignee?.email) {
-            const { emailNotifications } = await import('../emailService.js');
+            const { emailNotifications } = await import('../emailService');
             const prefs = await storage.getUserNotificationPreferences(assignee.id).catch(() => null);
             if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
               const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
@@ -407,7 +407,7 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
 
         // Email notification
         try {
-          const { emailNotifications } = await import('../emailService.js');
+          const { emailNotifications } = await import('../emailService');
           const assigneeName = newAssignee.firstName || newAssignee.username || 'there';
           
           // Respect preferences
@@ -469,7 +469,7 @@ router.post("/tasks/:taskId/comments", isAuthenticated, async (req: Request, res
     // Notification logic
     const task = await storage.getTask(req.params.taskId);
     if (task) {
-      const { sendPushToUser } = await import('../push.js');
+      const { sendPushToUser } = await import('../push');
       const currentUser = req.user as any;
       const commenterName = currentUser?.firstName || currentUser?.username || 'Someone';
       
@@ -493,7 +493,7 @@ router.post("/tasks/:taskId/comments", isAuthenticated, async (req: Request, res
         try {
           const assignee = await storage.getUser(String(task.assignedToId));
           if (assignee?.email) {
-            const { emailNotifications } = await import('../emailService.js');
+            const { emailNotifications } = await import('../emailService');
             const prefs = await storage.getUserNotificationPreferences(assignee.id).catch(() => null);
             if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
               const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';

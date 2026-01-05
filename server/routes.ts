@@ -119,7 +119,7 @@ async function checkOverdueInvoices() {
       // Notify client users about overdue invoice
       if (invoice.clientId) {
         const clientUsers = await storage.getUsersByClientId(invoice.clientId);
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         
         for (const clientUser of clientUsers) {
           await storage.createNotification({
@@ -143,7 +143,7 @@ async function checkOverdueInvoices() {
       // Notify admins about overdue invoice
       const users = await storage.getUsers();
       const admins = users.filter(u => u.role === UserRole.ADMIN);
-      const { sendPushToUser: sendPushToAdmin } = await import('./push.js');
+      const { sendPushToUser: sendPushToAdmin } = await import('./push');
       
       for (const admin of admins) {
         await storage.createNotification({
@@ -177,7 +177,7 @@ async function notifyAdminsAboutAnalytics(title: string, message: string, catego
   try {
     const users = await storage.getUsers();
     const admins = users.filter(u => u.role === UserRole.ADMIN);
-    const { sendPushToUser } = await import('./push.js');
+    const { sendPushToUser } = await import('./push');
     
     for (const admin of admins) {
       await storage.createNotification({
@@ -271,7 +271,7 @@ async function notifyAdminsAboutIntegration(title: string, message: string, cate
   try {
     const users = await storage.getUsers();
     const admins = users.filter(u => u.role === UserRole.ADMIN);
-    const { sendPushToUser } = await import('./push.js');
+    const { sendPushToUser } = await import('./push');
     
     for (const admin of admins) {
       await storage.createNotification({
@@ -319,7 +319,7 @@ async function runMeetingReminders() {
 
     const users = await storage.getUsers();
     const admins = users.filter(u => u.role === UserRole.ADMIN);
-    const { sendPushToUser } = await import('./push.js');
+    const { sendPushToUser } = await import('./push');
 
     for (const ev of upcoming) {
       for (const admin of admins) {
@@ -415,7 +415,7 @@ async function processAICommand(message: string, userId: number): Promise<{
             const admins = allUsers.filter(u => u.role === UserRole.ADMIN && u.email);
             
             if (admins.length > 0) {
-              const { emailNotifications } = await import('./emailService.js');
+              const { emailNotifications } = await import('./emailService');
               const adminsToNotify = [];
               for (const admin of admins) {
                 const prefs = await storage.getUserNotificationPreferences(admin.id);
@@ -743,7 +743,7 @@ export function registerRoutes(app: Express) {
         // Notify admins about file upload
         const users = await storage.getUsers();
         const admins = users.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         
         for (const admin of admins) {
           if (admin.id !== currentUserId) {
@@ -766,7 +766,7 @@ export function registerRoutes(app: Express) {
             // Email notification to admin
             if (admin.email) {
               try {
-                const { emailNotifications } = await import('./emailService.js');
+                const { emailNotifications } = await import('./emailService');
                 const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
                 const prefs = await storage.getUserNotificationPreferences(admin.id).catch(() => null);
                 if (prefs?.emailNotifications !== false) {
@@ -834,7 +834,7 @@ export function registerRoutes(app: Express) {
       const { to, subject } = req.body as { to?: string; subject?: string };
       if (!to) return res.status(400).json({ message: "Missing 'to' email address" });
 
-      const { sendEmail, emailTemplates } = await import("./emailService.js");
+      const { sendEmail, emailTemplates } = await import("./emailService");
       const user = req.user as any;
       const userName = user?.firstName || user?.username || 'Admin';
       
@@ -858,8 +858,8 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ message: 'Title and message are required' });
       }
       const users = await storage.getUsers();
-      const { sendPushToUser } = await import('./push.js');
-      const { emailNotifications } = await import('./emailService.js');
+      const { sendPushToUser } = await import('./push');
+      const { emailNotifications } = await import('./emailService');
       let count = 0;
       for (const user of users) {
         await storage.createNotification({
@@ -1035,7 +1035,7 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ success: false, message: "Missing sessionId" });
       }
 
-      const { getStripeInstance } = await import("./stripeService.js");
+      const { getStripeInstance } = await import("./stripeService");
       const stripe = getStripeInstance();
       if (!stripe) {
         return res.status(500).json({ success: false, message: "Stripe not configured" });
@@ -1131,7 +1131,7 @@ export function registerRoutes(app: Express) {
       try {
         const users = await storage.getUsers();
         const notifyUsers = users.filter((u: any) => u.role === UserRole.ADMIN || u.role === UserRole.MANAGER);
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         for (const u of notifyUsers) {
           await storage.createNotification({
             userId: u.id,
@@ -1151,7 +1151,7 @@ export function registerRoutes(app: Express) {
           // Email notification to admin/manager
           if (u.email) {
             try {
-              const { emailNotifications } = await import('./emailService.js');
+              const { emailNotifications } = await import('./emailService');
               const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
               const prefs = await storage.getUserNotificationPreferences(u.id).catch(() => null);
               if (prefs?.emailNotifications !== false) {
@@ -1602,7 +1602,7 @@ This lead will be updated if they complete the full signup process.`,
           u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
         );
         
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         
         for (const user of adminsAndManagers) {
           // In-app notification
@@ -1626,7 +1626,7 @@ This lead will be updated if they complete the full signup process.`,
           // Email notification to admin/manager
           if (user.email) {
             try {
-              const { emailNotifications } = await import('./emailService.js');
+              const { emailNotifications } = await import('./emailService');
               const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
               const prefs = await storage.getUserNotificationPreferences(user.id).catch(() => null);
               if (prefs?.emailNotifications !== false) {
@@ -2777,7 +2777,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       if (campaign.clientId) {
         try {
           const clientUsers = await storage.getUsersByClientId(campaign.clientId);
-          const { sendPushToUser } = await import('./push.js');
+          const { sendPushToUser } = await import('./push');
           
           for (const clientUser of clientUsers) {
             // In-app notification
@@ -3573,7 +3573,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       // Create a notification for all admins
       try {
         console.log("📬 Creating notifications for admins...");
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         
         for (const admin of adminUsers) {
           // In-app notification
@@ -3752,7 +3752,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
       
       // Check if user has permission to manage content
-      const { hasPermission } = await import('./rbac.js');
+      const { hasPermission } = await import('./rbac');
       if (!hasPermission(userRecord.role as any, "canManageContent")) {
         console.log("❌ Permission denied for user:", user.id, "role:", userRecord.role);
         return res.status(403).json({ message: "You don't have permission to manage content" });
@@ -3782,7 +3782,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       if (post.clientId) {
         try {
           const clientUsers = await storage.getUsersByClientId(post.clientId);
-          const { sendPushToUser } = await import('./push.js');
+          const { sendPushToUser } = await import('./push');
           
           for (const clientUser of clientUsers) {
             // In-app notification
@@ -3874,7 +3874,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       // Enhanced content approval notifications
       try {
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         const users = await storage.getUsers();
         const currentUser = req.user as any;
         const currentUserId = currentUser?.id || currentUser?.claims?.sub;
@@ -3993,7 +3993,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       if (invoice.clientId) {
         try {
           const clientUsers = await storage.getUsersByClientId(invoice.clientId);
-          const { sendPushToUser } = await import('./push.js');
+          const { sendPushToUser } = await import('./push');
           
           for (const clientUser of clientUsers) {
             // In-app notification
@@ -4324,7 +4324,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         if (mentionUsernames.length > 0) {
           const users = await storage.getUsers();
           const mentionedUsers = users.filter(u => mentionUsernames.includes(u.username));
-          const { sendPushToUser } = await import('./push.js');
+          const { sendPushToUser } = await import('./push');
           const sender = await storage.getUser(String(currentUserId));
           const senderName = sender?.firstName || sender?.username || 'Someone';
 
@@ -4406,7 +4406,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           console.log("📬 In-app notification created:", notification.id);
           
           // Push notification
-          const { sendPushToUser } = await import('./push.js');
+          const { sendPushToUser } = await import('./push');
           await sendPushToUser(validatedData.recipientId, {
             title: '💬 New Message',
             body: `${senderName}: ${validatedData.content?.substring(0, 100) || 'Sent you a message'}`,
@@ -5087,7 +5087,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     try {
       console.log("Creating user with data:", { username: req.body.username, role: req.body.role });
       
-      const { hashPassword } = await import("./auth.js");
+      const { hashPassword } = await import("./auth");
       const userData = {
         username: req.body.username,
         password: await hashPassword(req.body.password),
@@ -5101,7 +5101,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       // Email notifications
       if (user.email) {
         try {
-          const { emailNotifications } = await import("./emailService.js");
+          const { emailNotifications } = await import("./emailService");
           // Send welcome email to new user
           void emailNotifications.sendWelcomeEmail(
             user.firstName || user.username,
@@ -5116,8 +5116,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       try {
         const allUsers = await storage.getUsers();
         const admins = allUsers.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push.js');
-        const { emailNotifications } = await import('./emailService.js');
+        const { sendPushToUser } = await import('./push');
+        const { emailNotifications } = await import('./emailService');
         
         const adminEmailsToNotify = [];
         
@@ -5278,7 +5278,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         // Notify all admins about profile update
         const users = await storage.getUsers();
         const admins = users.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         
         for (const admin of admins) {
           await storage.createNotification({
@@ -5313,8 +5313,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Change password endpoint
   app.post("/api/user/change-password", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const { comparePasswords } = await import('./auth.js');
-      const { hashPassword } = await import('./auth.js');
+      const { comparePasswords } = await import('./auth');
+      const { hashPassword } = await import('./auth');
       const currentUserId = (req.user as any).id;
       const { currentPassword, newPassword, confirmPassword } = req.body;
 
@@ -5372,7 +5372,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         // Notify all admins about password change
         const users = await storage.getUsers();
         const admins = users.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push.js');
+        const { sendPushToUser } = await import('./push');
         
         for (const admin of admins) {
           await storage.createNotification({
@@ -5441,7 +5441,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const existingKeys = new Set(existing.map((n) => `${n.actionUrl ?? ""}::${n.title}`));
 
       let notificationsCreated = 0;
-      const { sendPushToUser } = await import("./push.js");
+      const { sendPushToUser } = await import("./push");
 
       for (const task of dueTasks) {
         if (!task.dueDate) continue;
@@ -5736,7 +5736,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Send push notification (Admin only)
   app.post("/api/push/send", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
-      const { sendPushToUser, sendPushToRole, broadcastPush } = await import('./push.js');
+      const { sendPushToUser, sendPushToRole, broadcastPush } = await import('./push');
       const { userId, role, title, body, url, broadcast } = req.body;
       const user = req.user as any;
 
@@ -5956,8 +5956,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // One-time database migration endpoint (Admin only)
   app.post("/api/admin/run-migration", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
-      const { db } = await import("./db.js");
-      
       // Add missing columns
       await db.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`);
       await db.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT`);
@@ -6016,7 +6014,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
       
-      const { getStripeDashboardMetrics } = await import("./stripeService.js");
+      const { getStripeDashboardMetrics } = await import("./stripeService");
       const metrics = await getStripeDashboardMetrics(start, end);
       res.json(metrics);
     } catch (error: any) {
@@ -6027,7 +6025,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.get("/api/stripe/customers", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
-      const { getStripeCustomers } = await import("./stripeService.js");
+      const { getStripeCustomers } = await import("./stripeService");
       const customers = await getStripeCustomers();
       res.json(customers);
     } catch (error: any) {
@@ -6039,7 +6037,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.post("/api/stripe/invoices", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
       const { customerId, items } = req.body;
-      const { createStripeInvoice } = await import("./stripeService.js");
+      const { createStripeInvoice } = await import("./stripeService");
       const invoice = await createStripeInvoice(customerId, items);
       res.json(invoice);
     } catch (error: any) {
@@ -6050,7 +6048,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.get("/api/stripe/balance", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
-      const { getStripeBalance } = await import("./stripeService.js");
+      const { getStripeBalance } = await import("./stripeService");
       const balance = await getStripeBalance();
       res.json(balance);
     } catch (error: any) {
