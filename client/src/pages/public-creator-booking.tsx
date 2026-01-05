@@ -16,7 +16,7 @@ import {
   Clock, 
   MapPin, 
   Instagram, 
-  Tiktok,
+  Video,
   Youtube,
   Globe,
   ArrowLeft,
@@ -162,7 +162,7 @@ export default function PublicCreatorBooking() {
                 {creator.tiktokUsername && (
                   <a href={`https://tiktok.com/@${creator.tiktokUsername}`} target="_blank" rel="noopener noreferrer">
                     <Button size="icon" variant="outline" className="h-8 w-8 rounded-full border-slate-500/20 text-slate-900 dark:text-white hover:bg-slate-500/10">
-                      <Tiktok className="h-4 w-4" />
+                      <Video className="h-4 w-4" />
                     </Button>
                   </a>
                 )}

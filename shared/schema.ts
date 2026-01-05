@@ -519,7 +519,8 @@ export const creators = pgTable("creators", {
   approvedAt: timestamp("approved_at"),
   approvedByAdmin: integer("approved_by_admin").references(() => users.id),
   performanceScore: decimal("performance_score", { precision: 2, scale: 1 }).default("5.0"), // 1.0 - 5.0
-  payoutMethod: text("payout_method"), // e.g., 'paypal', 'venmo', 'stripe', 'zelle', 'bank_transfer'
+  payoutMethod: text("payout_method").default("manual"), // e.g., 'paypal', 'venmo', 'stripe', 'zelle', 'bank_transfer'
+  payoutStatus: varchar("payout_status", { length: 50 }).default("pending"),
   payoutDetails: jsonb("payout_details"), // e.g., { email: '...' } or { account: '...', routing: '...' }
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),

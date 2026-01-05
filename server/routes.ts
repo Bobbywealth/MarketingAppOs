@@ -4648,8 +4648,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Notifications routes
-  app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/api/notifications", async (req: Request, res: Response) => {
     try {
+      if (!req.isAuthenticated()) {
+        return res.json([]);
+      }
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
       
@@ -4666,8 +4669,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Check and create notifications for due/overdue tasks
-  app.post("/api/notifications/check-tasks", isAuthenticated, async (req: Request, res: Response) => {
+  app.post("/api/notifications/check-tasks", async (req: Request, res: Response) => {
     try {
+      if (!req.isAuthenticated()) {
+        return res.status(200).json({ message: "Task notifications check skipped: user not authenticated", notificationsCreated: 0 });
+      }
       const { userId } = getCurrentUserContext(req);
       if (userId === null) {
         return res.status(400).json({ message: "Invalid user context" });

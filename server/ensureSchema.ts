@@ -71,6 +71,10 @@ export async function ensureMinimumSchema() {
       rate_per_visit_cents INTEGER NOT NULL,
       availability_notes TEXT,
       status VARCHAR NOT NULL DEFAULT 'active',
+      application_status VARCHAR DEFAULT 'pending',
+      payout_method TEXT DEFAULT 'manual',
+      payout_status VARCHAR(50) DEFAULT 'pending',
+      payout_details JSONB DEFAULT '{}'::jsonb,
       performance_score NUMERIC(2,1) DEFAULT 5.0,
       notes TEXT,
       created_at TIMESTAMP DEFAULT NOW()
@@ -251,6 +255,18 @@ export async function ensureMinimumSchema() {
   await safeQuery(
     "creators.application_status column",
     `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS application_status VARCHAR DEFAULT 'pending';`
+  );
+  await safeQuery(
+    "creators.payout_method column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS payout_method TEXT DEFAULT 'manual';`
+  );
+  await safeQuery(
+    "creators.payout_status column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS payout_status VARCHAR(50) DEFAULT 'pending';`
+  );
+  await safeQuery(
+    "creators.payout_details column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS payout_details JSONB DEFAULT '{}'::jsonb;`
   );
   await safeQuery(
     "creators.instagram_username column",
