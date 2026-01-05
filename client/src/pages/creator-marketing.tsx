@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { 
   Megaphone, 
   Copy, 
@@ -11,7 +13,9 @@ import {
   Users, 
   Share2,
   CheckCircle2,
-  QrCode
+  QrCode,
+  Lock,
+  Sparkles
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Creator } from "@shared/schema";
@@ -20,11 +24,39 @@ import { useToast } from "@/hooks/use-toast";
 export default function CreatorMarketing() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [password, setPassword] = useState("");
+
+  // Check if already authorized in this session
+  useEffect(() => {
+    const authorized = sessionStorage.getItem("creator_marketing_beta_access");
+    if (authorized === "true") {
+      setIsAuthorized(true);
+    }
+  }, []);
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === "password1234") {
+      setIsAuthorized(true);
+      sessionStorage.setItem("creator_marketing_beta_access", "true");
+      toast({
+        title: "Welcome to Beta!",
+        description: "You now have access to the Creator Marketing tools.",
+      });
+    } else {
+      toast({
+        title: "Incorrect Password",
+        description: "Please check with your manager for beta access.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch creator profile
   const { data: creator } = useQuery<Creator>({
     queryKey: [`/api/creators/${user?.creatorId}`],
-    enabled: !!user?.creatorId,
+    enabled: !!user?.creatorId && isAuthorized,
   });
 
   const bookingLink = `${window.location.origin}/book/${user?.creatorId}`;
@@ -37,15 +69,67 @@ export default function CreatorMarketing() {
     });
   };
 
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-950/50 p-4">
+        <Card className="max-w-md w-full border-2 border-primary/20 shadow-xl overflow-hidden">
+          <div className="bg-primary/5 p-8 text-center space-y-4 border-b border-primary/10">
+            <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
+              <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 mb-2">Private Beta</Badge>
+              <h2 className="text-2xl font-bold tracking-tight">Creator Marketing</h2>
+              <p className="text-sm text-muted-foreground">
+                We're building powerful tools to help you grow your business. This feature is releasing soon!
+              </p>
+            </div>
+          </div>
+          <CardContent className="p-8 pt-6">
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="beta-password">Beta Access Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="beta-password"
+                    type="password" 
+                    placeholder="Enter password..." 
+                    className="pl-10 h-12"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full h-12 text-lg font-bold gap-2">
+                Unlock Beta Access
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="bg-slate-50 dark:bg-slate-900/50 p-4 text-center">
+            <p className="text-xs text-muted-foreground w-full">
+              Coming to all creators in early 2026.
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-slate-50/50 dark:bg-slate-950/50 p-4 md:p-8 space-y-8">
       {/* Header section */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Creator Marketing</h1>
-        <p className="text-muted-foreground">Grow your presence and get more bookings from restaurants.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Creator Marketing</h1>
+          <p className="text-muted-foreground">Grow your presence and get more bookings from restaurants.</p>
+        </div>
+        <Badge className="w-fit bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1">
+          BETA ACCESS
+        </Badge>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Main Content: Booking Link & Tools */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-primary/20 bg-primary/5">
