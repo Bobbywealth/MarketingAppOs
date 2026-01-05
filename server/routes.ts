@@ -70,6 +70,48 @@ import {
 
 const objectStorageService = new ObjectStorageService();
 
+/**
+ * Ensures an email account has a valid access token, refreshing if necessary.
+ * Returns null if the account is inactive or refresh fails.
+ */
+async function ensureValidAccessToken(accountId: string): Promise<string | null> {
+  const account = await storage.getEmailAccount(accountId);
+  if (!account || !account.isActive) return null;
+
+  let accessToken = account.accessToken;
+  const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
+  const now = new Date();
+  const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+
+  if (!accessToken || (expiresAt && expiresAt < fiveMinutesFromNow)) {
+    if (!account.refreshToken) {
+      console.warn(`[Auth] No refresh token for account ${account.id}, marking inactive`);
+      await storage.updateEmailAccount(account.id, { isActive: false });
+      return null;
+    }
+
+    try {
+      const { refreshAccessToken } = await import("./microsoftAuth");
+      const refreshed = await refreshAccessToken(account.refreshToken);
+      await storage.updateEmailAccount(account.id, {
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+        tokenExpiresAt: refreshed.expiresOn,
+      });
+      accessToken = refreshed.accessToken;
+    } catch (error) {
+      console.error(`[Auth] Failed to refresh token for account ${account.id}:`, error);
+      // Mark as inactive if it's a permanent error (like invalid grant)
+      if (error instanceof Error && error.message.includes('invalid_grant')) {
+        await storage.updateEmailAccount(account.id, { isActive: false });
+      }
+      return null;
+    }
+  }
+
+  return accessToken;
+}
+
 // Ensure new message columns exist (safe to run multiple times)
 async function ensureMessageColumns() {
   try {
@@ -2152,29 +2194,12 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
         return res.status(404).json({ valid: false, message: "No active email account found" });
       }
 
-      // Check if token is expired or will expire soon (within 5 minutes)
-      const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
-      const now = new Date();
-      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-      
-      if (expiresAt && expiresAt < fiveMinutesFromNow) {
-        console.log(`🔄 Token expired or expiring soon, refreshing...`);
-        try {
-          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-          await storage.updateEmailAccount(account.id, {
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-            tokenExpiresAt: refreshed.expiresOn,
-          });
-          console.log(`✓ Token refreshed successfully`);
-          return res.json({ valid: true, refreshed: true });
-        } catch (error) {
-          console.error(`❌ Token refresh failed:`, error);
-          return res.status(401).json({ valid: false, message: "Token refresh failed, please reconnect" });
-        }
+      const accessToken = await ensureValidAccessToken(account.id);
+      if (!accessToken) {
+        return res.status(401).json({ valid: false, message: "Token refresh failed, please reconnect" });
       }
 
-      res.json({ valid: true, refreshed: false });
+      res.json({ valid: true, refreshed: true });
     } catch (error: any) {
       console.error('Error validating token:', error);
       res.status(500).json({ valid: false, message: "Failed to validate token" });
@@ -2199,18 +2224,9 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       console.log(`✓ Found email account: ${account.email}`);
 
       // Check if token is expired and refresh if needed
-      let accessToken = account.accessToken;
-      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
-        console.log(`🔄 Token expired, refreshing...`);
-        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-        accessToken = refreshed.accessToken;
-        
-        await storage.updateEmailAccount(account.id, {
-          accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken,
-          tokenExpiresAt: refreshed.expiresOn,
-        });
-        console.log(`✓ Token refreshed successfully`);
+      const accessToken = await ensureValidAccessToken(account.id);
+      if (!accessToken) {
+        return res.status(401).json({ message: "Authentication failed with email provider" });
       }
 
       // Fetch emails from Microsoft
@@ -2219,7 +2235,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
 
       for (const folder of folders) {
         console.log(`📥 Fetching emails from ${folder}...`);
-        const messages = await microsoftAuth.getEmails(accessToken!, folder, 50);
+        const messages = await microsoftAuth.getEmails(accessToken, folder, 50);
         console.log(`✓ Fetched ${messages.length} emails from ${folder}`);
         
         for (const msg of messages) {
@@ -2329,17 +2345,11 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       if (!emailBody || emailBody.length === 0) {
         const account = await storage.getEmailAccountByUserId(userId);
         if (account && account.isActive && email.messageId) {
-          let accessToken = account.accessToken;
-          if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
-            const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-            accessToken = refreshed.accessToken;
-            await storage.updateEmailAccount(account.id, {
-              accessToken: refreshed.accessToken,
-              refreshToken: refreshed.refreshToken,
-              tokenExpiresAt: refreshed.expiresOn,
-            });
+          const accessToken = await ensureValidAccessToken(account.id);
+          if (!accessToken) {
+            return res.status(401).json({ message: "Authentication failed with email provider" });
           }
-          const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
+          const fullEmail = await microsoftAuth.getEmailById(accessToken, email.messageId);
           emailBody = fullEmail.body?.content || email.bodyPreview || '';
         } else {
           emailBody = email.bodyPreview || '';
@@ -2378,17 +2388,11 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       if (!emailBody || emailBody.length === 0) {
         const account = await storage.getEmailAccountByUserId(userId);
         if (account && account.isActive && email.messageId) {
-          let accessToken = account.accessToken;
-          if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
-            const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-            accessToken = refreshed.accessToken;
-            await storage.updateEmailAccount(account.id, {
-              accessToken: refreshed.accessToken,
-              refreshToken: refreshed.refreshToken,
-              tokenExpiresAt: refreshed.expiresOn,
-            });
+          const accessToken = await ensureValidAccessToken(account.id);
+          if (!accessToken) {
+            return res.status(401).json({ message: "Authentication failed with email provider" });
           }
-          const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
+          const fullEmail = await microsoftAuth.getEmailById(accessToken, email.messageId);
           emailBody = fullEmail.body?.content || email.bodyPreview || '';
         } else {
           emailBody = email.bodyPreview || '';
@@ -2482,20 +2486,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
       
       // Check token expiry
-      let accessToken = account.accessToken;
-      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
-        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-        accessToken = refreshed.accessToken;
-        
-        await storage.updateEmailAccount(account.id, {
-          accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken,
-          tokenExpiresAt: refreshed.expiresOn,
-        });
+      const accessToken = await ensureValidAccessToken(account.id);
+      if (!accessToken) {
+        return res.status(401).json({ message: "Authentication failed with email provider" });
       }
       
       // Fetch full email from Microsoft
-      const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
+      const fullEmail = await microsoftAuth.getEmailById(accessToken, email.messageId);
       const bodyContent = fullEmail.body?.content || email.bodyPreview || '';
       
       // Store the body in database
@@ -2523,20 +2520,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
 
       // Check token expiry
-      let accessToken = account.accessToken;
-      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
-        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-        accessToken = refreshed.accessToken;
-        
-        await storage.updateEmailAccount(account.id, {
-          accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken,
-          tokenExpiresAt: refreshed.expiresOn,
-        });
+      const accessToken = await ensureValidAccessToken(account.id);
+      if (!accessToken) {
+        return res.status(401).json({ message: "Authentication failed with email provider" });
       }
 
       const emailData = req.body;
-      await microsoftAuth.sendEmail(accessToken!, emailData);
+      await microsoftAuth.sendEmail(accessToken, emailData);
 
       // Store sent email in database
       const now = new Date();
@@ -2987,19 +2977,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         const endIso = end ? new Date(end).toISOString() : new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
         // Refresh token if needed
-        let accessToken = account.accessToken;
-        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
-        if (!accessToken || (expiresAt && expiresAt < new Date())) {
-          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-          accessToken = refreshed.accessToken;
-          await storage.updateEmailAccount(account.id, {
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-            tokenExpiresAt: refreshed.expiresOn,
-          });
+        const accessToken = await ensureValidAccessToken(account.id);
+        if (!accessToken) {
+          return res.status(401).json({ message: "Authentication failed with email provider" });
         }
 
-        const graphEvents = await microsoftAuth.listCalendarView(accessToken!, startIso, endIso);
+        const graphEvents = await microsoftAuth.listCalendarView(accessToken, startIso, endIso);
         const mapped = (graphEvents || []).map((e: any) => ({
           id: e.id,
           title: e.subject || "(No title)",
@@ -3039,19 +3022,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
       if (wantsExternal && account?.isActive && account.provider === "microsoft") {
         // Refresh token if needed
-        let accessToken = account.accessToken;
-        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
-        if (!accessToken || (expiresAt && expiresAt < new Date())) {
-          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-          accessToken = refreshed.accessToken;
-          await storage.updateEmailAccount(account.id, {
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-            tokenExpiresAt: refreshed.expiresOn,
-          });
+        const accessToken = await ensureValidAccessToken(account.id);
+        if (!accessToken) {
+          return res.status(401).json({ message: "Authentication failed with email provider" });
         }
 
-        const created = await microsoftAuth.createCalendarEvent(accessToken!, {
+        const created = await microsoftAuth.createCalendarEvent(accessToken, {
           subject: req.body.title,
           bodyPreview: req.body.description || undefined,
           start: { dateTime: new Date(req.body.start).toISOString(), timeZone: "America/New_York" },
@@ -3097,19 +3073,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const account = await storage.getEmailAccountByUserId(Number(userId));
 
       if (account?.isActive && account.provider === "microsoft") {
-        let accessToken = account.accessToken;
-        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
-        if (!accessToken || (expiresAt && expiresAt < new Date())) {
-          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-          accessToken = refreshed.accessToken;
-          await storage.updateEmailAccount(account.id, {
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-            tokenExpiresAt: refreshed.expiresOn,
-          });
+        const accessToken = await ensureValidAccessToken(account.id);
+        if (!accessToken) {
+          return res.status(401).json({ message: "Authentication failed with email provider" });
         }
 
-        await microsoftAuth.updateCalendarEvent(accessToken!, req.params.id, {
+        await microsoftAuth.updateCalendarEvent(accessToken, req.params.id, {
           subject: req.body.title,
           bodyPreview: req.body.description || undefined,
           start: req.body.start ? { dateTime: new Date(req.body.start).toISOString(), timeZone: "America/New_York" } : undefined,
@@ -3136,18 +3105,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
       const account = await storage.getEmailAccountByUserId(Number(userId));
       if (account?.isActive && account.provider === "microsoft") {
-        let accessToken = account.accessToken;
-        const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
-        if (!accessToken || (expiresAt && expiresAt < new Date())) {
-          const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
-          accessToken = refreshed.accessToken;
-          await storage.updateEmailAccount(account.id, {
-            accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken,
-            tokenExpiresAt: refreshed.expiresOn,
-          });
+        const accessToken = await ensureValidAccessToken(account.id);
+        if (!accessToken) {
+          return res.status(401).json({ message: "Authentication failed with email provider" });
         }
-        await microsoftAuth.deleteCalendarEvent(accessToken!, req.params.id);
+        await microsoftAuth.deleteCalendarEvent(accessToken, req.params.id);
         return res.status(204).send();
       }
 

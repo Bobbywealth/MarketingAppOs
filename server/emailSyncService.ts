@@ -23,8 +23,17 @@ async function syncEmailsForUser(storage: IStorage, userId: number) {
     let accessToken = account.accessToken;
     if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
       console.log(`🔄 Token expired for user ${userId}, refreshing...`);
+      
+      if (!account.refreshToken) {
+        console.log(`⚠️  No refresh token for user ${userId}, marking email account as inactive`);
+        await storage.updateEmailAccount(account.id, {
+          isActive: false,
+        });
+        return { success: false, reason: 'no_refresh_token' };
+      }
+
       try {
-        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken);
         accessToken = refreshed.accessToken;
         
         await storage.updateEmailAccount(account.id, {
