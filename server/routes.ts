@@ -1052,6 +1052,16 @@ export function registerRoutes(app: Express) {
             notes: `${matchedLead.notes || ""}\nConverted via Stripe payment on ${now.toISOString()} (session ${sessionId})`,
           } as any);
 
+          // Link user account if created during signup
+          const sourceMetadata = matchedLead.sourceMetadata as any;
+          if (sourceMetadata?.userId && createdClient?.id) {
+            await storage.updateUser(sourceMetadata.userId, {
+              clientId: createdClient.id,
+              role: "client"
+            });
+            console.log(`✅ Linked user ${sourceMetadata.userId} to client ${createdClient.id}`);
+          }
+
           // Ensure onboarding tasks + commission exist
           if (createdClient?.id) {
             await ensureOnboardingTasksForClient(createdClient.id);
@@ -1735,6 +1745,7 @@ Lead completed signup process and is ready for package selection.`;
           sourceMetadata: { 
             ...(existingLead.sourceMetadata as object || {}),
             completedSignup: true,
+            userId,
             services: data.services,
             selectedPlatforms: data.selectedPlatforms,
             webDev: data.webDevType ? {
@@ -1809,6 +1820,7 @@ This lead completed the full signup process and is ready for package selection.`
           brandAssets: data.brandAssets,
           sourceMetadata: { 
             type: "signup_complete",
+            userId,
             services: data.services,
             webDev: data.webDevType ? {
               type: data.webDevType,

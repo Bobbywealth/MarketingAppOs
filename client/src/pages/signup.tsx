@@ -424,11 +424,11 @@ export default function SignupPage() {
                 🚀 Join 500+ Businesses Growing 3x Faster
               </div>
               <h1 className="text-4xl md:text-7xl font-black mb-4 md:mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent leading-[1.1] tracking-tight">
-                Your Marketing
+                Your Elite, High-Speed
                 <br />
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text">Dream Team</span>
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text">Marketing Department</span>
                 <br />
-                <span className="text-3xl md:text-5xl">Awaits.</span>
+                <span className="text-3xl md:text-5xl">is Ready to Launch.</span>
               </h1>
               <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-medium px-4 md:px-0">
                 Let's build your brand with a pro team that delivers <span className="text-blue-600 font-bold">real results</span>.
