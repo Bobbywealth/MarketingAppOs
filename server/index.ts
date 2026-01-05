@@ -17,6 +17,7 @@ import { storage } from "./storage";
 import { ensureMinimumSchema } from "./ensureSchema";
 
 const app = express();
+app.set('trust proxy', 1); // Trust the first proxy (e.g. Nginx, Replit, Heroku)
 
 // Security Middleware
 // In development, relax CSP for Vite HMR; in production, use strict defaults but allow Vimeo

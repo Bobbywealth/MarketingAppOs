@@ -459,8 +459,8 @@ export async function sendEmail(to: string | string[], subject: string, html: st
   }
 
   try {
-    const fromEmail = options?.from || 'business@wolfpaqmarketing.app';
-    const fromName = options?.fromName || 'Wolfpaq Marketing';
+    const fromEmail = options?.from || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'business@wolfpaqmarketing.app';
+    const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Wolfpaq Marketing';
     
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,

@@ -155,7 +155,9 @@ export function setupAuth(app: Express) {
           const { emailNotifications } = await import("./emailService");
           
           // Send verification email
-          const appUrl = process.env.APP_URL || `http://${req.headers.host}`;
+          const protocol = req.protocol;
+          const host = req.get('host');
+          const appUrl = process.env.APP_URL || `${protocol}://${host}`;
           const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
           
           void emailNotifications.sendVerificationEmail(
@@ -340,7 +342,9 @@ export function setupAuth(app: Express) {
       await storage.updateUserResetToken(user.id, resetToken, resetTokenExpiry);
 
       // In a real app, you'd send an email here
-      const appUrl = process.env.APP_URL || `http://${req.headers.host}`;
+      const protocol = req.protocol;
+      const host = req.get('host');
+      const appUrl = process.env.APP_URL || `${protocol}://${host}`;
       const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
       console.log(`
@@ -478,16 +482,23 @@ export function setupAuth(app: Express) {
       await storage.updateUserEmailVerification(user.id, false, verificationToken);
 
       // Send verification email
-      const appUrl = process.env.APP_URL || `http://${req.headers.host}`;
+      const protocol = req.protocol;
+      const host = req.get('host');
+      const appUrl = process.env.APP_URL || `${protocol}://${host}`;
       const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
       
       try {
         const { emailNotifications } = await import("./emailService");
-        await emailNotifications.sendVerificationEmail(
+        const emailResult = await emailNotifications.sendVerificationEmail(
           user.firstName || user.username,
           user.email,
           verifyUrl
         );
+        
+        if (!emailResult.success) {
+          console.error("Failed to send verification email:", emailResult.error || emailResult.message);
+          return res.status(500).json({ message: emailResult.message || "Failed to send verification email. Please contact support." });
+        }
       } catch (emailErr) {
         console.error("Failed to send verification email:", emailErr);
         return res.status(500).json({ message: "Failed to send verification email. Please try again later." });
