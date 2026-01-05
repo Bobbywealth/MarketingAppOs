@@ -4,7 +4,8 @@ import { db, pool } from "../db";
 import { clients, creators, clientCreators, creatorVisits, onboardingTasks, clientSocialStats } from "@shared/schema";
 import { eq, and, or, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
-import { requirePermission, requireRole, UserRole } from "../rbac";
+import { requirePermission, requireRole } from "../rbac";
+import { UserRole } from "@shared/schema";
 import { 
   getCurrentUserContext, 
   getAccessibleClientOr404 

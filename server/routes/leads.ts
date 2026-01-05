@@ -4,7 +4,8 @@ import { db } from "../db";
 import { leads } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
-import { requirePermission, UserRole } from "../rbac";
+import { requirePermission } from "../rbac";
+import { UserRole } from "@shared/schema";
 import { 
   getCurrentUserContext, 
   getAccessibleLeadOr404 

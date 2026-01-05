@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../auth";
-import { requireRole, UserRole } from "../rbac";
+import { requireRole } from "../rbac";
+import { UserRole } from "@shared/schema";
 import { sendEmail, marketingTemplates } from "../emailService";
 import { sendSms } from "../twilioService";
 import { insertMarketingBroadcastSchema } from "@shared/schema";

@@ -8,8 +8,8 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { pool } from "./db";
-import { User as SelectUser, insertUserSchema } from "@shared/schema";
-import { UserRole, rolePermissions } from "./rbac";
+import { User as SelectUser, insertUserSchema, UserRole } from "@shared/schema";
+import { rolePermissions } from "./rbac";
 
 declare global {
   namespace Express {

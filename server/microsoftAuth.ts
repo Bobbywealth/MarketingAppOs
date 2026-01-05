@@ -10,7 +10,14 @@ const msalConfig = {
   },
 };
 
-const pca = new ConfidentialClientApplication(msalConfig);
+let pcaInstance: ConfidentialClientApplication | null = null;
+
+function getPca(): ConfidentialClientApplication {
+  if (!pcaInstance) {
+    pcaInstance = new ConfidentialClientApplication(msalConfig);
+  }
+  return pcaInstance;
+}
 
 const REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:5000/api/auth/microsoft/callback';
 // 'offline_access' is REQUIRED to get refresh tokens for persistent login
@@ -31,7 +38,7 @@ export function getAuthUrl(state?: string): string {
     state: state,
   };
 
-  return pca.getAuthCodeUrl(authCodeUrlParameters).then((url) => url);
+  return getPca().getAuthCodeUrl(authCodeUrlParameters).then((url) => url);
 }
 
 export async function getTokenFromCode(code: string): Promise<any> {
@@ -42,7 +49,7 @@ export async function getTokenFromCode(code: string): Promise<any> {
   };
 
   try {
-    const response = await pca.acquireTokenByCode(tokenRequest);
+    const response = await getPca().acquireTokenByCode(tokenRequest);
     return {
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
@@ -70,7 +77,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<any> {
     };
 
     console.log(`[MicrosoftAuth] Attempting to refresh token (RT length: ${refreshToken.length})`);
-    const response = await pca.acquireTokenByRefreshToken(refreshTokenRequest);
+    const response = await getPca().acquireTokenByRefreshToken(refreshTokenRequest);
     
     if (!response) {
       throw new Error('No response from Microsoft during token refresh');

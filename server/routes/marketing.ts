@@ -4,7 +4,8 @@ import { db, pool } from "../db";
 import { campaigns, tasks, contentPosts, creatorVisits, onboardingTasks } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
-import { requirePermission, UserRole, rolePermissions } from "../rbac";
+import { requirePermission, rolePermissions } from "../rbac";
+import { UserRole } from "@shared/schema";
 import { 
   getCurrentUserContext 
 } from "./utils";

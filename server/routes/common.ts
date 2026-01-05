@@ -2,13 +2,12 @@ import { Response } from "express";
 import { ZodError } from "zod";
 import { storage } from "../storage";
 import { db } from "../db";
-import { clients, leads, onboardingTasks, commissions, subscriptionPackages } from "@shared/schema";
+import { clients, leads, onboardingTasks, commissions, subscriptionPackages, UserRole } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
-import { UserRole } from "../rbac";
 
 // Multer configuration
 export const UPLOAD_DIR = path.join(process.cwd(), 'uploads');

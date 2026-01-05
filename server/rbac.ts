@@ -1,15 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { storage } from "./storage";
-
-export enum UserRole {
-  ADMIN = "admin",
-  MANAGER = "manager",
-  STAFF = "staff",
-  SALES_AGENT = "sales_agent",
-  CREATOR_MANAGER = "creator_manager",
-  CREATOR = "creator",
-  CLIENT = "client",
-}
+import { UserRole } from "@shared/schema";
 
 export interface RolePermissions {
   canManageUsers: boolean;
@@ -118,6 +108,7 @@ export function requireRole(...allowedRoles: UserRole[]) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    const { storage } = await import("./storage");
     const dbUser = await storage.getUser(userId.toString());
     
     if (!dbUser) {
@@ -151,6 +142,7 @@ export function requirePermission(permission: keyof RolePermissions) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    const { storage } = await import("./storage");
     const dbUser = await storage.getUser(userId.toString());
     
     if (!dbUser) {

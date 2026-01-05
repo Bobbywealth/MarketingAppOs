@@ -5,7 +5,8 @@ import { creators, creatorVisits, clientCreators, clients, users } from "@shared
 import { eq, and, or, sql } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { hashPassword } from "../auth";
-import { requireRole, UserRole } from "../rbac";
+import { requireRole } from "../rbac";
+import { UserRole } from "@shared/schema";
 import { 
   handleValidationError
 } from "./common";

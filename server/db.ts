@@ -17,4 +17,15 @@ export const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined
 });
-export const db = drizzle(pool, { schema });
+// Lazy initialization of the drizzle instance to prevent circular dependency errors
+// during module loading, especially in bundled environments.
+let _db: any = null;
+
+export const db = new Proxy({} as any, {
+  get(target, prop, receiver) {
+    if (!_db) {
+      _db = drizzle(pool, { schema });
+    }
+    return Reflect.get(_db, prop, receiver);
+  }
+});
