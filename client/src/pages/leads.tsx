@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   UserPlus, 
   Search,
@@ -70,38 +71,40 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { format } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
 import { LeadsKanban } from "@/components/LeadsKanban";
 import { LeadCard } from "@/components/leads/LeadCard";
 import { LeadListView } from "@/components/leads/LeadListView";
 
-// Helper function to get badge variant based on stage
 function getStageBadge(stage: string): "default" | "secondary" | "outline" | "destructive" {
-  switch (stage) {
-    case "prospect":
-      return "secondary";
-    case "qualified":
-      return "default";
-    case "proposal":
-      return "outline";
-    case "closed_won":
-      return "default";
-    case "closed_lost":
-      return "destructive";
-    default:
-      return "secondary";
-  }
+  const colors: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+    prospect: "secondary",
+    qualified: "default",
+    proposal: "outline",
+    closed_won: "default",
+    closed_lost: "destructive",
+  };
+  return colors[stage] || "secondary";
 }
 
 // Activity Timeline Component
 function LeadActivityTimeline({ leadId }: { leadId: string }) {
   const { toast } = useToast();
 
-  const { data: activities, isLoading } = useQuery({
+  const { data: activitiesData, isLoading } = useQuery({
     queryKey: [`/api/leads/${leadId}/activities`],
     enabled: !!leadId,
   });
+
+  const activities = (activitiesData || []) as any[];
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -204,6 +207,7 @@ function LeadActivityTimeline({ leadId }: { leadId: string }) {
 
 export default function LeadsPage() {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [, setLocation] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -240,6 +244,8 @@ export default function LeadsPage() {
   const [quickFilterStage, setQuickFilterStage] = useState<string | null>(null);
   const [quickFilterScore, setQuickFilterScore] = useState<string | null>(null);
   const [quickFilterSource, setQuickFilterSource] = useState<string | null>(null);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+  const [mobileLead, setMobileLead] = useState<Lead | null>(null);
 
   const { data: leads = [], isLoading, refetch } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -680,11 +686,13 @@ export default function LeadsPage() {
                 lastContactDate: null, // Will be set when activity is logged
                 lastContactNotes: null,
                 nextFollowUpType: formData.get("nextFollowUpType") as string || null,
-                nextFollowUpDate: formData.get("nextFollowUpDate") ? new Date(formData.get("nextFollowUpDate") as string).toISOString() : null,
+                nextFollowUpDate: formData.get("nextFollowUpDate") ? new Date(formData.get("nextFollowUpDate") as string) : null,
                 clientId: null,
                 assignedToId: null,
                 sourceMetadata: null,
                 nextFollowUp: null,
+                expectedCloseDate: null,
+                expectedStartDate: null,
               };
               createLeadMutation.mutate(data);
               setNewTags([]); // Reset tags after submission
@@ -1176,14 +1184,14 @@ export default function LeadsPage() {
                   contactStatus: formData.get("contactStatus") as string || "not_contacted",
                   lastContactMethod: formData.get("lastContactMethod") as string || null,
                   nextFollowUpType: formData.get("nextFollowUpType") as string || null,
-                  nextFollowUpDate: formData.get("nextFollowUpDate") ? new Date(formData.get("nextFollowUpDate") as string).toISOString() : null,
+                  nextFollowUpDate: formData.get("nextFollowUpDate") ? new Date(formData.get("nextFollowUpDate") as string) : null,
                 };
                 updateLeadMutation.mutate({ id: editingLead.id, data });
               }} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Name</Label>
-                    <Input name="name" defaultValue={editingLead.name} placeholder="John Doe" />
+                    <Input name="name" defaultValue={editingLead.name || ""} placeholder="John Doe" />
                   </div>
                   <div>
                     <Label>Email</Label>
@@ -1599,7 +1607,7 @@ export default function LeadsPage() {
                       <Input 
                         name="nextFollowUpDate" 
                         type="datetime-local"
-                        defaultValue={editingLead.nextFollowUpDate ? new Date(editingLead.nextFollowUpDate).toISOString().slice(0, 16) : ""}
+                        defaultValue={editingLead.nextFollowUpDate ? new Date(editingLead.nextFollowUpDate as any).toISOString().slice(0, 16) : ""}
                       />
                     </div>
                   </div>
@@ -1881,7 +1889,7 @@ export default function LeadsPage() {
                   <div>
                     <DialogTitle className="text-2xl">{selectedLead.name}</DialogTitle>
                     <DialogDescription className="flex items-center gap-2 mt-2">
-                      <Badge variant={getStageBadge(selectedLead.stage)}>
+                      <Badge variant={getStageBadge(selectedLead.stage) as any}>
                         {selectedLead.stage.replace('_', ' ')}
                       </Badge>
                       {selectedLead.score && (
@@ -2469,7 +2477,14 @@ export default function LeadsPage() {
                   lead={lead}
                   isSelected={selectedLeads.has(lead.id)}
                   onToggleSelection={toggleLeadSelection}
-                  onClick={setSelectedLead}
+                  onClick={(lead) => {
+                    if (isMobile) {
+                      setMobileLead(lead);
+                      setIsMobileSheetOpen(true);
+                    } else {
+                      setSelectedLead(lead);
+                    }
+                  }}
                   onEdit={(lead) => {
                     setEditingLead(lead);
                     setEditTags(lead.tags || []);
@@ -2498,7 +2513,14 @@ export default function LeadsPage() {
               selectedLeads={selectedLeads}
               onToggleSelection={toggleLeadSelection}
               onSelectAll={selectAllLeads}
-              onLeadClick={setSelectedLead}
+              onLeadClick={(lead) => {
+                if (isMobile) {
+                  setMobileLead(lead);
+                  setIsMobileSheetOpen(true);
+                } else {
+                  setSelectedLead(lead);
+                }
+              }}
               onEdit={(lead) => {
                 setEditingLead(lead);
                 setEditTags(lead.tags || []);
@@ -2717,6 +2739,138 @@ export default function LeadsPage() {
       </Dialog>
       </div> {/* End Scrollable Content Area */}
       </div>
+
+      {/* Mobile Actions Bottom Sheet */}
+      <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl p-6">
+          <SheetHeader className="text-left mb-6">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12 border-2 border-primary/10">
+                <AvatarFallback className="bg-primary/5 text-primary font-bold">
+                  {(mobileLead?.company || mobileLead?.name)?.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <SheetTitle className="text-xl">{mobileLead?.company || mobileLead?.name}</SheetTitle>
+                <SheetDescription>{mobileLead?.name && mobileLead?.company ? mobileLead?.name : 'Lead Actions'}</SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="grid grid-cols-4 gap-4 mb-8">
+            <button 
+              onClick={() => {
+                if (mobileLead?.phone) setLocation(`/phone?number=${encodeURIComponent(mobileLead.phone)}&action=call`);
+                setIsMobileSheetOpen(false);
+              }}
+              disabled={!mobileLead?.phone}
+              className="flex flex-col items-center gap-2 group disabled:opacity-50"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 group-active:scale-95 transition-transform">
+                <PhoneCall className="w-6 h-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground">Call</span>
+            </button>
+            <button 
+              onClick={() => {
+                if (mobileLead?.email) window.location.href = `mailto:${mobileLead.email}`;
+                setIsMobileSheetOpen(false);
+              }}
+              disabled={!mobileLead?.email}
+              className="flex flex-col items-center gap-2 group disabled:opacity-50"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-600 group-active:scale-95 transition-transform">
+                <Mail className="w-6 h-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground">Email</span>
+            </button>
+            <button 
+              onClick={() => {
+                if (mobileLead?.phone) setLocation(`/phone?number=${encodeURIComponent(mobileLead.phone)}&action=sms`);
+                setIsMobileSheetOpen(false);
+              }}
+              disabled={!mobileLead?.phone}
+              className="flex flex-col items-center gap-2 group disabled:opacity-50"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-600 group-active:scale-95 transition-transform">
+                <MessageSquare className="w-6 h-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground">SMS</span>
+            </button>
+            <button 
+              onClick={() => {
+                setMobileLead(null);
+                setIsMobileSheetOpen(false);
+                setSelectedLead(mobileLead);
+              }}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600 group-active:scale-95 transition-transform">
+                <Eye className="w-6 h-6" />
+              </div>
+              <span className="text-[11px] font-semibold text-muted-foreground">Details</span>
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-12 text-sm font-medium rounded-xl border-muted/50"
+              onClick={() => {
+                if (mobileLead) {
+                  setEditingLead(mobileLead);
+                  setEditTags(mobileLead.tags || []);
+                  setEditNeeds(mobileLead.needs || []);
+                  setIsEditDialogOpen(true);
+                  setIsMobileSheetOpen(false);
+                }
+              }}
+            >
+              <Edit className="w-4 h-4 mr-3 text-muted-foreground" />
+              Edit Lead Information
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-12 text-sm font-medium rounded-xl border-muted/50"
+              onClick={() => {
+                if (mobileLead) {
+                  setSelectedLead(mobileLead);
+                  setActivityType('note');
+                  setIsActivityDialogOpen(true);
+                  setIsMobileSheetOpen(false);
+                }
+              }}
+            >
+              <FileText className="w-4 h-4 mr-3 text-muted-foreground" />
+              Add Activity Note
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-12 text-sm font-medium rounded-xl border-muted/50 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-100"
+              onClick={() => {
+                if (mobileLead) {
+                  aiAnalyzeMutation.mutate(mobileLead.id);
+                  setIsMobileSheetOpen(false);
+                }
+              }}
+            >
+              <BrainCircuit className="w-4 h-4 mr-3" />
+              AI Insights & Strategy
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start h-12 text-sm font-medium rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5"
+              onClick={() => {
+                setLeadToDelete(mobileLead);
+                setIsMobileSheetOpen(false);
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-3" />
+              Delete Lead
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </PullToRefresh>
   );
 }
