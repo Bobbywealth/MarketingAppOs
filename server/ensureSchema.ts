@@ -188,6 +188,24 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP;`
   );
 
+  // Leads & Clients: missing branding and credentials columns
+  await safeQuery(
+    "leads.social_credentials column",
+    `ALTER TABLE IF EXISTS leads ADD COLUMN IF NOT EXISTS social_credentials JSONB DEFAULT '{}'::jsonb;`
+  );
+  await safeQuery(
+    "leads.brand_assets column",
+    `ALTER TABLE IF EXISTS leads ADD COLUMN IF NOT EXISTS brand_assets JSONB DEFAULT '{}'::jsonb;`
+  );
+  await safeQuery(
+    "clients.social_credentials column",
+    `ALTER TABLE IF EXISTS clients ADD COLUMN IF NOT EXISTS social_credentials JSONB DEFAULT '{}'::jsonb;`
+  );
+  await safeQuery(
+    "clients.brand_assets column",
+    `ALTER TABLE IF EXISTS clients ADD COLUMN IF NOT EXISTS brand_assets JSONB DEFAULT '{}'::jsonb;`
+  );
+
   // Creators: new fields for multi-industry and multi-city support
   await safeQuery(
     "creators.home_cities column",
