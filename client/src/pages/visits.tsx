@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Select,
   SelectContent,
@@ -21,8 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, Plus } from "lucide-react";
-import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, format } from "date-fns";
+import { Calendar, Plus, ShieldCheck, AlertCircle } from "lucide-react";
+import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, format, startOfToday, endOfToday } from "date-fns";
 
 type VisitRow = {
   id: string;
@@ -42,11 +43,62 @@ type VisitRow = {
 type ViewMode = "list" | "calendar";
 
 export default function VisitsPage() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [view, setView] = useState<ViewMode>("list");
   const [status, setStatus] = useState<string>("all");
   const [uploadOverdue, setUploadOverdue] = useState<string>("all");
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
+
+  const isOps = ["admin", "manager", "creator_manager"].includes((user as any)?.role);
+
+  // Ops data fetching
+  const todayStart = startOfToday();
+  const todayEnd = endOfToday();
+  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+  const currentWeekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
+
+  const { data: visitsThisWeek = [] } = useQuery<any[]>({
+    queryKey: [
+      isOps ? `/api/visits?from=${encodeURIComponent(currentWeekStart.toISOString())}&to=${encodeURIComponent(currentWeekEnd.toISOString())}` : "",
+    ],
+    enabled: isOps,
+  });
+
+  const { data: overdueUploads = [] } = useQuery<any[]>({
+    queryKey: [isOps ? "/api/visits?uploadOverdue=true" : ""],
+    enabled: isOps,
+  });
+
+  const { data: visitsCompletedToday = [] } = useQuery<any[]>({
+    queryKey: [
+      isOps
+        ? `/api/visits?status=completed&from=${encodeURIComponent(todayStart.toISOString())}&to=${encodeURIComponent(todayEnd.toISOString())}`
+        : "",
+    ],
+    enabled: isOps,
+  });
+
+  const { data: pendingApprovals = [] } = useQuery<any[]>({
+    queryKey: [isOps ? "/api/visits?status=completed&approved=false" : ""],
+    enabled: isOps,
+  });
+
+  const { data: disputedVisits = [] } = useQuery<any[]>({
+    queryKey: [isOps ? "/api/visits?disputeStatus=pending" : ""],
+    enabled: isOps,
+  });
+
+  const lowQualityCreators = (visitsThisWeek || [])
+    .filter((v: any) => v.qualityScore != null && Number(v.qualityScore) <= 3)
+    .reduce((acc: Record<string, { creatorName: string; count: number }>, v: any) => {
+      const key = v.creatorId || v.creatorName || "unknown";
+      const current = acc[key] || { creatorName: v.creatorName || "Unknown", count: 0 };
+      current.count += 1;
+      acc[key] = current;
+      return acc;
+    }, {});
+  const lowQualityCount = Object.values(lowQualityCreators).length;
 
   const queryUrl = useMemo(() => {
     const params = new URLSearchParams();
@@ -86,6 +138,77 @@ export default function VisitsPage() {
             New Visit
           </Button>
         </div>
+
+        {/* Ops Control Widgets */}
+        {isOps && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-l-4 border-l-amber-500" onClick={() => setLocation("/visits?status=completed&approved=false")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  Pending Approvals
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{pendingApprovals.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Ready for review</p>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-l-4 border-l-red-500" onClick={() => setLocation("/visits?disputeStatus=pending")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Open Disputes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-600">{disputedVisits.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Needs attention</p>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setLocation("/visits")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Visits this week</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{visitsThisWeek.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Scheduled range</p>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setLocation("/visits?uploadOverdue=true")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Uploads overdue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-red-600">{overdueUploads.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Missing assets</p>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setLocation("/visits?status=completed")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Visits completed today</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{visitsCompletedToday.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Daily target</p>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setLocation("/creators")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Low quality creators</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{lowQualityCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">Score ≤ 3 this week</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -249,6 +372,7 @@ export default function VisitsPage() {
     </div>
   );
 }
+
 
 
 

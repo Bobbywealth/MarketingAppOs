@@ -157,7 +157,7 @@ export default function CreatorSignupPage() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="sticky top-0 z-50 border-b border-white/10 bg-[#0f172a]/70 backdrop-blur-xl supports-[backdrop-filter]:bg-[#0f172a]/50"
+        className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-xl shadow-sm supports-[backdrop-filter]:bg-white/60"
       >
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">
@@ -168,7 +168,7 @@ export default function CreatorSignupPage() {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              className="h-9 rounded-full border-slate-200 bg-white/50 text-slate-900 hover:bg-slate-100 hover:text-slate-900"
               onClick={() => {
                 document.getElementById("apply-now")?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
@@ -178,7 +178,7 @@ export default function CreatorSignupPage() {
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9 rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              className="h-9 w-9 rounded-full border-slate-200 bg-white/50 text-slate-900 hover:bg-slate-100 hover:text-slate-900"
               aria-label="Login"
               onClick={() => setLocation("/login")}
             >
@@ -238,7 +238,7 @@ export default function CreatorSignupPage() {
               <Card className="relative overflow-hidden border-0 bg-black rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
                 <div className="relative" style={{ padding: '56.25% 0 0 0' }}>
                   <iframe 
-                    src="https://player.vimeo.com/video/1151485036?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&loop=1&muted=1&controls=0" 
+                    src="https://player.vimeo.com/video/1151485036?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&loop=1" 
                     frameBorder="0" 
                     allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
