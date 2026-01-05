@@ -82,6 +82,7 @@ const AdminSocialAccounts = lazy(() => import("@/pages/admin-social-accounts"));
 const AIBusinessManager = lazy(() => import("@/pages/ai-business-manager"));
 const Commissions = lazy(() => import("@/pages/commissions"));
 const Creators = lazy(() => import("@/pages/creators"));
+const AdminPayouts = lazy(() => import("@/pages/admin-payouts"));
 const CreatorNew = lazy(() => import("@/pages/creator-new"));
 const CreatorDetail = lazy(() => import("@/pages/creator-detail"));
 const CreatorEdit = lazy(() => import("@/pages/creator-edit"));
@@ -181,6 +182,7 @@ function Router() {
         {isInternal && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
         {isInternal && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
         {isInternal && <ProtectedRoute path="/creators" component={Creators} />}
+        {isInternal && <ProtectedRoute path="/creators/payouts" component={AdminPayouts} />}
         {isInternal && <ProtectedRoute path="/creators/new" component={CreatorNew} />}
         {isInternal && <ProtectedRoute path="/creators/:id" component={CreatorDetail} />}
         {isInternal && <ProtectedRoute path="/creators/:id/edit" component={CreatorEdit} />}

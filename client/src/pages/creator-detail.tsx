@@ -3,6 +3,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -27,8 +30,27 @@ import {
   MapPin,
   Clock,
   User,
-  Activity
+  Activity,
+  DollarSign,
+  Receipt,
+  Plus
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const getCreatorTier = (score: string | number | null) => {
   const s = Number(score || 0);
@@ -61,11 +83,64 @@ export default function CreatorDetailPage() {
     enabled: !!creatorId,
   });
 
+  const [selectedVisitIds, setSelectedVisitIds] = useState<string[]>([]);
+  const [payoutModalOpen, setPayoutModalOpen] = useState(false);
+  const [payoutForm, setPayoutModalForm] = useState({
+    transactionId: "",
+    receiptUrl: "",
+    notes: "",
+  });
+
   const creator = data?.creator;
   const assignments = data?.assignments || [];
   const visits = data?.visits || [];
+  const payouts = (data as any)?.payouts || [];
 
-  const acceptMutation = useMutation({
+  const createPayoutMutation = useMutation({
+    mutationFn: async () => {
+      const selectedVisits = visits.filter(v => selectedVisitIds.includes(v.id));
+      const totalAmount = selectedVisits.length * (creator?.ratePerVisitCents || 0);
+      
+      const res = await apiRequest("POST", `/api/creators/${creatorId}/payouts`, {
+        visitIds: selectedVisitIds,
+        amountCents: totalAmount,
+        payoutMethod: creator.payoutMethod || "manual",
+        payoutDetails: creator.payoutDetails || {},
+        transactionId: payoutForm.transactionId,
+        receiptUrl: payoutForm.receiptUrl,
+        notes: payoutForm.notes,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/creators/${creatorId}`] });
+      toast({ title: "Payout Processed", description: "The payout record has been created and visits updated." });
+      setPayoutModalOpen(false);
+      setSelectedVisitIds([]);
+      setPayoutModalForm({ transactionId: "", receiptUrl: "", notes: "" });
+    },
+  });
+
+  const toggleVisitSelection = (id: string) => {
+    setSelectedVisitIds(prev => 
+      prev.includes(id) ? prev.filter(vid => vid !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllUnpaid = () => {
+    const unpaidIds = visits
+      .filter(v => v.status === 'completed' && !v.paymentReleased)
+      .map(v => v.id);
+    setSelectedVisitIds(unpaidIds);
+  };
+
+  const totalPaidOutCents = visits
+    .filter(v => v.paymentReleased)
+    .reduce((sum, v) => sum + (creator?.ratePerVisitCents || 0), 0);
+  
+  const pendingPayoutCents = visits
+    .filter(v => v.status === 'completed' && !v.paymentReleased)
+    .reduce((sum, v) => sum + (creator?.ratePerVisitCents || 0), 0);
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/creators/${creatorId}/accept`, {});
       return res.json();
@@ -181,6 +256,16 @@ export default function CreatorDetailPage() {
                         <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                         <span className="font-bold text-xl">{creator.performanceScore ?? "5.0"}</span>
                       </div>
+                    </div>
+                  </CardContent>
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t bg-slate-50/50">
+                    <div>
+                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Paid Out</div>
+                      <div className="text-xl font-black text-green-600">${(totalPaidOutCents / 100).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Pending Payout</div>
+                      <div className="text-xl font-black text-amber-600">${(pendingPayoutCents / 100).toFixed(2)}</div>
                     </div>
                   </CardContent>
                 </Card>
@@ -380,27 +465,53 @@ export default function CreatorDetailPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5" />
-                    Active Assignments
+                    <Calendar className="w-5 h-5" />
+                    Visit History & Payouts
                   </CardTitle>
+                  <div className="flex gap-2">
+                    {selectedVisitIds.length > 0 && (
+                      <Button size="sm" onClick={() => setPayoutModalOpen(true)} className="gap-2">
+                        <DollarSign className="w-4 h-4" />
+                        Payout Selected ({selectedVisitIds.length})
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={handleSelectAllUnpaid}>
+                      Select Unpaid
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {assignments.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No active assignments.</div>
+                  {visits.length === 0 ? (
+                    <div className="text-sm text-muted-foreground italic py-4 text-center">No visits yet.</div>
                   ) : (
-                    assignments.map((a) => (
-                      <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
-                        <div>
-                          <div className="font-medium">
-                            <Link href={`/clients/${a.clientId}`} className="underline">
-                              {a.clientName}
-                            </Link>
+                    visits.slice(0, 15).map((v: any) => (
+                      <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-slate-50 transition-colors group">
+                        <div className="flex items-center gap-3">
+                          {!v.paymentReleased && v.status === 'completed' && (
+                            <Checkbox 
+                              checked={selectedVisitIds.includes(v.id)}
+                              onCheckedChange={() => toggleVisitSelection(v.id)}
+                            />
+                          )}
+                          <div className="text-sm">
+                            <div className="font-bold flex items-center gap-2">
+                              <Link href={`/visits/${v.id}`} className="hover:underline">Visit</Link>
+                              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{format(new Date(v.scheduledStart), 'MMM d, yyyy')}</span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              Status: <span className="font-bold text-foreground">{v.status}</span> • 
+                              Upload: <span className={`font-bold ${v.uploadReceived ? 'text-green-600' : 'text-amber-600'}`}>{v.uploadReceived ? "Received" : "Missing"}</span>
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">Role: {a.role}</div>
                         </div>
-                        <Badge variant={a.role === "primary" ? "default" : "secondary"}>{a.role}</Badge>
+                        <div className="text-right">
+                          <div className="text-sm font-black text-blue-600">${(creator?.ratePerVisitCents / 100).toFixed(2)}</div>
+                          <Badge variant={v.paymentReleased ? "default" : "outline"} className={v.paymentReleased ? "bg-green-500 hover:bg-green-600 text-[10px] py-0 h-4" : "text-[10px] py-0 h-4"}>
+                            {v.paymentReleased ? "PAID" : "UNPAID"}
+                          </Badge>
+                        </div>
                       </div>
                     ))
                   )}
@@ -410,40 +521,112 @@ export default function CreatorDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Recent Visits
+                    <History className="w-5 h-5 text-primary" />
+                    Payout History
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {visits.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No visits yet.</div>
+                  {payouts.length === 0 ? (
+                    <div className="text-sm text-muted-foreground italic py-4 text-center">No payout history found.</div>
                   ) : (
-                    visits.slice(0, 10).map((v: any) => (
-                      <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
-                        <div className="text-sm">
-                          <div className="font-medium">
-                            <Link href={`/visits/${v.id}`} className="underline">
-                              Visit
-                            </Link>
-                            <span className="text-muted-foreground"> • {new Date(v.scheduledStart).toLocaleString()}</span>
+                    payouts.map((p: any) => (
+                      <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border bg-slate-50/50">
+                        <div className="space-y-1">
+                          <div className="text-sm font-bold flex items-center gap-2">
+                            <span>Payout {format(new Date(p.createdAt), 'MMM d, yyyy')}</span>
+                            <Badge variant="outline" className="text-[10px] uppercase font-bold">{p.payoutMethod}</Badge>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Status: {v.status} • Upload: {v.uploadReceived ? "received" : "missing"} • Approved: {v.approved ? "yes" : "no"}
+                          <div className="text-[10px] text-muted-foreground">
+                            ID: <span className="font-mono">{p.transactionId || "MANUAL"}</span>
                           </div>
                         </div>
-                        <Badge variant={v.uploadOverdue ? "destructive" : "secondary"}>{v.uploadOverdue ? "Upload Overdue" : v.status}</Badge>
+                        <div className="text-right flex items-center gap-3">
+                          <div className="text-base font-black text-green-600">${(p.amountCents / 100).toFixed(2)}</div>
+                          {p.receiptUrl && (
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" asChild>
+                              <a href={p.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                <Receipt className="w-4 h-4 text-primary" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))
                   )}
                 </CardContent>
               </Card>
             </div>
+
+            {/* Payout Dialog */}
+            <Dialog open={payoutModalOpen} onOpenChange={setPayoutModalOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Process Payout</DialogTitle>
+                  <DialogDescription>
+                    Create a payout record for {selectedVisitIds.length} visits. This will mark them as paid.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  <div className="p-4 bg-blue-50 border rounded-2xl flex items-center justify-between">
+                    <div className="text-sm font-medium text-blue-900">Total Payout Amount:</div>
+                    <div className="text-2xl font-black text-blue-600">${((selectedVisitIds.length * (creator?.ratePerVisitCents || 0)) / 100).toFixed(2)}</div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Transaction ID (Optional)</Label>
+                    <Input 
+                      placeholder="e.g. PayPal Transaction ID" 
+                      value={payoutForm.transactionId}
+                      onChange={(e) => setPayoutModalForm({...payoutForm, transactionId: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Receipt URL / Link (Optional)</Label>
+                    <Input 
+                      placeholder="https://..." 
+                      value={payoutForm.receiptUrl}
+                      onChange={(e) => setPayoutModalForm({...payoutForm, receiptUrl: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Internal Notes</Label>
+                    <Input 
+                      placeholder="Any internal notes about this payout" 
+                      value={payoutForm.notes}
+                      onChange={(e) => setPayoutModalForm({...payoutForm, notes: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="p-3 bg-slate-50 border rounded-xl space-y-1">
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Creator Payout Info</div>
+                    <div className="text-xs font-bold text-blue-600 capitalize">{creator.payoutMethod || "No method set"}</div>
+                    <div className="text-[10px] font-medium">
+                      {creator.payoutMethod === 'paypal' && creator.payoutDetails?.email}
+                      {creator.payoutMethod === 'venmo' && `@${creator.payoutDetails?.username}`}
+                      {creator.payoutMethod === 'zelle' && creator.payoutDetails?.id}
+                      {creator.payoutMethod === 'bank_transfer' && `ACH: ****${creator.payoutDetails?.account?.slice(-4)}`}
+                    </div>
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPayoutModalOpen(false)}>Cancel</Button>
+                  <Button onClick={() => createPayoutMutation.mutate()} disabled={createPayoutMutation.isPending}>
+                    {createPayoutMutation.isPending ? "Saving..." : "Confirm Payout"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </>
         )}
       </div>
     </div>
   );
 }
+
 
 
 

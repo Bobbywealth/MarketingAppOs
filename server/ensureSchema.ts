@@ -182,6 +182,33 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS creator_visits ADD COLUMN IF NOT EXISTS dispute_status VARCHAR DEFAULT 'none';`
   );
 
+  await safeQuery(
+    "creator_visits.payout_id column",
+    `ALTER TABLE IF EXISTS creator_visits ADD COLUMN IF NOT EXISTS payout_id VARCHAR;`
+  );
+
+  // Creator Payouts table
+  await safeQuery(
+    "creator_payouts table",
+    `
+    CREATE TABLE IF NOT EXISTS creator_payouts (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      creator_id UUID NOT NULL REFERENCES creators(id),
+      amount_cents INTEGER NOT NULL,
+      payout_method TEXT NOT NULL,
+      payout_details JSONB DEFAULT '{}'::jsonb,
+      transaction_id TEXT,
+      receipt_url TEXT,
+      status VARCHAR NOT NULL DEFAULT 'completed',
+      notes TEXT,
+      processed_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    `
+  );
+  await safeQuery("idx_creator_payouts_creator", `CREATE INDEX IF NOT EXISTS idx_creator_payouts_creator ON creator_payouts(creator_id);`);
+  await safeQuery("idx_creator_payouts_status", `CREATE INDEX IF NOT EXISTS idx_creator_payouts_status ON creator_payouts(status);`);
+
   // Tickets: resolved_at column (fix for runtime error)
   await safeQuery(
     "tickets.resolved_at column",

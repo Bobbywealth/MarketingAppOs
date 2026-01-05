@@ -557,13 +557,35 @@ export const creatorVisits = pgTable("creator_visits", {
   disputeStatus: varchar("dispute_status"), // pending, resolved, none
   paymentReleased: boolean("payment_released").notNull().default(false),
   paymentReleasedAt: timestamp("payment_released_at"),
+  payoutId: varchar("payout_id"), // Link to creator_payouts
   notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const creatorPayouts = pgTable("creator_payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creatorId: varchar("creator_id").references(() => creators.id).notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  payoutMethod: text("payout_method").notNull(),
+  payoutDetails: jsonb("payout_details"),
+  transactionId: text("transaction_id"),
+  receiptUrl: text("receipt_url"),
+  status: varchar("status").notNull().default("completed"), // completed, processing, failed
+  notes: text("notes"),
+  processedBy: integer("processed_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const creatorsRelations = relations(creators, ({ many }) => ({
   assignments: many(clientCreators),
   visits: many(creatorVisits),
+  payouts: many(creatorPayouts),
+}));
+
+export const creatorPayoutsRelations = relations(creatorPayouts, ({ one, many }) => ({
+  creator: one(creators, { fields: [creatorPayouts.creatorId], references: [creators.id] }),
+  visits: many(creatorVisits),
+  processor: one(users, { fields: [creatorPayouts.processedBy], references: [users.id] }),
 }));
 
 export const clientCreatorsRelations = relations(clientCreators, ({ one }) => ({
@@ -575,6 +597,7 @@ export const creatorVisitsRelations = relations(creatorVisits, ({ one }) => ({
   client: one(clients, { fields: [creatorVisits.clientId], references: [clients.id] }),
   creator: one(creators, { fields: [creatorVisits.creatorId], references: [creators.id] }),
   approver: one(users, { fields: [creatorVisits.approvedBy], references: [users.id] }),
+  payout: one(creatorPayouts, { fields: [creatorVisits.payoutId], references: [creatorPayouts.id] }),
 }));
 
 // ===== Courses + Learning Management =====
@@ -1681,6 +1704,10 @@ export type ClientCreator = typeof clientCreators.$inferSelect;
 export const insertCreatorVisitSchema = createInsertSchema(creatorVisits).omit({ id: true, createdAt: true });
 export type InsertCreatorVisit = z.infer<typeof insertCreatorVisitSchema>;
 export type CreatorVisit = typeof creatorVisits.$inferSelect;
+
+export const insertCreatorPayoutSchema = createInsertSchema(creatorPayouts).omit({ id: true, createdAt: true });
+export type InsertCreatorPayout = z.infer<typeof insertCreatorPayoutSchema>;
+export type CreatorPayout = typeof creatorPayouts.$inferSelect;
 
 export const insertMarketingBroadcastSchema = createInsertSchema(marketingBroadcasts).omit({ id: true, createdAt: true });
 export type InsertMarketingBroadcast = z.infer<typeof insertMarketingBroadcastSchema>;

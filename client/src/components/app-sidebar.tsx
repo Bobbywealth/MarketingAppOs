@@ -140,6 +140,11 @@ const creatorTools: SidebarNavItem[] = [
     icon: Calendar,
   },
   {
+    title: "My Payouts",
+    url: "/payouts",
+    icon: DollarSign,
+  },
+  {
     title: "Support Tickets",
     url: "/tickets",
     icon: Ticket,
@@ -302,6 +307,14 @@ const contentCreatorsTools: SidebarNavItem[] = [
     permission: "canManageClients" as const,
     sidebarKey: "visits" as const,
     roles: ["admin", "manager", "staff", "creator_manager"] as const,
+  },
+  {
+    title: "Payouts",
+    url: "/creators/payouts",
+    icon: DollarSign,
+    permission: "canManageInvoices" as const,
+    sidebarKey: "invoices" as const,
+    roles: ["admin", "manager"] as const,
   },
   {
     title: "Manage Courses",

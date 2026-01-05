@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { db, pool } from "../db";
 import { creators, creatorVisits, clientCreators, clients, users } from "@shared/schema";
-import { eq, and, or, sql } from "drizzle-orm";
+import { eq, and, or, sql, inArray } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { hashPassword } from "../auth";
 import { requireRole } from "../rbac";
@@ -11,7 +11,7 @@ import {
   handleValidationError
 } from "./common";
 import { z } from "zod";
-import { insertCreatorSchema, insertCreatorVisitSchema } from "@shared/schema";
+import { insertCreatorSchema, insertCreatorVisitSchema, creatorPayouts } from "@shared/schema";
 
 const router = Router();
 
@@ -238,10 +238,18 @@ router.get("/creators/:id", isAuthenticated, requireRole(...internalRoles), asyn
       .where(eq(creatorVisits.creatorId, creator.id))
       .orderBy(sql`${creatorVisits.scheduledStart} DESC`);
 
+    // Fetch payouts
+    const payouts = await db
+      .select()
+      .from(creatorPayouts)
+      .where(eq(creatorPayouts.creatorId, creator.id))
+      .orderBy(sql`${creatorPayouts.createdAt} DESC`);
+
     res.json({
       creator,
       assignments,
       visits,
+      payouts,
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -589,6 +597,76 @@ router.post("/visits/:id/dispute", isAuthenticated, requireRole(...internalRoles
       .where(eq(creatorVisits.id, req.params.id))
       .returning();
     res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Payouts routes
+router.get("/creators/payouts/all", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
+  try {
+    const rows = await db
+      .select({
+        id: creatorPayouts.id,
+        creatorId: creatorPayouts.creatorId,
+        creatorName: creators.fullName,
+        amountCents: creatorPayouts.amountCents,
+        payoutMethod: creatorPayouts.payoutMethod,
+        transactionId: creatorPayouts.transactionId,
+        receiptUrl: creatorPayouts.receiptUrl,
+        status: creatorPayouts.status,
+        createdAt: creatorPayouts.createdAt,
+      })
+      .from(creatorPayouts)
+      .innerJoin(creators, eq(creatorPayouts.creatorId, creators.id))
+      .orderBy(sql`${creatorPayouts.createdAt} DESC`);
+    
+    res.json(rows);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/creators/:id/payouts", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { visitIds, amountCents, payoutMethod, payoutDetails, transactionId, receiptUrl, notes } = req.body;
+
+    if (!visitIds || !Array.isArray(visitIds) || visitIds.length === 0) {
+      return res.status(400).json({ message: "At least one visit must be selected for payout" });
+    }
+
+    const [payout] = await db.transaction(async (tx) => {
+      // 1. Create the payout record
+      const [p] = await tx
+        .insert(creatorPayouts)
+        .values({
+          creatorId: req.params.id,
+          amountCents,
+          payoutMethod,
+          payoutDetails,
+          transactionId,
+          receiptUrl,
+          notes,
+          processedBy: user.id,
+          status: "completed",
+        } as any)
+        .returning();
+
+      // 2. Update the visits
+      await tx
+        .update(creatorVisits)
+        .set({
+          paymentReleased: true,
+          paymentReleasedAt: new Date(),
+          payoutId: p.id,
+        })
+        .where(inArray(creatorVisits.id, visitIds));
+
+      return [p];
+    });
+
+    res.status(201).json(payout);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
