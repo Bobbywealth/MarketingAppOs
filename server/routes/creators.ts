@@ -171,6 +171,7 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
     if (error?.status === 409) {
       return res.status(409).json({ message: error.message });
     }
+    console.error("[CREATOR SIGNUP ERROR]", error);
     handleValidationError(error, res);
   }
 });

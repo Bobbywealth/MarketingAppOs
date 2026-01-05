@@ -47,8 +47,13 @@ export default function VisitsPage() {
   const [, setLocation] = useLocation();
   const [view, setView] = useState<ViewMode>("list");
   const [status, setStatus] = useState<string>("all");
+  const [clientId, setClientId] = useState<string>("all");
   const [uploadOverdue, setUploadOverdue] = useState<string>("all");
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
+
+  const { data: clients = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/clients"],
+  });
 
   const isOps = ["admin", "manager", "creator_manager"].includes((user as any)?.role);
 
@@ -103,6 +108,7 @@ export default function VisitsPage() {
   const queryUrl = useMemo(() => {
     const params = new URLSearchParams();
     if (status !== "all") params.set("status", status);
+    if (clientId !== "all") params.set("clientId", clientId);
     if (uploadOverdue === "true") params.set("uploadOverdue", "true");
     // For calendar view, fetch the visible week range
     if (view === "calendar") {
@@ -111,7 +117,7 @@ export default function VisitsPage() {
     }
     const qs = params.toString();
     return qs ? `/api/visits?${qs}` : "/api/visits";
-  }, [status, uploadOverdue, view, weekStart]);
+  }, [status, clientId, uploadOverdue, view, weekStart]);
 
   const { data: visits = [], isLoading } = useQuery<VisitRow[]>({
     queryKey: [queryUrl],
@@ -217,7 +223,7 @@ export default function VisitsPage() {
               Controls
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label>View</Label>
               <Select value={view} onValueChange={(v) => setView(v as ViewMode)}>
@@ -227,6 +233,22 @@ export default function VisitsPage() {
                 <SelectContent>
                   <SelectItem value="list">List</SelectItem>
                   <SelectItem value="calendar">Calendar (week)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Clients</SelectItem>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -74,8 +74,8 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
           </div>
           <div class="footer">
             <img src="${logoUrl}" alt="Logo" class="footer-logo">
-            <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Wolfpaq Marketing. All rights reserved.</p>
-            <p style="margin-bottom: 4px;">business@wolfpaqmarketing.app</p>
+            <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Marketing Team. All rights reserved.</p>
+            <p style="margin-bottom: 4px;">business@marketingteam.app</p>
             <p>123 Marketing Suite, Premium Business District</p>
           </div>
         </div>
@@ -593,8 +593,8 @@ export async function sendEmail(to: string | string[], subject: string, html: st
   }
 
   try {
-    const fromEmail = options?.from || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'business@wolfpaqmarketing.app';
-    const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Wolfpaq Marketing';
+    const fromEmail = options?.from || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'business@marketingteam.app';
+    const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Marketing Team';
     
     const info = await emailCircuit.execute(() => 
       transporter!.sendMail({

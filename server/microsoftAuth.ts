@@ -113,7 +113,7 @@ type GraphLocation = { displayName?: string };
 type GraphAttendee = { emailAddress?: { address?: string; name?: string }; type?: string };
 
 function getCalendarUserPath(): string {
-  // If you want to force a specific mailbox/calendar (e.g. business@wolfpaqmarketing.app),
+  // If you want to force a specific mailbox/calendar (e.g. business@marketingteam.app),
   // set MICROSOFT_CALENDAR_MAILBOX to that email/UPN.
   const mailbox = (process.env.MICROSOFT_CALENDAR_MAILBOX || '').trim();
   if (mailbox) return `/users/${encodeURIComponent(mailbox)}`;

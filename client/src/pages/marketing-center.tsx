@@ -219,7 +219,7 @@ export default function MarketingCenter() {
                         <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sender Account</Label>
                         <Input 
                           disabled 
-                          value={broadcastType === 'email' ? "business@wolfpaqmarketing.app" : "Twilio Official"} 
+                          value={broadcastType === 'email' ? "business@marketingteam.app" : "Twilio Official"} 
                           className="h-12 glass border-2 font-semibold text-primary"
                         />
                       </div>
@@ -230,7 +230,7 @@ export default function MarketingCenter() {
                     <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                       <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Email Subject</Label>
                       <Input 
-                        placeholder="Exciting updates from Wolfpaq Marketing..." 
+                        placeholder="Exciting updates from Marketing Team..." 
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
                         className="h-12 glass border-2 focus-visible:ring-primary/20"
