@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
@@ -29,7 +29,10 @@ export default function PaymentSuccessPage() {
         const resp = await apiRequest("POST", "/api/stripe/confirm", { sessionId });
         const data = await resp.json();
         if (data?.success) {
-          setConvertMessage("Your account is active. You can log in now.");
+          setConvertMessage("Your account is active. Redirecting to onboarding...");
+          setTimeout(() => {
+            setLocation("/onboarding/post-payment");
+          }, 3000);
         } else {
           setConvertMessage(data?.message || "Account activation completed.");
         }
@@ -46,7 +49,9 @@ export default function PaymentSuccessPage() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         <div className="text-center mb-8">
-          <HeaderLogo className="mx-auto mb-4" />
+          <Link href="/">
+            <HeaderLogo className="mx-auto mb-4 cursor-pointer" />
+          </Link>
         </div>
 
         <Card className="border-2 border-green-500 shadow-2xl">
@@ -79,19 +84,19 @@ export default function PaymentSuccessPage() {
             <div className="flex flex-col sm:flex-row gap-4 mt-8">
               <Button 
                 size="lg"
-                onClick={() => setLocation("/login")}
+                onClick={() => setLocation("/onboarding/post-payment")}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold"
                 disabled={isConverting}
               >
-                {isConverting ? "Activating..." : "Go to Login"}
+                {isConverting ? "Activating..." : "Finish Onboarding"}
               </Button>
               <Button 
                 size="lg"
                 variant="outline"
-                onClick={() => setLocation("/")}
+                onClick={() => setLocation("/login")}
                 className="flex-1"
               >
-                Back to Home
+                Go to Login
               </Button>
             </div>
 

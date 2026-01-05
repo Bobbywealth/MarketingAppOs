@@ -219,6 +219,70 @@ export async function ensureMinimumSchema() {
     "creators.availability column",
     `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS availability JSONB;`
   );
+
+  // Creator application and legal columns
+  await safeQuery(
+    "creators.application_status column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS application_status VARCHAR DEFAULT 'pending';`
+  );
+  await safeQuery(
+    "creators.instagram_username column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS instagram_username TEXT;`
+  );
+  await safeQuery(
+    "creators.tiktok_username column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS tiktok_username TEXT;`
+  );
+  await safeQuery(
+    "creators.youtube_handle column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS youtube_handle TEXT;`
+  );
+  await safeQuery(
+    "creators.portfolio_url column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS portfolio_url TEXT;`
+  );
+  await safeQuery(
+    "creators.terms_signed column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS terms_signed BOOLEAN DEFAULT FALSE;`
+  );
+  await safeQuery(
+    "creators.waiver_signed column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS waiver_signed BOOLEAN DEFAULT FALSE;`
+  );
+  await safeQuery(
+    "creators.terms_signed_at column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS terms_signed_at TIMESTAMP;`
+  );
+  await safeQuery(
+    "creators.waiver_signed_at column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS waiver_signed_at TIMESTAMP;`
+  );
+  await safeQuery(
+    "creators.terms_version column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS terms_version TEXT;`
+  );
+  await safeQuery(
+    "creators.ip_address column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS ip_address TEXT;`
+  );
+  await safeQuery(
+    "creators.approved_at column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;`
+  );
+  await safeQuery(
+    "creators.approved_by_admin column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS approved_by_admin INTEGER REFERENCES users(id);`
+  );
+
+  // Data integrity constraints
+  await safeQuery(
+    "users.email unique constraint",
+    `ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email);`
+  );
+  await safeQuery(
+    "creators.email unique constraint",
+    `ALTER TABLE creators ADD CONSTRAINT creators_email_unique UNIQUE (email);`
+  );
 }
 
 

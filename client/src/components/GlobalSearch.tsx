@@ -17,12 +17,20 @@ interface SearchResults {
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const { data: results } = useQuery<SearchResults>({
-    queryKey: ["/api/search", searchQuery],
+    queryKey: ["/api/search", debouncedQuery],
     queryFn: async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, {
         credentials: "include",
       });
       if (!res.ok) {
@@ -30,7 +38,7 @@ export function GlobalSearch() {
       }
       return res.json();
     },
-    enabled: searchQuery.length >= 2,
+    enabled: debouncedQuery.length >= 2,
   });
 
   useEffect(() => {

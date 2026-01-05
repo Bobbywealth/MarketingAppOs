@@ -3,6 +3,7 @@ import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock, Tr
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow, format } from "date-fns";
@@ -13,12 +14,6 @@ import { apiRequest } from "@/lib/queryClient";
 export default function ClientDashboard() {
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
   
-  // Fetch client-specific data
-  const { data: stats } = useQuery({
-    queryKey: ["/api/client-dashboard/stats"],
-    enabled: !!user,
-  });
-
   const { data: client } = useQuery({
     queryKey: [`/api/clients/${user?.clientId}`],
     enabled: !!user?.clientId,
@@ -50,6 +45,11 @@ export default function ClientDashboard() {
 
   const { data: secondMe } = useQuery({
     queryKey: ["/api/second-me"],
+    enabled: !!user,
+  });
+
+  const { data: onboardingTasks = [] } = useQuery<any[]>({
+    queryKey: ["/api/onboarding-tasks"],
     enabled: !!user,
   });
 
@@ -159,6 +159,22 @@ export default function ClientDashboard() {
   return (
     <div className="min-h-full gradient-mesh overflow-x-hidden" style={{ "--primary-brand": primaryColor } as any}>
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 xl:p-12 space-y-6 sm:space-y-8">
+        {/* Onboarding Alert */}
+        {client?.requiresBrandInfo && (
+          <Alert className="bg-blue-50 border-blue-200 shadow-sm animate-pulse-subtle">
+            <Sparkles className="h-5 w-5 text-blue-600" />
+            <AlertTitle className="text-blue-900 font-bold">Complete Your Brand Profile</AlertTitle>
+            <AlertDescription className="text-blue-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <span>We need your brand details to start creating content for you.</span>
+              <Link href="/onboarding/post-payment">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                  Complete Now →
+                </Button>
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2">
@@ -427,6 +443,56 @@ export default function ClientDashboard() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* Onboarding Checklist */}
+          {onboardingTasks.length > 0 && (
+            <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5"></div>
+              <CardHeader className="relative border-b border-border/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Onboarding Checklist</CardTitle>
+                      <CardDescription>Your 30-day success roadmap</CardDescription>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-blue-600">
+                      {Math.round((onboardingTasks.filter(t => t.completed).length / onboardingTasks.length) * 100)}%
+                    </span>
+                  </div>
+                </div>
+                <Progress 
+                  value={(onboardingTasks.filter(t => t.completed).length / onboardingTasks.length) * 100} 
+                  className="h-1.5 mt-4" 
+                />
+              </CardHeader>
+              <CardContent className="relative p-4 sm:p-6">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {onboardingTasks.sort((a, b) => a.dueDay - b.dueDay).map((task: any) => (
+                    <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50 transition-colors">
+                      {task.completed ? (
+                        <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-muted shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium text-sm ${task.completed ? "text-muted-foreground line-through" : ""}`}>
+                          {task.title}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-bold uppercase tracking-wider">
+                          Day {task.dueDay}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Upcoming Content */}
           <Card className="glass-strong border-0 shadow-xl">
             <CardHeader className="border-b border-border/50">

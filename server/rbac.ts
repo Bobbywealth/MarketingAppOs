@@ -99,33 +99,25 @@ export function hasPermission(role: UserRole, permission: keyof RolePermissions)
 
 export function requireRole(...allowedRoles: UserRole[]) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Passport already attaches the user object to req.user after deserialization
     const user = req.user as any;
     
-    // Support both Passport (user.id) and Replit Auth (user.claims.sub)
-    const userId = user?.id || user?.claims?.sub;
-    
-    if (!userId) {
+    if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { storage } = await import("./storage");
-    const dbUser = await storage.getUser(userId.toString());
-    
-    if (!dbUser) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    if (!allowedRoles.includes(dbUser.role as UserRole)) {
+    // Use the already fetched user object from Passport
+    if (!allowedRoles.includes(user.role as UserRole)) {
       return res.status(403).json({ 
         message: "Forbidden: Insufficient permissions",
         requiredRoles: allowedRoles,
-        userRole: dbUser.role,
+        userRole: user.role,
       });
     }
 
-    // Attach user role to request for later use
-    (req as any).userRole = dbUser.role;
-    (req as any).userId = dbUser.id;
+    // Attach for convenience
+    (req as any).userRole = user.role;
+    (req as any).userId = user.id;
 
     next();
   };
@@ -135,29 +127,19 @@ export function requirePermission(permission: keyof RolePermissions) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user as any;
     
-    // Support both Passport (user.id) and Replit Auth (user.claims.sub)
-    const userId = user?.id || user?.claims?.sub;
-    
-    if (!userId) {
+    if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { storage } = await import("./storage");
-    const dbUser = await storage.getUser(userId.toString());
-    
-    if (!dbUser) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    if (!hasPermission(dbUser.role as UserRole, permission)) {
+    if (!hasPermission(user.role as UserRole, permission)) {
       return res.status(403).json({ 
         message: `Forbidden: Missing permission '${permission}'`,
-        userRole: dbUser.role,
+        userRole: user.role,
       });
     }
 
-    (req as any).userRole = dbUser.role;
-    (req as any).userId = dbUser.id;
+    (req as any).userRole = user.role;
+    (req as any).userId = user.id;
 
     next();
   };

@@ -1,5 +1,10 @@
 import Stripe from 'stripe';
 import memoize from 'memoizee';
+import { CircuitBreaker } from './lib/circuit-breaker';
+import { log } from './vite';
+
+// Stripe circuit breaker: trip after 5 failures, reset after 30s
+const stripeCircuit = new CircuitBreaker(5, 30000);
 
 let stripe: Stripe | null = null;
 
@@ -24,6 +29,16 @@ export function getStripeInstance() {
   return stripe;
 }
 
+// Helper for circuit breaker wrapped calls
+async function stripeCall<T>(fn: () => Promise<T>, operation: string): Promise<T> {
+  try {
+    return await stripeCircuit.execute(fn);
+  } catch (error) {
+    log(`❌ Stripe error (${operation}): ${error instanceof Error ? error.message : 'Unknown error'}`, "stripe");
+    throw error;
+  }
+}
+
 // Get dashboard metrics
 async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
   const stripeInstance = getStripeInstance();
@@ -39,7 +54,7 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
   const endTimestamp = Math.floor(end.getTime() / 1000);
 
   try {
-    // Get all data in parallel
+    // Get all data in parallel wrapped in circuit breaker
     const [
       activeSubscriptions,
       charges,
@@ -47,7 +62,7 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
       invoices,
       payouts,
       balanceTransactions,
-    ] = await Promise.all([
+    ] = await stripeCall(() => Promise.all([
       // Active subscriptions
       stripeInstance.subscriptions.list({
         status: 'active',
@@ -93,7 +108,7 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
         },
         limit: 100,
       }),
-    ]);
+    ]), "dashboard_metrics");
 
     // Calculate MRR (Monthly Recurring Revenue)
     const mrr = activeSubscriptions.data.reduce((total, sub) => {
@@ -238,26 +253,26 @@ export async function createStripeInvoice(customerId: string, items: Array<{ des
 
   try {
     // Create invoice
-    const invoice = await stripeInstance.invoices.create({
+    const invoice = await stripeCall(() => stripeInstance.invoices.create({
       customer: customerId,
       auto_advance: false, // Don't automatically finalize
       collection_method: 'send_invoice',
       days_until_due: 30,
-    });
+    }), "create_invoice");
 
     // Add invoice items
     for (const item of items) {
-      await stripeInstance.invoiceItems.create({
+      await stripeCall(() => stripeInstance.invoiceItems.create({
         customer: customerId,
         invoice: invoice.id,
         description: item.description,
         amount: Math.round(item.amount * 100), // Convert to cents
         currency: 'usd',
-      });
+      }), "add_invoice_item");
     }
 
     // Finalize the invoice
-    const finalizedInvoice = await stripeInstance.invoices.finalizeInvoice(invoice.id);
+    const finalizedInvoice = await stripeCall(() => stripeInstance.invoices.finalizeInvoice(invoice.id), "finalize_invoice");
 
     return {
       id: finalizedInvoice.id,
@@ -305,7 +320,7 @@ export async function getStripeBalance() {
   }
 
   try {
-    const balance = await stripeInstance.balance.retrieve();
+    const balance = await stripeCall(() => stripeInstance.balance.retrieve(), "get_balance");
     
     return {
       available: balance.available.map(b => ({
@@ -318,7 +333,7 @@ export async function getStripeBalance() {
       })),
     };
   } catch (error) {
-    console.error('Error fetching Stripe balance:', error);
+    // Already logged in stripeCall
     throw error;
   }
 }
@@ -384,14 +399,14 @@ export async function createCheckoutSession(params: {
       }];
     }
 
-    const session = await stripeInstance.checkout.sessions.create(sessionConfig);
+    const session = await stripeCall(() => stripeInstance.checkout.sessions.create(sessionConfig), "create_checkout_session");
 
     return {
       sessionId: session.id,
       checkoutUrl: session.url,
     };
   } catch (error) {
-    console.error('Error creating Stripe checkout session:', error);
+    // Already logged in stripeCall
     throw error;
   }
 }

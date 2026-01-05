@@ -135,11 +135,6 @@ const creatorTools: SidebarNavItem[] = [
     icon: BookOpen,
   },
   {
-    title: "Manage Courses",
-    url: "/manage-courses",
-    icon: LayoutDashboard,
-  },
-  {
     title: "My Visits",
     url: "/visits",
     icon: Calendar,
@@ -307,6 +302,13 @@ const contentCreatorsTools: SidebarNavItem[] = [
     permission: "canManageClients" as const,
     sidebarKey: "visits" as const,
     roles: ["admin", "manager", "staff", "creator_manager"] as const,
+  },
+  {
+    title: "Manage Courses",
+    url: "/manage-courses",
+    icon: BookOpen,
+    roles: ["admin"] as const,
+    sidebarKey: "training" as const,
   },
   {
     title: "AI Digital Twin",

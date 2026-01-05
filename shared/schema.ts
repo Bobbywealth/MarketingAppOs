@@ -54,7 +54,11 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   profileImageUrl: text("profile_image_url"),
-});
+}, (table) => [
+  index("IDX_users_client_id").on(table.clientId),
+  index("IDX_users_creator_id").on(table.creatorId),
+  index("IDX_users_username").on(table.username),
+]);
 
 export const usersRelations = relations(users, ({ many }) => ({
   assignedClients: many(clients),
@@ -92,11 +96,16 @@ export const clients = pgTable("clients", {
   displayOrder: integer("display_order").default(0),
   optInEmail: boolean("opt_in_email").default(true),
   optInSms: boolean("opt_in_sms").default(true),
+  requiresBrandInfo: boolean("requires_brand_info").default(false),
   lastMarketingReceived: timestamp("last_marketing_received"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("IDX_clients_created_at").on(table.createdAt)
+  index("IDX_clients_created_at").on(table.createdAt),
+  index("IDX_clients_assigned_to").on(table.assignedToId),
+  index("IDX_clients_sales_agent").on(table.salesAgentId),
+  index("IDX_clients_account_manager").on(table.accountManagerId),
+  index("IDX_clients_status").on(table.status),
 ]);
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -135,7 +144,10 @@ export const clientSocialStats = pgTable("client_social_stats", {
   updatedBy: integer("updated_by").references(() => users.id),
   notes: text("notes"), // Any additional context
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_social_stats_client").on(table.clientId),
+  index("IDX_social_stats_platform").on(table.platform),
+]);
 
 export const clientSocialStatsRelations = relations(clientSocialStats, ({ one }) => ({
   client: one(clients, {
@@ -161,7 +173,10 @@ export const socialAccounts = pgTable("social_accounts", {
   lastError: text("last_error"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_social_accounts_client").on(table.clientId),
+  index("IDX_social_accounts_status").on(table.status),
+]);
 
 export const socialAccountMetricsSnapshots = pgTable("social_account_metrics_snapshots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -209,7 +224,8 @@ export const campaigns = pgTable("campaigns", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("IDX_campaigns_status").on(table.status),
-  index("IDX_campaigns_created_at").on(table.createdAt)
+  index("IDX_campaigns_created_at").on(table.createdAt),
+  index("IDX_campaigns_client").on(table.clientId),
 ]);
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -272,7 +288,10 @@ export const tasks = pgTable("tasks", {
   index("IDX_tasks_assigned_to_id").on(table.assignedToId),
   index("IDX_tasks_status").on(table.status),
   index("IDX_tasks_due_date").on(table.dueDate),
-  index("IDX_tasks_created_at").on(table.createdAt)
+  index("IDX_tasks_created_at").on(table.createdAt),
+  index("IDX_tasks_client_id").on(table.clientId),
+  index("IDX_tasks_campaign_id").on(table.campaignId),
+  index("IDX_tasks_space_id").on(table.spaceId),
 ]);
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -399,7 +418,12 @@ export const leads = pgTable("leads", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("IDX_leads_created_at").on(table.createdAt),
-  index("IDX_leads_stage").on(table.stage)
+  index("IDX_leads_stage").on(table.stage),
+  index("IDX_leads_client_id").on(table.clientId),
+  index("IDX_leads_assigned_to").on(table.assignedToId),
+  index("IDX_leads_converted_client").on(table.convertedToClientId),
+  index("IDX_leads_email").on(table.email),
+  index("IDX_leads_company").on(table.company),
 ]);
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -426,7 +450,10 @@ export const leadActivities = pgTable("lead_activities", {
   outcome: varchar("outcome"), // positive, neutral, negative, no_answer, left_voicemail
   metadata: jsonb("metadata"), // {duration, email_id, sms_id, previous_stage, new_stage, call_duration}
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_lead_activities_lead").on(table.leadId),
+  index("IDX_lead_activities_user").on(table.userId),
+]);
 
 export const leadActivitiesRelations = relations(leadActivities, ({ one }) => ({
   lead: one(leads, {
@@ -478,6 +505,19 @@ export const creators = pgTable("creators", {
   availabilityNotes: text("availability_notes"),
   availability: jsonb("availability").$type<Record<string, "available" | "unavailable">>(), // Date-based availability
   status: varchar("status").notNull().default("active"), // active | backup | inactive
+  applicationStatus: varchar("application_status").notNull().default("pending"), // pending | accepted | declined
+  instagramUsername: text("instagram_username"),
+  tiktokUsername: text("tiktok_username"),
+  youtubeHandle: text("youtube_handle"),
+  portfolioUrl: text("portfolio_url"),
+  termsSigned: boolean("terms_signed").default(false),
+  waiverSigned: boolean("waiver_signed").default(false),
+  termsSignedAt: timestamp("terms_signed_at"),
+  waiverSignedAt: timestamp("waiver_signed_at"),
+  termsVersion: text("terms_version"),
+  ipAddress: text("ip_address"),
+  approvedAt: timestamp("approved_at"),
+  approvedByAdmin: integer("approved_by_admin").references(() => users.id),
   performanceScore: decimal("performance_score", { precision: 2, scale: 1 }).default("5.0"), // 1.0 - 5.0
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -697,7 +737,11 @@ export const contentPosts = pgTable("content_posts", {
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_content_posts_client").on(table.clientId),
+  index("IDX_content_posts_visit").on(table.visitId),
+  index("IDX_content_posts_scheduled").on(table.scheduledFor),
+]);
 
 export const contentPostsRelations = relations(contentPosts, ({ one }) => ({
   client: one(clients, {
@@ -773,7 +817,12 @@ export const messages = pgTable("messages", {
   mediaType: varchar("media_type"), // e.g. audio/webm, audio/mpeg
   durationMs: integer("duration_ms"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_messages_client").on(table.clientId),
+  index("IDX_messages_user").on(table.userId),
+  index("IDX_messages_recipient").on(table.recipientId),
+  index("IDX_messages_created_at").on(table.createdAt),
+]);
 
 export const messagesRelations = relations(messages, ({ one }) => ({
   client: one(clients, {
@@ -938,7 +987,11 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").default(false),
   actionUrl: varchar("action_url"), // Optional link to relevant page
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_notifications_user").on(table.userId),
+  index("IDX_notifications_is_read").on(table.isRead),
+  index("IDX_notifications_created_at").on(table.createdAt),
+]);
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
@@ -1049,7 +1102,11 @@ export const emails = pgTable("emails", {
   userId: integer("user_id").references(() => users.id), // Which user this email belongs to
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_emails_user").on(table.userId),
+  index("IDX_emails_thread").on(table.threadId),
+  index("IDX_emails_received_at").on(table.receivedAt),
+]);
 
 export const emailsRelations = relations(emails, ({ one }) => ({
   user: one(users, {
@@ -1093,7 +1150,11 @@ export const smsMessages = pgTable("sms_messages", {
   leadId: integer("lead_id").references(() => leads.id),
   timestamp: timestamp("timestamp").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_sms_messages_user").on(table.userId),
+  index("IDX_sms_messages_lead").on(table.leadId),
+  index("IDX_sms_messages_dialpad").on(table.dialpadId),
+]);
 
 export const smsMessagesRelations = relations(smsMessages, ({ one }) => ({
   user: one(users, {
@@ -1439,7 +1500,12 @@ export const commissions = pgTable("commissions", {
   paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_commissions_agent").on(table.agentId),
+  index("IDX_commissions_lead").on(table.leadId),
+  index("IDX_commissions_client").on(table.clientId),
+  index("IDX_commissions_status").on(table.status),
+]);
 
 export const commissionsRelations = relations(commissions, ({ one }) => ({
   agent: one(users, {
@@ -1500,7 +1566,11 @@ export const leadAssignments = pgTable("lead_assignments", {
   unassignedAt: timestamp("unassigned_at"),
   reason: text("reason"),
   isActive: boolean("is_active").default(true),
-});
+}, (table) => [
+  index("IDX_lead_assignments_lead").on(table.leadId),
+  index("IDX_lead_assignments_agent").on(table.agentId),
+  index("IDX_lead_assignments_active").on(table.isActive),
+]);
 
 export const leadAssignmentsRelations = relations(leadAssignments, ({ one }) => ({
   lead: one(leads, {
@@ -1591,6 +1661,11 @@ export const insertCreatorSchema = createInsertSchema(creators).omit({ id: true,
   industries: z.array(z.string()).optional().nullable(),
   homeCities: z.array(z.string()).optional().nullable(),
   availability: z.record(z.enum(["available", "unavailable"])).optional().nullable(),
+  termsSigned: z.boolean().optional(),
+  waiverSigned: z.boolean().optional(),
+  termsSignedAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+  waiverSignedAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+  approvedAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
 });
 export type InsertCreator = z.infer<typeof insertCreatorSchema>;
 export type Creator = typeof creators.$inferSelect;

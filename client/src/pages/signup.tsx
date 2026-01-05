@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import { Form } from "@/components/ui/form";
 import { SignupProgress } from "@/components/signup/SignupProgress";
 import { AccountStep } from "@/components/signup/AccountStep";
 import { ContactStep } from "@/components/signup/ContactStep";
+import { VerificationStep } from "@/components/signup/VerificationStep";
 import { ServicesStep } from "@/components/signup/ServicesStep";
 import { LoginsStep } from "@/components/signup/LoginsStep";
 import { BrandStep } from "@/components/signup/BrandStep";
@@ -197,10 +198,10 @@ export default function SignupPage() {
     },
     onSuccess: (result) => {
       toast({
-        title: "✅ Details Saved!",
+        title: "✅ Selections Saved!",
         description: "Next: choose your package to get started.",
       });
-      setStep(6);
+      setStep(5);
     },
     onError: (error: Error) => {
       toast({
@@ -287,9 +288,7 @@ export default function SignupPage() {
     let fields: any[] = [];
     if (step === 1) fields = ["username", "password"];
     else if (step === 2) fields = ["name", "email", "phone", "company", "website"];
-    else if (step === 3) fields = ["services", "budget", "industry"];
-    else if (step === 4 && needsSocialCredentials) fields = ["socialCredentials"];
-    else if (step === 5) fields = ["brandAssets"];
+    else if (step === 4) fields = ["services", "budget", "industry"];
     
     try {
       const isValid = await form.trigger(fields as any);
@@ -297,22 +296,41 @@ export default function SignupPage() {
         if (step === 1) {
           setStep(2);
         } else if (step === 2) {
+          // Register the user and move to verification step
           const formData = form.getValues();
-          earlyLeadCaptureMutation.mutate({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            company: formData.company || "Pending",
-            website: formData.website || null,
-          });
-          setStep(3);
-        } else if (step === 3) {
-          if (needsSocialCredentials) setStep(4);
-          else setStep(5);
+          try {
+            await apiRequest("POST", "/api/register", {
+              username: formData.username,
+              password: formData.password,
+              email: formData.email,
+              firstName: formData.name.split(' ')[0],
+              lastName: formData.name.split(' ').slice(1).join(' '),
+              role: "client",
+            });
+            
+            // Also capture early lead
+            earlyLeadCaptureMutation.mutate({
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              company: formData.company || "Pending",
+              website: formData.website || null,
+            });
+
+            setStep(3);
+          } catch (error: any) {
+            toast({
+              title: "Registration Failed",
+              description: error.message || "Could not create account. Please try a different username.",
+              variant: "destructive",
+            });
+          }
         } else if (step === 4) {
-          setStep(5);
-        } else if (step === 5) {
-          signupMutation.mutate(form.getValues());
+          // Save services selection to lead before showing packages
+          const formData = form.getValues();
+          // Omit sensitive/existing account info to avoid backend "already exists" errors
+          const { username, password, ...updateData } = formData;
+          signupMutation.mutate(updateData as any);
         }
       }
     } finally {
@@ -321,7 +339,7 @@ export default function SignupPage() {
   };
 
   const prevStep = () => {
-    if (step === 5 && !needsSocialCredentials) setStep(3);
+    if (step === 4) setStep(2); // Skip verification step if going back
     else setStep(step - 1);
   };
 
@@ -341,12 +359,12 @@ export default function SignupPage() {
   const steps = [
     { num: 1, label: "Account", icon: Lock },
     { num: 2, label: "Contact", icon: User },
-    { num: 3, label: "Services", icon: Target },
-    { num: 4, label: "Logins", icon: Lock, hidden: !needsSocialCredentials },
-    { num: 5, label: "Brand", icon: Palette },
+    { num: 3, label: "Verify", icon: ShieldCheck },
+    { num: 4, label: "Services", icon: Target },
+    { num: 5, label: "Payment", icon: Zap },
   ];
 
-  if (step === 6) {
+  if (step === 5) {
     return (
       <PackageSelection 
         packages={packages || []}
@@ -358,8 +376,9 @@ export default function SignupPage() {
         validDiscount={validDiscount}
         isValidatingDiscount={isValidatingDiscount}
         checkoutMutation={checkoutMutation}
-        onBack={() => setStep(5)}
+        onBack={() => setStep(4)}
         formValues={form.getValues()}
+        onSuccess={() => setLocation("/onboarding/post-payment")}
       />
     );
   }
@@ -398,7 +417,9 @@ export default function SignupPage() {
 
       <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <HeaderLogo />
+          <Link href="/">
+            <HeaderLogo className="cursor-pointer" />
+          </Link>
           <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground font-medium">
             <ShieldCheck className="w-4 h-4 text-green-600" />
             Secure Enterprise Encryption
@@ -426,9 +447,15 @@ export default function SignupPage() {
                 <br />
                 <span className="text-3xl md:text-5xl">is Ready to Launch.</span>
               </h1>
-              <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-medium px-4 md:px-0">
+              <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-medium px-4 md:px-0 mb-6">
                 Let's build your brand with a pro team that delivers <span className="text-blue-600 font-bold">real results</span>.
               </p>
+              
+              <div className="inline-flex items-center gap-2 py-2 px-4 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-sm font-bold animate-in fade-in slide-in-from-top-4 duration-1000">
+                <Users className="w-4 h-4" />
+                Are you a content creator? 
+                <Link href="/signup/creator" className="underline decoration-2 underline-offset-4 hover:text-blue-800 transition-colors">Apply to our network here →</Link>
+              </div>
             </motion.div>
           )}
 
@@ -448,53 +475,55 @@ export default function SignupPage() {
                   <AnimatePresence mode="wait">
                     {step === 1 && <AccountStep form={form} />}
                     {step === 2 && <ContactStep form={form} />}
-                    {step === 3 && <ServicesStep form={form} services={services} />}
-                    {step === 4 && <LoginsStep form={form} selectedServices={selectedServices} />}
-                    {step === 5 && <BrandStep form={form} />}
+                    {step === 3 && (
+                      <VerificationStep 
+                        email={form.getValues("email")} 
+                        onVerified={() => setStep(4)} 
+                      />
+                    )}
+                    {step === 4 && <ServicesStep form={form} services={services} />}
                   </AnimatePresence>
 
                   {/* Navigation Buttons */}
-                  <div className="flex flex-col sm:flex-row justify-between gap-4 pt-8 md:pt-12 border-t border-slate-100">
-                    {step > 1 ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="lg"
-                        onClick={prevStep}
-                        className="rounded-xl md:rounded-2xl h-14 md:h-16 px-8 text-slate-500 font-bold hover:bg-slate-50"
+                  {step !== 3 && (
+                    <div className="flex flex-col sm:flex-row justify-between gap-4 pt-8 md:pt-12 border-t border-slate-100">
+                      {step > 1 ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="lg"
+                          onClick={prevStep}
+                          className="rounded-xl md:rounded-2xl h-14 md:h-16 px-8 text-slate-500 font-bold hover:bg-slate-50"
+                        >
+                          <ArrowLeft className="w-5 h-5 mr-3" />
+                          Back
+                        </Button>
+                      ) : <div className="hidden sm:block w-32" />}
+                      
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex-1 sm:max-w-[300px]"
                       >
-                        <ArrowLeft className="w-5 h-5 mr-3" />
-                        Back
-                      </Button>
-                    ) : <div className="hidden sm:block w-32" />}
-                    
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex-1 sm:max-w-[300px]"
-                    >
-                      <Button
-                        type="button"
-                        size="lg"
-                        onClick={nextStep}
-                        disabled={isAdvancing || earlyLeadCaptureMutation.isPending || signupMutation.isPending}
-                        className={`w-full rounded-xl md:rounded-2xl h-14 md:h-16 px-12 font-black text-lg md:text-xl transition-all shadow-[0_20px_40px_-12px_rgba(0,0,0,0.2)] ${
-                          step === 5 
-                            ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white" 
-                            : "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
-                        }`}
-                      >
-                        {isAdvancing || signupMutation.isPending ? (
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
-                        ) : (
-                          <>
-                            {step === 5 ? "🚀 Launch My Plan" : "Continue"}
-                            <ArrowRight className="w-5 h-5 ml-3" />
-                          </>
-                        )}
-                      </Button>
-                    </motion.div>
-                  </div>
+                        <Button
+                          type="button"
+                          size="lg"
+                          onClick={nextStep}
+                          disabled={isAdvancing || earlyLeadCaptureMutation.isPending || signupMutation.isPending}
+                          className="w-full rounded-xl md:rounded-2xl h-14 md:h-16 px-12 font-black text-lg md:text-xl transition-all shadow-[0_20px_40px_-12px_rgba(0,0,0,0.2)] bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+                        >
+                          {isAdvancing || signupMutation.isPending ? (
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white" />
+                          ) : (
+                            <>
+                              Continue
+                              <ArrowRight className="w-5 h-5 ml-3" />
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                    </div>
+                  )}
                 </form>
               </Form>
             </div>

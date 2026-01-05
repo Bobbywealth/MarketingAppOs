@@ -988,8 +988,10 @@ export default function BlogPage() {
 
         {/* Footer */}
         <footer className="bg-gray-900 text-white py-12 mt-20">
-          <div className="container mx-auto px-4 text-center">
-            <FooterLogo className="mx-auto mb-4" />
+          <div className="container mx-auto px-4 text-center flex flex-col items-center">
+            <Link href="/">
+              <FooterLogo className="mx-auto mb-4 cursor-pointer" />
+            </Link>
             <p className="text-gray-400">
               © {new Date().getFullYear()} Marketing Team App. All rights reserved.
             </p>
@@ -1244,8 +1246,10 @@ export default function BlogPage() {
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4 text-center">
-          <FooterLogo className="mx-auto mb-4" />
+        <div className="container mx-auto px-4 text-center flex flex-col items-center">
+          <Link href="/">
+            <FooterLogo className="mx-auto mb-4 cursor-pointer" />
+          </Link>
           <p className="text-gray-400">
             © {new Date().getFullYear()} Marketing Team App. All rights reserved.
           </p>

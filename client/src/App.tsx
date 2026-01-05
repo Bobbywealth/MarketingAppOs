@@ -36,6 +36,7 @@ const AuthPage = lazy(() => import("@/pages/auth-page"));
 const VerifyEmail = lazy(() => import("@/pages/verify-email"));
 const Landing = lazy(() => import("@/pages/landing"));
 const SignupPage = lazy(() => import("@/pages/signup"));
+const PostPaymentOnboarding = lazy(() => import("@/pages/post-payment-onboarding"));
 const PaymentSuccessPage = lazy(() => import("@/pages/payment-success"));
 const ContactPage = lazy(() => import("@/pages/contact"));
 const BlogPage = lazy(() => import("@/pages/blog"));
@@ -122,6 +123,7 @@ function Router() {
         <Route path="/auth" component={AuthPage} />
         <Route path="/verify-email" component={VerifyEmail} />
         <Route path="/signup" component={SignupPage} />
+        <Route path="/onboarding/post-payment" component={PostPaymentOnboarding} />
         <Route path="/creator-signup" component={CreatorSignupRedirect} />
         <Route path="/signup/creator" component={CreatorSignup} />
         <Route path="/payment-success" component={PaymentSuccessPage} />
@@ -135,8 +137,8 @@ function Router() {
         {/* Creator-specific routes */}
         {isCreator && <ProtectedRoute path="/" component={CreatorDashboard} />}
         {isCreator && <ProtectedRoute path="/course" component={CreatorCourse} />}
-        {isCreator && <ProtectedRoute path="/manage-courses" component={ManageCourses} />}
-        {isCreator && <ProtectedRoute path="/manage-courses/:id" component={EditCourse} />}
+        {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses" component={ManageCourses} />}
+        {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses/:id" component={EditCourse} />}
         {isCreator && <ProtectedRoute path="/training/mastering-content" component={CreatorMasteringContent} />}
         <ProtectedRoute path="/course/:id" component={CreatorCourse} />
         {isCreator && <ProtectedRoute path="/visits" component={CreatorVisits} />}

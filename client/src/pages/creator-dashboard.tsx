@@ -144,13 +144,18 @@ export default function CreatorDashboard() {
   });
 
   const upcomingVisits = visits.filter(v => v.status === 'scheduled');
-  const completedVisits = visits.filter(v => v.status === 'completed').length;
+  const completedVisitsCount = visits.filter(v => v.status === 'completed').length;
+
+  // Calculate total earned from completed visits (using the creator's rate)
+  const totalEarnedCents = visits
+    .filter(v => v.status === 'completed')
+    .reduce((sum, v) => sum + (creator?.ratePerVisitCents || 0), 0);
+  const totalEarned = totalEarnedCents / 100;
 
   const getProgress = (courseId: string) => {
     const enrollment = enrollments.find(e => e.courseId === courseId);
     if (!enrollment) return 0;
-    // This is a simplification, ideally we'd know total lessons
-    return enrollment.status === 'completed' ? 100 : 25; 
+    return enrollment.status === 'completed' ? 100 : 0; 
   };
 
   return (
@@ -165,7 +170,7 @@ export default function CreatorDashboard() {
           <Card className="px-4 py-2 bg-primary text-primary-foreground shadow-sm">
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 fill-current" />
-              <span className="font-bold">4.9 Performance Score</span>
+              <span className="font-bold">{creator?.performanceScore || "—"} Performance Score</span>
             </div>
           </Card>
         </div>
@@ -191,7 +196,7 @@ export default function CreatorDashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Total Earned</p>
-                <p className="text-2xl font-bold">$1,250.00</p>
+                <p className="text-2xl font-bold">${totalEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -204,7 +209,7 @@ export default function CreatorDashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Completed Visits</p>
-                <p className="text-2xl font-bold">18</p>
+                <p className="text-2xl font-bold">{completedVisitsCount}</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
                 <CheckCircle2 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -217,7 +222,11 @@ export default function CreatorDashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Course Progress</p>
-                <p className="text-2xl font-bold">65%</p>
+                <p className="text-2xl font-bold">
+                  {enrollments.length > 0 
+                    ? `${Math.round(enrollments.reduce((acc, e) => acc + (e.status === 'completed' ? 100 : 25), 0) / enrollments.length)}%`
+                    : "0%"}
+                </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
                 <BookOpen className="h-6 w-6 text-amber-600 dark:text-amber-400" />
@@ -243,18 +252,20 @@ export default function CreatorDashboard() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Utensils className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-bold text-lg">Joe's Pizza & Grill</span>
+                      <span className="font-bold text-lg">{(upcomingVisits[0] as any).clientName || "Unknown Client"}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>{format(new Date(upcomingVisits[0].scheduledStart), 'EEEE, MMM d @ h:mm a')}</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      <span className="font-semibold">Objective:</span> High-quality social reels & interior shots.
+                      <span className="font-semibold">Objective:</span> {upcomingVisits[0].notes || "High-quality social reels & interior shots."}
                     </div>
                   </div>
                   <div className="flex gap-2 w-full md:w-auto">
-                    <Button className="flex-1 md:flex-none" variant="secondary">Visit Details</Button>
+                    <Link href={`/visit/${upcomingVisits[0].id}`}>
+                      <Button className="flex-1 md:flex-none" variant="secondary">Visit Details</Button>
+                    </Link>
                     <Button 
                       className="flex-1 md:flex-none gap-2"
                       onClick={() => handleUploadClick(upcomingVisits[0].id)}
@@ -280,11 +291,6 @@ export default function CreatorDashboard() {
                 <BookOpen className="h-5 w-5" />
                 Training & Courses
               </h2>
-              {user?.role === 'creator' && (
-                <Link href="/manage-courses">
-                  <Button variant="outline" size="sm">Manage My Courses</Button>
-                </Link>
-              )}
             </div>
             
             {courses.length === 0 ? (
@@ -293,7 +299,7 @@ export default function CreatorDashboard() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {courses.filter(c => c.status === 'published' || c.creatorId === user?.creatorId).map((course) => {
+                {courses.filter(c => c.status === 'published').map((course) => {
                   const progress = getProgress(course.id);
                   const isEnrolled = enrollments.some(e => e.courseId === course.id);
                   
@@ -420,20 +426,6 @@ export default function CreatorDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg">Pro Tip of the Day</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-indigo-50 leading-relaxed">
-                "When shooting content, try to use natural side-lighting. It brings out the texture and depth of your subject, making it look much more professional on screen!"
-              </p>
-              <div className="mt-4 pt-4 border-t border-white/20 flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Verified by Lead Editor</span>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 

@@ -385,7 +385,9 @@ export default function LandingPage() {
       >
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <HeaderLogo />
+            <Link href="/">
+              <HeaderLogo />
+            </Link>
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -2136,7 +2138,9 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10 mb-12">
             <div className="col-span-2 md:col-span-1">
-              <FooterLogo className="mb-4" />
+              <Link href="/">
+                <FooterLogo className="mb-4" />
+              </Link>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Your go-to remote marketing team. We help businesses, influencers, and entrepreneurs grow with results-driven digital marketing.
               </p>

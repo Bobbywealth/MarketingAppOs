@@ -13,6 +13,7 @@ import { initializeEmailParser } from "./emailParser";
 import { startEmailSyncService } from "./emailSyncService";
 import { startVisitsAutomation } from "./visitsAutomation";
 import { startTaskAutomation } from "./taskAutomation";
+import { startBackgroundJobs } from "./backgroundJobs";
 import { storage } from "./storage";
 import { ensureMinimumSchema } from "./ensureSchema";
 
@@ -130,6 +131,8 @@ app.use((req, res, next) => {
   startVisitsAutomation();
   // Start task due date reminders (daily)
   startTaskAutomation();
+  // Start general background jobs (invoices, meeting reminders)
+  startBackgroundJobs();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

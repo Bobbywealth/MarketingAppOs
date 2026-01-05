@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
+import { Redirect, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,9 @@ export default function AuthPage() {
         >
           <div className="text-center mb-10">
             <div className="flex justify-center mb-6">
-              <Logo size="lg" className="scale-110" />
+              <Link href="/">
+                <Logo size="lg" className="scale-110 cursor-pointer" />
+              </Link>
             </div>
             <h1 className="text-3xl md:text-4xl font-black mb-3 text-slate-900 tracking-tight">
               Marketing Team App
@@ -276,6 +278,32 @@ export default function AuthPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
+                      <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+                            <Sparkles className="w-4 h-4" />
+                          </div>
+                          <p className="font-black text-blue-900 text-sm tracking-tight">Are you a Content Creator?</p>
+                        </div>
+                        <p className="text-blue-700/70 text-[13px] font-medium leading-snug mb-3">
+                          Join our elite network to get paid for high-impact content captures.
+                        </p>
+                        <Link href="/signup/creator">
+                          <Button variant="outline" size="sm" className="w-full rounded-lg border-blue-200 bg-white text-blue-600 hover:bg-blue-50 hover:text-blue-700 font-bold text-xs h-9 shadow-sm">
+                            Apply To Creator Network →
+                          </Button>
+                        </Link>
+                      </div>
+
+                      <div className="relative mb-6">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t border-slate-200"></span>
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase tracking-widest font-black text-slate-400">
+                          <span className="bg-white px-4">Or Create Client Account</span>
+                        </div>
+                      </div>
+
                       <form onSubmit={handleRegister} className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="register-username" className="text-sm font-bold text-slate-700">Username</Label>

@@ -47,6 +47,7 @@ import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
 import leadsRouter from "./routes/leads";
+import { notifyAboutLeadAction } from "./leadNotifications";
 import clientsRouter from "./routes/clients";
 import marketingRouter from "./routes/marketing";
 import creatorsRouter from "./routes/creators";
@@ -54,6 +55,7 @@ import coursesRouter from "./routes/courses";
 import tasksRouter from "./routes/tasks";
 import marketingCenterRouter from "./routes/marketing-center";
 import socialRouter from "./routes/social";
+import aiRouter from "./routes/ai";
 import { 
   getCurrentUserContext, 
   getAccessibleClientOr404, 
@@ -147,604 +149,6 @@ if (process.env.STRIPE_SECRET_KEY) {
 
 // Initialize Stripe if keys are present
 
-// Helper function to check for overdue invoices and send reminders
-async function checkOverdueInvoices() {
-  try {
-    const invoices = await storage.getInvoices();
-    const now = new Date();
-    const overdueInvoices = invoices.filter(invoice => 
-      invoice.status === 'sent' && 
-      invoice.dueDate && 
-      new Date(invoice.dueDate) < now
-    );
-    
-    for (const invoice of overdueInvoices) {
-      // Notify client users about overdue invoice
-      if (invoice.clientId) {
-        const clientUsers = await storage.getUsersByClientId(invoice.clientId);
-        const { sendPushToUser } = await import('./push');
-        
-        for (const clientUser of clientUsers) {
-          await storage.createNotification({
-            userId: clientUser.id,
-            type: 'error',
-            title: '💰 Invoice Overdue',
-            message: `Invoice #${invoice.invoiceNumber} is overdue. Please pay immediately.`,
-            category: 'financial',
-            actionUrl: '/client-billing',
-            isRead: false,
-          });
-          
-          await sendPushToUser(clientUser.id, {
-            title: '💰 Invoice Overdue',
-            body: `Invoice #${invoice.invoiceNumber} is overdue. Please pay immediately.`,
-            url: '/client-billing',
-          }).catch(err => console.error('Failed to send push notification:', err));
-        }
-      }
-      
-      // Notify admins about overdue invoice
-      const users = await storage.getUsers();
-      const admins = users.filter(u => u.role === UserRole.ADMIN);
-      const { sendPushToUser: sendPushToAdmin } = await import('./push');
-      
-      for (const admin of admins) {
-        await storage.createNotification({
-          userId: admin.id,
-          type: 'warning',
-          title: '💰 Invoice Overdue',
-          message: `Invoice #${invoice.invoiceNumber} is overdue for client ${invoice.clientId}`,
-          category: 'financial',
-          actionUrl: `/invoices?invoiceId=${invoice.id}`,
-          isRead: false,
-        });
-        
-        await sendPushToAdmin(admin.id, {
-          title: '💰 Invoice Overdue',
-          body: `Invoice #${invoice.invoiceNumber} is overdue for client ${invoice.clientId}`,
-          url: '/invoices',
-        }).catch(err => console.error('Failed to send push notification:', err));
-      }
-    }
-    
-    if (overdueInvoices.length > 0) {
-      console.log(`✅ Checked ${overdueInvoices.length} overdue invoices and sent notifications`);
-    }
-  } catch (error) {
-    console.error('Failed to check overdue invoices:', error);
-  }
-}
-
-// Helper function to notify admins about analytics and performance events
-async function notifyAdminsAboutAnalytics(title: string, message: string, category: string = 'analytics') {
-  try {
-    const users = await storage.getUsers();
-    const admins = users.filter(u => u.role === UserRole.ADMIN);
-    const { sendPushToUser } = await import('./push');
-    
-    for (const admin of admins) {
-      await storage.createNotification({
-        userId: admin.id,
-        type: 'info',
-        title,
-        message,
-        category,
-        actionUrl: '/analytics',
-        isRead: false,
-      });
-      
-      await sendPushToUser(admin.id, {
-        title,
-        body: message,
-        url: '/analytics',
-      }).catch(err => console.error('Failed to send push notification:', err));
-    }
-    
-    console.log(`✅ Notified ${admins.length} admin(s) about analytics event: ${title}`);
-  } catch (error) {
-    console.error('Failed to send analytics notifications:', error);
-  }
-}
-
-// Helper function to notify admins about staff/manager actions is now imported from ./routes/common
-
-
-// Helper function to check for significant metric changes
-async function checkSignificantMetricChanges() {
-  try {
-    const stats = await storage.getDashboardStats();
-    
-    // Check for significant changes (more than 50% increase/decrease)
-    const significantChanges = [];
-    
-    if (stats.clientsChange && Math.abs(stats.clientsChange) > 50) {
-      significantChanges.push({
-        metric: 'Clients',
-        change: stats.clientsChange,
-        message: `Client count ${stats.clientsChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.clientsChange)}%`
-      });
-    }
-    
-    if (stats.campaignsChange && Math.abs(stats.campaignsChange) > 50) {
-      significantChanges.push({
-        metric: 'Campaigns',
-        change: stats.campaignsChange,
-        message: `Campaign count ${stats.campaignsChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.campaignsChange)}%`
-      });
-    }
-    
-    if (stats.revenueChange && Math.abs(stats.revenueChange) > 50) {
-      significantChanges.push({
-        metric: 'Revenue',
-        change: stats.revenueChange,
-        message: `Revenue ${stats.revenueChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.revenueChange)}%`
-      });
-    }
-    
-    if (stats.pipelineChange && Math.abs(stats.pipelineChange) > 50) {
-      significantChanges.push({
-        metric: 'Pipeline',
-        change: stats.pipelineChange,
-        message: `Pipeline value ${stats.pipelineChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(stats.pipelineChange)}%`
-      });
-    }
-    
-    // Send notifications for significant changes
-    for (const change of significantChanges) {
-      await notifyAdminsAboutAnalytics(
-        `📊 Significant ${change.metric} Change`,
-        change.message,
-        'analytics'
-      );
-    }
-    
-    if (significantChanges.length > 0) {
-      console.log(`✅ Detected ${significantChanges.length} significant metric changes`);
-    }
-  } catch (error) {
-    console.error('Failed to check metric changes:', error);
-  }
-}
-
-// Run overdue invoice check every hour
-setInterval(checkOverdueInvoices, 60 * 60 * 1000); // 1 hour
-
-// Helper function to notify admins about integration and external service events
-async function notifyAdminsAboutIntegration(title: string, message: string, category: string = 'integration') {
-  try {
-    const users = await storage.getUsers();
-    const admins = users.filter(u => u.role === UserRole.ADMIN);
-    const { sendPushToUser } = await import('./push');
-    
-    for (const admin of admins) {
-      await storage.createNotification({
-        userId: admin.id,
-        type: 'warning',
-        title,
-        message,
-        category,
-        actionUrl: '/settings',
-        isRead: false,
-      });
-      
-      await sendPushToUser(admin.id, {
-        title,
-        body: message,
-        url: '/settings',
-      }).catch(err => console.error('Failed to send push notification:', err));
-    }
-    
-    console.log(`✅ Notified ${admins.length} admin(s) about integration event: ${title}`);
-  } catch (error) {
-    console.error('Failed to send integration notifications:', error);
-  }
-}
-
-// Helper: meeting reminders for bookings/events in next 60 mins
-async function runMeetingReminders() {
-  const results: any[] = [];
-  try {
-    const now = new Date();
-    const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-    if (!('getCalendarEvents' in storage)) {
-      console.warn('Storage has no getCalendarEvents; skipping reminders');
-      return results;
-    }
-    // @ts-ignore - optional API on storage
-    const events = await storage.getCalendarEvents();
-    const upcoming = (events || []).filter((e: any) => {
-      const start = e.start || e.datetime || e.date;
-      if (!start) return false;
-      const when = new Date(start);
-      return when >= now && when <= inOneHour;
-    });
-    if (upcoming.length === 0) return results;
-
-    const users = await storage.getUsers();
-    const admins = users.filter(u => u.role === UserRole.ADMIN);
-    const { sendPushToUser } = await import('./push');
-
-    for (const ev of upcoming) {
-      for (const admin of admins) {
-        await storage.createNotification({
-          userId: admin.id,
-          type: 'warning',
-          title: '📅 Upcoming Meeting',
-          message: `${ev.title || 'Scheduled meeting'} at ${new Date(ev.start || ev.datetime).toLocaleTimeString()}`,
-          category: 'communication',
-          actionUrl: '/company-calendar',
-          isRead: false,
-        });
-        await sendPushToUser(admin.id, {
-          title: '📅 Upcoming Meeting',
-          body: `${ev.title || 'Scheduled meeting'} in less than 1 hour`,
-          url: '/company-calendar',
-        }).catch(err => console.error('Failed to send push notification:', err));
-      }
-      results.push({ id: ev.id, title: ev.title, notifiedAdmins: admins.length });
-    }
-    console.log(`✅ Meeting reminders sent for ${upcoming.length} event(s)`);
-  } catch (error) {
-    console.error('Meeting reminders error:', error);
-  }
-  return results;
-}
-
-// Schedule meeting reminders every 15 minutes
-setInterval(() => { runMeetingReminders().catch(() => {}); }, 15 * 60 * 1000);
-
-// Run analytics check every 6 hours
-setInterval(checkSignificantMetricChanges, 6 * 60 * 60 * 1000); // 6 hours
-
-// AI Business Manager - Intelligent command parser and router
-async function processAICommand(message: string, userId: number): Promise<{
-  success: boolean;
-  response: string;
-  actionTaken?: string;
-  error?: string;
-  errorDetails?: string;
-}> {
-  const lowerMessage = message.toLowerCase().trim();
-  
-  try {
-    // CLIENT MANAGEMENT
-    if (lowerMessage.includes('client') || lowerMessage.includes('customer')) {
-      // List clients
-      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
-        const clients = await storage.getClients();
-        if (clients.length === 0) {
-          return {
-            success: true,
-            response: "You don't have any clients yet! Ready to add your first one? Just say something like 'Create a client named John Smith' 🎉",
-          };
-        }
-        return {
-          success: true,
-          response: `You've got ${clients.length} client${clients.length === 1 ? '' : 's'}! Here's a quick look: ${clients.slice(0, 5).map(c => c.name).join(', ')}${clients.length > 5 ? ' and more!' : '! 😊'}`,
-        };
-      }
-      
-      // Create client
-      if (lowerMessage.includes('create') || lowerMessage.includes('add') || lowerMessage.includes('new')) {
-        const nameMatch = message.match(/(?:name|called|named)\s+(?:is\s+)?([A-Z][a-zA-Z\s]+?)(?:,|\s+(?:with|email|phone|company)|$)/i);
-        const emailMatch = message.match(/(?:email|e-mail)\s+(?:is\s+)?([\w\.-]+@[\w\.-]+\.\w+)/i);
-        const phoneMatch = message.match(/(?:phone|number)\s+(?:is\s+)?([\+\(\)\s\d-]+)/i);
-        const companyMatch = message.match(/(?:company|business)\s+(?:is\s+)?([A-Z][a-zA-Z\s&]+?)(?:,|\s+(?:with|email|phone)|$)/i);
-        
-        const clientData: any = {
-          name: nameMatch ? nameMatch[1].trim() : 'New Client',
-          email: emailMatch ? emailMatch[1] : null,
-          phone: phoneMatch ? phoneMatch[1] : null,
-          company: companyMatch ? companyMatch[1].trim() : null,
-        };
-        
-        if (!nameMatch) {
-          return {
-            success: true,
-            response: "I'd love to create a client for you! But I need a name first 😊 Try something like: 'Create a client named John Smith' or 'Add a new client called Sarah Johnson'",
-          };
-        }
-        
-        try {
-          const newClient = await storage.createClient({
-            ...clientData,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-
-          // Email alert to admins
-          try {
-            const allUsers = await storage.getUsers();
-            const admins = allUsers.filter(u => u.role === UserRole.ADMIN && u.email);
-            
-            if (admins.length > 0) {
-              const { emailNotifications } = await import('./emailService');
-              const adminsToNotify = [];
-              for (const admin of admins) {
-                const prefs = await storage.getUserNotificationPreferences(admin.id);
-                if (prefs?.emailNotifications !== false) {
-                  adminsToNotify.push(admin.email as string);
-                }
-              }
-              
-              if (adminsToNotify.length > 0) {
-                void emailNotifications.sendNewClientAlert(
-                  adminsToNotify,
-                  newClient.name,
-                  newClient.company || '',
-                  newClient.email || ''
-                ).catch(err => console.error('Failed to send AI client email alert:', err));
-              }
-            }
-          } catch (notifError) {
-            console.error('Failed to notify admins about new AI client via email:', notifError);
-          }
-
-          return {
-            success: true,
-            response: `Awesome! 🎉 I just added "${newClient.name}" to your client list!${emailMatch ? ` I saved their email too: ${emailMatch[1]}` : ''}`,
-            actionTaken: `Created client: ${newClient.name}`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Failed to create client: ${error.message || 'Unknown error'}`,
-            error: error.message || 'Unknown error',
-            errorDetails: error.stack,
-          };
-        }
-      }
-      
-      // Delete client
-      if (lowerMessage.includes('delete') || lowerMessage.includes('remove')) {
-        const nameMatch = message.match(/(?:client|customer)\s+(?:named|called|is\s+)?([A-Z][a-zA-Z\s]+?)(?:$|,|\s+(?:from|in|the))/i) || 
-                         message.match(/delete\s+([A-Z][a-zA-Z\s]+)/i);
-        
-        if (!nameMatch) {
-          return {
-            success: true,
-            response: "I need to know which client to delete. Please provide a name like: 'Delete client John Smith'",
-          };
-        }
-        
-        try {
-          const clients = await storage.getClients();
-          const client = clients.find(c => c.name.toLowerCase().includes(nameMatch[1].toLowerCase()));
-          if (!client) {
-            return {
-              success: true,
-              response: `Hmm, I couldn't find a client named "${nameMatch[1]}" 🤔 Could you double-check the name? Or would you like me to show you all your clients?`,
-            };
-          }
-          await storage.deleteClient(String(client.id));
-          return {
-            success: true,
-            response: `✅ Deleted client "${client.name}" successfully!`,
-            actionTaken: `Deleted client: ${client.name}`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Failed to delete client: ${error.message || 'Unknown error'}`,
-            error: error.message || 'Unknown error',
-            errorDetails: error.stack,
-          };
-        }
-      }
-    }
-    
-    // TASK MANAGEMENT
-    if (lowerMessage.includes('task') || lowerMessage.includes('todo')) {
-      // List tasks
-      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
-        try {
-          const tasks = await storage.getTasks();
-          const pending = tasks.filter(t => t.status === 'pending').length;
-          const completed = tasks.filter(t => t.status === 'completed').length;
-          
-          if (tasks.length === 0) {
-            return {
-              success: true,
-              response: "Your task list is empty! 🎉 Want me to create one? Just tell me what needs to be done!",
-            };
-          }
-          
-          return {
-            success: true,
-            response: `You have ${tasks.length} task${tasks.length === 1 ? '' : 's'} total! 📋 ${pending > 0 ? `${pending} still to do` : 'All done! ✅'}${completed > 0 ? ` and ${completed} completed! 🎉` : ''}`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Oops! Had trouble getting your tasks: ${error.message}`,
-            error: error.message,
-          };
-        }
-      }
-      
-      // Create task
-      if (lowerMessage.includes('create') || lowerMessage.includes('add') || lowerMessage.includes('new')) {
-        const titleMatch = message.match(/(?:task|todo|reminder)\s+(?:named|called|is\s+)?(?:to\s+)?(.+?)(?:with|due|by|$)/i) ||
-                          message.match(/(?:create|add)\s+(?:a\s+)?(?:task|todo)\s+(?:named|called|to\s+)?(.+?)(?:with|due|by|$)/i);
-        
-        if (!titleMatch) {
-          return {
-            success: true,
-            response: "What do you need to get done? 🤔 Just tell me like: 'Create a task to update the website' or 'Add a reminder to call Mike tomorrow'",
-          };
-        }
-        
-        try {
-          const newTask = await storage.createTask({
-            title: titleMatch[1].trim(),
-            description: null,
-            status: 'pending',
-            priority: 'medium',
-            assignedTo: String(userId),
-            createdBy: String(userId),
-            dueDate: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-          return {
-            success: true,
-            response: `Got it! ✅ I added "${newTask.title}" to your task list. You got this! 💪`,
-            actionTaken: `Created task: ${newTask.title}`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Failed to create task: ${error.message || 'Unknown error'}`,
-            error: error.message || 'Unknown error',
-            errorDetails: error.stack,
-          };
-        }
-      }
-    }
-    
-    // CALENDAR/EVENTS
-    if (lowerMessage.includes('calendar') || lowerMessage.includes('event') || lowerMessage.includes('meeting') || lowerMessage.includes('schedule')) {
-      // List events
-      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('today')) {
-        try {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const tomorrow = new Date(today);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          
-          const allEvents = await storage.getCalendarEvents();
-          const eventsToday = allEvents.filter(e => {
-            const eventDate = new Date(e.start);
-            return eventDate >= today && eventDate < tomorrow;
-          });
-          
-          if (eventsToday.length === 0) {
-            return {
-              success: true,
-              response: "Your calendar is clear today! 🎉 Perfect time to catch up or take a breather! ☕",
-            };
-          }
-          
-          return {
-            success: true,
-            response: `You've got ${eventsToday.length} thing${eventsToday.length === 1 ? '' : 's'} on your calendar today! 📅 Here's what's coming up: ${eventsToday.map(e => e.title).join(', ')}`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Failed to fetch calendar events: ${error.message}`,
-            error: error.message,
-          };
-        }
-      }
-    }
-    
-    // MESSAGES
-    if (lowerMessage.includes('message') || lowerMessage.includes('send') || lowerMessage.includes('text')) {
-      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('recent')) {
-        try {
-          const allMessages = await storage.getMessages();
-          const recentMessages = allMessages.slice(-10);
-          return {
-            success: true,
-            response: `Found ${allMessages.length} total messages. Showing ${recentMessages.length} most recent.`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Failed to fetch messages: ${error.message}`,
-            error: error.message,
-          };
-        }
-      }
-    }
-    
-    // CAMPAIGNS
-    if (lowerMessage.includes('campaign')) {
-      if (lowerMessage.includes('list') || lowerMessage.includes('show') || lowerMessage.includes('all')) {
-        try {
-          const campaigns = await storage.getCampaigns();
-          const active = campaigns.filter(c => c.status === 'active');
-          return {
-            success: true,
-            response: `Found ${campaigns.length} campaigns total. ${active.length} are currently active.`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Failed to fetch campaigns: ${error.message}`,
-            error: error.message,
-          };
-        }
-      }
-    }
-    
-    // INVOICES
-    if (lowerMessage.includes('invoice') || lowerMessage.includes('billing')) {
-      if (lowerMessage.includes('list') || lowerMessage.includes('show')) {
-        try {
-          const invoices = await storage.getInvoices();
-          const pending = invoices.filter(i => i.status === 'pending');
-          const paid = invoices.filter(i => i.status === 'paid');
-          return {
-            success: true,
-            response: `Found ${invoices.length} invoices. ${pending.length} pending, ${paid.length} paid.`,
-          };
-        } catch (error: any) {
-          return {
-            success: false,
-            response: `Failed to fetch invoices: ${error.message}`,
-            error: error.message,
-          };
-        }
-      }
-    }
-    
-    // Handle greetings naturally
-    if (lowerMessage.match(/^(hi|hello|hey|heya|sup|yo|howdy|greetings)$/)) {
-      const greetings = [
-        "Hey! 👋 Great to hear from you! What can I help you with today?",
-        "Hi there! 😊 I'm all ears! What do you need?",
-        "Hello! Ready to knock some tasks off your list? What's up?",
-        "Hey hey! 🙌 What can I help you accomplish today?",
-        "Hi! I'm here and ready to help! What's on your mind?",
-      ];
-      return {
-        success: true,
-        response: greetings[Math.floor(Math.random() * greetings.length)],
-      };
-    }
-
-    // Handle "thanks" and appreciation
-    if (lowerMessage.match(/thanks|thank you|thx|ty|appreciate/)) {
-      const responses = [
-        "You're very welcome! 😊 Anything else I can help with?",
-        "Happy to help! That's what I'm here for! 💪",
-        "No problem at all! Let me know if you need anything else!",
-        "Anytime! I'm always here when you need me! ✨",
-      ];
-      return {
-        success: true,
-        response: responses[Math.floor(Math.random() * responses.length)],
-      };
-    }
-
-    // DEFAULT: Ask for clarification in a friendly way
-    return {
-      success: true,
-      response: "Hmm, I'm not quite sure what you need help with! 🤔\n\nI can help you with things like:\n\n💼 **Clients** - \"Show me all clients\" or \"Create a client named Sarah\"\n✅ **Tasks** - \"What tasks do I have?\" or \"Create a task to call Mike\"\n📅 **Calendar** - \"What's on my schedule today?\"\n💬 **Messages** - \"Show recent messages\"\n🚀 **Campaigns** - \"List all campaigns\"\n💰 **Invoices** - \"Show me pending invoices\"\n\nJust ask me naturally - like you're talking to a friend! 😊",
-    };
-    
-  } catch (error: any) {
-    return {
-      success: false,
-      response: `An error occurred: ${error.message || 'Unknown error'}`,
-      error: error.message || 'Unknown error',
-      errorDetails: error.stack,
-    };
-  }
-}
-
 // Modularized helper functions are imported from ./routes/utils and ./routes/common
 
 export function registerRoutes(app: Express) {
@@ -757,6 +161,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/courses", coursesRouter);
   app.use("/api/social", socialRouter);
   app.use("/api", tasksRouter);
+  app.use("/api/ai-business-manager", aiRouter);
 
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
@@ -1120,6 +525,11 @@ export function registerRoutes(app: Express) {
         if (existing) {
           createdClient = existing;
         } else {
+          const selectedServices = (matchedLead?.sourceMetadata as any)?.services || [];
+          const requiresBrandInfo = selectedServices.some((s: string) => 
+            ["Content Creation", "Social Media Management", "Content Marketing"].includes(s)
+          );
+
           createdClient = await storage.createClient({
             name,
             email: email || undefined,
@@ -1128,6 +538,8 @@ export function registerRoutes(app: Express) {
             startDate: new Date(),
             salesAgentId: matchedLead?.assignedToId ?? undefined,
             assignedToId: matchedLead?.assignedToId ?? undefined,
+            serviceTags: selectedServices,
+            requiresBrandInfo,
             notes: `Created from Stripe session ${sessionId}${packageId ? ` for package ${packageId}` : ""}`,
           } as any);
         }
@@ -1639,58 +1051,10 @@ This lead will be updated if they complete the full signup process.`,
       console.log('✅ Early lead created successfully:', lead.id);
       
       // Notify all admins and managers about new early lead
-      try {
-        const users = await storage.getUsers();
-        const adminsAndManagers = users.filter(u => 
-          u.role === UserRole.ADMIN || u.role === UserRole.MANAGER
-        );
-        
-        const { sendPushToUser } = await import('./push');
-        
-        for (const user of adminsAndManagers) {
-          // In-app notification
-          await storage.createNotification({
-            userId: user.id,
-            type: 'info',
-            title: '🎯 New Early Lead',
-            message: `${lead.name}${lead.company ? ` from ${lead.company}` : ''} - Started signup process`,
-            category: 'general',
-            actionUrl: `/leads?leadId=${lead.id}`,
-            isRead: false,
-          });
-          
-          // Push notification
-          await sendPushToUser(user.id, {
-            title: '🎯 New Early Lead',
-            body: `${lead.name}${lead.company ? ` from ${lead.company}` : ''} - Started signup process`,
-            url: '/leads',
-          }).catch(err => console.error('Failed to send push notification:', err));
-
-          // Email notification to admin/manager
-          if (user.email) {
-            try {
-              const { emailNotifications } = await import('./emailService');
-              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
-              const prefs = await storage.getUserNotificationPreferences(user.id).catch(() => null);
-              if (prefs?.emailNotifications !== false) {
-                void emailNotifications.sendActionAlertEmail(
-                  user.email,
-                  '🎯 New Early Lead',
-                  `${lead.name}${lead.company ? ` from ${lead.company}` : ''} started the signup process. Follow up to encourage completion!`,
-                  `${appUrl}/leads?leadId=${lead.id}`,
-                  'info'
-                ).catch(err => console.error(`Failed to send early lead email to ${user.username}:`, err));
-              }
-            } catch (e) {
-              console.error(`Email error for early lead to ${user.username}:`, e);
-            }
-          }
-        }
-        console.log(`✅ Notifications sent to ${adminsAndManagers.length} admins/managers`);
-      } catch (notifError) {
-        console.error('⚠️ Failed to send notifications for early lead:', notifError);
-        // Don't fail the request if notification fails
-      }
+      notifyAboutLeadAction({
+        lead,
+        action: 'created'
+      }).catch(err => console.error('Failed to notify about early lead creation:', err));
       
       res.json({ success: true, leadId: lead.id });
     } catch (error: any) {
@@ -3122,103 +2486,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // AI Business Manager endpoint - GPT-4 Powered! 🚀
-  app.post("/api/ai-business-manager/chat", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      const { message, conversationHistory } = req.body;
-
-      if (!message || typeof message !== 'string') {
-        return res.status(400).json({ 
-          success: false,
-          message: "Message is required" 
-        });
-      }
-
-      console.log(`🤖 GPT-4 AI Business Manager from user ${userId}:`, message);
-
-      // Use the new GPT-4 powered AI system!
-      const result = await processAIChat(message, userId, conversationHistory || []);
-      
-      res.json(result);
-    } catch (error: any) {
-      console.error("AI Business Manager error:", error);
-      res.status(500).json({
-        success: false,
-        response: `Oops! Something went wrong 😅 ${error.message || 'Unknown error'}`,
-        error: error.message || 'Unknown error',
-      });
-    }
-  });
-
-  // AI Business Manager - Voice Transcription endpoint
-  app.post("/api/ai-business-manager/transcribe", isAuthenticated, upload.single('audio'), async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          error: "No audio file provided"
-        });
-      }
-
-      console.log(`🎤 Transcription request from user ${userId}, file: ${req.file.filename}`);
-
-      // Import OpenAI for Whisper API
-      const OpenAI = (await import('openai')).default;
-      
-      if (!process.env.OPENAI_API_KEY) {
-        // Clean up uploaded file
-        await fs.unlink(req.file.path).catch(console.error);
-        return res.status(503).json({
-          success: false,
-          error: "Voice transcription requires OpenAI API key to be configured"
-        });
-      }
-
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-      // Read the audio file
-      const audioFile = await fs.readFile(req.file.path);
-      
-      // Create a File object for OpenAI
-      const file = new File([audioFile], req.file.filename, { type: req.file.mimetype });
-
-      // Transcribe using Whisper API
-      const transcription = await openai.audio.transcriptions.create({
-        file: file,
-        model: "whisper-1",
-        language: "en",
-      });
-
-      // Clean up uploaded file
-      await fs.unlink(req.file.path).catch(console.error);
-
-      console.log(`✅ Transcription successful: "${transcription.text}"`);
-
-      res.json({
-        success: true,
-        text: transcription.text
-      });
-
-    } catch (error: any) {
-      console.error("Transcription error:", error);
-      
-      // Clean up file if it exists
-      if (req.file) {
-        await fs.unlink(req.file.path).catch(console.error);
-      }
-
-      res.status(500).json({
-        success: false,
-        error: error.message || "Failed to transcribe audio"
-      });
-    }
-  });
-
   // Sales Agent Metrics endpoint
   app.get("/api/sales/metrics", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -3234,7 +2501,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       // Get leads assigned to this sales agent
       const allLeads = await storage.getLeads();
       const assignedLeads = allLeads.filter(lead => 
-        lead.assignedTo === String(userId) || userRole === "admin"
+        lead.assignedToId === Number(userId) || userRole === "admin"
       );
 
       // Calculate metrics
@@ -3249,16 +2516,23 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         ? Math.round((leadsConverted / leadsAssigned) * 100) 
         : 0;
 
-      // Calculate revenue (placeholder - you'll need to add actual revenue tracking)
-      const revenueGenerated = leadsConverted * 5000; // Placeholder: $5k per conversion
+      // Calculate revenue from closed won leads
+      const revenueGenerated = assignedLeads
+        .filter(lead => lead.stage === "closed_won")
+        .reduce((sum, lead) => {
+          // Use dealValue (decimal) if available, otherwise value (cents)
+          if (lead.dealValue) return sum + Number(lead.dealValue);
+          if (lead.value) return sum + (lead.value / 100);
+          return sum;
+        }, 0);
 
       // Get activities for this week
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const leadActivities = await storage.getLeadActivities();
-      const userActivities = leadActivities.filter(activity => 
-        activity.userId === userId && new Date(activity.createdAt) >= oneWeekAgo
+      const allLeadActivities = await storage.getAllLeadActivities();
+      const userActivities = allLeadActivities.filter(activity => 
+        String(activity.userId) === String(userId) && new Date(activity.createdAt) >= oneWeekAgo
       );
 
       const activitiesThisWeek = {
@@ -3267,24 +2541,30 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         meetings: userActivities.filter(a => a.activityType === "meeting").length,
       };
 
-      // Quota tracking (placeholder - you'll need to add actual quota system)
+      // Quota tracking (using a default target of $50k monthly)
+      const monthlyTarget = 50000;
       const quota = {
-        target: 50000, // $50k monthly target
+        target: monthlyTarget,
         achieved: revenueGenerated,
-        percentage: Math.min(Math.round((revenueGenerated / 50000) * 100), 100),
+        percentage: Math.min(Math.round((revenueGenerated / monthlyTarget) * 100), 100),
       };
 
-      // Top leads (sorted by potential value or recent activity)
+      // Top leads (sorted by value)
       const topLeads = assignedLeads
-        .filter(lead => lead.status !== "lost" && lead.status !== "unqualified")
+        .filter(lead => lead.stage !== "closed_lost")
+        .sort((a, b) => {
+          const valA = a.dealValue ? Number(a.dealValue) : (a.value ? a.value / 100 : 0);
+          const valB = b.dealValue ? Number(b.dealValue) : (b.value ? b.value / 100 : 0);
+          return valB - valA;
+        })
         .slice(0, 5)
         .map(lead => ({
           id: lead.id,
-          name: lead.name,
-          company: lead.company || "N/A",
-          status: lead.status,
-          value: 5000, // Placeholder - add actual deal value field
-          lastContact: lead.lastContactedAt || lead.createdAt,
+          name: lead.name || lead.company,
+          company: lead.company,
+          status: lead.stage,
+          value: lead.dealValue ? Number(lead.dealValue) : (lead.value ? lead.value / 100 : 0),
+          lastContact: lead.lastContactDate || lead.createdAt,
         }));
 
       // Recent activity
@@ -5388,83 +4668,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Check and create notifications for due/overdue tasks
   app.post("/api/notifications/check-tasks", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const rawUserId = user?.id ?? user?.claims?.sub;
-      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
-      if (!Number.isFinite(userId)) {
+      const { userId } = getCurrentUserContext(req);
+      if (userId === null) {
         return res.status(400).json({ message: "Invalid user context" });
       }
 
-      const now = new Date();
-      const dueBy = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const dueTasks = await storage.getDueTasksForAssignee(userId, dueBy);
-
-      const actionUrls = dueTasks.map((t) => `/tasks?taskId=${t.id}`);
-      const existing = await storage.getUnreadNotificationsByActionUrls(userId, actionUrls);
-      const existingKeys = new Set(existing.map((n) => `${n.actionUrl ?? ""}::${n.title}`));
-
-      let notificationsCreated = 0;
-      const { sendPushToUser } = await import("./push");
-
-      for (const task of dueTasks) {
-        if (!task.dueDate) continue;
-        if (task.status === "completed") continue;
-
-        const dueDate = new Date(task.dueDate);
-        const hoursDiff = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-        const actionUrl = `/tasks?taskId=${task.id}`;
-
-        // Past due (overdue)
-        if (hoursDiff < 0) {
-          const title = "⏰ Task Overdue!";
-          const key = `${actionUrl}::${title}`;
-          if (existingKeys.has(key)) continue;
-
-          await storage.createNotification({
-            userId,
-            type: "error",
-            title,
-            message: `Task "${task.title}" is overdue!`,
-            category: "deadline",
-            actionUrl,
-            isRead: false,
-          });
-
-          void sendPushToUser(userId, {
-            title: "🚨 Task Overdue!",
-            body: `"${task.title}" is overdue!`,
-            url: actionUrl,
-          }).catch((err) => console.error("Failed to send push notification:", err));
-
-          existingKeys.add(key);
-          notificationsCreated++;
-        }
-        // Due within 24 hours
-        else if (hoursDiff <= 24) {
-          const title = "⚠️ Task Due Soon";
-          const key = `${actionUrl}::${title}`;
-          if (existingKeys.has(key)) continue;
-
-          await storage.createNotification({
-            userId,
-            type: "warning",
-            title,
-            message: `Task "${task.title}" is due in ${Math.max(1, Math.round(hoursDiff))} hours`,
-            category: "deadline",
-            actionUrl,
-            isRead: false,
-          });
-
-          void sendPushToUser(userId, {
-            title: "⏰ Task Due Soon",
-            body: `"${task.title}" is due in ${Math.max(1, Math.round(hoursDiff))} hours`,
-            url: actionUrl,
-          }).catch((err) => console.error("Failed to send push notification:", err));
-
-          existingKeys.add(key);
-          notificationsCreated++;
-        }
-      }
+      const { checkAndNotifyTaskDeadlines } = await import("./notificationService");
+      const notificationsCreated = await checkAndNotifyTaskDeadlines(userId);
       
       res.json({ 
         message: "Task notifications checked", 

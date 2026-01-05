@@ -97,6 +97,20 @@ export function setupAuth(app: Express) {
         if (!user || !(await comparePasswords(password, user.password))) {
           return done(null, false, { message: "Invalid username or password" });
         }
+
+        // Check creator application status
+        if (user.role === UserRole.CREATOR && user.creatorId) {
+          const creator = await storage.getCreator(user.creatorId);
+          if (creator) {
+            if (creator.applicationStatus === "pending") {
+              return done(null, false, { message: "Your application is still under review." });
+            }
+            if (creator.applicationStatus === "declined") {
+              return done(null, false, { message: "Your application has been declined." });
+            }
+          }
+        }
+
         return done(null, user);
       } catch (error) {
         return done(error);
@@ -139,12 +153,17 @@ export function setupAuth(app: Express) {
         }
       }
 
-      // Security: Force all self-registrations to "staff" role to prevent privilege escalation
+      // Security: Force all self-registrations to "client" role to prevent privilege escalation
       const verificationToken = randomBytes(20).toString("hex");
+      // Only allow client role via standard self-signup. 
+      // Staff, Managers, and Admins must be created by an Admin.
+      // Creators have their own specific signup flow.
+      const role = UserRole.CLIENT;
+      
       const user = await storage.createUser({
         ...validatedData,
         password: await hashPassword(validatedData.password),
-        role: "staff", // Always assign "staff" role, admins must be created by existing admins
+        role, 
         emailVerified: false,
         emailVerificationToken: verificationToken,
       });
@@ -171,33 +190,19 @@ export function setupAuth(app: Express) {
             user.email
           ).catch(err => console.error("Failed to send welcome email:", err));
           
-          // Also notify admins about new user registration via email
-          const allUsers = await storage.getUsers();
-          const adminEmails = allUsers
-            .filter(u => u.role === UserRole.ADMIN && u.email)
-            .map(u => u.email as string);
-          
-          if (adminEmails.length > 0) {
-            // Filter admins who have email notifications enabled
-            const adminsToNotify = [];
-            for (const admin of allUsers.filter(u => u.role === UserRole.ADMIN && u.email)) {
-              const prefs = await storage.getUserNotificationPreferences(admin.id);
-              if (prefs?.emailNotifications !== false) {
-                adminsToNotify.push(admin.email as string);
-              }
-            }
-            
-            if (adminsToNotify.length > 0) {
-              void emailNotifications.sendNewUserAlertToAdmins(
-                adminsToNotify,
-                user.username,
-                user.email,
-                user.role
-              ).catch(err => console.error("Failed to send new user admin email alert:", err));
-            }
-          }
+          // Also notify admins about new user registration via email and in-app
+          const { notifyAdminsAboutAction } = await import("./routes/common");
+          await notifyAdminsAboutAction(
+            undefined, // No actor ID (self-signup)
+            user.firstName || user.username,
+            "👤 New User Registered",
+            `${user.firstName || user.username} (${user.email}) has just signed up as ${user.role}.`,
+            "security",
+            "/settings", // Admin can go to settings to manage users
+            "info"
+          );
         } catch (emailErr) {
-          console.error("Error sending user registration emails:", emailErr);
+          console.error("Error sending user registration emails/notifications:", emailErr);
         }
       }
 
@@ -550,4 +555,21 @@ export function isAuthenticated(req: any, res: any, next: any) {
     return next();
   }
   res.status(401).json({ message: "Unauthorized" });
+}
+
+export function requireEmailVerified(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  const user = req.user as SelectUser;
+  if (!user.emailVerified) {
+    return res.status(403).json({ 
+      message: "Email verification required", 
+      emailVerified: false,
+      needsVerification: true 
+    });
+  }
+  
+  next();
 }

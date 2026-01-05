@@ -342,11 +342,8 @@ export default function Clients() {
         client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.company?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Status filter (mock data - you can add actual status field to schema)
-      const matchesStatus = statusFilter === "all" || 
-        (statusFilter === "active" && client.stripeSubscriptionId) ||
-        (statusFilter === "paused" && !client.stripeSubscriptionId) ||
-        (statusFilter === "prospect" && !client.email);
+      // Status filter
+      const matchesStatus = statusFilter === "all" || client.status === statusFilter;
       
       // Tag filter
       const matchesTag = tagFilter === "all" || 

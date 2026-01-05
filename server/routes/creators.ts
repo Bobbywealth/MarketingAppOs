@@ -17,51 +17,10 @@ const router = Router();
 
 const internalRoles = [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CREATOR_MANAGER] as const;
 
-// Public creator application endpoint
-router.post("/creators/apply", async (req: Request, res: Response) => {
-  try {
-    const schema = z.object({
-      fullName: z.string().min(1, "Full name is required"),
-      phone: z.string().optional().nullable(),
-      email: z.string().email("Valid email is required").optional().nullable(),
-      homeCity: z.string().optional().nullable(),
-      baseZip: z.string().optional().nullable(),
-      serviceZipCodes: z.array(z.string()).optional().nullable(),
-      serviceRadiusMiles: z.number().int().positive().optional().nullable(),
-      ratePerVisitCents: z.number().int().positive().optional().nullable(),
-      availabilityNotes: z.string().optional().nullable(),
-    });
-    const data = schema.parse(req.body);
-    
-    const [created] = await db
-      .insert(creators)
-      .values({
-        fullName: data.fullName,
-        phone: data.phone ?? null,
-        email: data.email ?? null,
-        homeCity: data.homeCity ?? null,
-        baseZip: data.baseZip ?? null,
-        serviceZipCodes: data.serviceZipCodes ?? null,
-        serviceRadiusMiles: data.serviceRadiusMiles ?? null,
-        ratePerVisitCents: data.ratePerVisitCents ?? 7500,
-        availabilityNotes: data.availabilityNotes ?? null,
-        status: "inactive",
-        performanceScore: "5.0",
-        notes: `[PENDING APPLICATION] Submitted via public creator signup form on ${new Date().toISOString()}.`,
-      } as any)
-      .returning();
-
-    res.status(201).json({ success: true, id: created.id });
-  } catch (error: any) {
-    handleValidationError(error, res);
-  }
-});
-
 /**
  * Public creator SIGNUP endpoint:
  * - Creates a creators row (status: inactive, pending notes)
  * - Creates a users row with role=creator and creatorId linked
- * - Logs the user in (session cookie) so they can immediately access creator dashboard
  */
 router.post("/creators/signup", async (req: Request, res: Response, next: any) => {
   try {
@@ -79,32 +38,62 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
       ratePerVisitCents: z.number().int().positive().optional().nullable(),
       availabilityNotes: z.string().optional().nullable(),
       availability: z.record(z.enum(["available", "unavailable"])).optional().nullable(),
+
+      instagramUsername: z.string().min(1, "Instagram username is required"),
+      tiktokUsername: z.string().optional().nullable(),
+      youtubeHandle: z.string().optional().nullable(),
+      portfolioUrl: z.string().optional().nullable(),
+      termsSigned: z.boolean().refine(v => v === true, "You must agree to the Terms"),
+      waiverSigned: z.boolean().refine(v => v === true, "You must agree to the Waiver"),
+      termsVersion: z.string().default("1.0"),
     });
 
     const data = schema.parse(req.body);
+
+    if (!data.homeCities || data.homeCities.length === 0) {
+      return res.status(400).json({ message: "At least one service city is required." });
+    }
+    if (!data.industries || data.industries.length === 0) {
+      return res.status(400).json({ message: "At least one industry of interest is required." });
+    }
+
+    const instagramUsername = data.instagramUsername.trim().replace(/^@+/, "");
+    if (!instagramUsername) {
+      return res.status(400).json({ message: "A valid Instagram username is required." });
+    }
 
     const normalizedEmail = data.email.trim().toLowerCase();
     const username = normalizedEmail; // creators log in with their email in the username field
 
     const nameParts = data.fullName.trim().split(/\s+/).filter(Boolean);
     const firstName = nameParts[0] || data.fullName.trim();
-    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : null;
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "Creator";
 
     const hashedPassword = await hashPassword(data.password);
-
-    let createdUser: any = null;
-    let createdCreator: any = null;
+    const ipAddress = req.ip || req.get('x-forwarded-for') || req.socket.remoteAddress;
 
     await db.transaction(async (tx) => {
       // Prevent duplicate accounts (by username/email).
-      const existing = await tx
+      const existingUser = await tx
         .select({ id: users.id })
         .from(users)
         .where(or(eq(users.username, username), eq(users.email, normalizedEmail)))
         .limit(1);
 
-      if (existing.length > 0) {
+      if (existingUser.length > 0) {
         const err: any = new Error("An account already exists for this email. Please log in instead.");
+        err.status = 409;
+        throw err;
+      }
+
+      const existingCreator = await tx
+        .select({ id: creators.id })
+        .from(creators)
+        .where(eq(creators.email, normalizedEmail))
+        .limit(1);
+
+      if (existingCreator.length > 0) {
+        const err: any = new Error("A creator application already exists for this email.");
         err.status = 409;
         throw err;
       }
@@ -116,24 +105,33 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
           fullName: data.fullName.trim(),
           phone: data.phone.trim(),
           email: normalizedEmail,
-          homeCities: data.homeCities || [],
+          homeCities: data.homeCities,
           baseZip: data.baseZip?.trim() || null,
           serviceZipCodes: data.serviceZipCodes ?? null,
-          serviceRadiusMiles: data.serviceRadiusMiles ?? null,
-          industries: data.industries || [],
+          serviceRadiusMiles: data.serviceRadiusMiles ?? 25,
+          industries: data.industries,
           ratePerVisitCents: data.ratePerVisitCents ?? 7500,
           availabilityNotes: data.availabilityNotes?.trim() || null,
           availability: data.availability ?? null,
           status: "inactive",
+          applicationStatus: "pending",
+          instagramUsername: instagramUsername,
+          tiktokUsername: data.tiktokUsername?.trim().replace(/^@+/, "") || null,
+          youtubeHandle: data.youtubeHandle?.trim() || null,
+          portfolioUrl: data.portfolioUrl?.trim() || null,
+          termsSigned: data.termsSigned,
+          waiverSigned: data.waiverSigned,
+          termsSignedAt: new Date(),
+          waiverSignedAt: new Date(),
+          termsVersion: data.termsVersion,
+          ipAddress: ipAddress as string,
           performanceScore: "5.0",
-          notes: `[PENDING APPLICATION] Creator account created via public signup on ${new Date().toISOString()}.`,
+          notes: `[PENDING APPLICATION] Creator account created via public signup on ${new Date().toISOString()}. IP: ${ipAddress}`,
         } as any)
         .returning();
 
-      createdCreator = creator;
-
       // Create login user linked to creator
-      const [user] = await tx
+      await tx
         .insert(users)
         .values({
           username,
@@ -143,30 +141,31 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
           lastName,
           role: UserRole.CREATOR,
           creatorId: creator.id,
-        } as any)
-        .returning();
+        } as any);
 
-      createdUser = user;
+      // Notify admins about new creator application
+      try {
+        const { emailNotifications } = await import("../emailService");
+        const adminUsers = await tx.select().from(users).where(eq(users.role, UserRole.ADMIN));
+        const adminEmails = adminUsers.map(a => a.email).filter(Boolean) as string[];
+        
+        if (adminEmails.length > 0) {
+          await emailNotifications.sendActionAlertEmail(
+            adminEmails,
+            "🆕 New Creator Application",
+            `A new creator application has been submitted by ${data.fullName} (${normalizedEmail}).`,
+            "/creators",
+            "info"
+          );
+        }
+      } catch (err) {
+        console.error("Failed to notify admins about new creator application:", err);
+      }
     });
 
-    // Auto-login creator after successful signup
-    req.login(createdUser, (err: any) => {
-      if (err) return next(err);
-      res.status(201).json({
-        id: createdUser.id,
-        username: createdUser.username,
-        email: createdUser.email,
-        firstName: createdUser.firstName,
-        lastName: createdUser.lastName,
-        profileImageUrl: (createdUser as any).profileImageUrl,
-        role: createdUser.role,
-        customPermissions: createdUser.customPermissions,
-        creatorId: createdUser.creatorId,
-        createdAt: createdUser.createdAt,
-        updatedAt: (createdUser as any).updatedAt,
-        // Helpful metadata for client UX (not required)
-        creatorProfileId: createdCreator?.id,
-      });
+    res.status(201).json({ 
+      success: true, 
+      message: "Application received. Our team reviews applications within 24–72 hours. You’ll receive an email once a decision is made." 
     });
   } catch (error: any) {
     if (error?.status === 409) {
@@ -179,18 +178,19 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
 // Internal creator management
 router.get("/creators", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
   try {
-    const { city, zip, status, minScore } = req.query as any;
+    const { city, zip, status, applicationStatus, minScore } = req.query as any;
     const user = req.user as any;
 
-    // If a creator is logged in, they can only see their own profile in a list if we allowed them, 
-    // but this is an internal management route. 
-    // However, if we want creators to see their own info, we might need a /me endpoint or similar.
-    // For now, let's keep this internal.
-
     const conditions: any[] = [];
-    if (city) conditions.push(eq(creators.homeCity, String(city)));
+    if (city) {
+      conditions.push(or(
+        eq(creators.homeCity, String(city)),
+        sql`${creators.homeCities} @> ARRAY[${String(city)}]::text[]`
+      ));
+    }
     if (zip) conditions.push(or(eq(creators.baseZip, String(zip)), sql`${creators.serviceZipCodes} @> ARRAY[${String(zip)}]::text[]`));
     if (status) conditions.push(eq(creators.status, String(status)));
+    if (applicationStatus) conditions.push(eq(creators.applicationStatus, String(applicationStatus)));
     if (minScore) conditions.push(sql`${creators.performanceScore} >= ${String(minScore)}`);
 
     let q = db.select().from(creators);
@@ -238,6 +238,68 @@ router.delete("/creators/:id", isAuthenticated, requireRole(UserRole.ADMIN), asy
     const [deleted] = await db.delete(creators).where(eq(creators.id, req.params.id)).returning();
     if (!deleted) return res.status(404).json({ message: "Creator not found" });
     res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Admin Approval/Decline routes
+router.post("/creators/:id/accept", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.CREATOR_MANAGER), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const [creator] = await db
+      .update(creators)
+      .set({ 
+        applicationStatus: "accepted",
+        status: "active",
+        approvedAt: new Date(),
+        approvedByAdmin: user.id
+      })
+      .where(eq(creators.id, req.params.id))
+      .returning();
+
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+    // Send approval email
+    try {
+      const { emailNotifications } = await import("../emailService");
+      if (creator.email) {
+        await emailNotifications.sendCreatorApprovedEmail(creator.email, creator.fullName);
+      }
+    } catch (err) {
+      console.error("Failed to send approval email:", err);
+    }
+
+    res.json({ success: true, creator });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/creators/:id/decline", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.CREATOR_MANAGER), async (req: Request, res: Response) => {
+  try {
+    const [creator] = await db
+      .update(creators)
+      .set({ 
+        applicationStatus: "declined",
+        status: "inactive"
+      })
+      .where(eq(creators.id, req.params.id))
+      .returning();
+
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+    // Send decline email
+    try {
+      const { emailNotifications } = await import("../emailService");
+      if (creator.email) {
+        await emailNotifications.sendCreatorDeclinedEmail(creator.email, creator.fullName);
+      }
+    } catch (err) {
+      console.error("Failed to send decline email:", err);
+    }
+
+    res.json({ success: true, creator });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

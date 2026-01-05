@@ -207,6 +207,7 @@ export interface IStorage {
 
   // Lead activity operations
   getLeadActivities(leadId: string): Promise<LeadActivity[]>;
+  getAllLeadActivities(): Promise<LeadActivity[]>;
   createLeadActivity(activity: InsertLeadActivity): Promise<LeadActivity>;
 
   // Lead automation operations
@@ -279,6 +280,7 @@ export interface IStorage {
 
   // Notifications operations
   getNotifications(userId: number): Promise<Notification[]>;
+  getNotificationsByActionUrls(userId: number, actionUrls: string[]): Promise<Notification[]>;
   getUnreadNotificationsByActionUrls(userId: number, actionUrls: string[]): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(notificationId: string): Promise<void>;
@@ -332,6 +334,15 @@ export interface IStorage {
   getUserEnrollments(userId: number): Promise<(CourseEnrollment & { course: Course })[]>;
   enrollInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment>;
   updateCourseEnrollment(id: string, data: Partial<InsertCourseEnrollment>): Promise<CourseEnrollment>;
+
+  // Creator operations
+  getCreators(): Promise<Creator[]>;
+  getCreator(id: string): Promise<Creator | undefined>;
+  getCreatorByEmail(email: string): Promise<Creator | undefined>;
+  getCreatorByUserId(userId: number): Promise<Creator | undefined>;
+  createCreator(creator: InsertCreator): Promise<Creator>;
+  updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator>;
+  deleteCreator(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -973,6 +984,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(leadActivities.createdAt));
   }
 
+  async getAllLeadActivities(): Promise<LeadActivity[]> {
+    return await db
+      .select()
+      .from(leadActivities)
+      .orderBy(desc(leadActivities.createdAt));
+  }
+
   async createLeadActivity(activityData: InsertLeadActivity): Promise<LeadActivity> {
     const [activity] = await db.insert(leadActivities).values(activityData).returning();
     return activity;
@@ -1448,6 +1466,21 @@ export class DatabaseStorage implements IStorage {
       .limit(50);
   }
 
+  async getNotificationsByActionUrls(userId: number, actionUrls: string[]) {
+    if (!actionUrls.length) return [];
+    return await db
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          inArray(notifications.actionUrl, actionUrls)
+        )
+      )
+      .orderBy(desc(notifications.createdAt))
+      .limit(200);
+  }
+
   async getUnreadNotificationsByActionUrls(userId: number, actionUrls: string[]) {
     if (!actionUrls.length) return [];
     return await db
@@ -1502,6 +1535,11 @@ export class DatabaseStorage implements IStorage {
       ? eq(tasks.assignedToId, userId) 
       : undefined;
 
+    // Filter for leads based on role
+    const leadCondition = (role !== "admin" && userId)
+      ? eq(leads.assignedToId, userId)
+      : undefined;
+
     const [
       clientsRes,
       clientsLastMonthRes,
@@ -1511,10 +1549,11 @@ export class DatabaseStorage implements IStorage {
       leadsLastMonthRes,
       taskMetricsRes,
       tasksTodayRes,
+      unreadMessagesRes,
+      upcomingDeadlinesRes,
       recentActivityClients,
       recentActivityCampaigns,
       recentActivityTasks,
-      upcomingDeadlinesRes
     ] = await Promise.all([
       // Total Clients
       db.select({ count: count() }).from(clients),
@@ -1534,11 +1573,16 @@ export class DatabaseStorage implements IStorage {
       db.select({ 
         count: count(),
         pipelineValue: sum(leads.value)
-      }).from(leads),
+      }).from(leads).where(leadCondition),
       db.select({ 
         count: count(),
         pipelineValue: sum(leads.value)
-      }).from(leads).where(lt(leads.createdAt, firstDayOfThisMonth)),
+      }).from(leads).where(
+        and(
+          leadCondition || sql`TRUE`,
+          lt(leads.createdAt, firstDayOfThisMonth)
+        )
+      ),
 
       // Task Metrics
       db.select({
@@ -1558,10 +1602,31 @@ export class DatabaseStorage implements IStorage {
         review: sql`count(*) FILTER (WHERE ${tasks.status} = 'review')`
       }).from(tasks).where(
         and(
-          taskCondition,
+          taskCondition || sql`TRUE`,
           sql`CAST(${tasks.dueDate} AS DATE) = CURRENT_DATE`
         )
       ),
+
+      // Unread Messages
+      userId ? db.select({ count: count() }).from(messages).where(
+        and(
+          eq(messages.recipientId, userId),
+          eq(messages.isRead, false)
+        )
+      ) : Promise.resolve([{ count: 0 }]),
+
+      // Upcoming Deadlines (for the specific user if staff)
+      db.select({
+        id: tasks.id,
+        title: tasks.title,
+        dueDate: tasks.dueDate
+      }).from(tasks).where(
+        and(
+          taskCondition || sql`TRUE`,
+          gte(tasks.dueDate, now),
+          sql`${tasks.status} != 'completed'`
+        )
+      ).orderBy(tasks.dueDate).limit(5),
 
       // Recent Activity - Clients
       db.select({
@@ -1583,21 +1648,8 @@ export class DatabaseStorage implements IStorage {
         title: tasks.title,
         updatedAt: tasks.updatedAt
       }).from(tasks).where(
-        and(taskCondition, eq(tasks.status, "completed"))
+        and(taskCondition || sql`TRUE`, eq(tasks.status, "completed"))
       ).orderBy(desc(tasks.updatedAt)).limit(3),
-
-      // Upcoming Deadlines
-      db.select({
-        id: tasks.id,
-        title: tasks.title,
-        dueDate: tasks.dueDate
-      }).from(tasks).where(
-        and(
-          taskCondition,
-          gte(tasks.dueDate, now),
-          sql`${tasks.status} != 'completed'`
-        )
-      ).orderBy(tasks.dueDate).limit(5)
     ]);
 
     // Aggregate values
@@ -1693,6 +1745,15 @@ export class DatabaseStorage implements IStorage {
       };
     });
 
+    const unreadMessagesCount = Number(unreadMessagesRes[0]?.count || 0);
+    const deadLinesThisWeek = upcomingDeadlines.filter(d => {
+      if (!d.timestamp) return false;
+      const dueDate = new Date(d.timestamp);
+      const oneWeekFromNow = new Date();
+      oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+      return dueDate <= oneWeekFromNow;
+    }).length;
+
     return {
       totalClients,
       activeCampaigns,
@@ -1706,7 +1767,9 @@ export class DatabaseStorage implements IStorage {
       recentActivity: sortedActivity,
       upcomingDeadlines,
       taskMetrics,
-      todayTaskMetrics
+      todayTaskMetrics,
+      unreadMessagesCount,
+      deadLinesThisWeek
     };
   }
 
@@ -2159,11 +2222,20 @@ export class DatabaseStorage implements IStorage {
     const [course] = await db.select().from(courses).where(eq(courses.id, id));
     if (!course) throw new Error("Course not found");
 
-    const modules = await db.select().from(courseModules).where(eq(courseModules.courseId, id)).orderBy(courseModules.order);
+    const [modules, lessons] = await Promise.all([
+      db.select().from(courseModules).where(eq(courseModules.courseId, id)).orderBy(courseModules.order),
+      db.select()
+        .from(courseLessons)
+        .innerJoin(courseModules, eq(courseLessons.moduleId, courseModules.id))
+        .where(eq(courseModules.courseId, id))
+        .orderBy(courseLessons.order)
+    ]);
     
-    const modulesWithLessons = await Promise.all(modules.map(async (module) => {
-      const lessons = await db.select().from(courseLessons).where(eq(courseLessons.moduleId, module.id)).orderBy(courseLessons.order);
-      return { ...module, lessons };
+    const modulesWithLessons = modules.map(module => ({
+      ...module,
+      lessons: lessons
+        .filter(l => l.course_lessons.moduleId === module.id)
+        .map(l => l.course_lessons)
     }));
 
     return { ...course, modules: modulesWithLessons };
@@ -2274,6 +2346,42 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!enrollment) throw new Error("Enrollment not found");
     return enrollment;
+  }
+
+  // Creator operations
+  async getCreators(): Promise<Creator[]> {
+    return await db.select().from(creators).orderBy(desc(creators.createdAt));
+  }
+
+  async getCreator(id: string): Promise<Creator | undefined> {
+    const [row] = await db.select().from(creators).where(eq(creators.id, id));
+    return row;
+  }
+
+  async getCreatorByEmail(email: string): Promise<Creator | undefined> {
+    const [row] = await db.select().from(creators).where(eq(creators.email, email.toLowerCase().trim()));
+    return row;
+  }
+
+  async getCreatorByUserId(userId: number): Promise<Creator | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user || !user.creatorId) return undefined;
+    return this.getCreator(user.creatorId);
+  }
+
+  async createCreator(creatorData: InsertCreator): Promise<Creator> {
+    const [row] = await db.insert(creators).values(creatorData).returning();
+    return row;
+  }
+
+  async updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator> {
+    const [row] = await db.update(creators).set(data).where(eq(creators.id, id)).returning();
+    if (!row) throw new Error("Creator not found");
+    return row;
+  }
+
+  async deleteCreator(id: string): Promise<void> {
+    await db.delete(creators).where(eq(creators.id, id));
   }
 }
 

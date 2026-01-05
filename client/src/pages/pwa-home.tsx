@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2, Sparkles, Rocket, TrendingUp, Target, Users, Zap, BarChart3 } from "lucide-react";
@@ -30,7 +30,9 @@ export default function PWAHomePage() {
         
         {/* Logo */}
         <div className="relative z-10 mb-8">
-          <HeaderLogo className="mx-auto drop-shadow-2xl animate-pulse" style={{ animationDuration: '2s' }} />
+          <Link href="/">
+            <HeaderLogo className="mx-auto drop-shadow-2xl animate-pulse cursor-pointer" style={{ animationDuration: '2s' }} />
+          </Link>
         </div>
         
         {/* Loading Content */}
@@ -78,7 +80,9 @@ export default function PWAHomePage() {
         {/* Logo with glow effect */}
         <div className="mb-8 relative">
           <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full"></div>
-          <HeaderLogo className="mx-auto relative z-10 drop-shadow-2xl animate-bounce" style={{ animationDuration: '3s' }} />
+          <Link href="/">
+            <HeaderLogo className="mx-auto relative z-10 drop-shadow-2xl animate-bounce cursor-pointer" style={{ animationDuration: '3s' }} />
+          </Link>
         </div>
 
         {/* Title with gradient text */}

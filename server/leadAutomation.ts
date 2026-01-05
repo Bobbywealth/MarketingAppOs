@@ -1,6 +1,7 @@
 import { eq, and, lt, sql } from "drizzle-orm";
 import { db } from "./db";
 import { leads, leadActivities, emails, smsMessages } from "../shared/schema";
+import { notifyAboutLeadAction } from "./leadNotifications";
 
 /**
  * Lead Pipeline Automation Service
@@ -176,21 +177,32 @@ export class LeadAutomationService {
 
         // Move leads to new stage
         for (const leadId of leadIds) {
-          await db
+          const [lead] = await db
             .update(leads)
             .set({ 
               stage: rule.toStage,
               updatedAt: new Date()
             })
-            .where(eq(leads.id, leadId));
+            .where(eq(leads.id, leadId))
+            .returning();
 
-          // Log the activity
-          await db.insert(leadActivities).values({
-            leadId,
-            type: 'stage_change',
-            description: `Automatically moved from ${rule.fromStage} to ${rule.toStage} - ${rule.description}`,
-            createdAt: new Date()
-          });
+          if (lead) {
+            // Log the activity
+            await db.insert(leadActivities).values({
+              leadId,
+              type: 'stage_change',
+              description: `Automatically moved from ${rule.fromStage} to ${rule.toStage} - ${rule.description}`,
+              createdAt: new Date()
+            });
+
+            // Notify relevant parties
+            notifyAboutLeadAction({
+              lead,
+              action: 'stage_changed',
+              oldStage: rule.fromStage,
+              newStage: rule.toStage
+            }).catch(err => console.error(`Failed to notify about automated lead move for lead ${leadId}:`, err));
+          }
         }
 
         console.log(`   ✅ Moved ${leadIds.length} leads: ${rule.fromStage} → ${rule.toStage}`);

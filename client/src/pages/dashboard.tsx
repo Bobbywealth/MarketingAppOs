@@ -71,15 +71,10 @@ export default function Dashboard() {
     });
   };
 
-  // Mock sparkline data (in production, this would come from API)
+  // Placeholder for sparkline data (in production, this would come from historical API data)
   const generateSparklineData = (baseValue: number, trend: number) => {
-    const data = [];
-    for (let i = 0; i < 7; i++) {
-      data.push({
-        value: baseValue * (0.8 + Math.random() * 0.4) * (1 + (trend / 100) * (i / 7))
-      });
-    }
-    return data;
+    // Return empty or flat data instead of random mock data
+    return Array(7).fill({ value: baseValue });
   };
 
   const metrics = [
@@ -223,8 +218,8 @@ export default function Dashboard() {
     { name: 'Completed', value: stats.taskMetrics.completed, color: '#10b981' },
   ] : [];
 
-  // Calculate MRR growth (mock data - would come from API)
-  const mrrGrowth = stripeData ? ((stripeData.mrr / (stripeData.mrr - 100)) * 100 - 100).toFixed(1) : "0";
+  // Calculate MRR growth (would come from historical API data)
+  const mrrGrowth = "0";
 
   if (isLoading) {
     return (
@@ -308,7 +303,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="relative p-4 md:p-6 pt-0">
                   <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
-                    <NumberTicker value={0} />
+                    <NumberTicker value={stats?.totalLeads || 0} />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">Assigned to you</p>
                 </CardContent>
@@ -327,7 +322,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="relative p-4 md:p-6 pt-0">
                   <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
-                    <NumberTicker value={0} />
+                    <NumberTicker value={(stats as any)?.unreadMessagesCount || 0} />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">Unread</p>
                 </CardContent>
@@ -346,7 +341,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="relative p-4 md:p-6 pt-0">
                   <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono">
-                    <NumberTicker value={0} />
+                    <NumberTicker value={(stats as any)?.deadLinesThisWeek || 0} />
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">This week</p>
                 </CardContent>

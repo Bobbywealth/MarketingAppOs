@@ -1,5 +1,10 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { CircuitBreaker } from './lib/circuit-breaker';
+import { log } from './vite';
+
+// Email circuit breaker: trip after 3 failures, reset after 1 minute
+const emailCircuit = new CircuitBreaker(3, 60000);
 
 // Email transporter configuration
 let transporter: Transporter | null = null;
@@ -419,6 +424,135 @@ export const emailTemplates = {
     };
   },
 
+  // Lead assigned to an agent
+  leadAssigned: (agentName: string, leadName: string, leadCompany: string, leadUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${agentName}! 👋</h2>
+      <p>A new lead has been assigned to you.</p>
+      
+      <div class="card">
+        <div class="badge" style="background-color: #dbeafe; color: #1e40af;">NEW ASSIGNMENT</div>
+        <div class="info-label">LEAD NAME</div>
+        <div class="info-value">${leadName || 'Not Provided'}</div>
+        
+        <div class="info-label">COMPANY</div>
+        <div class="info-value">${leadCompany}</div>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="${leadUrl}" class="button" style="background-color: #3b82f6;">View Lead Details →</a>
+      </div>
+    `;
+    return {
+      subject: `🎯 New Lead Assigned: ${leadCompany}`,
+      html: renderEmail('Lead Assignment', content, '#3b82f6')
+    };
+  },
+
+  // Lead stage changed
+  leadStageChanged: (userName: string, leadCompany: string, oldStage: string, newStage: string, leadUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${userName},</h2>
+      <p>A lead's stage has been updated.</p>
+      
+      <div class="card">
+        <div class="info-label">LEAD</div>
+        <div class="info-value">${leadCompany}</div>
+        
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="flex: 1;">
+            <div class="info-label">OLD STAGE</div>
+            <div class="info-value" style="text-transform: capitalize; color: #64748b;">${oldStage.replace('_', ' ')}</div>
+          </div>
+          <div style="font-size: 20px; color: #94a3b8;">→</div>
+          <div style="flex: 1;">
+            <div class="info-label">NEW STAGE</div>
+            <div class="info-value" style="text-transform: capitalize; color: #10b981;">${newStage.replace('_', ' ')}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="text-align: center;">
+        <a href="${leadUrl}" class="button" style="background-color: #10b981;">Review Lead Pipeline →</a>
+      </div>
+    `;
+    return {
+      subject: `📈 Lead Stage Updated: ${leadCompany}`,
+      html: renderEmail('Lead Stage Update', content, '#10b981')
+    };
+  },
+
+  // Lead converted to client
+  leadConverted: (userName: string, leadCompany: string, clientUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Success! 🎉</h2>
+      <p>A lead has been successfully converted into a client.</p>
+      
+      <div class="card" style="border: 1px solid #dcfce7; background-color: #f0fdf4;">
+        <div class="badge" style="background-color: #10b981; color: white;">CLOSED WON</div>
+        <div class="info-label">NEW CLIENT</div>
+        <div class="info-value" style="font-size: 24px;">${leadCompany}</div>
+      </div>
+      
+      <p>Onboarding tasks have been auto-generated and the sales commission has been recorded.</p>
+      
+      <div style="text-align: center;">
+        <a href="${clientUrl}" class="button" style="background-color: #10b981;">View Client Dashboard →</a>
+      </div>
+    `;
+    return {
+      subject: `🎊 Lead Converted: ${leadCompany}`,
+      html: renderEmail('Lead Successfully Converted', content, '#10b981')
+    };
+  },
+
+  // Creator Approval notification
+  creatorApproved: (creatorName: string, creatorEmail: string) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">Congratulations, ${creatorName}! 🎉</h2>
+      <p>We're thrilled to inform you that your application to the <strong>Marketing Team Creator Network</strong> has been approved!</p>
+      
+      <p>You now have full access to your creator back office where you can view assignments, update your profile, and manage your content visits.</p>
+      
+      <div class="card">
+        <div class="info-label">YOUR LOGIN EMAIL</div>
+        <div class="info-value">${creatorEmail}</div>
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">Use the password you created during signup to log in.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${appUrl}/auth" class="button" style="background-color: #3b82f6;">Log In to Creator Back Office →</a>
+      </div>
+      
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">Welcome to the team! We can't wait to see the incredible content you'll create.</p>
+    `;
+    return {
+      subject: '🎉 Welcome to the Network! Your Creator Application was Approved',
+      html: renderEmail('Application Approved', content, '#3b82f6')
+    };
+  },
+
+  // Creator Decline notification
+  creatorDeclined: (creatorName: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${creatorName},</h2>
+      <p>Thank you for your interest in joining the <strong>Marketing Team Creator Network</strong>.</p>
+      
+      <p>After carefully reviewing your application and current network needs, we are unable to move forward with your application at this time.</p>
+      
+      <p>We appreciate the time you took to apply and wish you the very best in your content creation journey. Feel free to re-apply in 6 months if your portfolio has significant updates.</p>
+      
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">Thank you again for your interest.</p>
+    `;
+    return {
+      subject: 'Update regarding your Creator Application',
+      html: renderEmail('Application Update', content, '#64748b')
+    };
+  },
+
   // General action alert (for admins)
   actionAlert: (title: string, message: string, actionUrl: string, type: string = 'info') => {
     let themeColor = '#1a1a1a';
@@ -462,18 +596,20 @@ export async function sendEmail(to: string | string[], subject: string, html: st
     const fromEmail = options?.from || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'business@wolfpaqmarketing.app';
     const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Wolfpaq Marketing';
     
-    const info = await transporter.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
-      to: Array.isArray(to) ? to.join(', ') : to,
-      subject,
-      html,
-      ...(process.env.SMTP_REPLY_TO ? { replyTo: process.env.SMTP_REPLY_TO } : { replyTo: fromEmail }),
-    });
+    const info = await emailCircuit.execute(() => 
+      transporter!.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to: Array.isArray(to) ? to.join(', ') : to,
+        subject,
+        html,
+        ...(process.env.SMTP_REPLY_TO ? { replyTo: process.env.SMTP_REPLY_TO } : { replyTo: fromEmail }),
+      })
+    );
 
-    console.log('✅ Email sent:', info.messageId);
+    log(`✅ Email sent: ${info.messageId}`, "email");
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('❌ Email send error:', error);
+    log(`❌ Email send error: ${error instanceof Error ? error.message : 'Unknown error'}`, "email");
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -546,6 +682,31 @@ export const emailNotifications = {
 
   async sendEnrollmentInvitation(toEmail: string, clientName: string, packageName: string, checkoutUrl: string) {
     const { subject, html } = emailTemplates.enrollmentInvitation(clientName, packageName, checkoutUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendLeadAssignedEmail(toEmail: string, agentName: string, leadName: string, leadCompany: string, leadUrl: string) {
+    const { subject, html } = emailTemplates.leadAssigned(agentName, leadName, leadCompany, leadUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendLeadStageChangedEmail(toEmail: string, userName: string, leadCompany: string, oldStage: string, newStage: string, leadUrl: string) {
+    const { subject, html } = emailTemplates.leadStageChanged(userName, leadCompany, oldStage, newStage, leadUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendLeadConvertedEmail(toEmail: string, userName: string, leadCompany: string, clientUrl: string) {
+    const { subject, html } = emailTemplates.leadConverted(userName, leadCompany, clientUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendCreatorApprovedEmail(toEmail: string, creatorName: string) {
+    const { subject, html } = emailTemplates.creatorApproved(creatorName, toEmail);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendCreatorDeclinedEmail(toEmail: string, creatorName: string) {
+    const { subject, html } = emailTemplates.creatorDeclined(creatorName);
     return sendEmail(toEmail, subject, html);
   },
 };

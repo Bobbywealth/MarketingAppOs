@@ -16,15 +16,14 @@ export const queryClient = new QueryClient({
       refetchOnMount: false,
       // Don't auto-refresh by interval (we use manual refresh buttons)
       refetchInterval: false,
-      retry: (failureCount, error) => {
+      retry: (failureCount, error: any) => {
         // Don't retry on client errors (4xx) or auth errors
-        if (error instanceof Error && error.message.includes('401')) return false;
-        if (error instanceof Error && error.message.includes('403')) return false;
-        if (error instanceof Error && error.message.includes('404')) return false;
+        const status = error?.status;
+        if (status && status >= 400 && status < 500) return false;
         
-        // Retry server errors (5xx) up to 2 times
-        if (error instanceof Error && (error.message.includes('500') || error.message.includes('503'))) {
-          return failureCount < 2;
+        // Retry server errors (5xx) or network errors up to 3 times
+        if (!status || (status >= 500 && status <= 504)) {
+          return failureCount < 3;
         }
         
         return false;
@@ -32,12 +31,13 @@ export const queryClient = new QueryClient({
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
-      retry: (failureCount, error) => {
+      retry: (failureCount, error: any) => {
         // Don't retry mutations on client errors
-        if (error instanceof Error && error.message.includes('4')) return false;
+        const status = error?.status;
+        if (status && status >= 400 && status < 500) return false;
         
-        // Retry server errors once
-        if (error instanceof Error && (error.message.includes('500') || error.message.includes('503'))) {
+        // Retry server errors once for safety
+        if (!status || (status >= 500 && status <= 504)) {
           return failureCount < 1;
         }
         

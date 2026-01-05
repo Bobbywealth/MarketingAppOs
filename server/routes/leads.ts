@@ -22,6 +22,7 @@ import { ZodError } from "zod";
 import fs from "fs/promises";
 import OpenAI from "openai";
 import { analyzeLeadWithAI } from "../leadIntelligence";
+import { notifyAboutLeadAction } from "../leadNotifications";
 
 const router = Router();
 
@@ -69,23 +70,12 @@ router.post("/", isAuthenticated, requirePermission("canManageLeads"), async (re
     // Trigger AI analysis in the background
     analyzeLeadWithAI(lead.id).catch(err => console.error("Background AI analysis failed:", err));
     
-    // Get actor information
-    const user = req.user as any;
-    const actorName = user?.firstName || user?.username || 'A team member';
-    const actorRole = user?.role || 'staff';
-    
-    // Notify admins if staff/manager created the lead
-    if (actorRole !== 'admin') {
-      await notifyAdminsAboutAction(
-        user?.id,
-        actorName,
-        '🎯 New Lead Created',
-        `${actorName} added ${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
-        'lead',
-        `/leads?leadId=${lead.id}`,
-        'info'
-      );
-    }
+    // Notify relevant parties
+    notifyAboutLeadAction({
+      lead,
+      action: 'created',
+      actorId: userId
+    }).catch(err => console.error("Failed to send lead creation notifications:", err));
     
     res.status(201).json(lead);
   } catch (error) {
@@ -120,22 +110,25 @@ router.patch("/:id", isAuthenticated, requirePermission("canManageLeads"), async
 
     const lead = await storage.updateLead(req.params.id, validatedData);
     
-    // Get actor information
-    const user = req.user as any;
-    const actorName = user?.firstName || user?.username || 'A team member';
-    const actorRole = user?.role || 'staff';
-    
-    // Notify admins if staff/manager updated the lead
-    if (actorRole !== 'admin') {
-      await notifyAdminsAboutAction(
-        user?.id,
-        actorName,
-        '📝 Lead Updated',
-        `${actorName} updated ${lead.name}${lead.company ? ` from ${lead.company}` : ''}`,
-        'lead',
-        `/leads?leadId=${lead.id}`,
-        'info'
-      );
+    // Check for significant changes to notify about
+    const assignedChanged = (validatedData as any).assignedToId && Number((validatedData as any).assignedToId) !== Number((existing as any).assignedToId);
+    const stageChanged = nextStage && nextStage !== (existing as any).stage;
+
+    if (assignedChanged) {
+      notifyAboutLeadAction({
+        lead,
+        action: 'assigned',
+        actorId: userId
+      }).catch(err => console.error("Failed to send lead assignment notifications:", err));
+    } else if (stageChanged && nextStage !== "closed_won") {
+      // closed_won is handled by autoConvertLeadToClient
+      notifyAboutLeadAction({
+        lead,
+        action: 'stage_changed',
+        actorId: userId,
+        oldStage: (existing as any).stage,
+        newStage: nextStage
+      }).catch(err => console.error("Failed to send lead stage notifications:", err));
     }
     
     // Auto-convert Closed Won -> Client + Onboarding + Commission
@@ -195,6 +188,19 @@ router.post("/:id/activities", isAuthenticated, requirePermission("canManageLead
       outcome,
       metadata: {},
     });
+
+    // Notify assigned agent if someone else added an activity
+    if (lead.assignedToId && Number(lead.assignedToId) !== Number(userId)) {
+      storage.createNotification({
+        userId: lead.assignedToId,
+        type: 'info',
+        title: `💬 New ${type} Activity`,
+        message: `A new ${type} was added to lead ${lead.company} by another team member.`,
+        category: 'lead',
+        actionUrl: `/leads?leadId=${lead.id}`,
+        isRead: false,
+      }).catch(err => console.error("Failed to notify agent about activity:", err));
+    }
 
     // Update lead's last contact info if it's a contact activity
     if (['call', 'email', 'sms', 'meeting'].includes(type)) {

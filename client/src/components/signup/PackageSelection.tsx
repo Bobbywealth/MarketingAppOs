@@ -21,6 +21,7 @@ interface PackageSelectionProps {
   checkoutMutation: UseMutationResult<any, any, any>;
   onBack: () => void;
   formValues: any;
+  onSuccess?: () => void;
 }
 
 export function PackageSelection({

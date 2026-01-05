@@ -14,9 +14,11 @@ export default function ManageCourses() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
+  const isAdmin = user?.role === 'admin';
+
   const { data: courses = [], isLoading } = useQuery<Course[]>({
-    queryKey: ["/api/courses", { creatorId: user?.creatorId }],
-    enabled: !!user?.creatorId,
+    queryKey: isAdmin ? ["/api/courses"] : ["/api/courses", { creatorId: user?.creatorId }],
+    enabled: !!user,
   });
 
   const deleteCourseMutation = useMutation({
@@ -35,7 +37,7 @@ export default function ManageCourses() {
         title: "New Course",
         description: "Enter course description here",
         status: "draft",
-        creatorId: user?.creatorId,
+        creatorId: user?.creatorId || null,
       });
       return res.json();
     },
@@ -45,12 +47,26 @@ export default function ManageCourses() {
     },
   });
 
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-full">
+        <Card className="max-w-md w-full p-8 text-center">
+          <CardTitle className="text-destructive mb-2 text-2xl">Access Denied</CardTitle>
+          <CardDescription className="text-lg">
+            Course management is restricted to administrators only.
+          </CardDescription>
+          <Button className="mt-6" onClick={() => setLocation("/")}>Return to Dashboard</Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-slate-50/50 dark:bg-slate-950/50 p-4 md:p-8 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Manage Your Courses</h1>
-          <p className="text-muted-foreground">Create and manage your educational content.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Manage Training Courses</h1>
+          <p className="text-muted-foreground">Create and manage educational content for the platform.</p>
         </div>
         <Button onClick={() => createCourseMutation.mutate()} disabled={createCourseMutation.isPending}>
           <Plus className="h-4 w-4 mr-2" />
