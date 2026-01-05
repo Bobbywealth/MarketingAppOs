@@ -25,7 +25,53 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot, ChevronLeft, ChevronRight, Menu, X, Play, ShieldCheck, Rocket, BarChart3, MessageSquare } from "lucide-react";
+import { 
+  ArrowRight, 
+  CheckCircle, 
+  Star, 
+  TrendingUp, 
+  Globe, 
+  Smartphone, 
+  Palette, 
+  Brain, 
+  CreditCard, 
+  Lightbulb, 
+  Users, 
+  Target, 
+  Zap, 
+  ChevronDown, 
+  Pencil, 
+  FileText, 
+  Sparkles, 
+  Bot, 
+  ChevronLeft, 
+  ChevronRight, 
+  Menu, 
+  X, 
+  Play, 
+  ShieldCheck, 
+  Rocket, 
+  BarChart3, 
+  MessageSquare 
+} from "lucide-react";
+
+import { HeaderLogo, FooterLogo } from "@/components/Logo";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
+import heroImage from "@assets/hero-header-image.png";
+import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
+import instagramLogo from "@assets/instagram-logo.png";
+import tiktokLogo from "@assets/tiktok-logo.png";
+import linkedinLogo from "@assets/linkedin-logo.png";
+import googleAdsLogo from "@assets/google-ads-logo.png";
 
 // Counter Component for Trust Indicators
 function Counter({ value, suffix = "", duration = 2 }: { value: number, suffix?: string, duration?: number }) {
@@ -54,25 +100,6 @@ function Counter({ value, suffix = "", duration = 2 }: { value: number, suffix?:
 
   return <span ref={nodeRef}>{count}{suffix}</span>;
 }
-
-import { useInView } from "framer-motion";
-import { HeaderLogo, FooterLogo } from "@/components/Logo";
-import { useDocumentMeta } from "@/hooks/useDocumentMeta";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetClose,
-} from "@/components/ui/sheet";
-import { AnimatedBackground } from "@/components/AnimatedBackground";
-import heroImage from "@assets/hero-header-image.png";
-import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
-import instagramLogo from "@assets/instagram-logo.png";
-import tiktokLogo from "@assets/tiktok-logo.png";
-import linkedinLogo from "@assets/linkedin-logo.png";
-import googleAdsLogo from "@assets/google-ads-logo.png";
 
 // Live Feed Mockup Data
 const LIVE_ACTIVITIES = [
