@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle, Mail, ArrowRight, LogOut } from "lucide-react";
@@ -31,6 +31,10 @@ export default function VerifyEmail() {
       if (res.ok) {
         setStatus('success');
         setMessage(data.message || "Email verified successfully!");
+        
+        // Invalidate user query to refresh verification status
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+
         toast({
           title: "Success",
           description: "Your email has been verified.",

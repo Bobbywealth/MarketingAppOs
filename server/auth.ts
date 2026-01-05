@@ -439,6 +439,18 @@ export function setupAuth(app: Express) {
 
       await storage.updateUserEmailVerification(user.id, true, null);
 
+      // If the user is currently logged in, update their session user object
+      if (req.isAuthenticated() && (req.user as SelectUser).id === user.id) {
+        (req.user as SelectUser).emailVerified = true;
+        // Re-save session to be absolutely sure
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+
       // Log the email verification activity
       try {
         await storage.createActivityLog({
