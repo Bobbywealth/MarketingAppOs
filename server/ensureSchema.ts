@@ -181,6 +181,26 @@ export async function ensureMinimumSchema() {
     "creator_visits.dispute_status column",
     `ALTER TABLE IF EXISTS creator_visits ADD COLUMN IF NOT EXISTS dispute_status VARCHAR DEFAULT 'none';`
   );
+
+  // Tickets: resolved_at column (fix for runtime error)
+  await safeQuery(
+    "tickets.resolved_at column",
+    `ALTER TABLE IF EXISTS tickets ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP;`
+  );
+
+  // Creators: new fields for multi-industry and multi-city support
+  await safeQuery(
+    "creators.home_cities column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS home_cities TEXT[];`
+  );
+  await safeQuery(
+    "creators.industries column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS industries TEXT[];`
+  );
+  await safeQuery(
+    "creators.availability column",
+    `ALTER TABLE IF EXISTS creators ADD COLUMN IF NOT EXISTS availability JSONB;`
+  );
 }
 
 
