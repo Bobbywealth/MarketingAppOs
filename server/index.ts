@@ -19,10 +19,18 @@ import { ensureMinimumSchema } from "./ensureSchema";
 const app = express();
 
 // Security Middleware
-// In development, relax CSP for Vite HMR; in production, use strict defaults
+// In development, relax CSP for Vite HMR; in production, use strict defaults but allow Vimeo
 const isDev = process.env.NODE_ENV === 'development';
 app.use(helmet({
-  contentSecurityPolicy: isDev ? false : undefined,
+  contentSecurityPolicy: isDev ? false : {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "frame-src": ["'self'", "https://player.vimeo.com"],
+      "script-src": ["'self'", "'unsafe-inline'", "https://player.vimeo.com"],
+      "img-src": ["'self'", "data:", "https://vimeo.com", "https://*.vimeocdn.com"],
+      "connect-src": ["'self'", "https://vimeo.com", "https://*.vimeocdn.com"],
+    },
+  },
   crossOriginEmbedderPolicy: isDev ? false : undefined,
 })); // Sets various HTTP headers for security
 app.use(mongoSanitize()); // Prevent NoSQL injection
