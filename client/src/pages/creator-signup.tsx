@@ -531,7 +531,6 @@ export default function CreatorSignupPage() {
     </div>
   );
 }
-}
 
 
 

@@ -1,4 +1,4 @@
-import { useAuth } from "./useAuth";
+import { useAuth } from "./use-auth";
 import type { SidebarPermissionKey } from "@/data/sidebar-items";
 
 export interface RolePermissions {

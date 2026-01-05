@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, CheckCircle2, Upload, ShieldCheck, DollarSign, AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function VisitDetailPage() {

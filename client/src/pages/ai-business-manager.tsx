@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bot, Send, Loader2, AlertCircle, CheckCircle2, Sparkles, Zap, MessageSquare, Mic, MicOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Message {

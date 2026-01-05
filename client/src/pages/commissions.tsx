@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DollarSign, CheckCircle2, Clock, XCircle, Plus, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Commission {
   id: number;

@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon, X, Filter, ChevronDown, Smile, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import type { Message, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import {

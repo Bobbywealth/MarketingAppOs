@@ -144,99 +144,10 @@ function LeadActivityTimeline({ leadId }: { leadId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full">        {/* AI Outreach Drafting Dialog */}
-        <Dialog open={isAiDraftDialogOpen} onOpenChange={setIsAiDraftDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Wand2 className="w-5 h-5 text-purple-600" />
-                AI Outreach Copilot
-              </DialogTitle>
-              <DialogDescription>
-                Generate a personalized outreach draft for {selectedLead?.company || selectedLead?.name}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>What is your goal for this outreach?</Label>
-                <Select value={aiDraftGoal} onValueChange={setAiDraftGoal}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a goal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Introduce our services">👋 Introduce our services</SelectItem>
-                    <SelectItem value="Schedule a discovery call">📅 Schedule a discovery call</SelectItem>
-                    <SelectItem value="Follow up on previous contact">🔄 Follow up on previous contact</SelectItem>
-                    <SelectItem value="Send a personalized proposal">📄 Send a personalized proposal</SelectItem>
-                    <SelectItem value="Reconnect after inactivity">✨ Reconnect after inactivity</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button 
-                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                onClick={() => {
-                  if (selectedLead) {
-                    setIsDrafting(true);
-                    setAiDraftResult("");
-                    aiDraftOutreachMutation.mutate({ id: selectedLead.id, goal: aiDraftGoal });
-                  }
-                }}
-                disabled={isDrafting}
-              >
-                {isDrafting ? (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                    Generating Draft...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Generate Draft
-                  </>
-                )}
-              </Button>
-
-              {aiDraftResult && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <Label>AI Generated Draft</Label>
-                  <ScrollArea className="h-[300px] w-full border rounded-md p-4 bg-muted/30">
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {aiDraftResult}
-                    </div>
-                  </ScrollArea>
-                  <div className="flex gap-2 justify-end">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(aiDraftResult);
-                        toast({ title: "Copied to clipboard" });
-                      }}
-                    >
-                      Copy to Clipboard
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => {
-                        if (selectedLead?.email) {
-                          window.location.href = `mailto:${selectedLead.email}?body=${encodeURIComponent(aiDraftResult)}`;
-                        }
-                      }}
-                    >
-                      Use in Email
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (!activities || activities.length === 0) {
     return (

@@ -46,8 +46,6 @@ export function MobileNav() {
 
   const totalUnreadMessages = unreadCounts ? Object.values(unreadCounts).reduce((sum, count) => sum + count, 0) : 0;
 
-  if (!isMobile || !user) return null;
-
   const haptic = (pattern: number | number[] = 10) => {
     try {
       // Android/Chrome: vibration API. iOS Safari generally ignores it.
@@ -116,7 +114,7 @@ export function MobileNav() {
 
   // Gesture: swipe between tabs (near bottom bar) + edge swipe back/forward
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile || !user) return;
 
     const onTouchStart = (e: TouchEvent) => {
       const t = e.touches?.[0];
@@ -196,7 +194,9 @@ export function MobileNav() {
       window.removeEventListener("touchmove", onTouchMove as any);
       window.removeEventListener("touchend", onTouchEnd as any);
     };
-  }, [isMobile, navItems, location, setLocation]);
+  }, [isMobile, navItems, location, setLocation, user]);
+
+  if (!isMobile || !user) return null;
 
   return (
     <>
