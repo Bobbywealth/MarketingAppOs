@@ -70,12 +70,14 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
       email: z.string().email("Valid email is required"),
       password: z.string().min(8, "Password must be at least 8 characters"),
 
-      homeCity: z.string().optional().nullable(),
+      homeCities: z.array(z.string()).optional().nullable(),
       baseZip: z.string().optional().nullable(),
       serviceZipCodes: z.array(z.string()).optional().nullable(),
       serviceRadiusMiles: z.number().int().positive().optional().nullable(),
+      industries: z.array(z.string()).optional().nullable(),
       ratePerVisitCents: z.number().int().positive().optional().nullable(),
       availabilityNotes: z.string().optional().nullable(),
+      availability: z.record(z.enum(["available", "unavailable"])).optional().nullable(),
     });
 
     const data = schema.parse(req.body);
@@ -113,12 +115,14 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
           fullName: data.fullName.trim(),
           phone: data.phone.trim(),
           email: normalizedEmail,
-          homeCity: data.homeCity?.trim() || null,
+          homeCities: data.homeCities || [],
           baseZip: data.baseZip?.trim() || null,
           serviceZipCodes: data.serviceZipCodes ?? null,
           serviceRadiusMiles: data.serviceRadiusMiles ?? null,
+          industries: data.industries || [],
           ratePerVisitCents: data.ratePerVisitCents ?? 7500,
           availabilityNotes: data.availabilityNotes?.trim() || null,
+          availability: data.availability ?? null,
           status: "inactive",
           performanceScore: "5.0",
           notes: `[PENDING APPLICATION] Creator account created via public signup on ${new Date().toISOString()}.`,
@@ -233,6 +237,27 @@ router.delete("/creators/:id", isAuthenticated, requireRole(UserRole.ADMIN), asy
     const [deleted] = await db.delete(creators).where(eq(creators.id, req.params.id)).returning();
     if (!deleted) return res.status(404).json({ message: "Creator not found" });
     res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Creator self-service routes
+router.patch("/creators/me/availability", isAuthenticated, requireRole(UserRole.CREATOR), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    if (!user.creatorId) {
+      return res.status(403).json({ message: "No creator ID associated with this user" });
+    }
+
+    const { availability } = req.body;
+    const [updated] = await db
+      .update(creators)
+      .set({ availability })
+      .where(eq(creators.id, user.creatorId))
+      .returning();
+
+    res.json(updated);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

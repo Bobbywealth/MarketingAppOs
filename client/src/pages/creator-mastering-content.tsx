@@ -82,7 +82,7 @@ export default function CreatorMasteringContent() {
       reward: "AI Voice EQ Preset",
       content: [
         "Trending Audio Strategy: Finding sounds before they blow up.",
-        "ASMR Elements: Layering natural sounds (sizzling, pouring, footsteps).",
+        "Atmospheric Sound Elements: Layering natural environment sounds (ambiance, interaction, movement).",
         "Voiceover EQ: Making your voice sound professional on a phone mic."
       ]
     },

@@ -464,11 +464,14 @@ export const creators = pgTable("creators", {
   phone: text("phone"),
   email: text("email"),
   homeCity: text("home_city"),
+  homeCities: text("home_cities").array(), // Multiple cities
   baseZip: text("base_zip"),
   serviceZipCodes: text("service_zip_codes").array(),
   serviceRadiusMiles: integer("service_radius_miles"),
+  industries: text("industries").array(), // Industries the creator works with
   ratePerVisitCents: integer("rate_per_visit_cents").notNull(),
   availabilityNotes: text("availability_notes"),
+  availability: jsonb("availability").$type<Record<string, "available" | "unavailable">>(), // Date-based availability
   status: varchar("status").notNull().default("active"), // active | backup | inactive
   performanceScore: decimal("performance_score", { precision: 2, scale: 1 }).default("5.0"), // 1.0 - 5.0
   notes: text("notes"),
@@ -1578,7 +1581,12 @@ export type InsertDiscountRedemption = z.infer<typeof insertDiscountRedemptionSc
 export type DiscountRedemption = typeof discountRedemptions.$inferSelect;
 
 // Creators + Visits schemas/types
-export const insertCreatorSchema = createInsertSchema(creators).omit({ id: true, createdAt: true });
+export const insertCreatorSchema = createInsertSchema(creators).omit({ id: true, createdAt: true }).extend({
+  serviceZipCodes: z.array(z.string()).optional().nullable(),
+  industries: z.array(z.string()).optional().nullable(),
+  homeCities: z.array(z.string()).optional().nullable(),
+  availability: z.record(z.enum(["available", "unavailable"])).optional().nullable(),
+});
 export type InsertCreator = z.infer<typeof insertCreatorSchema>;
 export type Creator = typeof creators.$inferSelect;
 

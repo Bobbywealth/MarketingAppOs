@@ -6,11 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, MapPin, DollarSign, Clock, Mail, Phone, User, Lock } from "lucide-react";
+import { CheckCircle, MapPin, DollarSign, Clock, Mail, Phone, User, Lock, X, Plus } from "lucide-react";
 import { HeaderLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+
+const INDUSTRIES = [
+  "Restaurants",
+  "Real Estate",
+  "E-commerce",
+  "Health & Wellness",
+  "Beauty & Personal Care",
+  "Technology",
+  "Fashion",
+  "Automotive",
+  "Events",
+  "Education",
+  "Other"
+];
 
 export default function CreatorSignupPage() {
   useDocumentMeta({
@@ -26,13 +41,40 @@ export default function CreatorSignupPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    homeCity: "",
+    homeCities: [] as string[],
+    newCity: "",
     baseZip: "",
     serviceZipCodes: "",
     serviceRadiusMiles: "",
-    ratePerVisitCents: "",
+    industries: [] as string[],
     availabilityNotes: "",
   });
+
+  const toggleIndustry = (industry: string) => {
+    setForm(prev => ({
+      ...prev,
+      industries: prev.industries.includes(industry)
+        ? prev.industries.filter(i => i !== industry)
+        : [...prev.industries, industry]
+    }));
+  };
+
+  const addCity = () => {
+    if (form.newCity.trim() && !form.homeCities.includes(form.newCity.trim())) {
+      setForm(prev => ({
+        ...prev,
+        homeCities: [...prev.homeCities, prev.newCity.trim()],
+        newCity: ""
+      }));
+    }
+  };
+
+  const removeCity = (city: string) => {
+    setForm(prev => ({
+      ...prev,
+      homeCities: prev.homeCities.filter(c => c !== city)
+    }));
+  };
 
   const applyMutation = useMutation({
     mutationFn: async () => {
@@ -47,13 +89,14 @@ export default function CreatorSignupPage() {
         phone: form.phone.trim(),
         email: form.email.trim(),
         password: form.password,
-        homeCity: form.homeCity.trim() || null,
+        homeCities: form.homeCities,
         baseZip: form.baseZip.trim() || null,
         serviceZipCodes: form.serviceZipCodes.trim()
           ? form.serviceZipCodes.split(",").map((z) => z.trim()).filter(Boolean)
           : null,
         serviceRadiusMiles: form.serviceRadiusMiles.trim() ? Number(form.serviceRadiusMiles) : null,
-        ratePerVisitCents: form.ratePerVisitCents.trim() ? Math.round(Number(form.ratePerVisitCents) * 100) : null, // Convert dollars to cents
+        industries: form.industries,
+        ratePerVisitCents: 7500, // Default internal rate, can be decided later
         availabilityNotes: form.availabilityNotes.trim() || null,
       };
       const res = await apiRequest("POST", "/api/creators/signup", payload);
@@ -143,7 +186,7 @@ export default function CreatorSignupPage() {
               Create your login (email + password) and tell us a bit about your availability. All fields marked with * are required.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName">
@@ -202,25 +245,21 @@ export default function CreatorSignupPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ratePerVisitCents">
-                  Rate per Visit (USD) *
-                </Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="ratePerVisitCents"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.ratePerVisitCents}
-                    onChange={(e) => setForm({ ...form, ratePerVisitCents: e.target.value })}
-                    className="pl-10"
-                    placeholder="75.00"
-                    required
-                  />
+                <Label>Industries of Interest *</Label>
+                <div className="flex flex-wrap gap-2">
+                  {INDUSTRIES.map(industry => (
+                    <Badge
+                      key={industry}
+                      variant={form.industries.includes(industry) ? "default" : "outline"}
+                      className="cursor-pointer py-1 px-3"
+                      onClick={() => toggleIndustry(industry)}
+                    >
+                      {industry}
+                    </Badge>
+                  ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Enter your desired rate per visit in US dollars
+                  Select all industries you'd like to create content for
                 </p>
               </div>
             </div>
@@ -269,18 +308,34 @@ export default function CreatorSignupPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="homeCity">
-                  Home City
-                </Label>
+            <div className="space-y-3">
+              <Label>Service Cities *</Label>
+              <div className="flex gap-2">
                 <Input
-                  id="homeCity"
-                  value={form.homeCity}
-                  onChange={(e) => setForm({ ...form, homeCity: e.target.value })}
-                  placeholder="New York"
+                  value={form.newCity}
+                  onChange={(e) => setForm({ ...form, newCity: e.target.value })}
+                  placeholder="Add a city you're willing to service"
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCity())}
                 />
+                <Button type="button" variant="outline" onClick={addCity}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add
+                </Button>
               </div>
+              <div className="flex flex-wrap gap-2">
+                {form.homeCities.map(city => (
+                  <Badge key={city} variant="secondary" className="gap-2 py-1.5 px-3">
+                    {city}
+                    <X className="w-3 h-3 cursor-pointer hover:text-destructive" onClick={() => removeCity(city)} />
+                  </Badge>
+                ))}
+                {form.homeCities.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic">No cities added yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="baseZip">
                   Base Zip Code
@@ -308,7 +363,7 @@ export default function CreatorSignupPage() {
 
             <div className="space-y-2">
               <Label htmlFor="serviceZipCodes">
-                Service Zip Codes (comma-separated)
+                Specific Service Zip Codes (optional, comma-separated)
               </Label>
               <Input
                 id="serviceZipCodes"
@@ -316,9 +371,6 @@ export default function CreatorSignupPage() {
                 onChange={(e) => setForm({ ...form, serviceZipCodes: e.target.value })}
                 placeholder="10001, 10002, 10003"
               />
-              <p className="text-xs text-muted-foreground">
-                List specific zip codes you're willing to service, separated by commas
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -330,7 +382,7 @@ export default function CreatorSignupPage() {
                 value={form.availabilityNotes}
                 onChange={(e) => setForm({ ...form, availabilityNotes: e.target.value })}
                 rows={4}
-                placeholder="Tell us about your availability, preferred days/times, any restrictions, etc."
+                placeholder="Tell us about your general availability (e.g., Weekends only, Weekdays after 5pm, etc.)"
               />
             </div>
 
@@ -342,7 +394,8 @@ export default function CreatorSignupPage() {
                   !form.fullName.trim() ||
                   !form.email.trim() ||
                   !form.phone.trim() ||
-                  !form.ratePerVisitCents.trim() ||
+                  form.industries.length === 0 ||
+                  form.homeCities.length === 0 ||
                   form.password.trim().length < 8 ||
                   form.password !== form.confirmPassword
                 }
@@ -367,24 +420,8 @@ export default function CreatorSignupPage() {
                 Cancel
               </Button>
             </div>
-
-            {applyMutation.isSuccess && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 text-green-800">
-                  <CheckCircle className="w-5 h-5" />
-                  <p className="font-semibold">Account Created Successfully!</p>
-                </div>
-                <p className="text-sm text-green-700 mt-2">
-                  You’re signed in now. If you ever need to log in again, use your email as your username.
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
-
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>Have questions? <a href="/contact" className="text-primary hover:underline">Contact us</a></p>
-        </div>
       </div>
     </div>
   );

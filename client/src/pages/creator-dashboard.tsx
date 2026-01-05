@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { 
   BookOpen, 
   Camera, 
@@ -16,12 +17,13 @@ import {
   Clock,
   ArrowRight,
   X,
-  FileText
+  FileText,
+  AlertCircle
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { CreatorVisit, Course } from "@shared/schema";
-import { format } from "date-fns";
+import { CreatorVisit, Course, Creator } from "@shared/schema";
+import { format, isSameDay, parseISO } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SimpleUploader } from "@/components/SimpleUploader";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -33,6 +35,54 @@ export default function CreatorDashboard() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
+
+  // Fetch creator profile
+  const { data: creator } = useQuery<Creator>({
+    queryKey: [`/api/creators/${user?.creatorId}`],
+    enabled: !!user?.creatorId,
+  });
+
+  // Mutation to update availability
+  const availabilityMutation = useMutation({
+    mutationFn: async (newAvailability: Record<string, "available" | "unavailable">) => {
+      const res = await apiRequest("PATCH", "/api/creators/me/availability", { availability: newAvailability });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/creators/${user?.creatorId}`] });
+      toast({
+        title: "Availability Updated",
+        description: "Your availability calendar has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update failed",
+        description: error.message || "Could not update availability.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const toggleAvailability = (date: Date) => {
+    if (!creator) return;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const currentStatus = creator.availability?.[dateStr];
+    
+    let newStatus: "available" | "unavailable" | null = null;
+    if (!currentStatus) newStatus = "available";
+    else if (currentStatus === "available") newStatus = "unavailable";
+    else newStatus = null; // Remove the entry
+
+    const newAvailability = { ...(creator.availability || {}) };
+    if (newStatus) {
+      newAvailability[dateStr] = newStatus;
+    } else {
+      delete newAvailability[dateStr];
+    }
+
+    availabilityMutation.mutate(newAvailability);
+  };
 
   // Mutation to submit uploaded content
   const uploadMutation = useMutation({
@@ -283,8 +333,47 @@ export default function CreatorDashboard() {
           </div>
         </div>
 
-        {/* Sidebar: Success Tools & Tips */}
+        {/* Sidebar: Availability & Success Tools */}
         <div className="space-y-6">
+          {/* Availability Calendar */}
+          <Card className="overflow-hidden">
+            <CardHeader className="bg-primary/5 pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Availability
+              </CardTitle>
+              <CardDescription>Mark your available and unavailable days.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4">
+              <CalendarUI
+                mode="single"
+                onSelect={(date) => date && toggleAvailability(date)}
+                className="rounded-md border"
+                modifiers={{
+                  available: (date) => creator?.availability?.[format(date, "yyyy-MM-dd")] === "available",
+                  unavailable: (date) => creator?.availability?.[format(date, "yyyy-MM-dd")] === "unavailable",
+                }}
+                modifiersClassNames={{
+                  available: "bg-green-500 text-white hover:bg-green-600 focus:bg-green-600 rounded-md",
+                  unavailable: "bg-red-500 text-white hover:bg-red-600 focus:bg-red-600 rounded-md",
+                }}
+              />
+              <div className="mt-4 flex flex-wrap gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full" />
+                  <span>Available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full" />
+                  <span>Unavailable</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground italic">
+                  * Click a date to toggle status
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -337,7 +426,7 @@ export default function CreatorDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-indigo-50 leading-relaxed">
-                "When shooting food, try to use natural side-lighting. It brings out the texture and makes the dish look much more appetizing on screen!"
+                "When shooting content, try to use natural side-lighting. It brings out the texture and depth of your subject, making it look much more professional on screen!"
               </p>
               <div className="mt-4 pt-4 border-t border-white/20 flex items-center gap-2 text-sm">
                 <CheckCircle2 className="h-4 w-4" />
