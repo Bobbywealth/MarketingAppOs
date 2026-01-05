@@ -362,9 +362,19 @@ router.post("/visits/:id/complete", isAuthenticated, requireRole(...internalRole
   }
 });
 
-router.post("/visits/:id/upload", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
+router.post("/visits/:id/upload", isAuthenticated, requireRole(...internalRoles, UserRole.CREATOR), async (req: Request, res: Response) => {
   try {
+    const user = req.user as any;
     const { uploadLinks } = req.body;
+
+    // If creator, ensure they own the visit
+    if (user.role === UserRole.CREATOR) {
+      const [visit] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, req.params.id));
+      if (!visit || visit.creatorId !== user.creatorId) {
+        return res.status(403).json({ message: "You can only upload content for your own visits" });
+      }
+    }
+
     const [updated] = await db
       .update(creatorVisits)
       .set({ 

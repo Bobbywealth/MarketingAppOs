@@ -3931,13 +3931,28 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     try {
       const tickets = await storage.getTickets();
       const userRole = (req as any).userRole;
-      const userId = (req as any).userId;
+      const user = req.user as any;
       
       // Clients can only see their own tickets (based on clientId)
       if (userRole === "client") {
-        const user = req.user as any;
         const clientId = user?.clientId;
         const filteredTickets = tickets.filter(t => t.clientId === clientId);
+        return res.json(filteredTickets);
+      }
+
+      // Creators can only see tickets for clients they have visited
+      if (userRole === "creator") {
+        const creatorId = user?.creatorId;
+        if (!creatorId) return res.json([]);
+
+        // Get all clients this creator has visits for
+        const creatorVisitsData = await db
+          .select({ clientId: creatorVisits.clientId })
+          .from(creatorVisits)
+          .where(eq(creatorVisits.creatorId, creatorId));
+        
+        const visitedClientIds = new Set(creatorVisitsData.map(v => v.clientId));
+        const filteredTickets = tickets.filter(t => visitedClientIds.has(t.clientId));
         return res.json(filteredTickets);
       }
       
@@ -3954,22 +3969,37 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const userRole = (req as any).userRole;
       const user = req.user as any;
       
-      // For clients: ensure they can only create tickets with their own clientId
       let ticketData: any = { ...validatedData };
       
       if (userRole === "client") {
-        // Clients cannot set arbitrary assignedTo
         delete ticketData.assignedToId;
-        
-        // Get clientId from user record
         if (!user?.clientId) {
           return res.status(400).json({ 
             message: "Your account is not linked to a client record. Please contact support." 
           });
         }
-        
-        // Force use of user's own clientId
         ticketData.clientId = user.clientId;
+      }
+
+      // Creators: ensure they can only create tickets for clients they have visited
+      if (userRole === "creator") {
+        const creatorId = user?.creatorId;
+        if (!creatorId) {
+          return res.status(403).json({ message: "No creator profile found" });
+        }
+
+        const [visit] = await db
+          .select()
+          .from(creatorVisits)
+          .where(and(
+            eq(creatorVisits.creatorId, creatorId),
+            eq(creatorVisits.clientId, ticketData.clientId)
+          ))
+          .limit(1);
+        
+        if (!visit) {
+          return res.status(403).json({ message: "You can only create tickets for clients you have visited" });
+        }
       }
       
       const ticket = await storage.createTicket(ticketData);

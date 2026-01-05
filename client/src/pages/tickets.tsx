@@ -20,6 +20,7 @@ export default function Tickets() {
 
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
   const isClient = user?.role === 'client';
+  const isCreator = user?.role === 'creator';
 
   const { data: tickets, isLoading } = useQuery<Ticket[]>({
     queryKey: ["/api/tickets"],
@@ -27,8 +28,16 @@ export default function Tickets() {
 
   const { data: clients } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
-    enabled: !isClient, // Only fetch clients list for admin/staff
+    enabled: !isClient && !isCreator, // Only fetch full clients list for admin/staff
   });
+
+  // Fetch only "visited" clients for creators
+  const { data: visitedVisits } = useQuery<any[]>({
+    queryKey: ["/api/visits", { creatorId: user?.creatorId }],
+    enabled: isCreator && !!user?.creatorId,
+  });
+
+  const creatorClients = isCreator ? Array.from(new Set(visitedVisits?.map(v => JSON.stringify({ id: v.clientId, name: v.clientName }))) || []).map(s => JSON.parse(s as string)) : [];
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -125,7 +134,7 @@ export default function Tickets() {
             </DialogHeader>
             <form onSubmit={handleCreateTicket} className="space-y-4">
               <div className="space-y-4">
-                {/* Only show client selector for admin/staff, not for clients */}
+                {/* Only show client selector for admin/staff/creator, not for clients */}
                 {!isClient && (
                   <div className="space-y-2">
                     <Label htmlFor="clientId">Client *</Label>
@@ -134,11 +143,19 @@ export default function Tickets() {
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
                       <SelectContent>
-                        {clients?.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
-                          </SelectItem>
-                        ))}
+                        {isCreator ? (
+                          creatorClients.map((client: any) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          clients?.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

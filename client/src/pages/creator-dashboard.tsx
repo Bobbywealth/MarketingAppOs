@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,15 +14,69 @@ import {
   Star,
   CheckCircle2,
   Clock,
-  ArrowRight
+  ArrowRight,
+  X,
+  FileText
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { CreatorVisit } from "@shared/schema";
+import { CreatorVisit, Course } from "@shared/schema";
 import { format } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { SimpleUploader } from "@/components/SimpleUploader";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CreatorDashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
+
+  // Mutation to submit uploaded content
+  const uploadMutation = useMutation({
+    mutationFn: async ({ visitId, urls }: { visitId: string, urls: string[] }) => {
+      const res = await apiRequest("POST", `/api/visits/${visitId}/upload`, { uploadLinks: urls });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/visits"] });
+      toast({
+        title: "Content Submitted!",
+        description: "Your content has been successfully uploaded and the visit is marked as completed.",
+      });
+      setUploadModalOpen(false);
+      setUploadedUrls([]);
+      setSelectedVisitId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Submission failed",
+        description: error.message || "Could not submit content links.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleUploadClick = (visitId: string) => {
+    setSelectedVisitId(visitId);
+    setUploadedUrls([]);
+    setUploadModalOpen(true);
+  };
+
+  const handleAddUrl = (url: string) => {
+    setUploadedUrls(prev => [...prev, url]);
+  };
+
+  const removeUrl = (index: number) => {
+    setUploadedUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmitContent = () => {
+    if (!selectedVisitId || uploadedUrls.length === 0) return;
+    uploadMutation.mutate({ visitId: selectedVisitId, urls: uploadedUrls });
+  };
 
   // Fetch upcoming visits for this creator
   const { data: visits = [] } = useQuery<CreatorVisit[]>({
@@ -149,8 +204,11 @@ export default function CreatorDashboard() {
                     </div>
                   </div>
                   <div className="flex gap-2 w-full md:w-auto">
-                    <Button className="flex-1 md:flex-none">Visit Details</Button>
-                    <Button variant="outline" className="flex-1 md:flex-none gap-2">
+                    <Button className="flex-1 md:flex-none" variant="secondary">Visit Details</Button>
+                    <Button 
+                      className="flex-1 md:flex-none gap-2"
+                      onClick={() => handleUploadClick(upcomingVisits[0].id)}
+                    >
                       <Upload className="h-4 w-4" />
                       Upload Content
                     </Button>
@@ -237,7 +295,21 @@ export default function CreatorDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start gap-3 h-12">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-3 h-12"
+                  onClick={() => {
+                    if (upcomingVisits.length > 0) {
+                      handleUploadClick(upcomingVisits[0].id);
+                    } else {
+                      toast({
+                        title: "No active visit",
+                        description: "You don't have any upcoming visits to upload content for.",
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                >
                   <div className="h-8 w-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                     <Upload className="h-4 w-4" />
                   </div>
@@ -275,6 +347,60 @@ export default function CreatorDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Content</DialogTitle>
+            <DialogDescription>
+              Upload reels, photos, or videos for your visit. These will be sent to the client for approval.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <SimpleUploader 
+              onUploadComplete={handleAddUrl} 
+              buttonText="Select File to Upload"
+              accept="image/*,video/*"
+            />
+            
+            {uploadedUrls.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Uploaded Files ({uploadedUrls.length})</p>
+                <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2">
+                  {uploadedUrls.map((url, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-900 rounded-lg border text-xs group">
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="truncate max-w-[200px]">{url.split('/').pop()}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeUrl(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadModalOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleSubmitContent} 
+              disabled={uploadedUrls.length === 0 || uploadMutation.isPending}
+            >
+              {uploadMutation.isPending ? "Submitting..." : "Submit for Approval"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

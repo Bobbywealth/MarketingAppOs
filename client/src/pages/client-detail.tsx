@@ -37,6 +37,7 @@ import {
   Activity,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { SocialAccountManager } from "@/components/SocialAccountManager";
 
 export default function ClientDetail() {
   const [, params] = useRoute("/clients/:id");
@@ -474,53 +475,13 @@ export default function ClientDetail() {
             </div>
 
             {/* Social Media Overview */}
-            {socialStats.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Social Media Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {socialStats.map((stat: any) => {
-                      const Icon = getPlatformIcon(stat.platform);
-                      return (
-                        <div key={stat.id} className="p-4 rounded-lg border bg-card">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-medium capitalize">{stat.platform}</span>
-                            <Icon className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                          <div className="space-y-2 text-sm">
-                            {stat.followers && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Followers</span>
-                                <span className="font-medium">{stat.followers.toLocaleString()}</span>
-                              </div>
-                            )}
-                            {stat.engagement && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Engagement</span>
-                                <span className="font-medium">{stat.engagement}%</span>
-                              </div>
-                            )}
-                            {stat.growthRate && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Growth</span>
-                                <span className={`font-medium ${parseFloat(stat.growthRate) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {stat.growthRate}%
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <section className="space-y-6">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                <h2 className="text-xl font-bold">Social Media Accounts</h2>
+              </div>
+              <SocialAccountManager clientId={clientId} isAdmin={true} />
+            </section>
           </TabsContent>
 
           {/* Tasks Tab */}

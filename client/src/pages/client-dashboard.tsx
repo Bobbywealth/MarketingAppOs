@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { InteractiveCard } from "@/components/ui/interactive-card";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ClientDashboard() {
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
@@ -230,108 +231,83 @@ export default function ClientDashboard() {
           </CardHeader>
           <CardContent className="relative p-4 sm:p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Instagram */}
-              <div className="space-y-3 p-4 rounded-xl bg-background/50 border border-border/50">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center">
-                    <ImageIcon className="w-4 h-4 text-white" />
+              {socialAccounts.length > 0 ? (
+                socialAccounts.map((account: any) => (
+                  <div key={account.id} className="space-y-3 p-4 rounded-xl bg-background/50 border border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center">
+                        {account.platform === "instagram" && <ImageIcon className="w-4 h-4 text-white" />}
+                        {account.platform === "tiktok" && <Video className="w-4 h-4 text-white" />}
+                        {account.platform === "youtube" && <Video className="w-4 h-4 text-white" />}
+                      </div>
+                      <span className="font-semibold capitalize">{account.platform}</span>
+                      <Badge variant={account.status === "active" ? "default" : "secondary"} className="ml-auto text-xs">
+                        {account.status}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2 pl-10">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Followers</span>
+                        <span className="font-medium">{account.id === activeAccountId ? (latestSnapshot?.followers?.toLocaleString() || "—") : "—"}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Handle</span>
+                        <span className="font-medium text-xs">@{account.handle}</span>
+                      </div>
+                      {account.lastScrapedAt && (
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> Updated {format(new Date(account.lastScrapedAt), "MMM d")}
+                        </p>
+                      )}
+                      <Link href="/client-analytics">
+                        <Button variant="ghost" size="sm" className="w-full text-xs h-8">
+                          View Details
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                  <span className="font-semibold">Instagram</span>
-                  <Badge variant={socialCredentials["Social Media Management"] ? "default" : "secondary"} className="ml-auto text-xs">
-                    {socialCredentials["Social Media Management"] ? "Credentialed" : "Not Connected"}
-                  </Badge>
-                </div>
-                <div className="space-y-2 pl-10">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Posts</span>
-                    <span className="font-medium">0</span>
-                  </div>
-                  {socialCredentials["Social Media Management"] && (
-                    <p className="text-[10px] text-green-600 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Login info received
-                    </p>
-                  )}
+                ))
+              ) : (
+                <div className="col-span-full py-8 text-center bg-muted/20 rounded-xl border-2 border-dashed">
+                  <Users className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-muted-foreground font-medium">No social accounts connected</p>
                   <Link href="/client-analytics">
-                    <Button variant="ghost" size="sm" className="w-full text-xs h-8">
-                      {socialCredentials["Social Media Management"] ? "View Details" : "Connect Account"}
+                    <Button variant="link" className="text-primary text-sm mt-2">
+                      Connect your accounts in Analytics →
                     </Button>
                   </Link>
                 </div>
-              </div>
-
-              {/* Facebook */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                    <ThumbsUp className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="font-semibold">Facebook</span>
-                  <Badge className="ml-auto text-xs bg-green-500/20 text-green-700 border-green-500/30">
-                    +8%
-                  </Badge>
-                </div>
-                <div className="space-y-2 pl-10">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Followers</span>
-                    <span className="font-medium">8,932</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Engagement</span>
-                    <span className="font-medium">3.2%</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Reach</span>
-                    <span className="font-medium">28,500</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* TikTok */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center">
-                    <Video className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="font-semibold">TikTok</span>
-                  <Badge className="ml-auto text-xs bg-green-500/20 text-green-700 border-green-500/30">
-                    +23%
-                  </Badge>
-                </div>
-                <div className="space-y-2 pl-10">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Followers</span>
-                    <span className="font-medium">23,567</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Engagement</span>
-                    <span className="font-medium">6.5%</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Views</span>
-                    <span className="font-medium">125,000</span>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
+          </CardContent>
+        </Card>
 
             {/* Summary Stats */}
             <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border/50">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div className="text-center">
-                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">32,499</div>
-                  <div className="text-xs text-muted-foreground mt-1">Total Followers</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
+                    {latestSnapshot?.followers?.toLocaleString() || "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Latest Followers</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">23</div>
-                  <div className="text-xs text-muted-foreground mt-1">Posts This Month</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
+                    {latestSnapshot?.postsCount?.toLocaleString() || "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Total Posts</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">5.2%</div>
-                  <div className="text-xs text-muted-foreground mt-1">Avg Engagement</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary">
+                    {latestSnapshot?.likesCount?.toLocaleString() || "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Total Likes</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-500">+12%</div>
-                  <div className="text-xs text-muted-foreground mt-1">Growth Rate</div>
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-500">
+                    {latestSnapshot?.viewsCount?.toLocaleString() || "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Total Views</div>
                 </div>
               </div>
             </div>
