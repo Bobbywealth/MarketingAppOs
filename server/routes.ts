@@ -51,6 +51,7 @@ import creatorsRouter from "./routes/creators";
 import coursesRouter from "./routes/courses";
 import tasksRouter from "./routes/tasks";
 import marketingCenterRouter from "./routes/marketing-center";
+import socialRouter from "./routes/social";
 import { 
   getCurrentUserContext, 
   getAccessibleClientOr404, 
@@ -710,6 +711,7 @@ export function registerRoutes(app: Express) {
   app.use("/api", marketingRouter);
   app.use("/api", creatorsRouter);
   app.use("/api/courses", coursesRouter);
+  app.use("/api/social", socialRouter);
   app.use("/api", tasksRouter);
 
   // File upload endpoint

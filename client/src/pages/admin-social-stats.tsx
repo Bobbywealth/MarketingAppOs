@@ -1,214 +1,77 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Instagram, Facebook, Twitter, Youtube, TrendingUp, Users, BarChart3, Eye, FileImage, Upload, Loader2 } from "lucide-react";
-import type { Client } from "@shared/schema";
-import { SimpleUploader } from "@/components/SimpleUploader";
-
-interface SocialStat {
-  id: string;
-  clientId: string;
-  platform: string;
-  followers?: number;
-  posts?: number;
-  engagement?: string;
-  reach?: number;
-  views?: number;
-  growthRate?: string;
-  notes?: string;
-  lastUpdated: string;
-}
-
-const PLATFORMS = [
-  { value: "instagram", label: "Instagram", icon: Instagram, color: "text-pink-600" },
-  { value: "facebook", label: "Facebook", icon: Facebook, color: "text-blue-600" },
-  { value: "tiktok", label: "TikTok", icon: Users, color: "text-black dark:text-white" },
-  { value: "youtube", label: "YouTube", icon: Youtube, color: "text-red-600" },
-  { value: "twitter", label: "Twitter/X", icon: Twitter, color: "text-blue-400" },
-  { value: "linkedin", label: "LinkedIn", icon: BarChart3, color: "text-blue-700" },
-];
+import { Label } from "@/components/ui/label";
+import { useLocation } from "wouter";
+import { TrendingUp, Settings } from "lucide-react";
+import { SocialAccountManager } from "@/components/SocialAccountManager";
 
 export default function AdminSocialStats() {
   const [selectedClient, setSelectedClient] = useState<string>("");
-  const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
-  const [uploadedScreenshot, setUploadedScreenshot] = useState<string>("");
-  const [isExtractingFromAI, setIsExtractingFromAI] = useState(false);
-  const [formData, setFormData] = useState({
-    followers: "",
-    posts: "",
-    engagement: "",
-    reach: "",
-    views: "",
-    growthRate: "",
-    notes: "",
-  });
+  const [, setLocation] = useLocation();
 
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const { data: clients = [] } = useQuery<Client[]>({
+  const { data: clients = [] } = useQuery<any[]>({
     queryKey: ["/api/clients"],
   });
 
-  const { data: stats = [] } = useQuery<SocialStat[]>({
-    queryKey: [`/api/clients/${selectedClient}/social-stats`],
-    enabled: !!selectedClient,
-  });
+  return (
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Social Analytics Management</h1>
+          <p className="text-muted-foreground mt-1">
+            Automated social media statistics powered by ScrapeCreators
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => setLocation("/admin/social-accounts")} className="gap-2">
+          <Settings className="w-4 h-4" /> Manage Connections
+        </Button>
+      </div>
 
-  const updateStatsMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const url = `/api/clients/${selectedClient}/social-stats`;
-      console.log("💾 Saving to URL:", url);
-      console.log("💾 Data:", data);
-      
-      const response = await apiRequest("POST", url, data);
-      const result = await response.json();
-      console.log("✅ Save response:", result);
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/clients/${selectedClient}/social-stats`] });
-      toast({
-        title: "✅ Stats Updated!",
-        description: `${PLATFORMS.find(p => p.value === selectedPlatform)?.label} stats saved successfully.`,
-      });
-      resetForm();
-    },
-    onError: (error: any) => {
-      console.error("❌ Save error:", error);
-      toast({
-        title: "❌ Update Failed",
-        description: error?.message || "Server error. Please try again later.",
-        variant: "destructive",
-      });
-    },
-  });
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Client Selection */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="text-lg">Select Client</CardTitle>
+            <CardDescription>View and refresh client stats</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={selectedClient} onValueChange={setSelectedClient}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-  const resetForm = () => {
-    setFormData({
-      followers: "",
-      posts: "",
-      engagement: "",
-      reach: "",
-      views: "",
-      growthRate: "",
-      notes: "",
-    });
-  };
-
-  const loadPlatformStats = (platform: string) => {
-    const platformStats = stats.find(s => s.platform === platform);
-    if (platformStats) {
-      setFormData({
-        followers: platformStats.followers?.toString() || "",
-        posts: platformStats.posts?.toString() || "",
-        engagement: platformStats.engagement || "",
-        reach: platformStats.reach?.toString() || "",
-        views: platformStats.views?.toString() || "",
-        growthRate: platformStats.growthRate || "",
-        notes: platformStats.notes || "",
-      });
-    } else {
-      resetForm();
-    }
-  };
-
-  const handlePlatformChange = (platform: string) => {
-    setSelectedPlatform(platform);
-    loadPlatformStats(platform);
-  };
-
-  const extractFromScreenshot = async () => {
-    if (!uploadedScreenshot) {
-      toast({
-        title: "⚠️ No Screenshot",
-        description: "Please upload a screenshot first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsExtractingFromAI(true);
-
-    try {
-      const url = "/api/ai/extract-social-stats";
-      console.log("🤖 Extracting from URL:", url);
-      console.log("🤖 Image:", uploadedScreenshot);
-      console.log("🤖 Platform:", selectedPlatform);
-      
-      const response = await apiRequest("POST", url, {
-        imageUrl: uploadedScreenshot,
-        platform: selectedPlatform,
-      });
-      
-      const data = await response.json();
-      console.log("✅ Extracted data:", data);
-
-      if (data.extracted) {
-        setFormData({
-          followers: data.followers?.toString() || "",
-          posts: data.posts?.toString() || "",
-          engagement: data.engagement || "",
-          reach: data.reach?.toString() || "",
-          views: data.views?.toString() || "",
-          growthRate: data.growthRate || "",
-          notes: formData.notes || `Extracted from screenshot on ${new Date().toLocaleDateString()}`,
-        });
-
-        toast({
-          title: "✅ Data Extracted!",
-          description: "Review the extracted data and click Save Stats",
-        });
-      }
-    } catch (error: any) {
-      console.error("❌ Extraction error:", error);
-      toast({
-        title: "❌ Extraction Failed",
-        description: error?.message || "Failed to extract data from screenshot",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExtractingFromAI(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedClient) {
-      toast({
-        title: "⚠️ Select a Client",
-        description: "Please select a client first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const data = {
-      platform: selectedPlatform,
-      followers: formData.followers ? parseInt(formData.followers) : null,
-      posts: formData.posts ? parseInt(formData.posts) : null,
-      engagement: formData.engagement || null,
-      reach: formData.reach ? parseInt(formData.reach) : null,
-      views: formData.views ? parseInt(formData.views) : null,
-      growthRate: formData.growthRate || null,
-      notes: formData.notes || null,
-    };
-
-    console.log("💾 Saving stats:", data);
-    updateStatsMutation.mutate(data);
-  };
-
-  const currentPlatform = PLATFORMS.find(p => p.value === selectedPlatform);
-  const Icon = currentPlatform?.icon || Instagram;
+        {/* Stats Section */}
+        <div className="lg:col-span-3">
+          {!selectedClient ? (
+            <Card className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed">
+              <TrendingUp className="w-16 h-16 mx-auto text-muted-foreground/20 mb-4" />
+              <h3 className="text-xl font-semibold text-muted-foreground">Select a client to get started</h3>
+              <p className="text-sm text-muted-foreground mt-1">Choose a client from the left to view their automated social stats</p>
+            </Card>
+          ) : (
+            <SocialAccountManager clientId={selectedClient} isAdmin={true} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">

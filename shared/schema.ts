@@ -143,6 +143,50 @@ export const clientSocialStatsRelations = relations(clientSocialStats, ({ one })
   }),
 }));
 
+// ScrapeCreators Social Accounts
+export const socialAccounts = pgTable("social_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").references(() => clients.id).notNull(),
+  platform: varchar("platform").notNull(), // instagram, tiktok, youtube
+  handle: varchar("handle").notNull(),
+  profileUrl: text("profile_url"),
+  displayName: text("display_name"),
+  status: varchar("status").notNull().default("active"), // active, paused, error
+  lastScrapedAt: timestamp("last_scraped_at"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const socialAccountMetricsSnapshots = pgTable("social_account_metrics_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  socialAccountId: varchar("social_account_id").references(() => socialAccounts.id).notNull(),
+  capturedAt: timestamp("captured_at").notNull(),
+  followers: integer("followers"),
+  following: integer("following"),
+  postsCount: integer("posts_count"),
+  likesCount: integer("likes_count"),
+  viewsCount: integer("views_count"),
+  rawPayload: jsonb("raw_payload"),
+}, (table) => [
+  index("IDX_social_snapshots_account_captured").on(table.socialAccountId, table.capturedAt)
+]);
+
+export const socialAccountsRelations = relations(socialAccounts, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [socialAccounts.clientId],
+    references: [clients.id],
+  }),
+  snapshots: many(socialAccountMetricsSnapshots),
+}));
+
+export const socialAccountMetricsSnapshotsRelations = relations(socialAccountMetricsSnapshots, ({ one }) => ({
+  account: one(socialAccounts, {
+    fields: [socialAccountMetricsSnapshots.socialAccountId],
+    references: [socialAccounts.id],
+  }),
+}));
+
 // Campaigns table
 export const campaigns = pgTable("campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1553,3 +1597,11 @@ export type MarketingBroadcast = typeof marketingBroadcasts.$inferSelect;
 export const insertMarketingBroadcastRecipientSchema = createInsertSchema(marketingBroadcastRecipients).omit({ id: true });
 export type InsertMarketingBroadcastRecipient = z.infer<typeof insertMarketingBroadcastRecipientSchema>;
 export type MarketingBroadcastRecipient = typeof marketingBroadcastRecipients.$inferSelect;
+
+export const insertSocialAccountSchema = createInsertSchema(socialAccounts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSocialAccount = z.infer<typeof insertSocialAccountSchema>;
+export type SocialAccount = typeof socialAccounts.$inferSelect;
+
+export const insertSocialAccountMetricsSnapshotSchema = createInsertSchema(socialAccountMetricsSnapshots).omit({ id: true });
+export type InsertSocialAccountMetricsSnapshot = z.infer<typeof insertSocialAccountMetricsSnapshotSchema>;
+export type SocialAccountMetricsSnapshot = typeof socialAccountMetricsSnapshots.$inferSelect;

@@ -52,6 +52,25 @@ export default function ClientDashboard() {
     enabled: !!user,
   });
 
+  // Fetch social accounts
+  const { data: socialAccounts = [] } = useQuery<any[]>({
+    queryKey: ["/api/social/accounts"],
+    enabled: !!user,
+  });
+
+  // Fetch metrics for the first active account if exists
+  const activeAccountId = socialAccounts.find(a => a.status === "active")?.id;
+  const { data: metricsData } = useQuery<any>({
+    queryKey: ["/api/social/metrics", { accountId: activeAccountId }],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/social/metrics?accountId=${activeAccountId}`);
+      return res.json();
+    },
+    enabled: !!activeAccountId,
+  });
+
+  const latestSnapshot = metricsData?.snapshots?.[0];
+
   // Filter for upcoming content
   const upcomingContent = contentPosts
     .filter((post: any) => 

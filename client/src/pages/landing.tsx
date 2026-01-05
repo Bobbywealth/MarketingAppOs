@@ -1821,7 +1821,7 @@ export default function LandingPage() {
                     Join the Elite 1%
                   </Button>
                 </Link>
-              </div>
+              </Card>
             </div>
           </div>
         </div>
