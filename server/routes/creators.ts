@@ -151,14 +151,20 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "Creator";
 
     const hashedPassword = await hashPassword(data.password);
-    const ipAddress = req.ip || req.get('x-forwarded-for') || req.socket.remoteAddress;
+    const rawIp = req.ip || req.get('x-forwarded-for') || req.socket.remoteAddress;
+    const ipAddress = Array.isArray(rawIp) ? rawIp[0] : rawIp || null;
 
     await db.transaction(async (tx) => {
-      // Prevent duplicate accounts (by username/email).
+      // Prevent duplicate accounts (by username/email) case-insensitively.
       const existingUser = await tx
         .select({ id: users.id })
         .from(users)
-        .where(or(eq(users.username, username), eq(users.email, normalizedEmail)))
+        .where(
+          or(
+            sql`LOWER(${users.username}) = ${username.toLowerCase()}`,
+            sql`LOWER(${users.email}) = ${normalizedEmail}`
+          )
+        )
         .limit(1);
 
       if (existingUser.length > 0) {
@@ -170,7 +176,7 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
       const existingCreator = await tx
         .select({ id: creators.id })
         .from(creators)
-        .where(eq(creators.email, normalizedEmail))
+        .where(sql`LOWER(${creators.email}) = ${normalizedEmail}`)
         .limit(1);
 
       if (existingCreator.length > 0) {
@@ -180,7 +186,7 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
       }
 
       // Create creator profile
-      const [creator] = await tx
+      const insertedCreators = await tx
         .insert(creators)
         .values({
           fullName: data.fullName.trim(),
@@ -210,6 +216,11 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
           notes: `[PENDING APPLICATION] Creator account created via public signup on ${new Date().toISOString()}. IP: ${ipAddress}`,
         } as any)
         .returning();
+
+      const creator = insertedCreators[0];
+      if (!creator) {
+        throw new Error("Failed to create creator profile.");
+      }
 
       // Create login user linked to creator
       await tx
@@ -252,8 +263,28 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
     if (error?.status === 409) {
       return res.status(409).json({ message: error.message });
     }
+    
+    // Handle unique constraint violations from DB if they weren't caught by manual checks
+    if (error?.code === '23505') {
+      const detail = error.detail?.toLowerCase() || "";
+      if (detail.includes('email')) {
+        return res.status(409).json({ message: "An account with this email already exists." });
+      }
+      if (detail.includes('username')) {
+        return res.status(409).json({ message: "This username is already taken." });
+      }
+      return res.status(409).json({ message: "A duplicate record already exists." });
+    }
+
     console.error("[CREATOR SIGNUP ERROR]", error);
-    handleValidationError(error, res);
+    
+    // In production, we still want to log the error but return a generic message
+    // unless we're debugging. Let's return more info for now since there's a live issue.
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    res.status(500).json({ 
+      message: "Signup failed due to a server error. Please try again later.",
+      debug: process.env.NODE_ENV === "development" ? errorMessage : undefined
+    });
   }
 });
 
