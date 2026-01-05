@@ -608,7 +608,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32 px-4 overflow-hidden min-h-[90vh] flex items-center">
+      <section className="relative pt-12 pb-16 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32 px-4 overflow-hidden min-h-[80vh] md:min-h-[90vh] flex items-center">
         {/* Background Decorative Elements */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1),transparent_50%)]"></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
@@ -620,7 +620,7 @@ export default function LandingPage() {
             opacity: [0.3, 0.5, 0.3],
           }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] pointer-events-none"
+          className="absolute top-1/4 -left-20 w-64 md:w-96 h-64 md:h-96 bg-blue-500/20 rounded-full blur-[80px] md:blur-[100px] pointer-events-none"
         />
         <motion.div 
           animate={{ 
@@ -628,55 +628,55 @@ export default function LandingPage() {
             opacity: [0.2, 0.4, 0.2],
           }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-1/4 -right-20 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none"
+          className="absolute bottom-1/4 -right-20 w-80 md:w-[500px] h-80 md:h-[500px] bg-purple-500/10 rounded-full blur-[100px] md:blur-[120px] pointer-events-none"
         />
 
         <div className="container mx-auto relative z-10">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-7 text-center lg:text-left space-y-8">
+          <div className="grid lg:grid-cols-12 gap-8 md:gap-12 items-center">
+            <div className="lg:col-span-7 text-center lg:text-left space-y-6 md:space-y-8">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <Badge className="bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 border-blue-600/20 px-4 py-1.5 rounded-full text-sm font-bold backdrop-blur-sm mb-6">
-                  <Sparkles className="w-4 h-4 mr-2 inline-block animate-pulse" />
+                <Badge className="bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 border-blue-600/20 px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[10px] md:text-sm font-bold backdrop-blur-sm mb-4 md:mb-6">
+                  <Sparkles className="w-3 md:w-4 h-3 md:h-4 mr-2 inline-block animate-pulse" />
                   The Future of Remote Marketing
                 </Badge>
                 
-                <h1 className="text-5xl md:text-7xl xl:text-8xl font-black tracking-tighter leading-[0.9] mb-8">
-                  Your Digital <br />
+                <h1 className="text-4xl sm:text-5xl md:text-7xl xl:text-8xl font-black tracking-tighter leading-[1] md:leading-[0.9] mb-6 md:mb-8">
+                  Your Digital <br className="hidden sm:block" />
                   <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent italic">
                     Marketing Force
                   </span>
                 </h1>
 
-                <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto lg:mx-0 leading-tight mb-10">
+                <p className="text-base sm:text-lg md:text-2xl text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto lg:mx-0 leading-snug md:leading-tight mb-8 md:mb-10 px-2 sm:px-0">
                   Stop hiring freelancers. Start scaling with an entire elite marketing team for the price of one junior employee.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center lg:justify-start px-4 sm:px-0">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
                 <Link href="/signup">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-8 rounded-2xl text-xl font-bold shadow-2xl shadow-blue-600/20 group w-full sm:w-auto">
-                    Get Started <ArrowRight className="ml-2 w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white h-14 md:h-auto px-8 md:px-10 py-6 md:py-8 rounded-xl md:rounded-2xl text-lg md:text-xl font-bold shadow-2xl shadow-blue-600/20 group w-full">
+                    Get Started <ArrowRight className="ml-2 w-5 md:w-6 h-5 md:h-6 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
                   </motion.div>
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
                     <Link href="/contact">
-                      <Button size="lg" variant="outline" className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-2 border-slate-200 dark:border-slate-800 px-10 py-8 rounded-2xl text-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto">
-                        Book a Strategy Call
+                      <Button size="lg" variant="outline" className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-2 border-slate-200 dark:border-slate-800 h-14 md:h-auto px-8 md:px-10 py-6 md:py-8 rounded-xl md:rounded-2xl text-lg md:text-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full">
+                        Book a Call
                       </Button>
                     </Link>
                   </motion.div>
                 </div>
 
-                <div className="pt-10 flex flex-wrap items-center justify-center lg:justify-start gap-8 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
-                  <img src={instagramLogo} alt="Instagram" className="h-6 md:h-8" />
-                  <img src={tiktokLogo} alt="TikTok" className="h-6 md:h-8" />
-                  <img src={linkedinLogo} alt="LinkedIn" className="h-6 md:h-8" />
-                  <img src={googleAdsLogo} alt="Google Ads" className="h-6 md:h-8" />
+                <div className="pt-8 md:pt-10 flex flex-wrap items-center justify-center lg:justify-start gap-4 md:gap-8 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
+                  <img src={instagramLogo} alt="Instagram" className="h-4 sm:h-6 md:h-8" />
+                  <img src={tiktokLogo} alt="TikTok" className="h-4 sm:h-6 md:h-8" />
+                  <img src={linkedinLogo} alt="LinkedIn" className="h-4 sm:h-6 md:h-8" />
+                  <img src={googleAdsLogo} alt="Google Ads" className="h-4 sm:h-6 md:h-8" />
                 </div>
 
                 {/* Live Activity Feed */}
@@ -1012,127 +1012,127 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-4 sm:gap-6 md:gap-8 items-center justify-items-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-4 sm:gap-6 md:gap-8 items-center justify-items-center">
             {/* Social Media */}
             <motion.div 
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">FB</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">FB</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Facebook</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Facebook</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: -5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={tiktokLogo} alt="TikTok" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={tiktokLogo} alt="TikTok" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">TikTok</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">TikTok</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">TW</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-blue-400 to-blue-500 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">TW</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Twitter/X</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Twitter/X</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: -5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">YT</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">YT</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">YouTube</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">YouTube</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={linkedinLogo} alt="LinkedIn" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={linkedinLogo} alt="LinkedIn" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">LinkedIn</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">LinkedIn</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: -5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={instagramLogo} alt="Instagram" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={instagramLogo} alt="Instagram" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Instagram</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Instagram</p>
             </motion.div>
 
             {/* Search & Ads */}
             <motion.div 
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={googleAdsLogo} alt="Google Ads" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={googleAdsLogo} alt="Google Ads" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Google Ads</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Google Ads</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: -5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">SEO</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">SEO</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">SEO</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">SEO</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">EM</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">EM</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Email</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Email</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: -5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">GA</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">GA</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Analytics</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Analytics</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">CR</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">CR</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">Conversion</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Conversion</p>
             </motion.div>
 
             <motion.div 
               whileHover={{ scale: 1.1, rotate: -5 }}
-              className="text-center group"
+              className="text-center group w-full"
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
-                <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">+</span>
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">+</span>
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700">More</p>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">More</p>
             </motion.div>
           </div>
 
@@ -1159,24 +1159,24 @@ export default function LandingPage() {
               <Badge className="bg-orange-500/10 text-orange-600 mb-6 px-4 py-1.5 rounded-full font-bold uppercase tracking-widest text-[10px]">
                 Diagnostic Engine
               </Badge>
-              <h2 className="text-4xl md:text-6xl font-black mb-8 leading-[1.1] tracking-tighter text-slate-900 dark:text-white">
-                Is your social media <br />
+              <h2 className="text-3xl md:text-6xl font-black mb-6 md:mb-8 leading-[1.1] tracking-tighter text-slate-900 dark:text-white">
+                Is your social media <br className="hidden sm:block" />
                 <span className="text-orange-500">working or wasting?</span>
               </h2>
-              <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+              <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
                 Most businesses are one small tweak away from doubling their engagement. Our AI-powered diagnostic engine scans your presence and identifies the exact growth bottlenecks.
               </p>
               
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4 md:gap-6">
                 {[
                   { label: "Data-Points Scanned", val: "50+" },
                   { label: "Analysis Time", val: "< 60s" },
                   { label: "Cost", val: "$0.00" },
                   { label: "Insights", val: "Actionable" }
                 ].map((stat, i) => (
-                  <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                    <p className="text-2xl font-black text-slate-900 dark:text-white">{stat.val}</p>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.label}</p>
+                  <div key={i} className="bg-white dark:bg-slate-900 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                    <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">{stat.val}</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">{stat.label}</p>
                   </div>
                 ))}
               </div>
@@ -1286,37 +1286,37 @@ export default function LandingPage() {
           </div>
 
           {/* Trust Badges Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-            <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-100 hover:shadow-lg transition-shadow">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <CheckCircle className="w-8 h-8 text-white" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
-              <p className="font-bold text-lg text-gray-900">98%</p>
-              <p className="text-sm text-muted-foreground">Client Satisfaction</p>
+              <p className="font-bold text-base md:text-lg text-gray-900">98%</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Client Satisfaction</p>
             </div>
 
-            <div className="text-center p-6 bg-gradient-to-br from-green-50 to-white rounded-xl border border-green-100 hover:shadow-lg transition-shadow">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <Target className="w-8 h-8 text-white" />
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-green-50 to-white rounded-xl border border-green-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Target className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
-              <p className="font-bold text-lg text-gray-900">310%</p>
-              <p className="text-sm text-muted-foreground">Avg ROI Increase</p>
+              <p className="font-bold text-base md:text-lg text-gray-900">310%</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Avg ROI Increase</p>
             </div>
 
-            <div className="text-center p-6 bg-gradient-to-br from-orange-50 to-white rounded-xl border border-orange-100 hover:shadow-lg transition-shadow">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <Zap className="w-8 h-8 text-white" />
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-orange-50 to-white rounded-xl border border-orange-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Zap className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
-              <p className="font-bold text-lg text-gray-900">7-10 Days</p>
-              <p className="text-sm text-muted-foreground">Fast Launch</p>
+              <p className="font-bold text-base md:text-lg text-gray-900">7-10 Days</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Fast Launch</p>
             </div>
 
-            <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-white rounded-xl border border-purple-100 hover:shadow-lg transition-shadow">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <Users className="w-8 h-8 text-white" />
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-purple-50 to-white rounded-xl border border-purple-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Users className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
-              <p className="font-bold text-lg text-gray-900">500+</p>
-              <p className="text-sm text-muted-foreground">Happy Clients</p>
+              <p className="font-bold text-base md:text-lg text-gray-900">500+</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Happy Clients</p>
             </div>
           </div>
 
@@ -1823,29 +1823,29 @@ export default function LandingPage() {
 
             <div className="relative">
               <div className="absolute inset-0 bg-blue-600/20 blur-[120px] rounded-full"></div>
-              <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50 p-8 md:p-12 relative z-10 rounded-[2.5rem] shadow-3xl">
+              <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50 p-6 md:p-12 relative z-10 rounded-[2rem] md:rounded-[2.5rem] shadow-3xl">
                 <div className="text-center mb-8">
-                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
-                    <ShieldCheck className="w-10 h-10 text-green-500" />
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
+                    <ShieldCheck className="w-8 h-8 md:w-10 md:h-10 text-green-500" />
                   </div>
-                  <h3 className="text-3xl font-black mb-4">Performance Focused</h3>
-                  <p className="text-slate-400 leading-relaxed italic">
+                  <h3 className="text-2xl md:text-3xl font-black mb-4">Performance Focused</h3>
+                  <p className="text-slate-400 leading-relaxed italic text-sm md:text-base">
                     "We don't just provide services; we deliver measurable results that impact your bottom line every single day."
                   </p>
                 </div>
                 <Separator className="bg-slate-700 mb-8" />
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-2 gap-4 md:gap-8">
                   <div className="text-center">
-                    <p className="text-4xl font-black text-white mb-1">100%</p>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Transparency</p>
+                    <p className="text-3xl md:text-4xl font-black text-white mb-1">100%</p>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Transparency</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-4xl font-black text-blue-500 mb-1">24/7</p>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Dashboards</p>
+                    <p className="text-3xl md:text-4xl font-black text-blue-500 mb-1">24/7</p>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Dashboards</p>
                   </div>
                 </div>
                 <Link href="/signup">
-                  <Button className="w-full mt-10 bg-white text-slate-900 hover:bg-slate-100 h-16 rounded-2xl font-black text-lg">
+                  <Button className="w-full mt-8 md:mt-10 bg-white text-slate-900 hover:bg-slate-100 h-14 md:h-16 rounded-xl md:rounded-2xl font-black text-base md:text-lg">
                     Join the Elite 1%
                   </Button>
                 </Link>
@@ -2133,44 +2133,35 @@ export default function LandingPage() {
       )}
 
       {/* Footer */}
-      <footer className="border-t py-12 px-4 bg-background pb-24 md:pb-12">
+      <footer className="border-t py-12 px-4 bg-background pb-32 md:pb-12">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10 mb-12">
+            <div className="col-span-2 md:col-span-1">
               <FooterLogo className="mb-4" />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Your go-to remote marketing team. We help businesses, influencers, and entrepreneurs grow with results-driven digital marketing.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Services</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
+              <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Services</h3>
+              <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="hover:text-primary transition-colors cursor-pointer">Digital Marketing</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Web Development & CRMs</li>
+                <li className="hover:text-primary transition-colors cursor-pointer">Web Dev & CRMs</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">Content Creation</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">AI Automation</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
+              <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Quick Links</h3>
+              <ul className="space-y-3 text-sm text-muted-foreground">
                 <li><Link href="/login" className="hover:text-primary transition-colors">Login</Link></li>
                 <li className="hover:text-primary transition-colors cursor-pointer">About Us</li>
                 <li className="hover:text-primary transition-colors cursor-pointer">Contact Us</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Privacy Policy</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="hover:text-primary transition-colors cursor-pointer">About us</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Leadership</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Careers</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Legal Notice</li>
+                <li className="hover:text-primary transition-colors cursor-pointer">Privacy</li>
               </ul>
             </div>
           </div>
-          <div className="border-t pt-8 text-center text-sm text-muted-foreground">
+          <div className="border-t pt-8 text-center text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
             Copyright © 2025 Marketing Team App, All rights reserved.
           </div>
         </div>

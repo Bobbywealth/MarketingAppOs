@@ -122,8 +122,8 @@ export function ServicesStep({ form, services }: ServicesStepProps) {
             <div className="pt-8 space-y-6">
               <Separator />
               <div className="space-y-2">
-                <h3 className="text-xl font-black text-slate-900">Which platforms should we manage?</h3>
-                <p className="text-sm text-slate-500 font-medium">Select the social media platforms you want us to handle for your brand.</p>
+                <h3 className="text-lg md:text-xl font-black text-slate-900">Which platforms should we manage?</h3>
+                <p className="text-xs md:text-sm text-slate-500 font-medium">Select the social media platforms you want us to handle for your brand.</p>
               </div>
 
               <FormField
@@ -131,7 +131,7 @@ export function ServicesStep({ form, services }: ServicesStepProps) {
                 name="selectedPlatforms"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3">
                       {PLATFORMS.map((platform) => {
                         const isSelected = field.value?.includes(platform.name);
                         return (
@@ -139,7 +139,7 @@ export function ServicesStep({ form, services }: ServicesStepProps) {
                             key={platform.name}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                            className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-2xl border-2 cursor-pointer transition-all ${
                               isSelected 
                                 ? 'border-blue-500 bg-blue-50/50' 
                                 : 'border-slate-100 bg-white hover:border-slate-200'
@@ -153,13 +153,13 @@ export function ServicesStep({ form, services }: ServicesStepProps) {
                               }
                             }}
                           >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white mb-2 ${platform.color}`}>
-                              <platform.icon className="w-5 h-5" />
+                            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center text-white mb-2 ${platform.color}`}>
+                              <platform.icon className="w-4 h-4 md:w-5 md:h-5" />
                             </div>
-                            <span className="text-xs font-black text-slate-900">{platform.name}</span>
+                            <span className="text-[10px] md:text-xs font-black text-slate-900">{platform.name}</span>
                             {isSelected && (
                               <div className="absolute top-2 right-2">
-                                <CheckCircle2 className="w-4 h-4 text-blue-500" />
+                                <CheckCircle2 className="w-3 md:w-4 h-3 md:h-4 text-blue-500" />
                               </div>
                             )}
                           </motion.div>

@@ -56,13 +56,13 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
             animate={{ opacity: 1, y: 0 }}
             className="p-6 rounded-3xl border-2 border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all"
           >
-            <h3 className="text-lg font-black flex items-center gap-2 mb-6">
+            <h3 className="text-base md:text-lg font-black flex items-center gap-2 mb-4 md:mb-6">
               <span className="p-2 bg-blue-50 rounded-xl"><Zap className="w-4 h-4 text-blue-600" /></span>
               {item.label}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
-                <Label className="text-sm font-black uppercase tracking-widest text-slate-500">Username / Email</Label>
+                <Label className="text-[10px] md:text-sm font-black uppercase tracking-widest text-slate-500">Username / Email</Label>
                 <Input 
                   placeholder="e.g. @yourbrand" 
                   className="h-12 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl bg-slate-50/50"
@@ -78,7 +78,7 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-black uppercase tracking-widest text-slate-500">Password</Label>
+                <Label className="text-[10px] md:text-sm font-black uppercase tracking-widest text-slate-500">Password</Label>
                 <Input 
                   type="password" 
                   placeholder="••••••••" 

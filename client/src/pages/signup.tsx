@@ -406,20 +406,20 @@ export default function SignupPage() {
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-12"
+              className="text-center mb-8 md:mb-12"
             >
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white px-6 py-3 rounded-full text-sm font-black mb-6 shadow-xl shadow-orange-500/20">
-                <Sparkles className="w-4 h-4" />
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-full text-xs md:text-sm font-black mb-4 md:mb-6 shadow-xl shadow-orange-500/20">
+                <Sparkles className="w-3 md:w-4 h-3 md:h-4" />
                 🚀 Join 500+ Businesses Growing 3x Faster
               </div>
-              <h1 className="text-5xl md:text-7xl font-black mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent leading-tight tracking-tight">
+              <h1 className="text-4xl md:text-7xl font-black mb-4 md:mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent leading-[1.1] tracking-tight">
                 Your Marketing
                 <br />
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text">Dream Team</span>
                 <br />
-                <span className="text-4xl md:text-5xl">Awaits.</span>
+                <span className="text-3xl md:text-5xl">Awaits.</span>
               </h1>
-              <p className="text-xl text-slate-600 max-w-2xl mx-auto font-medium">
+              <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-medium px-4 md:px-0">
                 Let's build your brand with a pro team that delivers <span className="text-blue-600 font-bold">real results</span>.
               </p>
             </motion.div>
@@ -427,16 +427,16 @@ export default function SignupPage() {
 
           <SignupProgress step={step} steps={steps} />
 
-          <Card className="p-0 border-0 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[2.5rem] relative overflow-hidden ring-1 ring-slate-200">
+          <Card className="p-0 border-0 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[1.5rem] md:rounded-[2.5rem] relative overflow-hidden ring-1 ring-slate-200">
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
             
-            <div className="p-8 md:p-12">
+            <div className="p-6 md:p-12">
               <Form {...form}>
                 <form 
                   onSubmit={(e) => {
                     e.preventDefault();
                   }} 
-                  className="space-y-8"
+                  className="space-y-6 md:space-y-8"
                 >
                   <AnimatePresence mode="wait">
                     {step === 1 && <ContactStep form={form} />}
@@ -447,14 +447,14 @@ export default function SignupPage() {
                   </AnimatePresence>
 
                   {/* Navigation Buttons */}
-                  <div className="flex flex-col sm:flex-row justify-between gap-4 pt-12 border-t border-slate-100">
+                  <div className="flex flex-col sm:flex-row justify-between gap-4 pt-8 md:pt-12 border-t border-slate-100">
                     {step > 1 ? (
                       <Button
                         type="button"
                         variant="ghost"
                         size="lg"
                         onClick={prevStep}
-                        className="rounded-2xl h-16 px-8 text-slate-500 font-bold hover:bg-slate-50"
+                        className="rounded-xl md:rounded-2xl h-14 md:h-16 px-8 text-slate-500 font-bold hover:bg-slate-50"
                       >
                         <ArrowLeft className="w-5 h-5 mr-3" />
                         Back
@@ -471,7 +471,7 @@ export default function SignupPage() {
                         size="lg"
                         onClick={nextStep}
                         disabled={isAdvancing || earlyLeadCaptureMutation.isPending || signupMutation.isPending}
-                        className={`w-full rounded-2xl h-16 px-12 font-black text-xl transition-all shadow-[0_20px_40px_-12px_rgba(0,0,0,0.2)] ${
+                        className={`w-full rounded-xl md:rounded-2xl h-14 md:h-16 px-12 font-black text-lg md:text-xl transition-all shadow-[0_20px_40px_-12px_rgba(0,0,0,0.2)] ${
                           step === 5 
                             ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white" 
                             : "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
@@ -494,15 +494,15 @@ export default function SignupPage() {
           </Card>
 
           {/* Social Proof & Trust Indicators */}
-          <div className="mt-20">
-            <div className="text-center mb-10">
+          <div className="mt-12 md:mt-20 px-4 md:px-0">
+            <div className="text-center mb-8 md:mb-10">
               <div className="inline-flex items-center gap-1 mb-2">
                 {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
               </div>
               <p className="font-bold text-slate-900">Rated 4.9/5 by 500+ happy business owners</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
               {[
                 { label: "24h Response", desc: "Always on time", icon: Clock, color: "text-green-600", bg: "bg-green-100" },
                 { label: "Secure Setup", desc: "Encrypted data", icon: Shield, color: "text-blue-600", bg: "bg-blue-100" },
@@ -513,14 +513,14 @@ export default function SignupPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + (i * 0.1) }}
-                  className="bg-white/60 backdrop-blur-sm p-8 rounded-[2rem] flex flex-col items-center text-center gap-4 shadow-sm border border-white group hover:bg-white hover:shadow-md transition-all"
+                  className="bg-white/60 backdrop-blur-sm p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] flex flex-row md:flex-col items-center text-left md:text-center gap-4 shadow-sm border border-white group hover:bg-white hover:shadow-md transition-all"
                 >
-                  <div className={`w-16 h-16 ${item.bg} ${item.color} rounded-[1.25rem] flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <item.icon className="w-8 h-8" />
+                  <div className={`w-12 h-12 md:w-16 md:h-16 ${item.bg} ${item.color} rounded-xl md:rounded-[1.25rem] flex items-center justify-center group-hover:scale-110 transition-transform shrink-0`}>
+                    <item.icon className="w-6 h-6 md:w-8 md:h-8" />
                   </div>
                   <div>
-                    <p className="font-black text-slate-900 text-lg">{item.label}</p>
-                    <p className="text-sm text-slate-500">{item.desc}</p>
+                    <p className="font-black text-slate-900 text-base md:text-lg">{item.label}</p>
+                    <p className="text-xs md:text-sm text-slate-500">{item.desc}</p>
                   </div>
                 </motion.div>
               ))}
