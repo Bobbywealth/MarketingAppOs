@@ -24,7 +24,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot, ChevronLeft, ChevronRight, Menu, X, Play, ShieldCheck, Rocket, BarChart3 } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, TrendingUp, Globe, Smartphone, Palette, Brain, CreditCard, Lightbulb, Users, Target, Zap, ChevronDown, Pencil, FileText, Sparkles, Bot, ChevronLeft, ChevronRight, Menu, X, Play, ShieldCheck, Rocket, BarChart3, MessageSquare } from "lucide-react";
 
 // Counter Component for Trust Indicators
 function Counter({ value, suffix = "", duration = 2 }: { value: number, suffix?: string, duration?: number }) {
