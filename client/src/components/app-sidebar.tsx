@@ -21,6 +21,7 @@ import {
   Sparkles,
   BookOpen,
   Bell,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -57,6 +58,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   HoverCard,
   HoverCardContent,
@@ -526,6 +532,142 @@ function NavItem({
   return content;
 }
 
+// Collapsible Group Component for grouping multiple items
+function NavCollapsibleGroup({
+  title,
+  icon: Icon,
+  items,
+  location,
+  isCollapsed,
+  onClick,
+  getBadgeCount,
+}: {
+  title: string;
+  icon: any;
+  items: SidebarNavItem[];
+  location: string;
+  isCollapsed: boolean;
+  onClick: () => void;
+  getBadgeCount: (key?: string) => number | null;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const hasActiveItem = items.some(item => location === item.url);
+
+  // Auto-open if an item is active
+  useEffect(() => {
+    if (hasActiveItem && !isCollapsed) setIsOpen(true);
+  }, [hasActiveItem, isCollapsed]);
+
+  if (items.length === 0) return null;
+
+  // In collapsed mode, show a dropdown menu
+  if (isCollapsed) {
+    return (
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton 
+              isActive={hasActiveItem}
+              className={`group transition-all duration-300 ease-in-out rounded-lg h-11 ${
+                hasActiveItem 
+                  ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20' 
+                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+              }`}
+            >
+              <div className={`flex items-center justify-center w-full ${hasActiveItem ? 'text-primary' : 'text-zinc-400 group-hover:text-primary'}`}>
+                <Icon className="w-5 h-5" />
+              </div>
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" className="w-56 p-2">
+            <div className="px-2 py-1.5 text-xs font-bold text-zinc-400 uppercase tracking-widest">{title}</div>
+            <DropdownMenuSeparator className="my-1" />
+            {items.map(item => {
+              const badge = getBadgeCount(item.badgeKey);
+              return (
+                <DropdownMenuItem key={item.title} asChild className="rounded-md">
+                  <Link href={item.url} onClick={onClick} className="flex items-center gap-2 w-full cursor-pointer">
+                    <item.icon className={`w-4 h-4 ${location === item.url ? 'text-primary' : 'text-zinc-400'}`} />
+                    <span className={location === item.url ? 'font-semibold text-primary' : ''}>{item.title}</span>
+                    {badge && (
+                      <Badge variant="destructive" className="ml-auto text-[10px] h-4 min-w-[16px] px-1">
+                        {badge}
+                      </Badge>
+                    )}
+                  </Link>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    );
+  }
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton 
+            isActive={hasActiveItem && !isOpen}
+            className={`group transition-all duration-300 ease-in-out rounded-lg h-11 mb-1 ${
+              hasActiveItem && !isOpen
+                ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20' 
+                : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+            }`}
+          >
+            <div className="flex items-center gap-3 w-full px-3">
+              <Icon className={`w-5 h-5 transition-colors duration-300 ${
+                hasActiveItem ? 'text-primary' : 'text-zinc-400 group-hover:text-primary'
+              }`} />
+              <span className={`font-semibold text-sm transition-colors duration-300 flex-1 text-left ${
+                hasActiveItem ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-zinc-100'
+              }`}>
+                {title}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+            </div>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
+          <SidebarMenuSub className="ml-8 border-l-2 border-zinc-100 dark:border-zinc-800 gap-1 mt-1 mb-2">
+            {items.map((item) => {
+              const badge = getBadgeCount(item.badgeKey);
+              const isSubActive = location === item.url;
+              return (
+                <SidebarMenuSubItem key={item.title}>
+                  <SidebarMenuSubButton 
+                    asChild 
+                    isActive={isSubActive}
+                    className={`transition-all duration-200 rounded-md px-3 h-9 ${
+                      isSubActive 
+                        ? 'bg-primary/5 text-primary font-semibold' 
+                        : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <Link href={item.url} onClick={onClick} className="flex items-center gap-2 w-full">
+                      <item.icon className={`w-4 h-4 ${isSubActive ? 'text-primary' : 'opacity-70'}`} />
+                      <span className="text-sm">{item.title}</span>
+                      {badge && (
+                        <Badge 
+                          variant="destructive" 
+                          className="ml-auto text-[10px] h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full"
+                        >
+                          {badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
@@ -880,6 +1022,15 @@ export function AppSidebar() {
     return canAccess(item.permission);
   });
 
+  // Split communication for better organization
+  const topLevelItems = filteredCommunication.filter(item => 
+    ["dashboard", "team"].includes(item.sidebarKey)
+  );
+  
+  const communicationGroupItems = filteredCommunication.filter(item => 
+    !["dashboard", "team"].includes(item.sidebarKey)
+  );
+
   return (
     <Sidebar 
       collapsible="icon" 
@@ -943,15 +1094,15 @@ export function AppSidebar() {
         )}
       </SidebarHeader>
       
-      <SidebarContent className="data-[collapsible=icon]:overflow-hidden">
-        {/* Communication Section */}
-        <SidebarGroup className="mt-4">
+      <SidebarContent className="data-[collapsible=icon]:overflow-hidden px-2">
+        {/* Main Section - Top Level Items */}
+        <SidebarGroup className="mt-2">
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Communication
+            Overview
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="px-2 gap-1">
-              {filteredCommunication.map((item) => (
+            <SidebarMenu className="gap-1">
+              {topLevelItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem
                     item={item}
@@ -966,110 +1117,71 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Divider */}
-        <div className="px-4 my-4">
+        <div className="px-4 my-2">
           <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
         </div>
 
-        {/* Growth Section */}
+        {/* Organized Groups */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Growth
+            Tools & Operations
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="px-2 gap-1">
-              {filteredGrowth.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <NavItem
-                    item={item}
-                    isActive={location === item.url}
-                    isCollapsed={isCollapsed}
-                    onClick={handleLinkClick}
-                    badgeCount={getBadgeCount((item as any).badgeKey)}
-                  />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+            <SidebarMenu className="gap-1">
+              {/* Communication Group */}
+              <NavCollapsibleGroup 
+                title="Communication"
+                icon={MessageSquare}
+                items={communicationGroupItems}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleLinkClick}
+                getBadgeCount={getBadgeCount}
+              />
 
-        {/* Divider */}
-        <div className="px-4 my-4">
-          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
-        </div>
+              {/* Growth Group */}
+              <NavCollapsibleGroup 
+                title="Growth & Sales"
+                icon={Zap}
+                items={filteredGrowth}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleLinkClick}
+                getBadgeCount={getBadgeCount}
+              />
 
-        {/* Content & Creators Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Content & Creators
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="px-2 gap-1">
-              {filteredContentCreators.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <NavItem
-                    item={item}
-                    isActive={location === item.url}
-                    isCollapsed={isCollapsed}
-                    onClick={handleLinkClick}
-                    badgeCount={getBadgeCount((item as any).badgeKey)}
-                  />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              {/* Creators Group */}
+              <NavCollapsibleGroup 
+                title="Creators & Content"
+                icon={Sparkles}
+                items={filteredContentCreators}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleLinkClick}
+                getBadgeCount={getBadgeCount}
+              />
 
-        {/* Divider */}
-        <div className="px-4 my-4">
-          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
-        </div>
+              {/* Management Group */}
+              <NavCollapsibleGroup 
+                title="Operations"
+                icon={ClipboardCheck}
+                items={filteredManagement}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleLinkClick}
+                getBadgeCount={getBadgeCount}
+              />
 
-        {/* Management Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Management
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="px-2 gap-1">
-              {filteredManagement.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <NavItem
-                    item={item}
-                    isActive={location === item.url}
-                    isCollapsed={isCollapsed}
-                    onClick={handleLinkClick}
-                    badgeCount={getBadgeCount((item as any).badgeKey)}
-                  />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Divider */}
-        <div className="px-4 my-4">
-          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
-        </div>
-
-        {/* Intelligence & Finance Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Intelligence & Finance
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="px-2 gap-1">
-              {filteredIntelligenceFinance.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <NavItem
-                    item={item}
-                    isActive={location === item.url}
-                    isCollapsed={isCollapsed}
-                    onClick={handleLinkClick}
-                    badgeCount={getBadgeCount((item as any).badgeKey)}
-                  />
-                </SidebarMenuItem>
-              ))}
+              {/* Intelligence Group */}
+              <NavCollapsibleGroup 
+                title="Business Intelligence"
+                icon={BarChart3}
+                items={filteredIntelligenceFinance}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleLinkClick}
+                getBadgeCount={getBadgeCount}
+              />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
