@@ -2,8 +2,10 @@ import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, X, Smartphone, Laptop } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "wouter";
 
 export function PWAInstallButton() {
+  const [location] = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [installed, setInstalled] = useState(false);
@@ -84,7 +86,12 @@ export function PWAInstallButton() {
     localStorage.setItem("pwa_install_dismissed", "true");
   };
 
-  if (isStandalone || dismissed) return null;
+  const isSignupPage = location.includes('/signup') || 
+                       location.includes('/auth') || 
+                       location.includes('/login') ||
+                       location === '/creator-signup';
+
+  if (isStandalone || dismissed || isSignupPage) return null;
   if (!showInstallButton) return null;
 
   return (
