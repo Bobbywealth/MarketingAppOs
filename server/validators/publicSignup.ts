@@ -39,6 +39,9 @@ export const signupSimpleSchema = z.object({
   email: emailSchema,
   phone: z.string().trim().min(1, "Phone number is required"),
 
+  username: z.string().trim().min(3, "Username must be at least 3 characters").optional(),
+  password: z.string().trim().min(8, "Password must be at least 8 characters").optional(),
+
   services: z.array(z.string().trim().min(1)).min(1, "Please select at least one service"),
   selectedPlatforms: z.array(z.string().trim().min(1)).optional(),
   budget: z.string().trim().optional(),

@@ -37,6 +37,7 @@ import { Form } from "@/components/ui/form";
 
 // Import new sub-components
 import { SignupProgress } from "@/components/signup/SignupProgress";
+import { AccountStep } from "@/components/signup/AccountStep";
 import { ContactStep } from "@/components/signup/ContactStep";
 import { ServicesStep } from "@/components/signup/ServicesStep";
 import { LoginsStep } from "@/components/signup/LoginsStep";
@@ -45,6 +46,10 @@ import { CompanyStep } from "@/components/signup/CompanyStep";
 import { PackageSelection } from "@/components/signup/PackageSelection";
 
 const signupSchema = z.object({
+  // Account Creation
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+
   // Contact Information
   name: z.string().min(1, "Your name is required"),
   email: z.string().email("Must be a valid email"),
@@ -128,6 +133,8 @@ export default function SignupPage() {
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
+      username: "",
+      password: "",
       name: "",
       email: "",
       phone: "",
@@ -194,7 +201,7 @@ export default function SignupPage() {
         title: "✅ Details Saved!",
         description: "Next: choose your package to get started.",
       });
-      setStep(6);
+      setStep(7);
     },
     onError: (error: Error) => {
       toast({
@@ -279,16 +286,19 @@ export default function SignupPage() {
     setIsAdvancing(true);
     
     let fields: any[] = [];
-    if (step === 1) fields = ["name", "email", "phone"];
-    else if (step === 2) fields = ["services"];
-    else if (step === 3 && needsSocialCredentials) fields = ["socialCredentials"];
-    else if (step === 4) fields = ["brandAssets"];
-    else if (step === 5) fields = ["company", "website", "industry", "companySize"];
+    if (step === 1) fields = ["username", "password"];
+    else if (step === 2) fields = ["name", "email", "phone"];
+    else if (step === 3) fields = ["services"];
+    else if (step === 4 && needsSocialCredentials) fields = ["socialCredentials"];
+    else if (step === 5) fields = ["brandAssets"];
+    else if (step === 6) fields = ["company", "website", "industry", "companySize"];
     
     try {
       const isValid = await form.trigger(fields as any);
       if (isValid) {
         if (step === 1) {
+          setStep(2);
+        } else if (step === 2) {
           const formData = form.getValues();
           earlyLeadCaptureMutation.mutate({
             name: formData.name,
@@ -296,15 +306,15 @@ export default function SignupPage() {
             phone: formData.phone,
             company: formData.company || "Pending",
           });
-          setStep(2);
-        } else if (step === 2) {
-          if (needsSocialCredentials) setStep(3);
-          else setStep(4);
+          setStep(3);
         } else if (step === 3) {
-          setStep(4);
+          if (needsSocialCredentials) setStep(4);
+          else setStep(5);
         } else if (step === 4) {
           setStep(5);
         } else if (step === 5) {
+          setStep(6);
+        } else if (step === 6) {
           signupMutation.mutate(form.getValues());
         }
       }
@@ -314,7 +324,7 @@ export default function SignupPage() {
   };
 
   const prevStep = () => {
-    if (step === 4 && !needsSocialCredentials) setStep(2);
+    if (step === 5 && !needsSocialCredentials) setStep(3);
     else setStep(step - 1);
   };
 
@@ -332,14 +342,15 @@ export default function SignupPage() {
   ];
 
   const steps = [
-    { num: 1, label: "Contact", icon: User },
-    { num: 2, label: "Services", icon: Target },
-    { num: 3, label: "Logins", icon: Lock, hidden: !needsSocialCredentials },
-    { num: 4, label: "Brand", icon: Palette },
-    { num: 5, label: "Company", icon: Building2 },
+    { num: 1, label: "Account", icon: Lock },
+    { num: 2, label: "Contact", icon: User },
+    { num: 3, label: "Services", icon: Target },
+    { num: 4, label: "Logins", icon: Lock, hidden: !needsSocialCredentials },
+    { num: 5, label: "Brand", icon: Palette },
+    { num: 6, label: "Company", icon: Building2 },
   ];
 
-  if (step === 6) {
+  if (step === 7) {
     return (
       <PackageSelection 
         packages={packages || []}
@@ -351,7 +362,7 @@ export default function SignupPage() {
         validDiscount={validDiscount}
         isValidatingDiscount={isValidatingDiscount}
         checkoutMutation={checkoutMutation}
-        onBack={() => setStep(5)}
+        onBack={() => setStep(6)}
         formValues={form.getValues()}
       />
     );
@@ -439,11 +450,12 @@ export default function SignupPage() {
                   className="space-y-6 md:space-y-8"
                 >
                   <AnimatePresence mode="wait">
-                    {step === 1 && <ContactStep form={form} />}
-                    {step === 2 && <ServicesStep form={form} services={services} />}
-                    {step === 3 && <LoginsStep form={form} selectedServices={selectedServices} />}
-                    {step === 4 && <BrandStep form={form} />}
-                    {step === 5 && <CompanyStep form={form} />}
+                    {step === 1 && <AccountStep form={form} />}
+                    {step === 2 && <ContactStep form={form} />}
+                    {step === 3 && <ServicesStep form={form} services={services} />}
+                    {step === 4 && <LoginsStep form={form} selectedServices={selectedServices} />}
+                    {step === 5 && <BrandStep form={form} />}
+                    {step === 6 && <CompanyStep form={form} />}
                   </AnimatePresence>
 
                   {/* Navigation Buttons */}

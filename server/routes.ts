@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import { pool, db } from "./db";
 import { sql, eq, and, or } from "drizzle-orm";
-import { isAuthenticated } from "./auth";
+import { isAuthenticated, hashPassword } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
 import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
 import { AuditService } from "./auditService";
@@ -1657,10 +1657,42 @@ This lead will be updated if they complete the full signup process.`,
       const data = signupSimpleSchema.parse(req.body);
       console.log('📝 Processing simplified signup for:', data.email);
 
+      // Check for existing user by username if provided
+      if (data.username) {
+        const existingUser = await storage.getUserByUsername(data.username);
+        if (existingUser) {
+          return res.status(400).json({ success: false, message: "Username already exists" });
+        }
+      }
+
+      // Check for existing user by email
+      const existingEmailUser = await storage.getUserByEmail(data.email);
+      if (existingEmailUser) {
+        return res.status(400).json({ success: false, message: "Email already exists" });
+      }
+
+      // Create the user account first if username and password are provided
+      let userId: number | undefined = undefined;
+      if (data.username && data.password) {
+        const hashedPassword = await hashPassword(data.password);
+        const newUser = await storage.createUser({
+          username: data.username,
+          password: hashedPassword,
+          email: data.email,
+          firstName: data.name.split(' ')[0],
+          lastName: data.name.split(' ').slice(1).join(' '),
+          role: "client", // Default to client for signups
+          emailVerified: false,
+        });
+        userId = newUser.id;
+        console.log('✅ Created user account:', data.username);
+      }
+
       // Check for existing lead and update it
       const existingLead = await storage.getLeadByEmail(data.email);
 
       if (existingLead) {
+        // ... (rest of the lead update logic)
         // Update existing lead with complete information
         const updatedNotes = `${existingLead.notes || ''}
 

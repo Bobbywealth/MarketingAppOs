@@ -25,6 +25,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
+    // Auto-reload on chunk load failures (common after deployments)
+    const chunkFailedMessage = /Failed to fetch dynamically imported module|Loading chunk .* failed/;
+    if (error?.message && chunkFailedMessage.test(error.message)) {
+      console.log('Chunk load failure detected. Forcing page reload...');
+      window.location.reload();
+    }
   }
 
   resetError = () => {
