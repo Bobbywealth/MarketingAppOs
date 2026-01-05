@@ -202,7 +202,7 @@ export default function CreatorSignupPage() {
               <Card className="relative overflow-hidden border-0 bg-black rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
                 <div className="relative" style={{ padding: '56.25% 0 0 0' }}>
                   <iframe 
-                    src="https://player.vimeo.com/video/1151485036?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&loop=1&muted=1" 
+                    src="https://player.vimeo.com/video/1151485036?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&loop=1&muted=1&controls=0" 
                     frameBorder="0" 
                     allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
