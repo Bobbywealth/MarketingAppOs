@@ -1,4 +1,4 @@
-simport { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Sparkles, Loader2, Send, X, Check, Mic, MicOff, Image as ImageIcon, Trash2, ListPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";

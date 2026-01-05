@@ -305,10 +305,9 @@ function AppContent() {
             <UpdateBanner />
             <OfflineBanner />
             <header className="sticky top-0 z-50 flex items-center gap-2 px-3 md:px-6 py-3 md:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              {/* Left: Hamburger + Logo (logo only on mobile) */}
+              {/* Left: Hamburger (logo removed on mobile) */}
               <div className="flex items-center gap-2 md:gap-3">
                 <HamburgerMenu />
-                <Logo variant="auto" size="lg" className="md:hidden h-8 w-auto" />
               </div>
               
               {/* Center: Search Bar (all screens) */}

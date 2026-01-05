@@ -70,13 +70,13 @@ export function GlobalSearch() {
     <>
       <Button
         variant="outline"
-        className="relative w-10 h-10 p-0 md:w-40 lg:w-64 md:px-4 md:py-2 md:justify-start text-sm text-muted-foreground rounded-xl border-2 hover:bg-primary/10 hover:border-primary transition-all"
+        className="relative w-full max-w-[200px] h-10 px-3 justify-start md:w-40 lg:w-64 md:px-4 md:py-2 text-sm text-muted-foreground rounded-xl border-2 hover:bg-primary/10 hover:border-primary transition-all"
         onClick={() => setOpen(true)}
         aria-label="Open global search"
         data-testid="button-global-search"
       >
-        <Search className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
-        <span className="hidden md:inline-flex">Search...</span>
+        <Search className="h-4 w-4 mr-2" />
+        <span className="inline-flex">Search...</span>
         <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
