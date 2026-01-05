@@ -150,6 +150,11 @@ const creatorTools: SidebarNavItem[] = [
     icon: Calendar,
   },
   {
+    title: "Marketing",
+    url: "/marketing",
+    icon: Megaphone,
+  },
+  {
     title: "My Payouts",
     url: "/payouts",
     icon: DollarSign,

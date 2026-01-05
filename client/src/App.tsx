@@ -95,6 +95,8 @@ const ManageCourses = lazy(() => import("@/pages/creator/ManageCourses"));
 const EditCourse = lazy(() => import("@/pages/creator/EditCourse"));
 const CreatorMasteringContent = lazy(() => import("@/pages/creator-mastering-content"));
 const CreatorVisits = lazy(() => import("@/pages/creator-visits"));
+const CreatorMarketing = lazy(() => import("@/pages/creator-marketing"));
+const PublicCreatorBooking = lazy(() => import("@/pages/public-creator-booking"));
 const Visits = lazy(() => import("@/pages/visits"));
 const VisitNew = lazy(() => import("@/pages/visit-new"));
 const VisitDetail = lazy(() => import("@/pages/visit-detail"));
@@ -128,6 +130,7 @@ function Router() {
         <Route path="/onboarding/post-payment" component={PostPaymentOnboarding} />
         <Route path="/creator-signup" component={CreatorSignupRedirect} />
         <Route path="/signup/creator" component={CreatorSignup} />
+        <Route path="/book/:creatorId" component={PublicCreatorBooking} />
         <Route path="/payment-success" component={PaymentSuccessPage} />
         <Route path="/contact" component={ContactPage} />
         <Route path="/blog" component={BlogPage} />
@@ -140,6 +143,7 @@ function Router() {
         {isCreator && <ProtectedRoute path="/" component={CreatorDashboard} />}
         {isCreator && <ProtectedRoute path="/course" component={CreatorCourse} />}
         {isCreator && <ProtectedRoute path="/payouts" component={CreatorPayouts} />}
+        {isCreator && <ProtectedRoute path="/marketing" component={CreatorMarketing} />}
         {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses" component={ManageCourses} />}
         {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses/:id" component={EditCourse} />}
         {isCreator && <ProtectedRoute path="/training/mastering-content" component={CreatorMasteringContent} />}

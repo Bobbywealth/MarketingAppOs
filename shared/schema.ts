@@ -541,7 +541,7 @@ export const creatorVisits = pgTable("creator_visits", {
   creatorId: varchar("creator_id").references(() => creators.id, { onDelete: "cascade" }).notNull(),
   scheduledStart: timestamp("scheduled_start").notNull(),
   scheduledEnd: timestamp("scheduled_end").notNull(),
-  status: varchar("status").notNull().default("scheduled"), // scheduled | completed | missed | cancelled
+  status: varchar("status").notNull().default("scheduled"), // pending | scheduled | completed | missed | cancelled
   completedAt: timestamp("completed_at"),
   uploadReceived: boolean("upload_received").notNull().default(false),
   uploadTimestamp: timestamp("upload_timestamp"),

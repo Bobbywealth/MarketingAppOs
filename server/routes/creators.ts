@@ -18,6 +18,87 @@ const router = Router();
 const internalRoles = [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CREATOR_MANAGER] as const;
 
 /**
+ * Public endpoint to fetch creator info for booking
+ */
+router.get("/public/creators/:id", async (req: Request, res: Response) => {
+  try {
+    const [creator] = await db
+      .select({
+        id: creators.id,
+        fullName: creators.fullName,
+        homeCities: creators.homeCities,
+        industries: creators.industries,
+        ratePerVisitCents: creators.ratePerVisitCents,
+        availability: creators.availability,
+        instagramUsername: creators.instagramUsername,
+        tiktokUsername: creators.tiktokUsername,
+        portfolioUrl: creators.portfolioUrl,
+      })
+      .from(creators)
+      .where(eq(creators.id, req.params.id));
+
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+    res.json(creator);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * Public endpoint to request a booking with a creator
+ */
+router.post("/public/creators/:id/book", async (req: Request, res: Response) => {
+  try {
+    const { restaurantName, contactName, email, phone, notes, date } = req.body;
+    
+    // 1. Find or create a lead for this restaurant
+    // For now, we'll just log it and notify. 
+    // In a real app, you might want to create a Lead and a pending Visit.
+    
+    console.log(`📅 New booking request for creator ${req.params.id} from ${restaurantName}`);
+
+    // Notify admins and creator
+    try {
+      const { emailNotifications } = await import("../emailService");
+      const [creator] = await db.select().from(creators).where(eq(creators.id, req.params.id));
+      
+      if (creator && creator.email) {
+        await emailNotifications.sendEmail(
+          creator.email,
+          "📅 New Booking Request!",
+          `<h2>Hi ${creator.fullName},</h2>
+           <p>You have a new booking request from <strong>${restaurantName}</strong>.</p>
+           <p><strong>Date:</strong> ${new Date(date).toLocaleDateString()}</p>
+           <p><strong>Contact:</strong> ${contactName} (${email}, ${phone})</p>
+           <p><strong>Notes:</strong> ${notes || 'No notes provided.'}</p>
+           <p>Please log in to your dashboard to review and confirm this request.</p>`
+        );
+      }
+
+      // Notify admins
+      const adminUsers = await db.select().from(users).where(eq(users.role, UserRole.ADMIN));
+      const adminEmails = adminUsers.map(a => a.email).filter(Boolean) as string[];
+      
+      if (adminEmails.length > 0) {
+        await emailNotifications.sendActionAlertEmail(
+          adminEmails,
+          "📅 New Creator Booking Request",
+          `${restaurantName} has requested a visit from creator ${creator?.fullName || req.params.id} on ${new Date(date).toLocaleDateString()}.`,
+          "/visits",
+          "info"
+        );
+      }
+    } catch (err) {
+      console.error("Failed to send booking notifications:", err);
+    }
+
+    res.status(201).json({ success: true, message: "Booking request submitted successfully" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
  * Public creator SIGNUP endpoint:
  * - Creates a creators row (status: inactive, pending notes)
  * - Creates a users row with role=creator and creatorId linked
