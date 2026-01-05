@@ -519,6 +519,8 @@ export const creators = pgTable("creators", {
   approvedAt: timestamp("approved_at"),
   approvedByAdmin: integer("approved_by_admin").references(() => users.id),
   performanceScore: decimal("performance_score", { precision: 2, scale: 1 }).default("5.0"), // 1.0 - 5.0
+  payoutMethod: text("payout_method"), // e.g., 'paypal', 'venmo', 'stripe', 'zelle', 'bank_transfer'
+  payoutDetails: jsonb("payout_details"), // e.g., { email: '...' } or { account: '...', routing: '...' }
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -1666,6 +1668,8 @@ export const insertCreatorSchema = createInsertSchema(creators).omit({ id: true,
   termsSignedAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
   waiverSignedAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
   approvedAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+  payoutMethod: z.string().optional().nullable(),
+  payoutDetails: z.any().optional().nullable(),
 });
 export type InsertCreator = z.infer<typeof insertCreatorSchema>;
 export type Creator = typeof creators.$inferSelect;

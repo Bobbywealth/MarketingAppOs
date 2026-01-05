@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +15,18 @@ import {
 } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Info, CheckCircle2, XCircle } from "lucide-react";
+import { format, isSameDay, parseISO } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 type ClientRow = { id: string; name: string };
-type CreatorRow = { id: string; fullName: string; status: string };
+type CreatorRow = { 
+  id: string; 
+  fullName: string; 
+  status: string; 
+  availabilityNotes?: string | null;
+  availability?: Record<string, "available" | "unavailable"> | null;
+};
 
 export default function VisitNewPage() {
   const [, setLocation] = useLocation();
@@ -32,6 +40,14 @@ export default function VisitNewPage() {
   const [scheduledStart, setScheduledStart] = useState<string>("");
   const [scheduledEnd, setScheduledEnd] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+
+  const selectedCreator = useMemo(() => creators.find(c => c.id === creatorId), [creators, creatorId]);
+  
+  const creatorAvailabilityStatus = useMemo(() => {
+    if (!selectedCreator || !scheduledStart) return null;
+    const dateStr = format(new Date(scheduledStart), "yyyy-MM-dd");
+    return selectedCreator.availability?.[dateStr] || "unknown";
+  }, [selectedCreator, scheduledStart]);
 
   const canSubmit = useMemo(() => !!clientId && !!creatorId && !!scheduledStart && !!scheduledEnd, [clientId, creatorId, scheduledStart, scheduledEnd]);
 
@@ -96,11 +112,20 @@ export default function VisitNewPage() {
                   <SelectContent>
                     {creators
                       .filter((c) => c.status !== "inactive")
-                      .map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.fullName} ({c.status})
-                        </SelectItem>
-                      ))}
+                      .map((c) => {
+                        const dateStr = scheduledStart ? format(new Date(scheduledStart), "yyyy-MM-dd") : null;
+                        const status = dateStr ? c.availability?.[dateStr] : null;
+                        const statusLabel = status === "available" ? "🟢 Avail" : status === "unavailable" ? "🔴 Unavail" : "";
+                        
+                        return (
+                          <SelectItem key={c.id} value={c.id}>
+                            <div className="flex items-center justify-between w-full gap-2">
+                              <span>{c.fullName} ({c.status})</span>
+                              {statusLabel && <span className="text-[10px] font-bold opacity-70">{statusLabel}</span>}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>
@@ -116,6 +141,45 @@ export default function VisitNewPage() {
                 <Input type="datetime-local" value={scheduledEnd} onChange={(e) => setScheduledEnd(e.target.value)} />
               </div>
             </div>
+
+            {/* Creator Availability Preview */}
+            {selectedCreator && (
+              <div className="p-4 rounded-2xl border bg-slate-50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-primary" />
+                    Creator Availability
+                  </h3>
+                  {scheduledStart && (
+                    <div className="flex items-center gap-2">
+                      {creatorAvailabilityStatus === "available" ? (
+                        <Badge className="bg-green-500 hover:bg-green-600 border-0 gap-1 px-2 py-0.5 text-[10px]">
+                          <CheckCircle2 className="w-3 h-3" /> Available on this date
+                        </Badge>
+                      ) : creatorAvailabilityStatus === "unavailable" ? (
+                        <Badge variant="destructive" className="gap-1 px-2 py-0.5 text-[10px]">
+                          <XCircle className="w-3 h-3" /> Unavailable on this date
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 px-2 py-0.5 text-[10px] text-muted-foreground">
+                          <Info className="w-3 h-3" /> Not specified for this date
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {selectedCreator.availabilityNotes && (
+                  <div className="text-xs text-slate-600 italic bg-white p-3 rounded-xl border border-slate-100">
+                    "{selectedCreator.availabilityNotes}"
+                  </div>
+                )}
+                
+                {!selectedCreator.availabilityNotes && !selectedCreator.availability && (
+                  <p className="text-xs text-muted-foreground italic">No specific availability information provided by this creator.</p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Notes</Label>
@@ -136,6 +200,7 @@ export default function VisitNewPage() {
     </div>
   );
 }
+
 
 
 

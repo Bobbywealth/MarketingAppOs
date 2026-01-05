@@ -3,8 +3,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { format } from "date-fns";
 import { 
   ArrowLeft, 
   Pencil, 
@@ -245,6 +247,85 @@ export default function CreatorDetailPage() {
                       <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100 italic leading-relaxed">
                         {creator.availabilityNotes || "No availability notes provided."}
                       </p>
+                    </div>
+
+                    <div className="pt-4 space-y-4">
+                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Payout Information</div>
+                      <div className="p-4 rounded-2xl border bg-slate-50 flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Preferred Method</div>
+                          <div className="font-bold text-blue-600 capitalize">{creator.payoutMethod || "Not set"}</div>
+                        </div>
+                        {creator.payoutDetails && (
+                          <div className="text-right">
+                            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Details</div>
+                            <div className="text-sm font-medium">
+                              {creator.payoutMethod === 'paypal' && creator.payoutDetails.email}
+                              {creator.payoutMethod === 'venmo' && `@${creator.payoutDetails.username}`}
+                              {creator.payoutMethod === 'zelle' && creator.payoutDetails.id}
+                              {creator.payoutMethod === 'bank_transfer' && `ACH: ****${creator.payoutDetails.account?.slice(-4)}`}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">Availability Calendar</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                        <div className="border rounded-2xl p-4 bg-white shadow-sm">
+                          <CalendarUI
+                            mode="single"
+                            className="rounded-md"
+                            modifiers={{
+                              available: (date) => creator.availability?.[format(date, "yyyy-MM-dd")] === "available",
+                              unavailable: (date) => creator.availability?.[format(date, "yyyy-MM-dd")] === "unavailable",
+                            }}
+                            modifiersClassNames={{
+                              available: "bg-green-500 text-white hover:bg-green-600 focus:bg-green-600 rounded-md",
+                              unavailable: "bg-red-500 text-white hover:bg-red-600 focus:bg-red-600 rounded-md",
+                            }}
+                          />
+                          <div className="mt-4 flex flex-wrap gap-4 text-xs px-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full" />
+                              <span className="font-medium">Available</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-red-500 rounded-full" />
+                              <span className="font-medium">Unavailable</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl">
+                            <h4 className="text-sm font-bold text-blue-900 mb-1 flex items-center gap-2">
+                              <Info className="w-4 h-4" />
+                              Admin Note
+                            </h4>
+                            <p className="text-xs text-blue-800 leading-relaxed">
+                              This calendar shows the creator's self-reported availability. Green dates indicate they have explicitly marked themselves as available, while red dates indicate they are unavailable.
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Scheduled Visits</div>
+                            {visits.filter(v => v.status === 'scheduled').length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic">No upcoming visits scheduled.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {visits.filter(v => v.status === 'scheduled').map(v => (
+                                  <div key={v.id} className="text-xs p-2 rounded-lg border bg-white flex items-center justify-between">
+                                    <span className="font-medium">{format(new Date(v.scheduledStart), 'MMM d, h:mm a')}</span>
+                                    <Badge variant="outline" className="text-[10px]">{v.status}</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

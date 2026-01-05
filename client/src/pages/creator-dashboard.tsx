@@ -410,12 +410,14 @@ export default function CreatorDashboard() {
                   </div>
                   Quick Content Upload
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-3 h-12">
-                  <div className="h-8 w-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <DollarSign className="h-4 w-4" />
-                  </div>
-                  Earnings & Invoices
-                </Button>
+                <Link href="/payouts">
+                  <Button variant="outline" className="w-full justify-start gap-3 h-12">
+                    <div className="h-8 w-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <DollarSign className="h-4 w-4" />
+                    </div>
+                    Earnings & Payouts
+                  </Button>
+                </Link>
                 <Button variant="outline" className="w-full justify-start gap-3 h-12">
                   <div className="h-8 w-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                     <Star className="h-4 w-4" />

@@ -214,9 +214,35 @@ router.post("/creators", isAuthenticated, requireRole(...internalRoles), async (
 
 router.get("/creators/:id", isAuthenticated, requireRole(...internalRoles), async (req: Request, res: Response) => {
   try {
-    const [row] = await db.select().from(creators).where(eq(creators.id, req.params.id));
-    if (!row) return res.status(404).json({ message: "Creator not found" });
-    res.json(row);
+    const [creator] = await db.select().from(creators).where(eq(creators.id, req.params.id));
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+    // Fetch assignments
+    const assignments = await db
+      .select({
+        id: clientCreators.id,
+        clientId: clientCreators.clientId,
+        clientName: clients.name,
+        role: clientCreators.role,
+        active: clientCreators.active,
+        assignedAt: clientCreators.assignedAt,
+      })
+      .from(clientCreators)
+      .innerJoin(clients, eq(clientCreators.clientId, clients.id))
+      .where(eq(clientCreators.creatorId, creator.id));
+
+    // Fetch visits
+    const visits = await db
+      .select()
+      .from(creatorVisits)
+      .where(eq(creatorVisits.creatorId, creator.id))
+      .orderBy(sql`${creatorVisits.scheduledStart} DESC`);
+
+    res.json({
+      creator,
+      assignments,
+      visits,
+    });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -317,6 +343,26 @@ router.patch("/creators/me/availability", isAuthenticated, requireRole(UserRole.
     const [updated] = await db
       .update(creators)
       .set({ availability })
+      .where(eq(creators.id, user.creatorId))
+      .returning();
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/creators/me/payout-info", isAuthenticated, requireRole(UserRole.CREATOR), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    if (!user.creatorId) {
+      return res.status(403).json({ message: "No creator ID associated with this user" });
+    }
+
+    const { payoutMethod, payoutDetails } = req.body;
+    const [updated] = await db
+      .update(creators)
+      .set({ payoutMethod, payoutDetails })
       .where(eq(creators.id, user.creatorId))
       .returning();
 

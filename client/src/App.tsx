@@ -88,6 +88,7 @@ const CreatorEdit = lazy(() => import("@/pages/creator-edit"));
 const CreatorSignup = lazy(() => import("@/pages/creator-signup"));
 const CreatorSignupRedirect = lazy(() => import("@/pages/creator-signup-redirect"));
 const CreatorDashboard = lazy(() => import("@/pages/creator-dashboard"));
+const CreatorPayouts = lazy(() => import("@/pages/creator-payouts"));
 const CreatorCourse = lazy(() => import("@/pages/creator-course"));
 const ManageCourses = lazy(() => import("@/pages/creator/ManageCourses"));
 const EditCourse = lazy(() => import("@/pages/creator/EditCourse"));
@@ -137,6 +138,7 @@ function Router() {
         {/* Creator-specific routes */}
         {isCreator && <ProtectedRoute path="/" component={CreatorDashboard} />}
         {isCreator && <ProtectedRoute path="/course" component={CreatorCourse} />}
+        {isCreator && <ProtectedRoute path="/payouts" component={CreatorPayouts} />}
         {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses" component={ManageCourses} />}
         {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses/:id" component={EditCourse} />}
         {isCreator && <ProtectedRoute path="/training/mastering-content" component={CreatorMasteringContent} />}
