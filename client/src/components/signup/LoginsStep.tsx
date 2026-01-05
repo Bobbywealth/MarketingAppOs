@@ -10,8 +10,15 @@ interface LoginsStepProps {
 }
 
 export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
-  const socialServices = ["Social Media Management", "Digital Marketing", "PPC Advertising"];
-  const neededServices = selectedServices.filter(s => socialServices.includes(s));
+  const selectedPlatforms = form.watch("selectedPlatforms") || [];
+  const otherServices = ["Digital Marketing", "PPC Advertising"];
+  const neededOtherServices = selectedServices.filter(s => otherServices.includes(s));
+
+  // Combine platforms and other services that need logins
+  const itemsToCollect = [
+    ...selectedPlatforms.map(p => ({ id: p, label: `${p} Account`, type: 'platform' })),
+    ...neededOtherServices.map(s => ({ id: s, label: `${s} Access`, type: 'service' }))
+  ];
 
   return (
     <motion.div 
@@ -27,7 +34,7 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
         </div>
         <div>
           <h2 className="text-3xl font-black text-slate-900">Secure Setup</h2>
-          <p className="text-slate-500">To start managing your socials, we'll need basic login access.</p>
+          <p className="text-slate-500">To start managing your socials and campaigns, we'll need basic login access.</p>
         </div>
       </div>
 
@@ -42,16 +49,16 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
       </div>
 
       <div className="space-y-6">
-        {neededServices.map(s => (
+        {itemsToCollect.length > 0 ? itemsToCollect.map(item => (
           <motion.div 
-            key={s}
+            key={item.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="p-6 rounded-3xl border-2 border-slate-100 bg-white shadow-sm hover:border-blue-200 transition-all"
           >
             <h3 className="text-lg font-black flex items-center gap-2 mb-6">
               <span className="p-2 bg-blue-50 rounded-xl"><Zap className="w-4 h-4 text-blue-600" /></span>
-              {s} Account Access
+              {item.label}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -59,12 +66,13 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
                 <Input 
                   placeholder="e.g. @yourbrand" 
                   className="h-12 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl bg-slate-50/50"
-                  onChange={(e) => {
+                  defaultValue={form.getValues(`socialCredentials.${item.id}.username`)}
+                  onBlur={(e) => {
                     const val = e.target.value;
                     const current = form.getValues("socialCredentials") || {};
                     form.setValue("socialCredentials", {
                       ...current,
-                      [s]: { ...(current[s] || { password: "" }), username: val }
+                      [item.id]: { ...(current[item.id] || { password: "" }), username: val }
                     });
                   }}
                 />
@@ -75,19 +83,24 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
                   type="password" 
                   placeholder="••••••••" 
                   className="h-12 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl bg-slate-50/50"
-                  onChange={(e) => {
+                  defaultValue={form.getValues(`socialCredentials.${item.id}.password`)}
+                  onBlur={(e) => {
                     const val = e.target.value;
                     const current = form.getValues("socialCredentials") || {};
                     form.setValue("socialCredentials", {
                       ...current,
-                      [s]: { ...(current[s] || { username: "" }), password: val }
+                      [item.id]: { ...(current[item.id] || { username: "" }), password: val }
                     });
                   }}
                 />
               </div>
             </div>
           </motion.div>
-        ))}
+        )) : (
+          <div className="text-center py-12 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+            <p className="text-slate-500 font-bold">No credentials needed for selected services.</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

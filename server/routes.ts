@@ -1666,6 +1666,7 @@ This lead will be updated if they complete the full signup process.`,
 
 🎯 COMPLETED SIGNUP PROCESS
 Services Interested: ${data.services.join(', ')}
+${data.selectedPlatforms && data.selectedPlatforms.length > 0 ? `Selected Platforms: ${data.selectedPlatforms.join(', ')}` : ''}
 Budget: ${data.budget || 'Not specified'}
 
 ${data.webDevType ? `
@@ -1703,6 +1704,7 @@ Lead completed signup process and is ready for package selection.`;
             ...(existingLead.sourceMetadata as object || {}),
             completedSignup: true,
             services: data.services,
+            selectedPlatforms: data.selectedPlatforms,
             webDev: data.webDevType ? {
               type: data.webDevType,
               features: data.webDevFeatures,
@@ -1742,6 +1744,7 @@ Lead completed signup process and is ready for package selection.`;
 
 🎯 SERVICES INTERESTED:
 ${data.services.join(', ')}
+${data.selectedPlatforms && data.selectedPlatforms.length > 0 ? `• Platforms: ${data.selectedPlatforms.join(', ')}` : ''}
 Budget: ${data.budget || 'Not specified'}
 
 ${data.webDevType ? `

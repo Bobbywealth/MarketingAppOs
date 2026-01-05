@@ -1,8 +1,9 @@
-import { motion } from "framer-motion";
-import { CheckCircle2, LucideIcon, Sparkles } from "lucide-react";
-import { FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2, LucideIcon, Sparkles, Facebook, Instagram, Linkedin, Youtube, MessageSquare } from "lucide-react";
+import { FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 interface Service {
   name: string;
@@ -17,14 +18,26 @@ interface ServicesStepProps {
   services: Service[];
 }
 
+const PLATFORMS = [
+  { name: "Facebook", icon: Facebook, color: "bg-[#1877F2]" },
+  { name: "Instagram", icon: Instagram, color: "bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7]" },
+  { name: "X / Twitter", icon: MessageSquare, color: "bg-black" },
+  { name: "LinkedIn", icon: Linkedin, color: "bg-[#0A66C2]" },
+  { name: "YouTube", icon: Youtube, color: "bg-[#FF0000]" },
+  { name: "TikTok", icon: MessageSquare, color: "bg-black" },
+];
+
 export function ServicesStep({ form, services }: ServicesStepProps) {
+  const selectedServices = form.watch("services") || [];
+  const showPlatforms = selectedServices.includes("Social Media Management");
+
   return (
     <motion.div 
       key="step2"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="space-y-6"
+      className="space-y-8"
     >
       <div className="flex items-center gap-4 mb-2">
         <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
@@ -97,6 +110,80 @@ export function ServicesStep({ form, services }: ServicesStepProps) {
           </FormItem>
         )}
       />
+
+      <AnimatePresence>
+        {showPlatforms && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-8 space-y-6">
+              <Separator />
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-900">Which platforms should we manage?</h3>
+                <p className="text-sm text-slate-500 font-medium">Select the social media platforms you want us to handle for your brand.</p>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="selectedPlatforms"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {PLATFORMS.map((platform) => {
+                        const isSelected = field.value?.includes(platform.name);
+                        return (
+                          <motion.div
+                            key={platform.name}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                              isSelected 
+                                ? 'border-blue-500 bg-blue-50/50' 
+                                : 'border-slate-100 bg-white hover:border-slate-200'
+                            }`}
+                            onClick={() => {
+                              const current = field.value || [];
+                              if (isSelected) {
+                                field.onChange(current.filter((v: string) => v !== platform.name));
+                              } else {
+                                field.onChange([...current, platform.name]);
+                              }
+                            }}
+                          >
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white mb-2 ${platform.color}`}>
+                              <platform.icon className="w-5 h-5" />
+                            </div>
+                            <span className="text-xs font-black text-slate-900">{platform.name}</span>
+                            {isSelected && (
+                              <div className="absolute top-2 right-2">
+                                <CheckCircle2 className="w-4 h-4 text-blue-500" />
+                              </div>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex gap-3 items-center">
+                <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 font-bold text-xs">
+                  {form.watch("selectedPlatforms")?.length || 0}
+                </div>
+                <p className="text-xs font-bold text-blue-700">
+                  {form.watch("selectedPlatforms")?.length > 2 
+                    ? "Great choice! Higher platform counts will automatically recommend our premium packages." 
+                    : "Selection complete. This will help us tailor your management plan."}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

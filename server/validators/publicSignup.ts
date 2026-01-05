@@ -40,6 +40,7 @@ export const signupSimpleSchema = z.object({
   phone: z.string().trim().min(1, "Phone number is required"),
 
   services: z.array(z.string().trim().min(1)).min(1, "Please select at least one service"),
+  selectedPlatforms: z.array(z.string().trim().min(1)).optional(),
   budget: z.string().trim().optional(),
 
   webDevType: z.string().trim().optional(),

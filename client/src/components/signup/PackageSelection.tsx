@@ -82,68 +82,106 @@ export function PackageSelection({
 
         {/* Package Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          {packages && Array.isArray(packages) && packages.length > 0 ? packages.map((pkg: any, idx: number) => (
-            <motion.div
-              key={pkg.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-            >
-              <Card 
-                className={`relative border-0 h-full cursor-pointer transition-all duration-500 rounded-[2.5rem] overflow-hidden flex flex-col group ${
-                  selectedPackage === pkg.id 
-                    ? 'ring-4 ring-blue-500 shadow-[0_32px_64px_-16px_rgba(37,99,235,0.2)] scale-105 z-10' 
-                    : 'hover:shadow-2xl hover:scale-[1.02] shadow-xl bg-white/80 backdrop-blur-sm'
-                }`}
-                onClick={() => setSelectedPackage(pkg.id)}
-              >
-                {pkg.isFeatured && (
-                  <div className="absolute top-6 right-6">
-                    <Badge className="bg-gradient-to-r from-orange-500 to-pink-500 text-white border-0 px-4 py-1.5 font-black rounded-full shadow-lg">
-                      POPULAR
-                    </Badge>
-                  </div>
-                )}
-                
-                <CardHeader className="p-8 pb-4">
-                  <CardTitle className="text-2xl font-black text-slate-900">{pkg.name}</CardTitle>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-5xl font-black text-slate-900 tracking-tighter">
-                      ${(pkg.price / 100).toFixed(0)}
-                    </span>
-                    <span className="text-slate-500 font-bold">/mo</span>
-                  </div>
-                  <CardDescription className="mt-4 font-medium leading-relaxed">{pkg.description}</CardDescription>
-                </CardHeader>
-                
-                <CardContent className="p-8 pt-4 flex-1">
-                  <Separator className="mb-8 opacity-50" />
-                  <ul className="space-y-4 mb-8">
-                    {Array.isArray(pkg.features) && pkg.features.slice(0, 8).map((feature: string, fIdx: number) => (
-                      <li key={fIdx} className="flex items-start gap-3 text-sm font-bold text-slate-700">
-                        <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                        </div>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
+          {packages && Array.isArray(packages) && packages.length > 0 ? packages.map((pkg: any, idx: number) => {
+            const platformCount = formValues.selectedPlatforms?.length || 0;
+            const isSocialManagement = formValues.services?.includes("Social Media Management");
+            
+            // Logic to recommend package based on platform count
+            let isRecommendedByCount = false;
+            if (isSocialManagement) {
+              if (platformCount <= 2 && pkg.name.includes("Gold")) isRecommendedByCount = true;
+              else if (platformCount === 3 && pkg.name.includes("Business")) isRecommendedByCount = true;
+              else if (platformCount === 4 && pkg.name.includes("Digital Domination")) isRecommendedByCount = true;
+              else if (platformCount >= 5 && pkg.name.includes("Brand Takeover")) isRecommendedByCount = true;
+            } else if (pkg.isFeatured) {
+              isRecommendedByCount = true;
+            }
 
-                <div className="p-8 pt-0">
-                  <Button 
-                    className={`w-full h-14 rounded-2xl font-black text-lg shadow-xl transition-all ${
-                      selectedPackage === pkg.id 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20' 
-                        : 'bg-slate-900 hover:bg-slate-800 text-white'
-                    }`}
-                  >
-                    {selectedPackage === pkg.id ? '✓ Selected' : pkg.buttonText || 'Select Plan'}
-                  </Button>
-                </div>
-              </Card>
-            </motion.div>
-          )) : (
+            // Check if package supports the selected platform count
+            let platformLimit = 0;
+            if (pkg.name.includes("Gold")) platformLimit = 2;
+            else if (pkg.name.includes("Business")) platformLimit = 3;
+            else if (pkg.name.includes("Digital Domination")) platformLimit = 4;
+            else if (pkg.name.includes("Brand Takeover")) platformLimit = 6;
+
+            const isBelowLimit = isSocialManagement && platformCount > platformLimit;
+
+            return (
+              <motion.div
+                key={pkg.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+              >
+                <Card 
+                  className={`relative border-0 h-full cursor-pointer transition-all duration-500 rounded-[2.5rem] overflow-hidden flex flex-col group ${
+                    selectedPackage === pkg.id 
+                      ? 'ring-4 ring-blue-500 shadow-[0_32px_64px_-16px_rgba(37,99,235,0.2)] scale-105 z-10' 
+                      : 'hover:shadow-2xl hover:scale-[1.02] shadow-xl bg-white/80 backdrop-blur-sm'
+                  } ${isBelowLimit ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                  onClick={() => setSelectedPackage(pkg.id)}
+                >
+                  {(pkg.isFeatured || isRecommendedByCount) && (
+                    <div className="absolute top-6 right-6">
+                      <Badge className={`${isRecommendedByCount ? 'bg-blue-600' : 'bg-gradient-to-r from-orange-500 to-pink-500'} text-white border-0 px-4 py-1.5 font-black rounded-full shadow-lg`}>
+                        {isRecommendedByCount ? 'BEST MATCH' : 'POPULAR'}
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  <CardHeader className="p-8 pb-4">
+                    <CardTitle className="text-2xl font-black text-slate-900">{pkg.name}</CardTitle>
+                    <div className="mt-4 flex items-baseline gap-1">
+                      <span className="text-5xl font-black text-slate-900 tracking-tighter">
+                        ${(pkg.price / 100).toFixed(0)}
+                      </span>
+                      <span className="text-slate-500 font-bold">/mo</span>
+                    </div>
+                    <CardDescription className="mt-4 font-medium leading-relaxed">{pkg.description}</CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent className="p-8 pt-4 flex-1">
+                    <Separator className="mb-8 opacity-50" />
+                    
+                    {isBelowLimit && (
+                      <div className="mb-6 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                        <p className="text-[10px] font-black text-amber-700 uppercase tracking-wider mb-1">Limit Reached</p>
+                        <p className="text-xs font-bold text-amber-600 leading-tight">
+                          You selected {platformCount} platforms, but this plan only supports up to {platformLimit}.
+                        </p>
+                      </div>
+                    )}
+
+                    <ul className="space-y-4 mb-8">
+                      {Array.isArray(pkg.features) && pkg.features.slice(0, 8).map((feature: string, fIdx: number) => (
+                        <li key={fIdx} className="flex items-start gap-3 text-sm font-bold text-slate-700">
+                          <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                          </div>
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+
+                  <div className="p-8 pt-0">
+                    <Button 
+                      className={`w-full h-14 rounded-2xl font-black text-lg shadow-xl transition-all ${
+                        selectedPackage === pkg.id 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20' 
+                          : isBelowLimit 
+                            ? 'bg-slate-200 text-slate-400'
+                            : 'bg-slate-900 hover:bg-slate-800 text-white'
+                      }`}
+                      disabled={isBelowLimit && selectedPackage !== pkg.id}
+                    >
+                      {selectedPackage === pkg.id ? '✓ Selected' : isBelowLimit ? 'Upgrade Needed' : pkg.buttonText || 'Select Plan'}
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
+            );
+          }) : (
             <div className="col-span-full text-center py-20 bg-white/50 backdrop-blur-sm rounded-[3rem] border-2 border-dashed border-slate-200">
               <p className="text-slate-500 font-black text-xl mb-4">Loading available plans...</p>
               <div className="flex justify-center gap-2">

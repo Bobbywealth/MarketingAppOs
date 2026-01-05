@@ -52,6 +52,7 @@ const signupSchema = z.object({
 
   // Service Interests
   services: z.array(z.string()).min(1, "Please select at least one service"),
+  selectedPlatforms: z.array(z.string()).optional(),
   budget: z.string().optional(),
 
   // Social Credentials (Dynamic)
@@ -131,6 +132,7 @@ export default function SignupPage() {
       email: "",
       phone: "",
       services: [],
+      selectedPlatforms: [],
       budget: "",
       socialCredentials: {},
       brandAssets: {
