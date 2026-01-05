@@ -4518,9 +4518,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
       const users = await storage.getAllUsers();
-      // Filter out clients - they should only appear in /clients page, not team management
-      const teamMembers = users.filter(user => user.role !== 'client');
-      res.json(teamMembers);
+      res.json(users);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch users" });

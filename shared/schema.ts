@@ -44,6 +44,8 @@ export const users = pgTable("users", {
   googleTokenExpiry: timestamp("google_token_expiry"),
   googleCalendarConnected: boolean("google_calendar_connected").default(false),
   lastSeen: timestamp("last_seen"),
+  emailVerified: boolean("email_verified").default(false),
+  emailVerificationToken: text("email_verification_token"),
   resetPasswordToken: text("reset_password_token"),
   resetPasswordExpires: timestamp("reset_password_expires"),
   createdAt: timestamp("created_at").defaultNow(),

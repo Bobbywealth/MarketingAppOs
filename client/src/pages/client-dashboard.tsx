@@ -279,8 +279,6 @@ export default function ClientDashboard() {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
 
             {/* Summary Stats */}
             <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border/50">

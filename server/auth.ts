@@ -55,8 +55,10 @@ export function setupAuth(app: Express) {
     .query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_expires TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token TEXT;
     `)
-    .then(() => console.log('✅ ensured password reset columns exist'))
+    .then(() => console.log('✅ ensured password reset and email verification columns exist'))
     .catch((e) => console.error('⚠️ could not ensure password reset columns:', e.message));
 
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -137,16 +139,30 @@ export function setupAuth(app: Express) {
       }
 
       // Security: Force all self-registrations to "staff" role to prevent privilege escalation
+      const verificationToken = randomBytes(20).toString("hex");
       const user = await storage.createUser({
         ...validatedData,
         password: await hashPassword(validatedData.password),
         role: "staff", // Always assign "staff" role, admins must be created by existing admins
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
       });
 
-      // Send welcome email
+      // Send welcome and verification emails
       if (user.email) {
         try {
           const { emailNotifications } = await import("./emailService.js");
+          
+          // Send verification email
+          const appUrl = process.env.APP_URL || `http://${req.headers.host}`;
+          const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
+          
+          void emailNotifications.sendVerificationEmail(
+            user.firstName || user.username,
+            user.email,
+            verifyUrl
+          ).catch(err => console.error("Failed to send verification email:", err));
+
           void emailNotifications.sendWelcomeEmail(
             user.firstName || user.username,
             user.email
@@ -193,6 +209,7 @@ export function setupAuth(app: Express) {
           profileImageUrl: user.profileImageUrl,
           role: user.role,
           customPermissions: user.customPermissions,
+          emailVerified: user.emailVerified,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         });
@@ -248,6 +265,7 @@ export function setupAuth(app: Express) {
           profileImageUrl: user.profileImageUrl,
           role: user.role,
           customPermissions: user.customPermissions,
+          emailVerified: user.emailVerified,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         });
@@ -399,6 +417,88 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Email verification route
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ message: "Verification token is required" });
+      }
+
+      const user = await storage.getUserByEmailVerificationToken(token);
+      
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired verification token." });
+      }
+
+      await storage.updateUserEmailVerification(user.id, true, null);
+
+      // Log the email verification activity
+      try {
+        await storage.createActivityLog({
+          userId: user.id,
+          activityType: "email_verified",
+          description: `${user.username} verified their email`,
+          metadata: {
+            ip: req.ip,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to log email verification activity:", error);
+      }
+      
+      res.json({ message: "Email successfully verified! You now have full access." });
+    } catch (error) {
+      console.error("Email verification error:", error);
+      res.status(500).json({ message: "Failed to verify email" });
+    }
+  });
+
+  // Resend verification email
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in to resend verification." });
+      }
+
+      const user = req.user as SelectUser;
+      
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "Email is already verified." });
+      }
+
+      if (!user.email) {
+        return res.status(400).json({ message: "User does not have an email address." });
+      }
+
+      // Generate new token
+      const verificationToken = randomBytes(20).toString("hex");
+      await storage.updateUserEmailVerification(user.id, false, verificationToken);
+
+      // Send verification email
+      const appUrl = process.env.APP_URL || `http://${req.headers.host}`;
+      const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
+      
+      try {
+        const { emailNotifications } = await import("./emailService.js");
+        await emailNotifications.sendVerificationEmail(
+          user.firstName || user.username,
+          user.email,
+          verifyUrl
+        );
+      } catch (emailErr) {
+        console.error("Failed to send verification email:", emailErr);
+        return res.status(500).json({ message: "Failed to send verification email. Please try again later." });
+      }
+
+      res.json({ message: "Verification email has been resent." });
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ message: "Failed to resend verification email" });
+    }
+  });
+
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = req.user as SelectUser;
@@ -412,6 +512,7 @@ export function setupAuth(app: Express) {
       profileImageUrl: user.profileImageUrl,
       role: user.role,
       customPermissions: user.customPermissions,
+      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       permissions,

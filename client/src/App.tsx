@@ -32,6 +32,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 // Lazy load all pages for better mobile performance
 const AuthPage = lazy(() => import("@/pages/auth-page"));
+const VerifyEmail = lazy(() => import("@/pages/verify-email"));
 const Landing = lazy(() => import("@/pages/landing"));
 const SignupPage = lazy(() => import("@/pages/signup"));
 const PaymentSuccessPage = lazy(() => import("@/pages/payment-success"));
@@ -118,6 +119,7 @@ function Router() {
         <Route path="/pwa-home" component={PWAHomePage} />
         <Route path="/login" component={AuthPage} />
         <Route path="/auth" component={AuthPage} />
+        <Route path="/verify-email" component={VerifyEmail} />
         <Route path="/signup" component={SignupPage} />
         <Route path="/creator-signup" component={CreatorSignupRedirect} />
         <Route path="/signup/creator" component={CreatorSignup} />
@@ -252,6 +254,13 @@ function AppContent() {
       sessionStorage.setItem("mta:lastUrl", routeLocation);
     } catch {}
   }, [routeLocation]);
+
+  // Force email verification if logged in but not verified
+  useEffect(() => {
+    if (user && !user.emailVerified && routeLocation !== "/verify-email") {
+      setLocation("/verify-email");
+    }
+  }, [user, routeLocation, setLocation]);
 
   const sidebarStyle = {
     "--sidebar-width": "16.25rem", // 260px - wider for better readability

@@ -2,7 +2,7 @@
 export const sidebarPermissionList = [
   // Company Tools
   { key: "dashboard", label: "Dashboard", category: "Company Tools" },
-  { key: "team", label: "Team", category: "Company Tools" },
+  { key: "team", label: "User Management", category: "Company Tools" },
   { key: "messages", label: "Messages", category: "Company Tools" },
   { key: "emails", label: "Emails", category: "Company Tools" },
   { key: "phone", label: "Phone", category: "Company Tools" },

@@ -215,7 +215,7 @@ const communicationTools: SidebarNavItem[] = [
     sidebarKey: "dashboard" as const,
   },
   {
-    title: "Team",
+    title: "User Management",
     url: "/team",
     icon: UsersRound,
     permission: "canManageUsers" as const,

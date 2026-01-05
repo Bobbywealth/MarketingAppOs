@@ -58,10 +58,11 @@ interface NewUser {
 const SIDEBAR_PERMISSIONS = sidebarPermissionList;
 type PermissionOption = (typeof SIDEBAR_PERMISSIONS)[number];
 
-export default function TeamPage() {
+export default function UserManagementPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [permissionsDialogUser, setPermissionsDialogUser] = useState<User | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [newUser, setNewUser] = useState<NewUser>({
     username: "",
     password: "",
@@ -85,7 +86,7 @@ export default function TeamPage() {
       setNewUser({ username: "", password: "", role: "staff" });
       toast({
         title: "User created",
-        description: "New team member has been added successfully.",
+        description: "New user account has been created successfully.",
       });
     },
     onError: (error: Error) => {
@@ -154,7 +155,7 @@ export default function TeamPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "User deleted",
-        description: "Team member has been removed successfully.",
+        description: "User account has been removed successfully.",
       });
     },
     onError: (error: any) => {
@@ -187,6 +188,7 @@ export default function TeamPage() {
       staff: "secondary",
       sales_agent: "default",
       client: "outline",
+      creator: "secondary",
     };
     const displayNames: Record<string, string> = {
       admin: "Admin",
@@ -194,6 +196,7 @@ export default function TeamPage() {
       staff: "Staff",
       sales_agent: "Sales Agent",
       client: "Client",
+      creator: "Creator",
     };
     return (
       <Badge variant={variants[role] || "outline"}>
@@ -245,21 +248,21 @@ export default function TeamPage() {
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Team Management</h1>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">User Management</h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Manage your team members and their permissions
+            Manage all user accounts, roles, and permissions
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="w-4 h-4 mr-2" />
-              Add Team Member
+              Add New User
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Team Member</DialogTitle>
+              <DialogTitle>Add New User</DialogTitle>
               <DialogDescription>
                 Create a new user account and assign their role.
               </DialogDescription>
@@ -332,6 +335,8 @@ export default function TeamPage() {
                       <SelectItem value="manager">Manager - Advanced Access</SelectItem>
                       <SelectItem value="staff">Staff - Standard Access</SelectItem>
                       <SelectItem value="sales_agent">Sales Agent - Leads & Clients</SelectItem>
+                      <SelectItem value="creator">Creator - Content Fulfillment</SelectItem>
+                      <SelectItem value="client">Client - External Access</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -346,10 +351,10 @@ export default function TeamPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-7">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
             <UsersIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -380,7 +385,7 @@ export default function TeamPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sales Agents</CardTitle>
+            <CardTitle className="text-sm font-medium">Sales</CardTitle>
             <UsersIcon className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
@@ -400,19 +405,59 @@ export default function TeamPage() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clients</CardTitle>
+            <UsersIcon className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.role === "client").length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Creators</CardTitle>
+            <UsersIcon className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.role === "creator").length}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>View and manage all team members</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>All Users</CardTitle>
+            <CardDescription>View and manage all user accounts across the platform</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="admin">Admins</SelectItem>
+                <SelectItem value="manager">Managers</SelectItem>
+                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="sales_agent">Sales Agents</SelectItem>
+                <SelectItem value="creator">Creators</SelectItem>
+                <SelectItem value="client">Clients</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Loading...</div>
           ) : users.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No team members found. Add your first team member to get started.
+              No users found.
             </div>
           ) : (
             <Table>
@@ -425,7 +470,9 @@ export default function TeamPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {users
+                  .filter(user => roleFilter === "all" || user.role === roleFilter)
+                  .map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="font-medium">{user.username}</div>

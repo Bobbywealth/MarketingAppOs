@@ -16,6 +16,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
+  resendVerificationMutation: UseMutationResult<any, Error, void>;
 };
 
 type LoginData = {
@@ -81,6 +82,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const resendVerificationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/auth/resend-verification");
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Verification email sent",
+        description: data.message || "Please check your inbox.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to resend verification",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
@@ -112,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        resendVerificationMutation,
       }}
     >
       {children}
