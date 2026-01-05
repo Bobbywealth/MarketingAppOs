@@ -28,7 +28,7 @@ export function initializeEmailService() {
 }
 
 // Premium Email Wrapper
-function renderEmail(title: string, content: string, themeColor: string = '#1a1a1a') {
+function renderEmail(title: string, content: string, themeColor: string = '#3b82f6') {
   const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
   const logoUrl = `${appUrl}/logo.png`;
 
@@ -39,31 +39,39 @@ function renderEmail(title: string, content: string, themeColor: string = '#1a1a
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f3f4f6; }
-        .wrapper { width: 100%; table-layout: fixed; background-color: #f3f4f6; padding-bottom: 40px; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        .header { background: #1a1a1a; color: white; padding: 40px 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: #ffffff; }
-        .content { padding: 40px 30px; background-color: #ffffff; }
-        .footer { text-align: center; padding: 30px; color: #6b7280; font-size: 14px; }
-        .footer img { height: 32px; margin-bottom: 16px; opacity: 0.8; }
-        .button { display: inline-block; background-color: #1a1a1a; color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 24px 0; }
-        .card { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
-        hr { border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f8fafc; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 40px 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        .header { background: #ffffff; padding: 40px 20px; text-align: center; border-bottom: 1px solid #f1f5f9; }
+        .header img { height: 48px; margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; color: #0f172a; }
+        .content { padding: 40px 40px; background-color: #ffffff; }
+        .footer { text-align: center; padding: 40px; background-color: #f8fafc; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9; }
+        .footer-logo { height: 24px; margin-bottom: 16px; filter: grayscale(1); opacity: 0.5; }
+        .button { display: inline-block; background-color: ${themeColor}; color: white !important; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; margin: 24px 0; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0; }
+        .info-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .info-value { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 16px; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
+        hr { border: 0; border-top: 1px solid #f1f5f9; margin: 32px 0; }
+        .text-gradient { background: linear-gradient(to right, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
       </style>
     </head>
     <body>
       <div class="wrapper">
         <div class="container">
           <div class="header">
+            <img src="${logoUrl}" alt="Marketing Team App Logo">
             <h1>${title}</h1>
           </div>
           <div class="content">
             ${content}
           </div>
           <div class="footer">
-            <p>© ${new Date().getFullYear()} Wolfpaq Marketing. All rights reserved.</p>
-            <p>business@wolfpaqmarketing.app</p>
+            <img src="${logoUrl}" alt="Logo" class="footer-logo">
+            <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Wolfpaq Marketing. All rights reserved.</p>
+            <p style="margin-bottom: 4px;">business@wolfpaqmarketing.app</p>
+            <p>123 Marketing Suite, Premium Business District</p>
           </div>
         </div>
       </div>
