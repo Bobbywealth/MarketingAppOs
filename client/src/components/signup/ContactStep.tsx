@@ -57,14 +57,44 @@ export function ContactStep({ form }: ContactStepProps) {
         />
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm font-black uppercase tracking-widest text-slate-500">Phone Number *</FormLabel>
+              <FormControl>
+                <Input placeholder="+1 (555) 123-4567" {...field} className="h-14 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl bg-slate-50/50" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="company"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-sm font-black uppercase tracking-widest text-slate-500">Company Name *</FormLabel>
+              <FormControl>
+                <Input placeholder="Acme Inc." {...field} className="h-14 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl bg-slate-50/50" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
       <FormField
         control={form.control}
-        name="phone"
+        name="website"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-sm font-black uppercase tracking-widest text-slate-500">Phone Number *</FormLabel>
+            <FormLabel className="text-sm font-black uppercase tracking-widest text-slate-500">Website URL (Optional)</FormLabel>
             <FormControl>
-              <Input placeholder="+1 (555) 123-4567" {...field} className="h-14 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl bg-slate-50/50" />
+              <Input placeholder="https://example.com" {...field} className="h-14 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl bg-slate-50/50" />
             </FormControl>
             <FormMessage />
           </FormItem>

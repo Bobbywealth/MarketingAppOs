@@ -27,7 +27,7 @@ async function throwIfResNotOk(res: Response) {
       case 404:
         throw new Error("The requested resource was not found.");
       case 500:
-        throw new Error("Server error. Please try again later.");
+        throw new Error(errorMessage || "Server error. Please try again later.");
       case 503:
         throw new Error("Service temporarily unavailable. Please try again later.");
       default:

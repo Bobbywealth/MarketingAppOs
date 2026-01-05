@@ -12,7 +12,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { 
   ArrowRight, 
   ArrowLeft, 
-  Building2, 
   User, 
   Target, 
   Star, 
@@ -42,7 +41,6 @@ import { ContactStep } from "@/components/signup/ContactStep";
 import { ServicesStep } from "@/components/signup/ServicesStep";
 import { LoginsStep } from "@/components/signup/LoginsStep";
 import { BrandStep } from "@/components/signup/BrandStep";
-import { CompanyStep } from "@/components/signup/CompanyStep";
 import { PackageSelection } from "@/components/signup/PackageSelection";
 
 const signupSchema = z.object({
@@ -82,9 +80,10 @@ const signupSchema = z.object({
       if (typeof val !== "string") return val;
       const s = val.trim();
       if (!s) return "";
-      return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+      const normalized = /^https?:\/\//i.test(s) ? s : `https://${s}`;
+      return normalized;
     },
-    z.string().url("Must be a valid URL").or(z.literal(""))
+    z.string().min(3, "Must be a valid URL").or(z.literal(""))
   ),
   industry: z.string().optional(),
   companySize: z.string().optional(),
@@ -201,7 +200,7 @@ export default function SignupPage() {
         title: "✅ Details Saved!",
         description: "Next: choose your package to get started.",
       });
-      setStep(7);
+      setStep(6);
     },
     onError: (error: Error) => {
       toast({
@@ -287,11 +286,10 @@ export default function SignupPage() {
     
     let fields: any[] = [];
     if (step === 1) fields = ["username", "password"];
-    else if (step === 2) fields = ["name", "email", "phone"];
-    else if (step === 3) fields = ["services"];
+    else if (step === 2) fields = ["name", "email", "phone", "company", "website"];
+    else if (step === 3) fields = ["services", "budget", "industry"];
     else if (step === 4 && needsSocialCredentials) fields = ["socialCredentials"];
     else if (step === 5) fields = ["brandAssets"];
-    else if (step === 6) fields = ["company", "website", "industry", "companySize"];
     
     try {
       const isValid = await form.trigger(fields as any);
@@ -305,6 +303,7 @@ export default function SignupPage() {
             email: formData.email,
             phone: formData.phone,
             company: formData.company || "Pending",
+            website: formData.website || null,
           });
           setStep(3);
         } else if (step === 3) {
@@ -313,8 +312,6 @@ export default function SignupPage() {
         } else if (step === 4) {
           setStep(5);
         } else if (step === 5) {
-          setStep(6);
-        } else if (step === 6) {
           signupMutation.mutate(form.getValues());
         }
       }
@@ -347,10 +344,9 @@ export default function SignupPage() {
     { num: 3, label: "Services", icon: Target },
     { num: 4, label: "Logins", icon: Lock, hidden: !needsSocialCredentials },
     { num: 5, label: "Brand", icon: Palette },
-    { num: 6, label: "Company", icon: Building2 },
   ];
 
-  if (step === 7) {
+  if (step === 6) {
     return (
       <PackageSelection 
         packages={packages || []}
@@ -362,7 +358,7 @@ export default function SignupPage() {
         validDiscount={validDiscount}
         isValidatingDiscount={isValidatingDiscount}
         checkoutMutation={checkoutMutation}
-        onBack={() => setStep(6)}
+        onBack={() => setStep(5)}
         formValues={form.getValues()}
       />
     );
@@ -455,7 +451,6 @@ export default function SignupPage() {
                     {step === 3 && <ServicesStep form={form} services={services} />}
                     {step === 4 && <LoginsStep form={form} selectedServices={selectedServices} />}
                     {step === 5 && <BrandStep form={form} />}
-                    {step === 6 && <CompanyStep form={form} />}
                   </AnimatePresence>
 
                   {/* Navigation Buttons */}

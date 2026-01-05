@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, MapPin, DollarSign, Clock, Mail, Phone, User, Lock, X, Plus } from "lucide-react";
+import { CheckCircle, MapPin, DollarSign, Clock, Mail, Phone, User, Lock, X, Plus, Video } from "lucide-react";
 import { HeaderLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
@@ -34,6 +34,17 @@ export default function CreatorSignupPage() {
   });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Load Vimeo API script
+    const script = document.createElement("script");
+    script.src = "https://player.vimeo.com/api/player.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -134,13 +145,27 @@ export default function CreatorSignupPage() {
 
       <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">
-            Become a Creator
+          <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gradient-purple">
+            Become a Marketing Team Creator
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Join our network of creators and start earning by completing visits for our clients. 
-            Fill out the form below and we'll review your application.
+            Join our network of elite creators and start earning by capturing high-impact content for local businesses. 
           </p>
+        </div>
+
+        {/* Video Section */}
+        <div className="mb-12 max-w-3xl mx-auto">
+          <Card className="overflow-hidden border-0 shadow-2xl ring-1 ring-primary/10 bg-black">
+            <div className="relative" style={{ padding: '75% 0 0 0' }}>
+              <iframe 
+                src="https://player.vimeo.com/video/1151485036?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&loop=1" 
+                frameBorder="0" 
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                title="Creator Opportunity Video"
+              ></iframe>
+            </div>
+          </Card>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">

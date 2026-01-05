@@ -1898,7 +1898,7 @@ This lead completed the full signup process and is ready for package selection.`
         console.log('✅ Created new qualified lead from complete signup');
         res.json({ success: true, leadId: lead.id, message: "Account created successfully!" });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Simplified signup error:', error);
       if (error instanceof ZodError) {
         return res.status(400).json({
@@ -1909,7 +1909,7 @@ This lead completed the full signup process and is ready for package selection.`
       }
       return res.status(500).json({
         success: false,
-        message: "Failed to create account. Please try again.",
+        message: error.message || "Failed to create account. Please try again.",
       });
     }
   });

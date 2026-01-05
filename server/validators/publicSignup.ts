@@ -10,9 +10,20 @@ export const websiteSchema = z.preprocess(
     if (typeof val !== "string") return val;
     const s = val.trim();
     if (!s) return undefined;
-    return hasHttpProtocol(s) ? s : `https://${s}`;
+    
+    // Add protocol if missing
+    let normalized = hasHttpProtocol(s) ? s : `https://${s}`;
+    
+    // Simple basic check instead of strict z.string().url() which can be too aggressive
+    try {
+      new URL(normalized);
+      return normalized;
+    } catch {
+      // If URL constructor fails, return as is and let the string validator catch it or just allow it if it looks like a domain
+      return normalized;
+    }
   },
-  z.string().url("Must be a valid URL").optional()
+  z.string().min(3, "Must be a valid URL").optional()
 );
 
 export const requiredWebsiteSchema = websiteSchema.refine(

@@ -1,9 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, LucideIcon, Sparkles, Facebook, Instagram, Linkedin, Youtube, MessageSquare } from "lucide-react";
-import { FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
+import { CheckCircle2, LucideIcon, Sparkles, Facebook, Instagram, Linkedin, Youtube, MessageSquare, Landmark, Briefcase } from "lucide-react";
+import { FormField, FormItem, FormMessage, FormLabel, FormControl } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface Service {
   name: string;
@@ -110,6 +112,71 @@ export function ServicesStep({ form, services }: ServicesStepProps) {
           </FormItem>
         )}
       />
+
+      <div className="pt-8 space-y-6">
+        <Separator />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <FormField
+            control={form.control}
+            name="industry"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2 mb-2">
+                  <Briefcase className="w-4 h-4 text-slate-400" />
+                  <FormLabel className="text-sm font-black uppercase tracking-widest text-slate-500">Industry</FormLabel>
+                </div>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-14 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl bg-slate-50/50 text-left">
+                      <SelectValue placeholder="Select industry" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="technology">Technology</SelectItem>
+                    <SelectItem value="healthcare">Healthcare</SelectItem>
+                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="education">Education</SelectItem>
+                    <SelectItem value="hospitality">Hospitality</SelectItem>
+                    <SelectItem value="real_estate">Real Estate</SelectItem>
+                    <SelectItem value="e_commerce">E-commerce</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="budget"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2 mb-2">
+                  <Landmark className="w-4 h-4 text-slate-400" />
+                  <FormLabel className="text-sm font-black uppercase tracking-widest text-slate-500">Monthly Budget</FormLabel>
+                </div>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-14 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-2xl bg-slate-50/50 text-left">
+                      <SelectValue placeholder="Select budget range" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="<5000">Less than $5,000</SelectItem>
+                    <SelectItem value="5000-10000">$5,000 - $10,000</SelectItem>
+                    <SelectItem value="10000-25000">$10,000 - $25,000</SelectItem>
+                    <SelectItem value="25000-50000">$25,000 - $50,000</SelectItem>
+                    <SelectItem value="50000+">$50,000+</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      </div>
 
       <AnimatePresence>
         {showPlatforms && (
