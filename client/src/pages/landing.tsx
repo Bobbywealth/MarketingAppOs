@@ -143,8 +143,8 @@ export default function LandingPage() {
   
   useDocumentMeta({
     title: "Marketing Team App | Your Remote Digital Marketing Team",
-    description: "Stop wasting money on marketing that doesn't work. Marketing Team App is your remote digital marketing team for strategy, content, campaigns and growth.",
-    ogImage: "https://www.marketingteam.app/icon-512x512.png", // Assuming this exists or will be useful
+    description: "Stop wasting money on marketing that doesn't work. Get a remote digital marketing team for strategy, content, and growth. 🚀",
+    ogImage: "https://www.marketingteam.app/icon-512x512.png",
     ogType: "website",
     twitterCard: "summary_large_image"
   });

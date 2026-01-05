@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { injectMetaTags } from "./meta-handler";
 
 const viteLogger = createLogger();
 
@@ -54,6 +55,10 @@ export async function setupVite(app: Express, server: Server) {
 
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      
+      // Inject dynamic meta tags based on the URL
+      template = injectMetaTags(template, url);
+
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
@@ -79,7 +84,18 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  app.use("*", async (req, res) => {
+    try {
+      const indexPath = path.resolve(distPath, "index.html");
+      let html = await fs.promises.readFile(indexPath, "utf-8");
+      
+      // Inject dynamic meta tags based on the URL
+      html = injectMetaTags(html, req.originalUrl);
+      
+      res.status(200).set({ "Content-Type": "text/html" }).send(html);
+    } catch (e) {
+      console.error("Error serving index.html:", e);
+      res.status(500).send("Internal Server Error");
+    }
   });
 }

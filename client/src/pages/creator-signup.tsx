@@ -189,8 +189,8 @@ By checking the acceptance box, I confirm that:
 
 export default function CreatorSignupPage() {
   useDocumentMeta({
-    title: "The Creator Opportunity | Marketing Team",
-    description: "Watch the opportunity and apply to become an elite creator."
+    title: "The Creator Opportunity | Join Marketing Team",
+    description: "🎥 Turn your content into a career. We're looking for elite creators to capture high-impact content for the world's fastest growing brands. Apply now to join the network."
   });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
