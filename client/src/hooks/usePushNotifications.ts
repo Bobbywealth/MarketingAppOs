@@ -1,13 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
-export function usePushNotifications() {
+type UsePushNotificationsOptions = {
+  /**
+   * When false, the hook will NOT attempt to sync subscriptions with the server.
+   * Use this to prevent 401 spam on public (logged-out) pages.
+   */
+  enabled?: boolean;
+};
+
+export function usePushNotifications(options: UsePushNotificationsOptions = {}) {
+  const enabled = options.enabled ?? true;
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const syncSubscriptionToServer = useCallback(
+    async (sub: PushSubscription) => {
+      if (!enabled) return;
+      try {
+        await apiRequest('POST', '/api/push/subscribe', {
+          subscription: sub.toJSON(),
+        });
+      } catch (e) {
+        // Don't toast here (it can be noisy on load); just log.
+        console.warn('Failed to sync existing push subscription to server:', e);
+      }
+    },
+    [enabled],
+  );
 
   useEffect(() => {
     // Check if push notifications are supported
@@ -27,22 +51,21 @@ export function usePushNotifications() {
         console.log('Found existing subscription:', existingSubscription.endpoint);
         setIsSubscribed(true);
         setSubscription(existingSubscription);
-
-        // This fixes the common case where the device is subscribed but the DB row is missing
-        // (migrations, account switching, DB restore, etc).
-        try {
-          await apiRequest('POST', '/api/push/subscribe', {
-            subscription: existingSubscription.toJSON(),
-          });
-        } catch (e) {
-          // Don't toast here (it can be noisy on load); just log.
-          console.warn('Failed to sync existing push subscription to server:', e);
-        }
+        // Only sync to server when enabled (i.e., logged-in). This prevents 401 spam on public pages.
+        await syncSubscriptionToServer(existingSubscription);
       }
     } catch (error) {
       console.error('Error checking subscription:', error);
     }
   }
+
+  // If we discovered an existing browser subscription while logged out,
+  // sync it once auth becomes available.
+  useEffect(() => {
+    if (!enabled) return;
+    if (!subscription) return;
+    syncSubscriptionToServer(subscription);
+  }, [enabled, subscription, syncSubscriptionToServer]);
 
   async function forceResubscribe() {
     try {
@@ -80,6 +103,14 @@ export function usePushNotifications() {
   }
 
   async function subscribe() {
+    if (!enabled) {
+      toast({
+        title: "Login required",
+        description: "Please log in to enable push notifications on this device.",
+        variant: "destructive",
+      });
+      return false;
+    }
     if (!isSupported) {
       toast({
         title: "Not Supported",
@@ -138,9 +169,7 @@ export function usePushNotifications() {
       });
 
       // Send subscription to server
-      await apiRequest('POST', '/api/push/subscribe', {
-        subscription: pushSubscription.toJSON(),
-      });
+      await syncSubscriptionToServer(pushSubscription);
 
       setIsSubscribed(true);
       setSubscription(pushSubscription);
@@ -174,9 +203,11 @@ export function usePushNotifications() {
       await subscription.unsubscribe();
 
       // Remove subscription from server
-      await apiRequest('POST', '/api/push/unsubscribe', {
-        endpoint: subscription.endpoint,
-      });
+      if (enabled) {
+        await apiRequest('POST', '/api/push/unsubscribe', {
+          endpoint: subscription.endpoint,
+        });
+      }
 
       setIsSubscribed(false);
       setSubscription(null);

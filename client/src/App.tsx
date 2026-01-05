@@ -215,7 +215,7 @@ function AppContent() {
   const [, setLocation] = useLocation();
   const [routeLocation] = useLocation();
   const isMobile = useIsMobile();
-  const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications();
+  const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications({ enabled: !!user });
   const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
   
   // Track page views automatically

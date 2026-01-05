@@ -500,7 +500,8 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    // Logged-out is not an error state for the SPA; return 200 + null to reduce noisy 401 logs.
+    if (!req.isAuthenticated()) return res.status(200).json(null);
     const user = req.user as SelectUser;
     const permissions = rolePermissions[user.role as UserRole] || rolePermissions[UserRole.STAFF];
     res.json({

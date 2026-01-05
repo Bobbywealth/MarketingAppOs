@@ -33,7 +33,7 @@ export default function PushNotifications() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const { toast } = useToast();
-  const { isSupported, isSubscribed, loading, subscribe, unsubscribe, forceResubscribe } = usePushNotifications();
+  const { isSupported, isSubscribed, loading, subscribe, unsubscribe, forceResubscribe } = usePushNotifications({ enabled: !!user });
 
   // Emergency cleanup mutation
   const emergencyCleanupMutation = useMutation({
