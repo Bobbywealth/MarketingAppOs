@@ -239,14 +239,14 @@ export default function CommissionsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="lead">Lead (Optional)</Label>
                   <Select
-                    value={newCommission.leadId || ""}
-                    onValueChange={(value) => setNewCommission({ ...newCommission, leadId: value || undefined })}
+                    value={newCommission.leadId || "none"}
+                    onValueChange={(value) => setNewCommission({ ...newCommission, leadId: value === "none" ? undefined : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select lead" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {leads.map((lead) => (
                         <SelectItem key={lead.id} value={lead.id}>
                           {lead.name || lead.company}

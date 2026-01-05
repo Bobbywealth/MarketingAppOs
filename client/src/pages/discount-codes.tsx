@@ -43,7 +43,7 @@ export default function DiscountCodes() {
     code: "",
     description: "",
     discountPercentage: "",
-    durationMonths: "",
+    durationMonths: "once",
     maxUses: "",
     expiresAt: "",
   });
@@ -139,7 +139,7 @@ export default function DiscountCodes() {
       code: formData.code.toUpperCase(),
       description: formData.description,
       discountPercentage: parseFloat(formData.discountPercentage),
-      durationMonths: formData.durationMonths ? parseInt(formData.durationMonths) : null,
+      durationMonths: (formData.durationMonths && formData.durationMonths !== "once") ? parseInt(formData.durationMonths) : null,
       maxUses: formData.maxUses ? parseInt(formData.maxUses) : null,
       expiresAt: formData.expiresAt || null,
     });
@@ -248,7 +248,7 @@ export default function DiscountCodes() {
                       <SelectValue placeholder="One-time" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">One-time only</SelectItem>
+                      <SelectItem value="once">One-time only</SelectItem>
                       <SelectItem value="1">1 month</SelectItem>
                       <SelectItem value="3">3 months</SelectItem>
                       <SelectItem value="6">6 months</SelectItem>
