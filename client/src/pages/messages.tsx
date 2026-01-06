@@ -76,6 +76,18 @@ export default function Messages() {
   // Handle deep linking from notifications (moved after teamMembers definition)
   // This will be defined later after teamMembers is available
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const conversationScrollRef = useRef<HTMLDivElement>(null);
+  const scrollLogCountRef = useRef(0);
+  const windowScrollLogCountRef = useRef(0);
+  const debugEnabled =
+    Boolean((import.meta as any)?.env?.DEV) ||
+    (() => {
+      try {
+        return new URLSearchParams(window.location.search).has("__debug");
+      } catch {
+        return false;
+      }
+    })();
   const messageInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -247,6 +259,50 @@ export default function Messages() {
       deliveredAt: msg.deliveredAt,
     }));
   }, [messageMode, groupMessages, messages, user, selectedUser]);
+
+  // #region agent log (hypothesis C/D: message list duplicates/appends unexpectedly and inflates heights)
+  useEffect(() => {
+    try {
+      if (!debugEnabled) return;
+      const el = conversationScrollRef.current;
+      const docEl = document.documentElement;
+      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'C',location:'client/src/pages/messages.tsx:messages-effect',message:'messages changed snapshot',data:{messageMode,selectedUserId,selectedGroupId,messageCount:normalizedMessages?.length ?? null,isLoadingCurrentMessages,convClientH:el?.clientHeight,convScrollH:el?.scrollHeight,convScrollTop:el?.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'C',location:'client/src/pages/messages.tsx:messages-effect',message:'messages changed snapshot',data:{messageMode,selectedUserId,selectedGroupId,messageCount:normalizedMessages?.length ?? null,isLoadingCurrentMessages,convClientH:el?.clientHeight,convScrollH:el?.scrollHeight,convScrollTop:el?.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+    } catch {}
+  }, [messageMode, selectedUserId, selectedGroupId, normalizedMessages?.length, isLoadingCurrentMessages, debugEnabled]);
+  // #endregion agent log
+
+  // #region agent log (hypothesis A: the window/document is scrolling instead of the conversation pane)
+  useEffect(() => {
+    const onWinScroll = () => {
+      try {
+        if (!debugEnabled) return;
+        if (windowScrollLogCountRef.current >= 12) return;
+        windowScrollLogCountRef.current += 1;
+        const docEl = document.documentElement;
+        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/pages/messages.tsx:window-scroll',message:'window scrolled',data:{windowScrollY:window.scrollY,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/pages/messages.tsx:window-scroll',message:'window scrolled',data:{windowScrollY:window.scrollY,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+      } catch {}
+    };
+    window.addEventListener("scroll", onWinScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onWinScroll as any);
+  }, [debugEnabled]);
+  // #endregion agent log
+
+  // #region agent log (hypothesis B: conversation pane height constraint not applied; pane grows instead of scrolling)
+  const onConversationScroll = () => {
+    try {
+      if (!debugEnabled) return;
+      const el = conversationScrollRef.current;
+      if (!el) return;
+      if (scrollLogCountRef.current >= 20) return;
+      scrollLogCountRef.current += 1;
+      const docEl = document.documentElement;
+      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'B',location:'client/src/pages/messages.tsx:conversation-scroll',message:'conversation scrolled',data:{convClientH:el.clientHeight,convScrollH:el.scrollHeight,convScrollTop:el.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight,messageCount:normalizedMessages?.length ?? null},timestamp:Date.now()})}).catch(()=>{});
+      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'B',location:'client/src/pages/messages.tsx:conversation-scroll',message:'conversation scrolled',data:{convClientH:el.clientHeight,convScrollH:el.scrollHeight,convScrollTop:el.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight,messageCount:normalizedMessages?.length ?? null},timestamp:Date.now()})}).catch(()=>{});
+    } catch {}
+  };
+  // #endregion agent log
 
   const isLoadingCurrentMessages = isGroupMode ? groupMessagesLoading : messagesLoading;
   const hasActiveConversation = isGroupMode ? Boolean(selectedGroupId) : Boolean(selectedUserId);
@@ -955,7 +1011,7 @@ export default function Messages() {
 
               {/* Messages Area */}
               <div className="flex-1 min-h-0 bg-zinc-50 dark:bg-zinc-900/50 relative">
-                <div className="h-full overflow-y-auto overscroll-contain">
+                <div ref={conversationScrollRef} onScroll={onConversationScroll} className="h-full overflow-y-auto overscroll-contain">
                   <div className="p-4 sm:p-6 space-y-6">
                     {messagesLoading ? (
                       <div className="space-y-4">

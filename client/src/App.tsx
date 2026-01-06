@@ -236,8 +236,30 @@ function AppContent() {
   // wouter's location may include query/hash; normalize so route checks are reliable
   const routePathname = (routeLocation || "").split(/[?#]/)[0].replace(/\/+$/, "") || "/";
   const isMessagesRoute = routePathname === "/messages" || routePathname.startsWith("/messages/");
+  const debugEnabled =
+    Boolean((import.meta as any)?.env?.DEV) ||
+    (() => {
+      try {
+        return new URLSearchParams(window.location.search).has("__debug");
+      } catch {
+        return false;
+      }
+    })();
   const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications({ enabled: !!user });
   const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
+
+  // #region agent log (hypothesis A/B: page is scrolling instead of chat container, or main isn't overflow-hidden at runtime)
+  useEffect(() => {
+    try {
+      if (!debugEnabled) return;
+      const main = document.querySelector("main");
+      const mainStyle = main ? window.getComputedStyle(main) : null;
+      const docEl = document.documentElement;
+      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/App.tsx:route-effect',message:'route/layout snapshot',data:{routeLocation,routePathname,isMessagesRoute,mainOverflowY:mainStyle?.overflowY,mainOverflowX:mainStyle?.overflowX,mainClientH:(main as any)?.clientHeight,mainScrollH:(main as any)?.scrollHeight,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/App.tsx:route-effect',message:'route/layout snapshot',data:{routeLocation,routePathname,isMessagesRoute,mainOverflowY:mainStyle?.overflowY,mainOverflowX:mainStyle?.overflowX,mainClientH:(main as any)?.clientHeight,mainScrollH:(main as any)?.scrollHeight,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+    } catch {}
+  }, [routeLocation, routePathname, isMessagesRoute, debugEnabled]);
+  // #endregion agent log
   
   // Track page views automatically
   usePageTracking();

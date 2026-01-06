@@ -152,6 +152,30 @@ if (process.env.STRIPE_SECRET_KEY) {
 // Modularized helper functions are imported from ./routes/utils and ./routes/common
 
 export function registerRoutes(app: Express) {
+  // #region agent log (debug mode helper)
+  // Debug-mode log proxy: lets the browser POST to same-origin (works on https),
+  // and the server forwards to the local ingest server.
+  // Guarded by auth + admin role so it can't be abused.
+  app.post("/api/__debug/log", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const payload = req.body;
+      // Minimal validation + size guard (express.json is already capped at 10kb)
+      if (!payload || typeof payload !== "object") {
+        return res.status(400).json({ message: "Invalid payload" });
+      }
+      // Forward to local ingest server (no secrets/PII expected in payload)
+      await fetch("http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+      return res.json({ ok: true });
+    } catch {
+      return res.json({ ok: false });
+    }
+  });
+  // #endregion agent log
+
   // Mount modularized routers
   app.use("/api/leads", leadsRouter);
   app.use("/api/marketing-center", marketingCenterRouter);
@@ -263,6 +287,10 @@ export function registerRoutes(app: Express) {
       const admins = allUsers.filter(u => u.role === UserRole.ADMIN);
       const adminsWithEmails = admins.filter(u => u.email).map(u => u.username);
       
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run2',hypothesisId:'A',location:'server/routes.ts:/api/email/test',message:'Email test endpoint called',data:{configured:ok,secure:process.env.SMTP_SECURE==='true',hasHost:!!process.env.SMTP_HOST,hasUser:!!process.env.SMTP_USER,hasPass:!!process.env.SMTP_PASS,adminsFound:admins.length,adminsWithEmailsCount:adminsWithEmails.length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
       res.json({ 
         configured: ok, 
         host: process.env.SMTP_HOST || null, 
@@ -289,7 +317,16 @@ export function registerRoutes(app: Express) {
       // Use the welcome template as the test email content to show off the new design
       const template = emailTemplates.welcomeUser(userName, user?.email || 'test@example.com');
       
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run2',hypothesisId:'B',location:'server/routes.ts:/api/email/send-test:before',message:'send-test called; invoking sendEmail',data:{toDomain:(String(to).includes('@')?String(to).split('@').pop()?.toLowerCase():'invalid'),hasSubjectOverride:!!subject,templateSubjectLen:template?.subject?.length??null},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
       const result = await sendEmail(to, subject || template.subject, template.html);
+
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run2',hypothesisId:'C',location:'server/routes.ts:/api/email/send-test:after',message:'send-test completed',data:{success:!!(result as any)?.success,hasMessageId:!!(result as any)?.messageId,hasError:!!(result as any)?.error,hasMessage:!!(result as any)?.message},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
       if (!result.success) return res.status(500).json(result);
       res.json(result);
     } catch (e: any) {
