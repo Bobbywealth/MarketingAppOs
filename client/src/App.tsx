@@ -225,6 +225,7 @@ function AppContent() {
   const [, setLocation] = useLocation();
   const [routeLocation] = useLocation();
   const isMobile = useIsMobile();
+  const isMessagesRoute = routeLocation === "/messages" || routeLocation.startsWith("/messages/");
   const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications({ enabled: !!user });
   const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
   
@@ -343,7 +344,8 @@ function AppContent() {
                 </div>
               </div>
             )}
-            <main className={`flex-1 overflow-auto ${isMobile ? 'pb-20' : ''}`}>
+            {/* Messages needs its own internal scroll containers; avoid body/main growing with long threads */}
+            <main className={`flex-1 min-h-0 ${isMessagesRoute ? 'overflow-hidden' : 'overflow-auto'} ${isMobile ? 'pb-20' : ''}`}>
               <AnimatePresence mode="wait" initial={false}>
                 <PageTransition routeKey={routeLocation}>
                   <Router />

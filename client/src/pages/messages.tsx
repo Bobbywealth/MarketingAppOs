@@ -668,7 +668,7 @@ export default function Messages() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white dark:bg-zinc-950">
       {/* Premium Page Header */}
       <div className="flex-shrink-0 px-6 py-6 border-b border-zinc-100 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-md z-20">
         <div className="flex items-center justify-between">
@@ -713,9 +713,9 @@ export default function Messages() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-12 overflow-hidden">
         {/* Team List Panel */}
-        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 border-r flex-col bg-white dark:bg-zinc-950`}>
+        <div className={`${selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-4 min-h-0 border-r flex-col bg-white dark:bg-zinc-950`}>
           <div className="flex-shrink-0 p-4 border-b space-y-4 bg-white dark:bg-zinc-950">
             {/* Smart Search Bar */}
             <div className="relative group">
@@ -857,7 +857,7 @@ export default function Messages() {
         </div>
 
         {/* Messages Area - Now with back button on mobile */}
-        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-900`}>
+        <div className={`${!selectedUserId ? 'hidden' : 'flex'} md:flex md:col-span-8 min-h-0 flex-col overflow-hidden bg-zinc-50 dark:bg-zinc-900`}>
           {!selectedUserId ? (
             <div className="flex-1 hidden md:flex items-center justify-center p-8">
               <div className="max-w-md w-full text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
