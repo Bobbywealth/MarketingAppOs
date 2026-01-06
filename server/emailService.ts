@@ -48,11 +48,12 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
         .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 40px 0; }
         .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
         .header { background: #ffffff; padding: 40px 20px; text-align: center; border-bottom: 1px solid #f1f5f9; }
-        .header img { height: 48px; margin-bottom: 20px; }
+        /* Email clients (especially iOS Gmail/Mail) can ignore some CSS, so we also inline critical sizing on the <img>. */
+        .header img { display: block; margin: 0 auto 20px; max-width: 220px; width: 220px; height: auto; }
         .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; color: #0f172a; }
         .content { padding: 40px 40px; background-color: #ffffff; }
         .footer { text-align: center; padding: 40px; background-color: #f8fafc; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9; }
-        .footer-logo { height: 24px; margin-bottom: 16px; filter: grayscale(1); opacity: 0.5; }
+        .footer-logo { display: block; margin: 0 auto 16px; max-width: 160px; width: 160px; height: auto; filter: grayscale(1); opacity: 0.5; }
         .button { display: inline-block; background-color: ${themeColor}; color: white !important; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; margin: 24px 0; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0; }
         .info-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
@@ -66,17 +67,26 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
       <div class="wrapper">
         <div class="container">
           <div class="header">
-            <img src="${logoUrl}" alt="Marketing Team App Logo">
+            <img
+              src="${logoUrl}"
+              alt="Marketing Team App Logo"
+              width="220"
+              style="display:block; margin:0 auto 20px; max-width:220px; width:220px; height:auto;"
+            >
             <h1>${title}</h1>
           </div>
           <div class="content">
             ${content}
           </div>
           <div class="footer">
-            <img src="${logoUrl}" alt="Logo" class="footer-logo">
+            <img
+              src="${logoUrl}"
+              alt="Marketing Team App Logo"
+              class="footer-logo"
+              width="160"
+              style="display:block; margin:0 auto 16px; max-width:160px; width:160px; height:auto; filter:grayscale(1); opacity:0.5;"
+            >
             <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Marketing Team. All rights reserved.</p>
-            <p style="margin-bottom: 4px;">business@marketingteam.app</p>
-            <p>123 Marketing Suite, Premium Business District</p>
           </div>
         </div>
       </div>
