@@ -111,8 +111,15 @@ function PageLoader() {
 function Router() {
   const { user } = useAuth();
   // Role override for testing
-  const overrideRole = localStorage.getItem('admin_role_override');
-  const effectiveRole = (user?.role === 'admin' && overrideRole) ? overrideRole : user?.role;
+  const normalizeRole = (value: unknown) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase();
+
+  const overrideRoleRaw = localStorage.getItem("admin_role_override");
+  const baseRole = normalizeRole((user as any)?.role);
+  const overrideRole = normalizeRole(overrideRoleRaw);
+  const effectiveRole = (baseRole === "admin" && overrideRole) ? overrideRole : baseRole;
   
   const isClient = effectiveRole === 'client';
   const isSalesAgent = effectiveRole === 'sales_agent';
@@ -225,7 +232,9 @@ function AppContent() {
   const [, setLocation] = useLocation();
   const [routeLocation] = useLocation();
   const isMobile = useIsMobile();
-  const isMessagesRoute = routeLocation === "/messages" || routeLocation.startsWith("/messages/");
+  // wouter's location may include query/hash; normalize so route checks are reliable
+  const routePathname = (routeLocation || "").split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  const isMessagesRoute = routePathname === "/messages" || routePathname.startsWith("/messages/");
   const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications({ enabled: !!user });
   const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
   
