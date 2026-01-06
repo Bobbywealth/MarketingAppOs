@@ -32,6 +32,40 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       console.log('Chunk load failure detected. Forcing page reload...');
       window.location.reload();
     }
+
+    // Recover from TDZ initialization errors that can happen when a Service Worker
+    // serves stale JS/CSS bundles across deployments (minified var names like 're', 'ae', etc).
+    const tdzInitError = /Cannot access '.+' before initialization/;
+    if (error?.message && tdzInitError.test(error.message)) {
+      console.log('TDZ initialization error detected. Clearing caches + forcing reload...');
+      try {
+        // Best-effort: clear CacheStorage (SW + page cache)
+        if ('caches' in window) {
+          caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {});
+        }
+
+        // Best-effort: ask SW to clear its caches and unregister
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration?.().then(async (reg) => {
+            try {
+              reg?.active?.postMessage({ type: 'CLEAR_CACHE' });
+            } catch {}
+            try {
+              await reg?.unregister?.();
+            } catch {}
+          }).catch(() => {});
+        }
+      } catch {}
+
+      // Cache-busting reload
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('__reload', String(Date.now()));
+        window.location.replace(url.toString());
+      } catch {
+        window.location.reload();
+      }
+    }
   }
 
   resetError = () => {

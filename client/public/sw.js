@@ -147,6 +147,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+  const isAsset = url.pathname.startsWith('/assets/');
+  const isJsOrCss =
+    request.destination === 'script' ||
+    request.destination === 'style' ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css');
   
   // ----------------------------------------------------
   // Web Share Target: transform POST -> client route
@@ -238,7 +244,8 @@ self.addEventListener('fetch', (event) => {
             return preload;
           }
 
-          const response = await fetch(request);
+          // Force a fresh HTML fetch to avoid stale entrypoints after deployments
+          const response = await fetch(request, { cache: 'no-store' });
           const cache = await caches.open(DYNAMIC_CACHE);
           cache.put(request, response.clone());
           return response;
@@ -251,6 +258,31 @@ self.addEventListener('fetch', (event) => {
         }
       })()
     );
+    return;
+  }
+
+  // ----------------------------------------------------
+  // Versioned build assets (/assets/*): network-first
+  //
+  // Rationale:
+  // Serving stale JS/CSS from SW cache can cause runtime mismatches across
+  // deployments (including TDZ errors like "Cannot access '<x>' before initialization").
+  // ----------------------------------------------------
+  if (request.method === 'GET' && isAsset && isJsOrCss) {
+    event.respondWith((async () => {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      try {
+        const response = await fetch(request, { cache: 'no-store' });
+        if (response && response.status === 200) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      } catch (e) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        throw e;
+      }
+    })());
     return;
   }
 
