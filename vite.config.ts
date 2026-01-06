@@ -21,24 +21,17 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1200,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("recharts")) {
-              return "charts";
-            }
-            if (id.includes("@tanstack/react-query")) {
-              return "data-layer";
-            }
-            if (id.includes("lucide-react")) {
-              return "icons";
-            }
-            return "vendor";
-          }
-        },
-      },
-    },
+    /**
+     * NOTE:
+     * We intentionally avoid custom `manualChunks` splitting here.
+     *
+     * Custom chunk splitting can introduce circular dependencies *between chunks*
+     * (even if there are no circular imports in source), which can surface in
+     * production as TDZ runtime errors like:
+     *   "Cannot access 'ae' before initialization"
+     *
+     * Let Vite/Rollup handle chunking to ensure stable evaluation order.
+     */
   },
   server: {
     fs: {
