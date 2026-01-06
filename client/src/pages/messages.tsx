@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// NOTE: We intentionally avoid Radix ScrollArea here. For long chat threads, a plain overflow container
+// is more reliable for preventing the overall page/document height from growing.
 import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon, X, Filter, ChevronDown, Smile, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -771,7 +772,7 @@ export default function Messages() {
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto overscroll-contain">
             <div className="p-3">
               {filteredTeamMembers.length === 0 ? (
                 <div className="text-center py-12 px-4">
@@ -853,7 +854,7 @@ export default function Messages() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Messages Area - Now with back button on mobile */}
@@ -954,7 +955,7 @@ export default function Messages() {
 
               {/* Messages Area */}
               <div className="flex-1 min-h-0 bg-zinc-50 dark:bg-zinc-900/50 relative">
-                <ScrollArea className="h-full">
+                <div className="h-full overflow-y-auto overscroll-contain">
                   <div className="p-4 sm:p-6 space-y-6">
                     {messagesLoading ? (
                       <div className="space-y-4">
@@ -1086,7 +1087,7 @@ export default function Messages() {
                       </div>
                     )}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
 
               {/* Enhanced Message Input Area */}
