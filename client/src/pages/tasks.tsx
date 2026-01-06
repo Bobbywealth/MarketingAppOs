@@ -627,6 +627,7 @@ export default function TasksPage() {
             <Checkbox 
               checked={selectedTaskIds.size === filteredTasks.length && filteredTasks.length > 0}
               onCheckedChange={selectAllTasks}
+              className="h-4 w-4"
             />
           </div>
           <div className="col-span-4">TASK NAME</div>
@@ -659,7 +660,7 @@ export default function TasksPage() {
                       checked={selectedTaskIds.has(task.id)}
                       onCheckedChange={() => toggleTaskSelection(task.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="mr-1"
+                      className="mr-1 h-4 w-4"
                     />
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                     <span className="font-medium text-sm flex-1">{task.title}</span>
@@ -689,6 +690,7 @@ export default function TasksPage() {
                       checked={selectedTaskIds.has(task.id)}
                       onCheckedChange={() => toggleTaskSelection(task.id)}
                       onClick={(e) => e.stopPropagation()}
+                      className="h-4 w-4"
                     />
                   </div>
                   <div className="col-span-4 flex items-center gap-3 min-w-0">
@@ -767,6 +769,7 @@ export default function TasksPage() {
                   checked={selectedTaskIds.has(task.id)}
                   onCheckedChange={() => toggleTaskSelection(task.id)}
                   onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4"
                 />
               </div>
               <div className={`flex items-start justify-between gap-4 transition-transform ${selectedTaskIds.has(task.id) ? "translate-x-6" : "group-hover:translate-x-6"}`}>
