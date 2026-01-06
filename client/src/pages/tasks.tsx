@@ -95,6 +95,28 @@ export default function TasksPage() {
     queryKey: ["/api/tasks"],
   });
 
+  const isAdminOrManager = (user as any)?.role === "admin" || (user as any)?.role === "manager";
+  const backfillRecurringMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/tasks/backfill-recurring", {});
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Recurring tasks backfilled",
+        description: `Created ${data.tasksCreated ?? 0} task(s) across ${data.seriesProcessed ?? 0} series.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Backfill failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Surface task loading errors instead of silently showing an empty list
   useEffect(() => {
     if (!tasksError) return;
@@ -989,6 +1011,23 @@ export default function TasksPage() {
             {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             <span className="hidden sm:inline">{showCompleted ? "Hide Completed" : "Show Completed"}</span>
           </Button>
+
+          {isAdminOrManager && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => backfillRecurringMutation.mutate()}
+              disabled={backfillRecurringMutation.isPending}
+              className="gap-2 whitespace-nowrap"
+              data-testid="button-backfill-recurring"
+              title="Create one current To Do instance for each recurring series (EST)"
+            >
+              <Repeat className="w-4 h-4" />
+              <span className="hidden md:inline">
+                {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
+              </span>
+            </Button>
+          )}
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
