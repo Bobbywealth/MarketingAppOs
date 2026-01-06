@@ -62,6 +62,30 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ marketing tracking columns for clients already exist or error:', e.message);
       }
+
+      // Add requires_brand_info to clients (required by shared/schema.ts)
+      try {
+        await client.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS requires_brand_info BOOLEAN DEFAULT false;`);
+        console.log('✅ Added requires_brand_info to clients');
+      } catch (e) {
+        console.log('⚠️ requires_brand_info in clients already exists or error:', e.message);
+      }
+
+      // Optional: comment + index for requires_brand_info
+      try {
+        await client.query(
+          `COMMENT ON COLUMN clients.requires_brand_info IS 'Indicates whether this client requires brand information to be provided';`
+        );
+      } catch (e) {
+        console.log('⚠️ requires_brand_info column comment skipped or error:', e.message);
+      }
+      try {
+        await client.query(
+          `CREATE INDEX IF NOT EXISTS idx_clients_requires_brand_info ON clients(requires_brand_info);`
+        );
+      } catch (e) {
+        console.log('⚠️ requires_brand_info index skipped or error:', e.message);
+      }
       
       // Add client_id to leads table
       try {
