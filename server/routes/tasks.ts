@@ -16,6 +16,8 @@ import {
 } from "./common";
 import { insertTaskSchema, insertTaskSpaceSchema, insertTaskCommentSchema } from "@shared/schema";
 import { ZodError } from "zod";
+import { randomUUID } from "crypto";
+import { DEFAULT_RECURRENCE_TZ, getDateKeyInTimeZone, getEndOfDayUtcFromDateKey, getNextInstanceDateKey } from "../lib/recurrence";
 
 const router = Router();
 
@@ -108,7 +110,14 @@ router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
 router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
   try {
     console.log("📥 Backend received task data:", JSON.stringify(req.body, null, 2));
-    const validatedData = insertTaskSchema.parse(req.body);
+    const validatedData = insertTaskSchema.parse(req.body) as any;
+
+    // Ensure robust recurrence identifiers are present for recurring tasks
+    if (validatedData?.isRecurring) {
+      validatedData.recurrenceSeriesId = validatedData.recurrenceSeriesId || randomUUID();
+      const base = validatedData.dueDate instanceof Date ? validatedData.dueDate : new Date();
+      validatedData.recurrenceInstanceDate = validatedData.recurrenceInstanceDate || getDateKeyInTimeZone(base, DEFAULT_RECURRENCE_TZ);
+    }
     console.log("✅ Validation passed, creating task:", validatedData);
     const task = await storage.createTask(validatedData);
     
@@ -313,7 +322,7 @@ Return JSON with:
 
 router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
   try {
-    const validatedData = insertTaskSchema.partial().strip().parse(req.body);
+    const validatedData = insertTaskSchema.partial().strip().parse(req.body) as any;
     const existingTask = await storage.getTask(req.params.id);
     if (!existingTask) {
       return res.status(404).json({ message: "Task not found" });
@@ -330,6 +339,83 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
     const currentUser = req.user as any;
     const actorName = currentUser?.firstName || currentUser?.username || 'A team member';
     const { sendPushToUser } = await import('../push');
+
+    // Recurring tasks: when completed, immediately create the next occurrence due EOD tomorrow (EST)
+    if (
+      validatedData.status === "completed" &&
+      existingTask.status !== "completed" &&
+      (existingTask as any).isRecurring
+    ) {
+      const recurringPattern = String((existingTask as any).recurringPattern || "daily");
+      const interval = Number((existingTask as any).recurringInterval || 1);
+      const scheduleFrom = String((existingTask as any).scheduleFrom || "due_date");
+
+      const seriesId = (existingTask as any).recurrenceSeriesId || randomUUID();
+      const baseDate =
+        scheduleFrom === "completion_date"
+          ? (task.completedAt || new Date())
+          : ((existingTask as any).dueDate || new Date());
+
+      const currentInstanceDateKey =
+        (existingTask as any).recurrenceInstanceDate || getDateKeyInTimeZone(baseDate, DEFAULT_RECURRENCE_TZ);
+
+      // Persist missing recurrence identifiers on the completed instance (best-effort)
+      if (!(existingTask as any).recurrenceSeriesId || !(existingTask as any).recurrenceInstanceDate) {
+        try {
+          await db
+            .update(tasks)
+            .set({ recurrenceSeriesId: seriesId, recurrenceInstanceDate: currentInstanceDateKey } as any)
+            .where(eq(tasks.id, task.id));
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      const nextInstanceDateKey = getNextInstanceDateKey({
+        pattern: recurringPattern as any,
+        interval,
+        baseDate,
+        timeZone: DEFAULT_RECURRENCE_TZ,
+      });
+
+      const nextDueDateUtc = getEndOfDayUtcFromDateKey(nextInstanceDateKey, DEFAULT_RECURRENCE_TZ);
+      const recurringEndDate = (existingTask as any).recurringEndDate ? new Date((existingTask as any).recurringEndDate) : null;
+
+      if (!recurringEndDate || nextDueDateUtc <= recurringEndDate) {
+        const oldChecklist = ((existingTask as any).checklist || []) as any[];
+        const resetChecklist = Array.isArray(oldChecklist)
+          ? oldChecklist.map((i) => ({ ...i, completed: false }))
+          : [];
+
+        try {
+          await db.insert(tasks).values({
+            campaignId: (existingTask as any).campaignId ?? null,
+            clientId: (existingTask as any).clientId ?? null,
+            assignedToId: (existingTask as any).assignedToId ?? null,
+            spaceId: (existingTask as any).spaceId ?? null,
+            title: (existingTask as any).title,
+            description: (existingTask as any).description ?? null,
+            status: "todo",
+            priority: (existingTask as any).priority ?? "normal",
+            dueDate: nextDueDateUtc,
+            completedAt: null,
+            isRecurring: true,
+            recurringPattern,
+            recurringInterval: interval,
+            recurringEndDate: (existingTask as any).recurringEndDate ?? null,
+            scheduleFrom,
+            checklist: resetChecklist,
+            recurrenceSeriesId: seriesId,
+            recurrenceInstanceDate: nextInstanceDateKey,
+          } as any);
+        } catch (e: any) {
+          // Unique constraint protects us from duplicates; ignore duplicate errors.
+          if (String(e?.code) !== "23505") {
+            console.error("Failed to create next recurring task occurrence:", e);
+          }
+        }
+      }
+    }
     
     if (validatedData.status === 'completed' && existingTask.status !== 'completed' && actorRole !== UserRole.ADMIN) {
       await notifyAdminsAboutAction(

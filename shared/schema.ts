@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import {
   index,
+  uniqueIndex,
   jsonb,
   pgTable,
   timestamp,
@@ -281,6 +282,9 @@ export const tasks = pgTable("tasks", {
   recurringInterval: integer("recurring_interval").default(1), // e.g., every 2 weeks
   recurringEndDate: timestamp("recurring_end_date"),
   scheduleFrom: varchar("schedule_from").default("due_date"), // "due_date" or "completion_date"
+  // Robust recurrence instance tracking (prevents duplicates across retries/schedulers)
+  recurrenceSeriesId: varchar("recurrence_series_id"), // UUID-like string linking all instances
+  recurrenceInstanceDate: varchar("recurrence_instance_date", { length: 10 }), // YYYY-MM-DD in America/New_York
   checklist: jsonb("checklist").$type<Array<{ id: string; text: string; completed: boolean }>>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -292,6 +296,8 @@ export const tasks = pgTable("tasks", {
   index("IDX_tasks_client_id").on(table.clientId),
   index("IDX_tasks_campaign_id").on(table.campaignId),
   index("IDX_tasks_space_id").on(table.spaceId),
+  index("IDX_tasks_recurrence_series").on(table.recurrenceSeriesId),
+  uniqueIndex("UQ_tasks_recurrence_series_instance").on(table.recurrenceSeriesId, table.recurrenceInstanceDate),
 ]);
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({

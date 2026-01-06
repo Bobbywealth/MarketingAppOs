@@ -16,6 +16,23 @@ export async function ensureMinimumSchema() {
     "tasks.checklist column",
     `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS checklist JSONB DEFAULT '[]'::jsonb;`
   );
+  // Tasks: recurrence instance tracking (robust de-dupe for recurring tasks)
+  await safeQuery(
+    "tasks.recurrence_series_id column",
+    `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS recurrence_series_id VARCHAR;`
+  );
+  await safeQuery(
+    "tasks.recurrence_instance_date column",
+    `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS recurrence_instance_date VARCHAR(10);`
+  );
+  await safeQuery(
+    "uq_tasks_recurrence_series_instance index",
+    `CREATE UNIQUE INDEX IF NOT EXISTS uq_tasks_recurrence_series_instance ON tasks(recurrence_series_id, recurrence_instance_date);`
+  );
+  await safeQuery(
+    "idx_tasks_recurrence_series_id index",
+    `CREATE INDEX IF NOT EXISTS idx_tasks_recurrence_series_id ON tasks(recurrence_series_id);`
+  );
 
   // User columns: creator_id and client_id (critical for role-based access)
   await safeQuery(

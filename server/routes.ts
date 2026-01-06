@@ -4647,6 +4647,54 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
+  // Hybrid accounts: switch between client and creator view (role toggling)
+  app.post("/api/user/switch-role", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const currentUser = req.user as any;
+      const currentUserId = currentUser?.id;
+      if (!currentUserId) return res.status(401).json({ message: "Unauthorized" });
+
+      // Only allow toggling between client and creator for hybrid accounts
+      const hasClient = Boolean(currentUser?.clientId);
+      const hasCreator = Boolean(currentUser?.creatorId);
+      if (!hasClient || !hasCreator) {
+        return res.status(400).json({ message: "Role switching requires a hybrid account (both clientId and creatorId)." });
+      }
+
+      const currentRole = String(currentUser?.role || "");
+      if (currentRole !== UserRole.CLIENT && currentRole !== UserRole.CREATOR) {
+        return res.status(400).json({ message: "Role switching is only supported for client/creator accounts." });
+      }
+
+      const nextRole = currentRole === UserRole.CLIENT ? UserRole.CREATOR : UserRole.CLIENT;
+
+      // If switching into creator role, ensure creator application has been accepted
+      if (nextRole === UserRole.CREATOR) {
+        const creator = await storage.getCreator(String(currentUser.creatorId));
+        if (!creator) return res.status(400).json({ message: "Creator profile not found for this account." });
+        if ((creator as any).applicationStatus !== "accepted") {
+          return res.status(403).json({ message: "Your creator account is not approved yet." });
+        }
+      }
+
+      const [updated] = await db
+        .update(users)
+        .set({ role: nextRole })
+        .where(eq(users.id, Number(currentUserId)))
+        .returning();
+
+      // Ensure the session user object reflects the new role for the rest of this request lifecycle
+      try {
+        (req.user as any).role = nextRole;
+      } catch {}
+
+      return res.json(updated);
+    } catch (error) {
+      console.error("Error switching roles:", error);
+      return res.status(500).json({ message: "Failed to switch roles" });
+    }
+  });
+
   // Notifications routes
   app.get("/api/notifications", async (req: Request, res: Response) => {
     try {

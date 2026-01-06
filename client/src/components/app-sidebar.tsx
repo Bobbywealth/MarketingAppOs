@@ -679,7 +679,7 @@ function NavCollapsibleGroup({
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, switchRoleMutation } = useAuth();
   const { setOpenMobile, state, toggleSidebar, isMobile } = useSidebar();
   const { canAccess, canSeeSidebarItem } = usePermissions();
 
@@ -691,6 +691,9 @@ export function AppSidebar() {
   const isSalesAgent = effectiveRole === 'sales_agent';
   const isCreator = effectiveRole === 'creator';
   const isCollapsed = state === "collapsed" && !isMobile;
+  const isHybrid = Boolean((user as any)?.clientId) && Boolean((user as any)?.creatorId);
+  const switchLabel = isCreator ? "Switch to Client View" : "Switch to Creator View";
+  const canShowSwitch = !isCollapsed && isHybrid && (isCreator || isClient);
 
   // Fetch unread message counts
   const { data: unreadCounts } = useQuery<Record<number, number>>({
@@ -811,6 +814,16 @@ export function AppSidebar() {
               </div>
             )}
           </div>
+          {canShowSwitch && (
+            <Button
+              variant="outline"
+              className="w-full mb-2"
+              onClick={() => switchRoleMutation.mutate()}
+              disabled={switchRoleMutation.isPending}
+            >
+              {switchRoleMutation.isPending ? "Switching..." : switchLabel}
+            </Button>
+          )}
           {!isCollapsed && (
             <a
               href={logoutUrl}
@@ -888,6 +901,16 @@ export function AppSidebar() {
               </div>
             )}
           </div>
+          {canShowSwitch && (
+            <Button
+              variant="outline"
+              className="w-full mb-2"
+              onClick={() => switchRoleMutation.mutate()}
+              disabled={switchRoleMutation.isPending}
+            >
+              {switchRoleMutation.isPending ? "Switching..." : switchLabel}
+            </Button>
+          )}
           {!isCollapsed && (
             <a
               href={logoutUrl}
@@ -1282,6 +1305,17 @@ export function AppSidebar() {
                   <span>Settings</span>
                 </div>
               </Link>
+              {canShowSwitch && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  onClick={() => switchRoleMutation.mutate()}
+                  disabled={switchRoleMutation.isPending}
+                >
+                  <UsersRound className="w-4 h-4" />
+                  <span>{switchRoleMutation.isPending ? "Switching..." : switchLabel}</span>
+                </Button>
+              )}
               <a
                 href={logoutUrl}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"

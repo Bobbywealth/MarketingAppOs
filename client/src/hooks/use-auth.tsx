@@ -19,6 +19,7 @@ type AuthContextType = {
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
   resendVerificationMutation: UseMutationResult<any, Error, void>;
+  switchRoleMutation: UseMutationResult<SelectUser, Error, void>;
 };
 
 type LoginData = {
@@ -126,6 +127,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const switchRoleMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/user/switch-role");
+      return await res.json();
+    },
+    onSuccess: (user: SelectUser) => {
+      queryClient.setQueryData(["/api/user"], user);
+      // Also refresh permissions and any role-gated data
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Switched view",
+        description: `You're now in ${user.role} mode.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not switch view",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <AuthContext.Provider
       value={{
@@ -136,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutMutation,
         registerMutation,
         resendVerificationMutation,
+        switchRoleMutation,
       }}
     >
       {children}

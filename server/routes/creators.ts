@@ -3,8 +3,7 @@ import { storage } from "../storage";
 import { db, pool } from "../db";
 import { creators, creatorVisits, clientCreators, clients, users } from "@shared/schema";
 import { eq, and, or, sql, inArray } from "drizzle-orm";
-import { isAuthenticated } from "../auth";
-import { hashPassword } from "../auth";
+import { isAuthenticated, hashPassword, comparePasswords } from "../auth";
 import { requireRole } from "../rbac";
 import { UserRole } from "@shared/roles";
 import { 
@@ -157,7 +156,15 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
     await db.transaction(async (tx) => {
       // Prevent duplicate accounts (by username/email) case-insensitively.
       const existingUser = await tx
-        .select({ id: users.id })
+        .select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          password: users.password,
+          role: users.role,
+          clientId: users.clientId,
+          creatorId: users.creatorId,
+        })
         .from(users)
         .where(
           or(
@@ -167,11 +174,7 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
         )
         .limit(1);
 
-      if (existingUser.length > 0) {
-        const err: any = new Error("An account already exists for this email. Please log in instead.");
-        err.status = 409;
-        throw err;
-      }
+      const existing = existingUser[0];
 
       const existingCreator = await tx
         .select({ id: creators.id })
@@ -179,7 +182,7 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
         .where(sql`LOWER(${creators.email}) = ${normalizedEmail}`)
         .limit(1);
 
-      if (existingCreator.length > 0) {
+      if (existingCreator.length > 0 && !existing?.creatorId) {
         const err: any = new Error("A creator application already exists for this email.");
         err.status = 409;
         throw err;
@@ -222,18 +225,41 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
         throw new Error("Failed to create creator profile.");
       }
 
-      // Create login user linked to creator
-      await tx
-        .insert(users)
-        .values({
-          username,
-          password: hashedPassword,
-          email: normalizedEmail,
-          firstName,
-          lastName,
-          role: UserRole.CREATOR,
-          creatorId: creator.id,
-        } as any);
+      if (existing) {
+        // Hybrid account: if user already exists (typically a client), link this creator profile to that user.
+        // Security: require the existing account password to prevent hijacking.
+        const ok = await comparePasswords(data.password, existing.password);
+        if (!ok) {
+          const err: any = new Error("An account already exists for this email. Please enter your existing account password to apply as a creator.");
+          err.status = 401;
+          throw err;
+        }
+        if (existing.creatorId) {
+          const err: any = new Error("This account is already linked to a creator profile.");
+          err.status = 409;
+          throw err;
+        }
+        // Only support hybrid linkage for client accounts (avoid accidental conflicts with internal users).
+        if (existing.role !== UserRole.CLIENT) {
+          const err: any = new Error("This email is already associated with an internal account. Please contact support to apply as a creator.");
+          err.status = 409;
+          throw err;
+        }
+        await tx.update(users).set({ creatorId: creator.id }).where(eq(users.id, existing.id));
+      } else {
+        // Create login user linked to creator
+        await tx
+          .insert(users)
+          .values({
+            username,
+            password: hashedPassword,
+            email: normalizedEmail,
+            firstName,
+            lastName,
+            role: UserRole.CREATOR,
+            creatorId: creator.id,
+          } as any);
+      }
 
       // Notify admins about new creator application
       try {
@@ -260,6 +286,9 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
       message: "Application received. Our team reviews applications within 24–72 hours. You’ll receive an email once a decision is made." 
     });
   } catch (error: any) {
+    if (error?.status === 401) {
+      return res.status(401).json({ message: error.message });
+    }
     if (error?.status === 409) {
       return res.status(409).json({ message: error.message });
     }
