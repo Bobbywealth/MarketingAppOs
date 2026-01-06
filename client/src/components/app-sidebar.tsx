@@ -53,6 +53,7 @@ import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getEffectiveRole } from "@/lib/effective-role";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -224,7 +225,7 @@ const salesAgentTools: SidebarNavItem[] = [
 const communicationTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
     permission: null,
     sidebarKey: "dashboard" as const,
@@ -684,8 +685,7 @@ export function AppSidebar() {
   const { canAccess, canSeeSidebarItem } = usePermissions();
 
   // Role override for testing
-  const overrideRole = localStorage.getItem('admin_role_override');
-  const effectiveRole = (user?.role === 'admin' && overrideRole) ? overrideRole : user?.role;
+  const effectiveRole = getEffectiveRole((user as any)?.role);
 
   const isClient = effectiveRole === 'client';
   const isSalesAgent = effectiveRole === 'sales_agent';
@@ -1015,7 +1015,7 @@ export function AppSidebar() {
       return false;
     }
     if (item.roles) {
-      return item.roles.includes((user as any)?.role as any);
+      return item.roles.includes(effectiveRole as any);
     }
     if (!item.permission) return true;
     return canAccess(item.permission);
@@ -1026,7 +1026,7 @@ export function AppSidebar() {
       return false;
     }
     if (item.roles) {
-      return item.roles.includes((user as any)?.role as any);
+      return item.roles.includes(effectiveRole as any);
     }
     if (!item.permission) return true;
     return canAccess(item.permission);
@@ -1037,7 +1037,7 @@ export function AppSidebar() {
       return false;
     }
     if (item.roles) {
-      return item.roles.includes((user as any)?.role as any);
+      return item.roles.includes(effectiveRole as any);
     }
     if (!item.permission) return true;
     return canAccess(item.permission);
@@ -1048,7 +1048,7 @@ export function AppSidebar() {
       return false;
     }
     if (item.roles) {
-      return item.roles.includes((user as any)?.role as any);
+      return item.roles.includes(effectiveRole as any);
     }
     if (!item.permission) return true;
     return canAccess(item.permission);

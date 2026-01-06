@@ -1920,24 +1920,71 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Dashboard stats - OPTIMIZED
-  app.get("/api/dashboard/stats", isAuthenticated, async (req: Request, res: Response) => {
+  // NOTE: /api/dashboard/stats is legacy and now admin-only (use /api/dashboard/*-stats).
+  app.get("/api/dashboard/stats", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
       const currentUser = req.user as any;
-      console.log("🔍 Dashboard API called - fetching data for user:", currentUser?.username, "role:", currentUser?.role);
-      
       const stats = await storage.getDashboardStats(currentUser.id, currentUser.role);
-      
-      console.log("✅ Sending dashboard response with:", {
-        totalClients: stats.totalClients,
-        activeCampaigns: stats.activeCampaigns,
-        pipelineValue: stats.pipelineValue,
-      });
-
       res.json(stats);
     } catch (error: any) {
       console.error("❌ Dashboard API error:", error);
-      console.error("Error details:", error.message, error.stack);
       res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
+    }
+  });
+
+  // Role-specific dashboard stats (least privilege)
+  app.get("/api/dashboard/admin-stats", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const currentUser = req.user as any;
+      const stats = await storage.getDashboardStats(currentUser.id, UserRole.ADMIN);
+      res.json(stats);
+    } catch (error: any) {
+      console.error("❌ Admin dashboard stats error:", error);
+      res.status(500).json({ message: "Failed to fetch admin dashboard stats", error: error.message });
+    }
+  });
+
+  app.get("/api/dashboard/manager-stats", isAuthenticated, requireRole(UserRole.MANAGER, UserRole.CREATOR_MANAGER), async (req: Request, res: Response) => {
+    try {
+      const currentUser = req.user as any;
+      const stats = await storage.getDashboardStats(currentUser.id, UserRole.MANAGER);
+
+      // Pipeline counts by stage (no $)
+      const stageRows = await pool.query(
+        `SELECT stage, COUNT(*)::int AS count FROM leads GROUP BY stage`
+      );
+      const pipelineByStage: Record<string, number> = {};
+      for (const row of stageRows.rows) {
+        if (row?.stage) pipelineByStage[String(row.stage)] = Number(row.count || 0);
+      }
+
+      // Remove financial/value fields for manager dashboard payload
+      const {
+        pipelineValue: _pipelineValue,
+        pipelineChange: _pipelineChange,
+        monthlyRevenue: _monthlyRevenue,
+        revenueChange: _revenueChange,
+        ...rest
+      } = stats || {};
+
+      res.json({
+        ...rest,
+        pipelineByStage,
+      });
+    } catch (error: any) {
+      console.error("❌ Manager dashboard stats error:", error);
+      res.status(500).json({ message: "Failed to fetch manager dashboard stats", error: error.message });
+    }
+  });
+
+  app.get("/api/dashboard/staff-stats", isAuthenticated, requireRole(UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const currentUser = req.user as any;
+      const stats = await storage.getDashboardStats(currentUser.id, UserRole.STAFF);
+      res.json(stats);
+    } catch (error: any) {
+      console.error("❌ Staff dashboard stats error:", error);
+      res.status(500).json({ message: "Failed to fetch staff dashboard stats", error: error.message });
     }
   });
 
@@ -3436,7 +3483,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Message routes (all authenticated users)
-  app.get("/api/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.get("/api/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const clientId = req.query.clientId as string | undefined;
       const messages = await storage.getMessages(clientId);
@@ -3687,7 +3734,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.patch("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.patch("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const validatedData = insertMessageSchema.partial().strip().parse(req.body);
       const message = await storage.updateMessage(req.params.id, validatedData);
@@ -3704,7 +3751,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.delete("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.delete("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       await storage.deleteMessage(req.params.id);
       res.status(204).send();

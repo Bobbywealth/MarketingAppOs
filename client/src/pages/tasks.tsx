@@ -1725,6 +1725,30 @@ export default function TasksPage() {
           </div>
           
           <div className="flex items-center gap-2">
+            {selectedTaskIds.size === 1 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-full text-xs"
+                onClick={() => {
+                  const selectedId = Array.from(selectedTaskIds)[0];
+                  const task = tasks.find((t) => t.id === selectedId);
+                  if (!task) {
+                    toast({
+                      title: "Couldn't find that task",
+                      description: "Please refresh and try again.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  handleEditTask(task);
+                }}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Name
+              </Button>
+            )}
+
             <Select onValueChange={(status) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { status } })}>
               <SelectTrigger className="h-9 w-32 rounded-full text-xs">
                 <SelectValue placeholder="Update Status" />

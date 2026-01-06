@@ -1,5 +1,6 @@
 import { useAuth } from "./use-auth";
 import type { SidebarPermissionKey } from "@/data/sidebar-items";
+import { getEffectiveRole } from "@/lib/effective-role";
 
 export interface RolePermissions {
   canManageUsers: boolean;
@@ -17,8 +18,9 @@ export function usePermissions() {
   const { user } = useAuth();
 
   // Role override for testing
-  const overrideRole = localStorage.getItem('admin_role_override');
-  const role = (user?.role === 'admin' && overrideRole) ? overrideRole : (user as any)?.role || "staff";
+  // NOTE: this is the canonical effective role for UI gating across the app.
+  // If a non-admin has an override lingering, it is cleared.
+  const role = getEffectiveRole((user as any)?.role);
   
   const customSidebarPermissions = (user as any)?.customPermissions as Record<string, boolean> | undefined;
   const isAdmin = role === "admin";

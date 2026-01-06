@@ -61,7 +61,10 @@ export default function Clients() {
     },
     onSuccess: async (response: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
       
       const clientData = await response.json();
       
@@ -156,7 +159,10 @@ export default function Clients() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
       setEditDialogOpen(false);
       setEditingClient(null);
       setSelectedClient(null);
@@ -189,7 +195,10 @@ export default function Clients() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
       setDeleteDialogOpen(false);
       setClientToDelete(null);
       toast({ title: "✅ Client deleted successfully" });
@@ -208,7 +217,10 @@ export default function Clients() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
       setSelectedClients(new Set());
       toast({ title: `✅ Deleted ${selectedClients.size} clients successfully` });
     },

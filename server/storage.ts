@@ -1525,18 +1525,28 @@ export class DatabaseStorage implements IStorage {
 
   // Optimized dashboard stats
   async getDashboardStats(userId?: number, role?: string) {
+    const normalizeRole = (value: unknown) =>
+      String(value ?? "")
+        .trim()
+        .toLowerCase();
+
+    const normalizedRole = normalizeRole(role);
+    const isStaff = normalizedRole === "staff";
+    const isSalesAgent = normalizedRole === "sales_agent";
+    const restrictToAssignee = (isStaff || isSalesAgent) && Boolean(userId);
+
     const now = new Date();
     const firstDayOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const firstDayOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Filter for tasks based on role
-    const taskCondition = (role !== "admin" && userId) 
+    const taskCondition = (restrictToAssignee && userId) 
       ? eq(tasks.assignedToId, userId) 
       : undefined;
 
     // Filter for leads based on role
-    const leadCondition = (role !== "admin" && userId)
+    const leadCondition = (restrictToAssignee && userId)
       ? eq(leads.assignedToId, userId)
       : undefined;
 
@@ -1754,6 +1764,27 @@ export class DatabaseStorage implements IStorage {
       return dueDate <= oneWeekFromNow;
     }).length;
 
+    // Staff should never receive company-wide / financial metrics (even if UI bugs).
+    if (isStaff) {
+      return {
+        totalClients: 0,
+        activeCampaigns: 0,
+        totalLeads,
+        pipelineValue: 0,
+        monthlyRevenue: 0,
+        clientsChange: "0",
+        campaignsChange: "0",
+        pipelineChange: "0",
+        revenueChange: "0",
+        recentActivity: [], // avoid leaking client/campaign activity
+        upcomingDeadlines,
+        taskMetrics,
+        todayTaskMetrics,
+        unreadMessagesCount,
+        deadLinesThisWeek,
+      };
+    }
+
     return {
       totalClients,
       activeCampaigns,
@@ -1769,7 +1800,7 @@ export class DatabaseStorage implements IStorage {
       taskMetrics,
       todayTaskMetrics,
       unreadMessagesCount,
-      deadLinesThisWeek
+      deadLinesThisWeek,
     };
   }
 

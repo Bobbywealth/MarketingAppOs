@@ -30,6 +30,8 @@ import { PageTransition } from "@/components/PageTransition";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { getEffectiveRole } from "@/lib/effective-role";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Lazy load all pages for better mobile performance
 const AuthPage = lazy(() => import("@/pages/auth-page"));
@@ -40,7 +42,10 @@ const PostPaymentOnboarding = lazy(() => import("@/pages/post-payment-onboarding
 const PaymentSuccessPage = lazy(() => import("@/pages/payment-success"));
 const ContactPage = lazy(() => import("@/pages/contact"));
 const BlogPage = lazy(() => import("@/pages/blog"));
-const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Dashboard = lazy(() => import("@/pages/dashboard")); // /dashboard redirect
+const AdminDashboard = lazy(() => import("@/pages/dashboard-admin"));
+const ManagerDashboard = lazy(() => import("@/pages/dashboard-manager"));
+const StaffDashboard = lazy(() => import("@/pages/dashboard-staff"));
 const ClientDashboard = lazy(() => import("@/pages/client-dashboard"));
 const SalesDashboard = lazy(() => import("@/pages/sales-dashboard"));
 const ClientContent = lazy(() => import("@/pages/client-content"));
@@ -110,21 +115,13 @@ function PageLoader() {
 
 function Router() {
   const { user } = useAuth();
-  // Role override for testing
-  const normalizeRole = (value: unknown) =>
-    String(value ?? "")
-      .trim()
-      .toLowerCase();
-
-  const overrideRoleRaw = localStorage.getItem("admin_role_override");
-  const baseRole = normalizeRole((user as any)?.role);
-  const overrideRole = normalizeRole(overrideRoleRaw);
-  const effectiveRole = (baseRole === "admin" && overrideRole) ? overrideRole : baseRole;
+  const effectiveRole = getEffectiveRole((user as any)?.role);
+  const { canAccess, isAdmin, isManager } = usePermissions();
   
   const isClient = effectiveRole === 'client';
   const isSalesAgent = effectiveRole === 'sales_agent';
   const isCreator = effectiveRole === 'creator';
-  const isInternal = !!user && !isClient && !isSalesAgent && !isCreator; // admin/manager/staff/creator_manager
+  const isInternal = !!user && ["admin", "manager", "staff", "creator_manager"].includes(effectiveRole); // explicit allowlist
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -165,42 +162,46 @@ function Router() {
         {isClient && <ProtectedRoute path="/second-me" component={ClientSecondMeDashboard} />}
         {isClient && <ProtectedRoute path="/second-me/onboarding" component={SecondMeOnboarding} />}
         {/* Admin/Manager/Staff routes */}
+        {isInternal && <ProtectedRoute path="/dashboard/admin" component={AdminDashboard} />}
+        {isInternal && <ProtectedRoute path="/dashboard/manager" component={ManagerDashboard} />}
+        {isInternal && <ProtectedRoute path="/dashboard/staff" component={StaffDashboard} />}
+        {user && <ProtectedRoute path="/dashboard" component={Dashboard} />}
         {isInternal && <ProtectedRoute path="/" component={Dashboard} />}
         {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
         {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
         {isInternal && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
-        {isInternal && <ProtectedRoute path="/marketing-center" component={MarketingCenter} />}
+        {isInternal && <ProtectedRoute path="/marketing-center" component={isAdmin ? MarketingCenter : Dashboard} />}
         {isInternal && <ProtectedRoute path="/campaigns" component={Campaigns} />}
         {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
         {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
         {isInternal && <ProtectedRoute path="/content" component={Content} />}
-        {isInternal && <ProtectedRoute path="/invoices" component={Invoices} />}
-        {isInternal && <ProtectedRoute path="/commissions" component={Commissions} />}
-        {isInternal && <ProtectedRoute path="/subscription-packages" component={SubscriptionPackages} />}
-        {isInternal && <ProtectedRoute path="/discount-codes" component={DiscountCodes} />}
+        {isInternal && <ProtectedRoute path="/invoices" component={canAccess("canManageInvoices") ? Invoices : Dashboard} />}
+        {isInternal && <ProtectedRoute path="/commissions" component={(isAdmin || isManager) ? Commissions : Dashboard} />}
+        {isInternal && <ProtectedRoute path="/subscription-packages" component={isAdmin ? SubscriptionPackages : Dashboard} />}
+        {isInternal && <ProtectedRoute path="/discount-codes" component={isAdmin ? DiscountCodes : Dashboard} />}
         {isInternal && <ProtectedRoute path="/onboarding" component={Onboarding} />}
         {!isClient && <ProtectedRoute path="/messages" component={Messages} />}
         {isInternal && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}
         {isInternal && <ProtectedRoute path="/analytics" component={Analytics} />}
-        {isInternal && <ProtectedRoute path="/team" component={Team} />}
+        {isInternal && <ProtectedRoute path="/team" component={isAdmin ? Team : Dashboard} />}
         {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
         {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
         {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
         {isInternal && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
         {isInternal && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
-        {isInternal && <ProtectedRoute path="/training" component={Training} />}
+        {isInternal && <ProtectedRoute path="/training" component={isAdmin ? Training : Dashboard} />}
         {isInternal && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
         {isInternal && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
         {isInternal && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
         {isInternal && <ProtectedRoute path="/creators" component={Creators} />}
-        {isInternal && <ProtectedRoute path="/creators/payouts" component={AdminPayouts} />}
+        {isInternal && <ProtectedRoute path="/creators/payouts" component={(isAdmin || isManager) ? AdminPayouts : Dashboard} />}
         {isInternal && <ProtectedRoute path="/creators/new" component={CreatorNew} />}
         {isInternal && <ProtectedRoute path="/creators/:id" component={CreatorDetail} />}
         {isInternal && <ProtectedRoute path="/creators/:id/edit" component={CreatorEdit} />}
         {isInternal && <ProtectedRoute path="/visits" component={Visits} />}
         {isInternal && <ProtectedRoute path="/visits/new" component={VisitNew} />}
         {isInternal && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
-        {user?.role === "admin" && <ProtectedRoute path="/ai-manager" component={AIBusinessManager} />}
+        {isInternal && <ProtectedRoute path="/ai-manager" component={isAdmin ? AIBusinessManager : Dashboard} />}
         {/* Shared routes (both clients and staff) */}
         <ProtectedRoute path="/tickets" component={Tickets} />
         <ProtectedRoute path="/settings" component={Settings} />
