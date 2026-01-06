@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat, Eye, EyeOff } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -981,12 +981,13 @@ export default function TasksPage() {
 
           <Button
             variant={showCompleted ? "outline" : "secondary"}
-            size="default"
+            size="sm"
             onClick={() => setShowCompleted(!showCompleted)}
             data-testid="button-toggle-completed"
-            className="gap-2"
+            className="gap-2 whitespace-nowrap md:h-10 md:px-4"
           >
-            {showCompleted ? "✅ Hide Completed" : "👁️ Show Completed"}
+            {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            <span className="hidden sm:inline">{showCompleted ? "Hide Completed" : "Show Completed"}</span>
           </Button>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
