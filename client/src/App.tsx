@@ -42,6 +42,8 @@ const PostPaymentOnboarding = lazy(() => import("@/pages/post-payment-onboarding
 const PaymentSuccessPage = lazy(() => import("@/pages/payment-success"));
 const ContactPage = lazy(() => import("@/pages/contact"));
 const BlogPage = lazy(() => import("@/pages/blog"));
+const PrivacyPolicyPage = lazy(() => import("@/pages/privacy"));
+const TermsOfServicePage = lazy(() => import("@/pages/terms"));
 const Dashboard = lazy(() => import("@/pages/dashboard")); // /dashboard redirect
 const AdminDashboard = lazy(() => import("@/pages/dashboard-admin"));
 const ManagerDashboard = lazy(() => import("@/pages/dashboard-manager"));
@@ -138,6 +140,8 @@ function Router() {
         <Route path="/payment-success" component={PaymentSuccessPage} />
         <Route path="/contact" component={ContactPage} />
         <Route path="/blog" component={BlogPage} />
+        <Route path="/privacy" component={PrivacyPolicyPage} />
+        <Route path="/terms" component={TermsOfServicePage} />
         {!user && <Route path="/" component={Landing} />}
         {/* Client-specific routes */}
         {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
@@ -314,7 +318,7 @@ function AppContent() {
   };
 
   if (isLoading) {
-    const publicPages = ["/", "/signup", "/signup/creator", "/contact", "/blog", "/auth", "/login"];
+    const publicPages = ["/", "/signup", "/signup/creator", "/contact", "/blog", "/privacy", "/terms", "/auth", "/login"];
     const isPublicPage = publicPages.includes(window.location.pathname) || 
                          window.location.pathname.startsWith("/signup/");
     

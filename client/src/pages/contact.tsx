@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, Send, CheckCircle, ArrowLeft, Calendar } from "lucide-react";
 import { HeaderLogo, FooterLogo } from "@/components/Logo";
@@ -25,7 +26,8 @@ export default function ContactPage() {
     email: "",
     phone: "",
     company: "",
-    message: ""
+    message: "",
+    smsOptIn: false,
   });
 
   const contactMutation = useMutation({
@@ -202,6 +204,26 @@ export default function ContactPage() {
                           rows={5}
                           required
                         />
+                      </div>
+
+                      {/* SMS Opt-in (Twilio proof-of-consent requirement) */}
+                      <div className="rounded-lg border bg-gray-50/60 p-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            id="smsOptIn"
+                            checked={formData.smsOptIn}
+                            onCheckedChange={(checked) =>
+                              setFormData((prev) => ({ ...prev, smsOptIn: checked === true }))
+                            }
+                            aria-label="SMS opt-in consent"
+                          />
+                          <label htmlFor="smsOptIn" className="text-sm leading-5 text-gray-800 cursor-pointer">
+                            I'd like to receive SMS updates and promotional messages from Marketing Team App.
+                            <div className="text-xs text-gray-600 mt-1">
+                              (Message &amp; data rates may apply. Reply STOP to opt out.)
+                            </div>
+                          </label>
+                        </div>
                       </div>
 
                       <Button

@@ -35,12 +35,16 @@ Set these in your hosting provider (Render/Replit/etc.):
 - **Inbound webhook signature validation (recommended)**:
   - `TWILIO_WEBHOOK_BASE_URL=https://YOUR_PUBLIC_DOMAIN`
     - This should match your public origin (scheme + host). The server will append the incoming path for validation.
+  - `TWILIO_SIGNATURE_VALIDATION=true` (optional)
+    - When set to `true`, the server will **require** signature validation for inbound webhooks (returns `403` if missing/invalid).
 
 If `TWILIO_AUTH_TOKEN` + `X-Twilio-Signature` are present, the server will validate the webhook request and return `403` if invalid.
 
 ## ✅ Response behavior
 
-The endpoint always returns **HTTP 200** with **TwiML XML** (even when downstream systems fail) to prevent Twilio retry storms.
+The endpoint returns **HTTP 200** with **valid TwiML XML** (even when downstream systems fail) to prevent Twilio retry storms.
+
+Signature validation failures return **HTTP 403**.
 
 ## ✅ “Accessible from the internet” checklist
 
@@ -59,4 +63,22 @@ Twilio cannot reach `localhost` or private networks. Ensure:
 ---
 
 Implementation: `server/routes.ts` → `app.post("/webhooks/twilio/sms", ...)`
+
+## ✅ Toll-free verification (submission details)
+
+These are the details submitted in Twilio Console → **Messaging → Toll-Free Verification**:
+
+- **Email for Notifications**: `business@marketingteam.app`
+- **Estimated Monthly Volume**: `10`
+- **Opt-In Type**: `Web Form`
+- **Messaging Use Case Categories**: `Marketing`
+- **Proof of Consent URL**: `https://www.marketingteam.app/privacy`
+- **Use Case Description**: “Marketing Team App sends marketing and promotional messages to users who have opted in through our web platform. Messages include campaign updates, special offers, and account notifications.”
+- **Sample Message**: “Hi! Your campaign is live! Check out exclusive offers and updates. Reply STOP to opt out.”
+- **Privacy Policy URL**: `https://www.marketingteam.app/privacy`
+- **Terms & Conditions URL**: `https://www.marketingteam.app/terms`
+- **Terms of Service Agreement**: checked ✅
+
+Recommended production webhook URL to paste into Twilio:
+- `https://www.marketingteam.app/api/webhooks/twilio`
 

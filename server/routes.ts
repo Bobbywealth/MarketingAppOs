@@ -2957,7 +2957,9 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Public contact form endpoint (no authentication required)
   app.post("/api/contact", async (req: Request, res: Response) => {
     try {
-      const { name, email, phone, company, message } = req.body;
+      const { name, email, phone, company, message, smsOptIn } = req.body;
+      const normalizedSmsOptIn =
+        smsOptIn === true || smsOptIn === "true" || smsOptIn === 1 || smsOptIn === "1";
 
       // Create a notification for all admins
       try {
@@ -2966,7 +2968,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           await storage.createNotification({
             userId: admin.id,
             title: "📧 New Contact Form Submission",
-            message: `${name}${company ? ` from ${company}` : ''} sent a message`,
+            message: `${name}${company ? ` from ${company}` : ""} sent a message${normalizedSmsOptIn ? " (SMS opt-in: YES)" : " (SMS opt-in: NO)"}`,
             type: "info",
             category: "general",
             actionUrl: "/messages",
@@ -2975,6 +2977,36 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         }
       } catch (notifError) {
         console.error("Failed to create notification:", notifError);
+      }
+
+      // Persist submission for audit/proof-of-consent (best-effort)
+      try {
+        const ip =
+          (typeof req.headers["x-forwarded-for"] === "string"
+            ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
+            : Array.isArray(req.headers["x-forwarded-for"])
+              ? req.headers["x-forwarded-for"][0]
+              : undefined) || req.ip;
+        const userAgent = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined;
+
+        await pool.query(
+          `
+          INSERT INTO contact_submissions (name, email, phone, company, message, sms_opt_in, ip, user_agent)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `,
+          [
+            name ?? null,
+            email ?? null,
+            phone ?? null,
+            company ?? null,
+            message ?? null,
+            normalizedSmsOptIn,
+            ip ?? null,
+            userAgent ?? null,
+          ]
+        );
+      } catch (dbError) {
+        console.error("Failed to persist contact submission:", dbError);
       }
 
       // TODO: Send email notification to admin
@@ -6348,7 +6380,24 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const authToken = process.env.TWILIO_AUTH_TOKEN;
       const signature = (req.header("X-Twilio-Signature") || "").trim();
       const baseUrl = (process.env.TWILIO_WEBHOOK_BASE_URL || process.env.APP_URL || "").trim();
+      const requireSignatureValidation = String(process.env.TWILIO_SIGNATURE_VALIDATION || "").toLowerCase() === "true";
 
+      if (requireSignatureValidation) {
+        if (!authToken) {
+          console.error("❌ TWILIO_SIGNATURE_VALIDATION=true but TWILIO_AUTH_TOKEN is not set");
+          return res.status(500).send("Server misconfigured");
+        }
+        if (!baseUrl) {
+          console.error("❌ TWILIO_SIGNATURE_VALIDATION=true but TWILIO_WEBHOOK_BASE_URL / APP_URL is not set");
+          return res.status(500).send("Server misconfigured");
+        }
+        if (!signature) {
+          console.warn("⚠️  Twilio webhook missing X-Twilio-Signature");
+          return res.status(403).send("Forbidden");
+        }
+      }
+
+      // Best-effort validation when auth + signature are present (or required)
       if (authToken && signature) {
         const urlForValidation = baseUrl
           ? new URL(req.originalUrl, baseUrl).toString()

@@ -343,6 +343,33 @@ export async function ensureMinimumSchema() {
     "creators.email unique constraint",
     `ALTER TABLE creators ADD CONSTRAINT creators_email_unique UNIQUE (email);`
   );
+
+  // Public website contact submissions (for SMS opt-in proof + audit trail)
+  await safeQuery(
+    "contact_submissions table",
+    `
+    CREATE TABLE IF NOT EXISTS contact_submissions (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      name TEXT,
+      email TEXT,
+      phone TEXT,
+      company TEXT,
+      message TEXT,
+      sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE,
+      ip VARCHAR,
+      user_agent TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    `
+  );
+  await safeQuery(
+    "idx_contact_submissions_created_at",
+    `CREATE INDEX IF NOT EXISTS idx_contact_submissions_created_at ON contact_submissions(created_at);`
+  );
+  await safeQuery(
+    "idx_contact_submissions_email",
+    `CREATE INDEX IF NOT EXISTS idx_contact_submissions_email ON contact_submissions(email);`
+  );
 }
 
 
