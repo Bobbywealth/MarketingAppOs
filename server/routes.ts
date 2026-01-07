@@ -70,6 +70,7 @@ import {
   upload,
   UPLOAD_DIR
 } from "./routes/common";
+import twilio from "twilio";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -6330,6 +6331,128 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       res.status(200).json({ success: false, error: error.message });
     }
   });
+
+  // Twilio SMS/MMS Webhook (NO authentication - Twilio will call this)
+  // Configure in Twilio Console → Phone Numbers → Messaging → "A message comes in"
+  // Supported paths:
+  // - /webhooks/twilio/sms
+  // - /api/webhooks/twilio
+  // - /api/webhooks/twilio/sms
+  const handleTwilioIncomingMessage = async (req: Request, res: Response) => {
+    try {
+      // Twilio sends application/x-www-form-urlencoded payloads
+      const params = (req.body || {}) as Record<string, any>;
+
+      // Optional request signature validation (recommended)
+      // Requires TWILIO_AUTH_TOKEN and a correct public base URL (APP_URL or TWILIO_WEBHOOK_BASE_URL).
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const signature = (req.header("X-Twilio-Signature") || "").trim();
+      const baseUrl = (process.env.TWILIO_WEBHOOK_BASE_URL || process.env.APP_URL || "").trim();
+
+      if (authToken && signature) {
+        const urlForValidation = baseUrl
+          ? new URL(req.originalUrl, baseUrl).toString()
+          : `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+
+        const ok = twilio.validateRequest(authToken, signature, urlForValidation, params);
+        if (!ok) {
+          console.warn("⚠️  Twilio webhook signature validation failed");
+          return res.status(403).send("Forbidden");
+        }
+      }
+
+      console.log("📨 Twilio SMS/MMS Webhook received:", JSON.stringify(params, null, 2));
+
+      const {
+        smsMessages: smsMessagesTable,
+        leads,
+      } = await import("@shared/schema");
+
+      // Twilio fields (common):
+      // - MessageSid, SmsSid
+      // - From, To, Body
+      // - NumMedia, MediaUrl0.., MediaContentType0..
+      // - MessageStatus / SmsStatus (if status callback configured)
+      const messageSid = params.MessageSid || params.SmsSid;
+      const fromNumber = params.From;
+      const toNumber = params.To;
+      const bodyText = params.Body || "";
+      const messageStatus = params.MessageStatus || params.SmsStatus;
+
+      // Attempt to associate to a lead by phone number (best-effort)
+      let leadId: number | null = null;
+      try {
+        if (fromNumber) {
+          const matchingLeads = await db
+            .select()
+            .from(leads)
+            .where(or(
+              eq(leads.phone, fromNumber),
+              eq(leads.phone, String(fromNumber).replace(/\D/g, "")),
+            ))
+            .limit(1);
+
+          if (matchingLeads.length > 0) {
+            leadId = matchingLeads[0].id;
+          }
+        }
+      } catch (leadLookupErr) {
+        console.error("⚠️  Twilio lead lookup failed:", leadLookupErr);
+      }
+
+      // Store inbound messages and/or status updates in existing sms_messages table.
+      // NOTE: schema column is named dialpad_id historically; we store Twilio's MessageSid there for de-duplication.
+      if (messageSid) {
+        const existing = await db
+          .select()
+          .from(smsMessagesTable)
+          .where(sql`dialpad_id = ${messageSid}`)
+          .limit(1);
+
+        if (existing.length > 0) {
+          // Update status if we received a callback or any new info
+          if (messageStatus) {
+            await db
+              .update(smsMessagesTable)
+              .set({
+                status: messageStatus,
+              })
+              .where(sql`dialpad_id = ${messageSid}`);
+          }
+        } else if (fromNumber && toNumber) {
+          await db.insert(smsMessagesTable).values({
+            dialpadId: messageSid,
+            direction: "inbound",
+            fromNumber,
+            toNumber,
+            text: bodyText,
+            status: messageStatus || "received",
+            userId: null,
+            leadId,
+            timestamp: new Date(),
+          });
+        }
+      }
+
+      // Respond with TwiML (valid XML). You can customize the reply later if desired.
+      // Returning 200 + TwiML prevents Twilio from treating the webhook as failed.
+      const twiml = new twilio.twiml.MessagingResponse();
+      // If you want an auto-reply, uncomment:
+      // twiml.message("Thanks! We've received your message.");
+
+      // Twilio accepts empty TwiML too; keep it minimal to avoid unintended auto-replies.
+      res.type("text/xml").status(200).send(twiml.toString());
+    } catch (error: any) {
+      console.error("❌ Error processing Twilio webhook:", error);
+      // Return 200 with valid TwiML to avoid repeated retries if the issue is downstream (DB, etc.)
+      const twiml = new twilio.twiml.MessagingResponse();
+      res.type("text/xml").status(200).send(twiml.toString());
+    }
+  };
+
+  app.post("/webhooks/twilio/sms", handleTwilioIncomingMessage);
+  app.post("/api/webhooks/twilio", handleTwilioIncomingMessage);
+  app.post("/api/webhooks/twilio/sms", handleTwilioIncomingMessage);
 
   // Get current Dialpad user info
   app.get("/api/dialpad/user/me", isAuthenticated, async (req: Request, res: Response) => {
