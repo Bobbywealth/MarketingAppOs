@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import fs from "fs";
+import path from "path";
 import { CircuitBreaker } from './lib/circuit-breaker';
 import { log } from './vite';
 
@@ -34,8 +36,15 @@ export function initializeEmailService() {
 
 // Premium Email Wrapper
 function renderEmail(title: string, content: string, themeColor: string = '#3b82f6') {
-  const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
-  const logoUrl = `${appUrl}/logo.png`;
+  const appUrlRaw = process.env.APP_URL || 'https://www.marketingteam.app';
+  const appUrl = appUrlRaw.replace(/\/+$/, "");
+
+  // Prefer a hard override, otherwise prefer an embedded CID logo (best for Outlook),
+  // and finally fall back to a public URL if we can't find a logo file on disk.
+  const overriddenLogoUrl = process.env.EMAIL_LOGO_URL?.trim();
+  const cidLogoSrc = "cid:marketingteam-logo";
+  const publicLogoUrl = `${appUrl}/logo.png`;
+  const logoSrc = overriddenLogoUrl || (resolveEmailLogoPath() ? cidLogoSrc : publicLogoUrl);
 
   return `
     <!DOCTYPE html>
@@ -68,7 +77,7 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
         <div class="container">
           <div class="header">
             <img
-              src="${logoUrl}"
+              src="${logoSrc}"
               alt="Marketing Team App Logo"
               width="220"
               style="display:block; margin:0 auto 20px; max-width:220px; width:220px; height:auto;"
@@ -80,7 +89,7 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
           </div>
           <div class="footer">
             <img
-              src="${logoUrl}"
+              src="${logoSrc}"
               alt="Marketing Team App Logo"
               class="footer-logo"
               width="160"
@@ -93,6 +102,42 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
     </body>
     </html>
   `;
+}
+
+function resolveEmailLogoPath(): string | null {
+  // Candidates for dev + production. In production, the server code runs from `dist/`
+  // and assets are served from `dist/public/`.
+  const candidates = [
+    path.resolve(import.meta.dirname, "public", "logo.png"),
+    path.resolve(import.meta.dirname, "..", "dist", "public", "logo.png"),
+    path.resolve(import.meta.dirname, "..", "client", "public", "logo.png"),
+  ];
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) return p;
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+function maybeGetLogoAttachment():
+  | { filename: string; path: string; cid: string; contentDisposition: "inline" }
+  | null {
+  // If a hard URL is configured, don't attach anything.
+  if (process.env.EMAIL_LOGO_URL?.trim()) return null;
+
+  const logoPath = resolveEmailLogoPath();
+  if (!logoPath) return null;
+
+  return {
+    filename: "logo.png",
+    path: logoPath,
+    cid: "marketingteam-logo",
+    contentDisposition: "inline",
+  };
 }
 
 // Email template functions
@@ -212,7 +257,7 @@ export const emailTemplates = {
       <p>They have been sent a premium welcome pack and are ready to be integrated into your workflows.</p>
     `;
     return {
-      subject: '👤 New Team Member Added',
+      subject: `👤 New team member: ${newUserName}`,
       html: renderEmail('New Team Member', content, '#8b5cf6')
     };
   },
@@ -241,7 +286,7 @@ export const emailTemplates = {
       </div>
     `;
     return {
-      subject: '🎯 New Client Added',
+      subject: `🎯 New client: ${clientName}`,
       html: renderEmail('New Client Onboarded', content, '#10b981')
     };
   },
@@ -294,6 +339,7 @@ export const emailTemplates = {
     const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
     const isOverdue = hoursUntilDue <= 0;
     const themeColor = isOverdue ? '#ef4444' : '#f59e0b';
+    const dueLabel = new Date(dueDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     
     const content = `
       <h2 style="margin-top: 0;">Hi ${assigneeName},</h2>
@@ -305,7 +351,7 @@ export const emailTemplates = {
         </div>
         <h3 style="margin: 12px 0 8px 0; font-size: 20px;">${taskTitle}</h3>
         <p style="font-size: 16px; font-weight: 700; color: ${themeColor}; margin-bottom: 8px;">
-          Due ${new Date(dueDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          Due ${dueLabel}
         </p>
         <p style="color: #6b7280; font-size: 14px;">
           ${isOverdue ? 'This task required attention ' + Math.abs(Math.round(hoursUntilDue)) + ' hours ago.' : 'This task is due in approximately ' + Math.round(hoursUntilDue) + ' hours.'}
@@ -317,7 +363,7 @@ export const emailTemplates = {
       </div>
     `;
     return {
-      subject: `⏰ Task Due ${isOverdue ? 'Overdue' : 'Soon'}: ${taskTitle}`,
+      subject: `${isOverdue ? '🚨 Overdue' : '⏰ Due soon'}: ${taskTitle} (due ${dueLabel})`,
       html: renderEmail('Task Deadline Alert', content, themeColor)
     };
   },
@@ -337,7 +383,7 @@ export const emailTemplates = {
       </div>
     `;
     return {
-      subject: `✅ Task Completed: ${taskTitle}`,
+      subject: `✅ ${actorName} completed: ${taskTitle}`,
       html: renderEmail('Task Completed', content, '#10b981')
     };
   },
@@ -357,7 +403,7 @@ export const emailTemplates = {
       </div>
     `;
     return {
-      subject: `💬 New Comment on: ${taskTitle}`,
+      subject: `💬 ${commenterName} commented: ${taskTitle}`,
       html: renderEmail('New Task Comment', content, '#3b82f6')
     };
   },
@@ -453,14 +499,17 @@ export const emailTemplates = {
         <a href="${leadUrl}" class="button" style="background-color: #3b82f6;">View Lead Details →</a>
       </div>
     `;
+    const leadLabel = leadName ? `${leadCompany} (${leadName})` : leadCompany;
     return {
-      subject: `🎯 New Lead Assigned: ${leadCompany}`,
+      subject: `🎯 Lead assigned to you: ${leadLabel}`,
       html: renderEmail('Lead Assignment', content, '#3b82f6')
     };
   },
 
   // Lead stage changed
   leadStageChanged: (userName: string, leadCompany: string, oldStage: string, newStage: string, leadUrl: string) => {
+    const oldStageLabel = oldStage.replaceAll('_', ' ');
+    const newStageLabel = newStage.replaceAll('_', ' ');
     const content = `
       <h2 style="margin-top: 0;">Hi ${userName},</h2>
       <p>A lead's stage has been updated.</p>
@@ -472,12 +521,12 @@ export const emailTemplates = {
         <div style="display: flex; align-items: center; gap: 12px;">
           <div style="flex: 1;">
             <div class="info-label">OLD STAGE</div>
-            <div class="info-value" style="text-transform: capitalize; color: #64748b;">${oldStage.replace('_', ' ')}</div>
+            <div class="info-value" style="text-transform: capitalize; color: #64748b;">${oldStageLabel}</div>
           </div>
           <div style="font-size: 20px; color: #94a3b8;">→</div>
           <div style="flex: 1;">
             <div class="info-label">NEW STAGE</div>
-            <div class="info-value" style="text-transform: capitalize; color: #10b981;">${newStage.replace('_', ' ')}</div>
+            <div class="info-value" style="text-transform: capitalize; color: #10b981;">${newStageLabel}</div>
           </div>
         </div>
       </div>
@@ -487,7 +536,7 @@ export const emailTemplates = {
       </div>
     `;
     return {
-      subject: `📈 Lead Stage Updated: ${leadCompany}`,
+      subject: `📈 ${leadCompany}: ${oldStageLabel} → ${newStageLabel}`,
       html: renderEmail('Lead Stage Update', content, '#10b981')
     };
   },
@@ -511,7 +560,7 @@ export const emailTemplates = {
       </div>
     `;
     return {
-      subject: `🎊 Lead Converted: ${leadCompany}`,
+      subject: `🎊 Converted to client: ${leadCompany}`,
       html: renderEmail('Lead Successfully Converted', content, '#10b981')
     };
   },
@@ -539,7 +588,7 @@ export const emailTemplates = {
       <p style="font-size: 14px; color: #6b7280;">Welcome to the team! We can't wait to see the incredible content you'll create.</p>
     `;
     return {
-      subject: '🎉 Welcome to the Network! Your Creator Application was Approved',
+      subject: `🎉 Creator application approved: ${creatorName}`,
       html: renderEmail('Application Approved', content, '#3b82f6')
     };
   },
@@ -558,7 +607,7 @@ export const emailTemplates = {
       <p style="font-size: 14px; color: #6b7280;">Thank you again for your interest.</p>
     `;
     return {
-      subject: 'Update regarding your Creator Application',
+      subject: `Update on your creator application: ${creatorName}`,
       html: renderEmail('Application Update', content, '#64748b')
     };
   },
@@ -605,6 +654,7 @@ export async function sendEmail(to: string | string[], subject: string, html: st
   try {
     const fromEmail = options?.from || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'business@marketingteam.app';
     const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Marketing Team';
+    const logoAttachment = maybeGetLogoAttachment();
     
     const info = await emailCircuit.execute(() => 
       transporter!.sendMail({
@@ -613,6 +663,7 @@ export async function sendEmail(to: string | string[], subject: string, html: st
         subject,
         html,
         ...(process.env.SMTP_REPLY_TO ? { replyTo: process.env.SMTP_REPLY_TO } : { replyTo: fromEmail }),
+        ...(logoAttachment ? { attachments: [logoAttachment] } : {}),
       })
     );
 

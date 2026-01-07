@@ -24,6 +24,8 @@ Set these in your production environment (or local `.env`):
 - `SMTP_REPLY_TO`: Reply-To address
 - `SMTP_TLS_REJECT_UNAUTHORIZED`: set to `false` only if your SMTP provider uses a self-signed certificate (not recommended)
 - `APP_URL`: used in email templates for links (example: `https://www.marketingteam.app`)
+- `EMAIL_LOGO_URL`: optional override for the logo used in email templates. If not set, the app will try to embed `logo.png` inline (best for Outlook) and fall back to `${APP_URL}/logo.png`.
+- `ENFORCE_EMAIL_VERIFICATION`: when set to `true`, authenticated API routes will require `emailVerified=true` for non-exempt roles (admins/managers are exempt). Useful as a temporary safety switch while tightening auth/security.
 
 ## How to test SMTP (end-to-end)
 

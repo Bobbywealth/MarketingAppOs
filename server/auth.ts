@@ -557,10 +557,26 @@ export function setupAuth(app: Express) {
 }
 
 export function isAuthenticated(req: any, res: any, next: any) {
-  if (req.isAuthenticated()) {
-    return next();
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
-  res.status(401).json({ message: "Unauthorized" });
+
+  // Optional enforcement: require email verification for non-exempt roles.
+  // This is helpful as a temporary safety switch while polishing auth/security flows.
+  const enforce = process.env.ENFORCE_EMAIL_VERIFICATION === "true";
+  if (enforce) {
+    const user = req.user as SelectUser;
+    const isExemptRole = user?.role === "admin" || user?.role === "manager";
+    if (!isExemptRole && !user?.emailVerified) {
+      return res.status(403).json({
+        message: "Email verification required",
+        emailVerified: false,
+        needsVerification: true,
+      });
+    }
+  }
+
+  return next();
 }
 
 export function requireEmailVerified(req: any, res: any, next: any) {
