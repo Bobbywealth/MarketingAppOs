@@ -46,6 +46,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
+import { randomBytes } from "crypto";
 import leadsRouter from "./routes/leads";
 import { notifyAboutLeadAction } from "./leadNotifications";
 import clientsRouter from "./routes/clients";
@@ -1185,6 +1186,7 @@ This lead will be updated if they complete the full signup process.`,
       let userId: number | undefined = undefined;
       if (data.username && data.password) {
         const hashedPassword = await hashPassword(data.password);
+        const verificationToken = randomBytes(20).toString("hex");
         const newUser = await storage.createUser({
           username: data.username,
           password: hashedPassword,
@@ -1193,9 +1195,30 @@ This lead will be updated if they complete the full signup process.`,
           lastName: data.name.split(' ').slice(1).join(' '),
           role: "client", // Default to client for signups
           emailVerified: false,
+          emailVerificationToken: verificationToken,
         });
         userId = newUser.id;
         console.log('✅ Created user account:', data.username);
+
+        // Send welcome + verification emails (best-effort)
+        if (newUser.email) {
+          try {
+            const protocol = req.protocol;
+            const host = req.get("host");
+            const appUrl = process.env.APP_URL || `${protocol}://${host}`;
+            const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
+
+            void emailNotifications
+              .sendVerificationEmail(newUser.firstName || newUser.username, newUser.email, verifyUrl)
+              .catch((err) => console.error("Failed to send verification email (signup-simple):", err));
+
+            void emailNotifications
+              .sendWelcomeEmail(newUser.firstName || newUser.username, newUser.email)
+              .catch((err) => console.error("Failed to send welcome email (signup-simple):", err));
+          } catch (emailErr) {
+            console.error("Error sending signup-simple emails:", emailErr);
+          }
+        }
       }
 
       // Check for existing lead and update it
@@ -4445,14 +4468,45 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
-      console.log("Creating user with data:", { username: req.body.username, role: req.body.role });
-      
-      const { hashPassword } = await import("./auth");
+      const schema = z.object({
+        username: z.string().min(3),
+        password: z.string().min(6),
+        role: z.string().optional(),
+        email: z.string().email().optional().nullable(),
+        firstName: z.string().optional().nullable(),
+        lastName: z.string().optional().nullable(),
+      });
+
+      const data = schema.parse(req.body);
+      console.log("Creating user with data:", { username: data.username, role: data.role });
+
+      const username = data.username.trim();
+      const email = typeof data.email === "string" ? (data.email.trim() ? data.email.trim().toLowerCase() : null) : null;
+      const firstName = typeof data.firstName === "string" ? (data.firstName.trim() || null) : null;
+      const lastName = typeof data.lastName === "string" ? (data.lastName.trim() || null) : null;
+
+      const existingUser = await storage.getUserByUsername(username).catch(() => null);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      if (email) {
+        const existingEmailUser = await storage.getUserByEmail(email).catch(() => null);
+        if (existingEmailUser) {
+          return res.status(400).json({ message: "Email already exists" });
+        }
+      }
+
+      const verificationToken = email ? randomBytes(20).toString("hex") : null;
+
       const userData = {
-        username: req.body.username,
-        password: await hashPassword(req.body.password),
-        role: req.body.role || "staff",
-      };
+        username,
+        password: await hashPassword(data.password),
+        role: data.role || "staff",
+        ...(email ? { email } : {}),
+        ...(firstName ? { firstName } : {}),
+        ...(lastName ? { lastName } : {}),
+        ...(verificationToken ? { emailVerified: false, emailVerificationToken: verificationToken } : {}),
+      } as any;
       
       console.log("Hashed password, calling storage.createUser...");
       const user = await storage.createUser(userData);
@@ -4461,7 +4515,18 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       // Email notifications
       if (user.email) {
         try {
-          const { emailNotifications } = await import("./emailService");
+          const protocol = req.protocol;
+          const host = req.get("host");
+          const appUrl = process.env.APP_URL || `${protocol}://${host}`;
+          const verifyUrl = user.emailVerificationToken ? `${appUrl}/verify-email?token=${user.emailVerificationToken}` : null;
+
+          // Send verification email (best-effort)
+          if (verifyUrl) {
+            void emailNotifications
+              .sendVerificationEmail(user.firstName || user.username, user.email, verifyUrl)
+              .catch((err) => console.error("Failed to send verification email:", err));
+          }
+
           // Send welcome email to new user
           void emailNotifications.sendWelcomeEmail(
             user.firstName || user.username,
@@ -4525,6 +4590,9 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const { password, ...sanitizedUser } = user;
       res.status(201).json(sanitizedUser);
     } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
       console.error("User creation error:", error);
       console.error("Error details:", error?.message, error?.code);
       res.status(500).json({ message: error?.message || "Failed to create user" });
@@ -5405,6 +5473,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.get("/api/subscription-packages", async (_req: Request, res: Response) => {
     try {
       const packages = await storage.getActiveSubscriptionPackages();
+      // Public marketing page uses this; allow short-lived caching to improve perceived speed.
+      res.setHeader("Cache-Control", "public, max-age=300");
       res.json(packages);
     } catch (error) {
       console.error("Error fetching packages:", error);

@@ -13,6 +13,7 @@ import { initializeEmailParser } from "./emailParser";
 import { startEmailSyncService } from "./emailSyncService";
 import { startVisitsAutomation } from "./visitsAutomation";
 import { startTaskAutomation } from "./taskAutomation";
+import { startMarketingBroadcastScheduler } from "./marketingBroadcastScheduler";
 import { startBackgroundJobs } from "./backgroundJobs";
 import { storage } from "./storage";
 import { ensureMinimumSchema } from "./ensureSchema";
@@ -133,6 +134,8 @@ app.use((req, res, next) => {
   startVisitsAutomation();
   // Start task due date reminders (daily)
   startTaskAutomation();
+  // Start scheduled marketing broadcasts (every minute)
+  startMarketingBroadcastScheduler();
   // Start general background jobs (invoices, meeting reminders)
   startBackgroundJobs();
 

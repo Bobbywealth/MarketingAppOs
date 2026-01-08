@@ -81,4 +81,3 @@ These are the details submitted in Twilio Console → **Messaging → Toll-Free 
 
 Recommended production webhook URL to paste into Twilio:
 - `https://www.marketingteam.app/api/webhooks/twilio`
-

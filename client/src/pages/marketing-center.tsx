@@ -30,8 +30,37 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import type { MarketingBroadcast } from "@shared/schema";
+
+type MarketingCenterStats = {
+  leads: {
+    total: number;
+    optedIn: number;
+    industries: string[];
+    tags: string[];
+  };
+  clients: {
+    total: number;
+    optedIn: number;
+  };
+};
+
+type SmsInboxRow = {
+  id: string | number;
+  dialpad_id?: string | null;
+  direction: "inbound" | "outbound";
+  from_number: string;
+  to_number: string;
+  text: string;
+  status?: string | null;
+  user_id?: number | null;
+  lead_id?: string | null;
+  timestamp: string;
+  created_at?: string | null;
+  lead_company?: string | null;
+  lead_name?: string | null;
+};
 
 export default function MarketingCenter() {
   const { toast } = useToast();
@@ -41,9 +70,11 @@ export default function MarketingCenter() {
   const [customRecipient, setCustomRecipient] = useState("");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
+  const [sendMode, setSendMode] = useState<"now" | "scheduled">("now");
+  const [scheduledAtLocal, setScheduledAtLocal] = useState(""); // datetime-local value (local TZ)
   
   // Marketing Stats Query
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery<MarketingCenterStats>({
     queryKey: ["/api/marketing-center/stats"],
   });
 
@@ -52,8 +83,21 @@ export default function MarketingCenter() {
     queryKey: ["/api/marketing-center/broadcasts"],
     refetchInterval: (data) => {
       // Refresh frequently if any broadcast is still sending
-      return Array.isArray(data) && data.some(b => b.status === 'sending') ? 3000 : false;
+      if (!Array.isArray(data)) return false;
+      if (data.some(b => b.status === 'sending')) return 3000;
+      if (data.some(b => b.status === 'pending')) return 15000;
+      return false;
     }
+  });
+
+  // SMS Inbox (inbound replies)
+  const { data: smsInbox = [], isLoading: smsInboxLoading } = useQuery<SmsInboxRow[]>({
+    queryKey: ["/api/marketing-center/sms-inbox"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/marketing-center/sms-inbox?limit=200", undefined);
+      return res.json();
+    },
+    refetchInterval: 10000,
   });
 
   // Send Broadcast Mutation
@@ -62,16 +106,20 @@ export default function MarketingCenter() {
       const res = await apiRequest("POST", "/api/marketing-center/broadcast", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (created: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/broadcasts"] });
       toast({
-        title: "🚀 Broadcast Started",
-        description: "Your messages are being queued for delivery.",
+        title: created?.status === "pending" ? "📅 Broadcast Scheduled" : "🚀 Broadcast Started",
+        description: created?.status === "pending"
+          ? "Your campaign is saved and will send at the scheduled time."
+          : "Your messages are being queued for delivery.",
       });
       setActiveTab("history");
       // Reset form
       setSubject("");
       setContent("");
+      setSendMode("now");
+      setScheduledAtLocal("");
     },
     onError: (error: any) => {
       toast({
@@ -95,6 +143,21 @@ export default function MarketingCenter() {
       toast({ title: "Recipient Required", description: `Please enter a recipient ${broadcastType === 'email' ? 'email' : 'phone number'}.`, variant: "destructive" });
       return;
     }
+    if (sendMode === "scheduled") {
+      if (!scheduledAtLocal) {
+        toast({ title: "Schedule Required", description: "Please select a date & time to schedule.", variant: "destructive" });
+        return;
+      }
+      const scheduled = new Date(scheduledAtLocal);
+      if (Number.isNaN(scheduled.getTime())) {
+        toast({ title: "Invalid Schedule", description: "Please select a valid date & time.", variant: "destructive" });
+        return;
+      }
+      if (scheduled.getTime() <= Date.now() + 30_000) {
+        toast({ title: "Schedule Too Soon", description: "Please schedule at least ~1 minute in the future.", variant: "destructive" });
+        return;
+      }
+    }
 
     sendBroadcastMutation.mutate({
       type: broadcastType,
@@ -102,7 +165,7 @@ export default function MarketingCenter() {
       customRecipient: audience === 'individual' ? customRecipient : null,
       subject: broadcastType === 'email' ? subject : null,
       content,
-      status: 'sending'
+      scheduledAt: sendMode === "scheduled" ? new Date(scheduledAtLocal).toISOString() : null,
     });
   };
 
@@ -152,6 +215,9 @@ export default function MarketingCenter() {
           </TabsTrigger>
           <TabsTrigger value="history" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
             <History className="w-4 h-4 mr-2" /> History & Status
+          </TabsTrigger>
+          <TabsTrigger value="sms-inbox" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+            <MessageSquare className="w-4 h-4 mr-2" /> SMS Inbox
           </TabsTrigger>
         </TabsList>
 
@@ -226,6 +292,36 @@ export default function MarketingCenter() {
                     )}
                   </div>
 
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Send Mode</Label>
+                      <Select value={sendMode} onValueChange={(v) => setSendMode(v as any)}>
+                        <SelectTrigger className="h-12 glass border-2">
+                          <SelectValue placeholder="Send mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="now">Send Now</SelectItem>
+                          <SelectItem value="scheduled">Schedule</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className={`space-y-2 ${sendMode === "scheduled" ? "animate-in slide-in-from-left-2 duration-300" : ""}`}>
+                      <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Scheduled For</Label>
+                      <Input
+                        type="datetime-local"
+                        disabled={sendMode !== "scheduled"}
+                        value={scheduledAtLocal}
+                        onChange={(e) => setScheduledAtLocal(e.target.value)}
+                        className="h-12 glass border-2 font-semibold"
+                      />
+                      {sendMode === "scheduled" && scheduledAtLocal && !Number.isNaN(new Date(scheduledAtLocal).getTime()) && (
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
+                          Will send: {format(new Date(scheduledAtLocal), "PPpp")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   {broadcastType === 'email' && (
                     <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                       <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Email Subject</Label>
@@ -278,7 +374,11 @@ export default function MarketingCenter() {
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-dashed">
                       <span className="text-muted-foreground font-medium">Schedule</span>
-                      <span className="font-black">Now (Instant)</span>
+                      <span className="font-black">
+                        {sendMode === "scheduled" && scheduledAtLocal
+                          ? format(new Date(scheduledAtLocal), "PPpp")
+                          : "Now (Instant)"}
+                      </span>
                     </div>
                   </div>
 
@@ -376,7 +476,9 @@ export default function MarketingCenter() {
                           <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
                             {broadcast.audience === 'individual' ? `Individual: ${broadcast.customRecipient}` : broadcast.audience}
                           </Badge>
-                          {broadcast.status === 'sending' ? (
+                          {broadcast.status === 'pending' ? (
+                            <Badge className="bg-amber-500 text-white font-black uppercase text-[10px]">Scheduled</Badge>
+                          ) : broadcast.status === 'sending' ? (
                             <Badge className="bg-primary animate-pulse font-black uppercase text-[10px]">Sending...</Badge>
                           ) : broadcast.status === 'completed' ? (
                             <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px]">Completed</Badge>
@@ -385,7 +487,10 @@ export default function MarketingCenter() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                          <Zap className="w-3 h-3" /> Sent {formatDistanceToNow(new Date(broadcast.createdAt!), { addSuffix: true })}
+                          <Zap className="w-3 h-3" />{" "}
+                          {broadcast.status === "pending" && (broadcast as any).scheduledAt
+                            ? `Scheduled for ${format(new Date((broadcast as any).scheduledAt), "PPpp")}`
+                            : `Sent ${formatDistanceToNow(new Date((broadcast as any).createdAt!), { addSuffix: true })}`}
                         </p>
                       </div>
 
@@ -416,6 +521,71 @@ export default function MarketingCenter() {
                     </div>
                   </Card>
                 </motion.div>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="sms-inbox" className="animate-in fade-in duration-500">
+          <div className="grid gap-4">
+            {smsInboxLoading ? (
+              <Card className="glass p-10 text-center">
+                <div className="flex items-center justify-center gap-2 text-muted-foreground font-semibold">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading SMS inbox...
+                </div>
+              </Card>
+            ) : smsInbox.length === 0 ? (
+              <Card className="glass-strong border-dashed border-2 p-20 text-center space-y-4">
+                <div className="w-20 h-20 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto">
+                  <MessageSquare className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-zinc-900 dark:text-white">No replies yet</h3>
+                  <p className="text-muted-foreground max-w-sm mx-auto">
+                    Incoming SMS replies to your Twilio number will appear here once your Twilio webhook is configured.
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              smsInbox.map((m) => (
+                <Card key={`${m.id}`} className="glass border-primary/10 overflow-hidden">
+                  <CardContent className="p-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className="font-black uppercase text-[10px] tracking-widest">
+                          Inbound
+                        </Badge>
+                        <span className="font-black truncate max-w-[420px]">
+                          {m.lead_company || m.lead_name || m.from_number}
+                        </span>
+                        <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
+                          From: {m.from_number}
+                        </Badge>
+                        <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
+                          To: {m.to_number}
+                        </Badge>
+                      </div>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.text}</p>
+                      <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                        <Zap className="w-3 h-3" /> {formatDistanceToNow(new Date(m.timestamp), { addSuffix: true })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        className="font-bold"
+                        onClick={() => {
+                          setBroadcastType("sms");
+                          setAudience("individual");
+                          setCustomRecipient(m.from_number);
+                          setActiveTab("composer");
+                        }}
+                      >
+                        Reply
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               ))
             )}
           </div>

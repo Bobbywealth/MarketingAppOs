@@ -1,14 +1,22 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../auth";
-import { processAIChat } from "../aiManager";
+import { processAIChat, processAIChatStream } from "../aiManager";
 import { UserRole } from "@shared/roles";
+import { requireRole } from "../rbac";
 import { emailNotifications } from "../emailService";
 import { upload } from "./common";
 import fs from "fs/promises";
+import { createReadStream } from "fs";
 import OpenAI from "openai";
 
 const router = Router();
+
+function getNumericUserId(reqUser: any): number | null {
+  const raw = reqUser?.id ?? reqUser?.claims?.sub;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
 
 /**
  * Legacy Regex-based AI Command Parser
@@ -137,14 +145,17 @@ async function processAICommand(message: string, userId: number): Promise<{
 }
 
 // AI Chat endpoint using GPT-4
-router.post("/chat", isAuthenticated, async (req: Request, res: Response) => {
+router.post("/chat", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const { message, conversationHistory } = req.body;
     const user = req.user as any;
-    const userId = user?.id || user?.claims?.sub;
+    const userId = getNumericUserId(user);
 
     if (!message) {
       return res.status(400).json({ message: "Message is required" });
+    }
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     console.log(`🤖 AI Chat Request from user ${userId}:`, message);
@@ -161,14 +172,46 @@ router.post("/chat", isAuthenticated, async (req: Request, res: Response) => {
   }
 });
 
+// Streaming chat endpoint (NDJSON)
+router.post("/chat-stream", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  const { message, conversationHistory } = req.body || {};
+  const user = req.user as any;
+  const userId = getNumericUserId(user);
+
+  if (!message) {
+    return res.status(400).json({ message: "Message is required" });
+  }
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  res.status(200);
+  res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+
+  try {
+    for await (const event of processAIChatStream(String(message), userId, conversationHistory || [])) {
+      res.write(`${JSON.stringify(event)}\n`);
+      // If client disconnects, stop work early
+      if ((res as any).writableEnded) break;
+    }
+  } catch (e: any) {
+    res.write(`${JSON.stringify({ type: "error", error: e?.message || "Streaming failed" })}\n`);
+  } finally {
+    res.end();
+  }
+});
+
 // Legacy Command endpoint (Regex-based)
-router.post("/command", isAuthenticated, async (req: Request, res: Response) => {
+router.post("/command", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const { message } = req.body;
     const user = req.user as any;
-    const userId = user?.id || user?.claims?.sub;
+    const userId = getNumericUserId(user);
 
     if (!message) return res.status(400).json({ message: "Message is required" });
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const result = await processAICommand(message, userId);
     res.json(result);
@@ -178,10 +221,11 @@ router.post("/command", isAuthenticated, async (req: Request, res: Response) => 
 });
 
 // AI Business Manager - Voice Transcription endpoint
-router.post("/transcribe", isAuthenticated, upload.single('audio'), async (req: Request, res: Response) => {
+router.post("/transcribe", isAuthenticated, requireRole(UserRole.ADMIN), upload.single('audio'), async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    const userId = user?.id || user?.claims?.sub;
+    const userId = getNumericUserId(user);
+    if (!userId) return res.status(401).json({ success: false, error: "Unauthorized" });
 
     if (!req.file) {
       return res.status(400).json({
@@ -203,13 +247,9 @@ router.post("/transcribe", isAuthenticated, upload.single('audio'), async (req: 
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // Read the audio file
-    const audioFileData = await fs.readFile(req.file.path);
-    
-    // Create a File object for OpenAI (Node.js version might need a different approach depending on OpenAI SDK version)
-    // For OpenAI Node SDK v4+, you can pass a ReadStream or Buffer
+    const audioStream = createReadStream(req.file.path);
     const transcription = await openai.audio.transcriptions.create({
-      file: await fs.open(req.file.path, 'r') as any, // Passing the stream
+      file: audioStream as any,
       model: "whisper-1",
       language: "en",
     });

@@ -71,6 +71,11 @@ export default function UserManagementPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Sidebar visibility overrides are only used for the staff/admin "full menu".
+  // Creators/Clients/Sales Agents have role-specific sidebars, so this control is not applicable.
+  const canConfigureSidebarVisibilityForRole = (role?: string) =>
+    ["admin", "manager", "staff", "creator_manager"].includes(String(role || "").toLowerCase());
+
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
@@ -488,70 +493,81 @@ export default function UserManagementPage() {
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right space-x-2">
-                      {/* Sidebar Permissions Button */}
-                      <Dialog
-                        open={permissionsDialogUser?.id === user.id}
-                        onOpenChange={(open) => {
-                          if (!open && permissionsDialogUser?.id === user.id) {
-                            setPermissionsDialogUser(null);
-                          }
-                        }}
-                      >
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPermissionsDialogUser(user)}
-                          >
-                            <Settings2 className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        {permissionsDialogUser?.id === user.id && (
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Sidebar Permissions - {user.username}</DialogTitle>
-                            <DialogDescription>
-                              Control which sidebar menu items {user.username} can see and access.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-6 py-4">
-                            {Object.entries(getPermissionsByCategory()).map(([category, permissions]) => (
-                              <div key={category} className="space-y-3">
-                                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
-                                  {category}
-                                </h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                  {permissions.map((permission) => (
-                                    <div key={permission.key} className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id={`${user.id}-${permission.key}`}
-                                        checked={isPermissionChecked(permission.key)}
-                                        onCheckedChange={(checked) => 
-                                          handlePermissionChange(permission.key, checked as boolean)
-                                        }
-                                        disabled={updateUserPermissionsMutation.isPending}
-                                      />
-                                      <Label 
-                                        htmlFor={`${user.id}-${permission.key}`}
-                                        className="text-sm font-normal cursor-pointer"
-                                      >
-                                        {permission.label}
-                                      </Label>
+                      {/* Sidebar Permissions Button (staff/admin full-menu only) */}
+                      {canConfigureSidebarVisibilityForRole(user.role) ? (
+                        <Dialog
+                          open={permissionsDialogUser?.id === user.id}
+                          onOpenChange={(open) => {
+                            if (!open && permissionsDialogUser?.id === user.id) {
+                              setPermissionsDialogUser(null);
+                            }
+                          }}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPermissionsDialogUser(user)}
+                            >
+                              <Settings2 className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          {permissionsDialogUser?.id === user.id && (
+                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Sidebar Permissions - {user.username}</DialogTitle>
+                                <DialogDescription>
+                                  Control which sidebar menu items {user.username} can see and access.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-6 py-4">
+                                {Object.entries(getPermissionsByCategory()).map(([category, permissions]) => (
+                                  <div key={category} className="space-y-3">
+                                    <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                                      {category}
+                                    </h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                      {permissions.map((permission) => (
+                                        <div key={permission.key} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`${user.id}-${permission.key}`}
+                                            checked={isPermissionChecked(permission.key)}
+                                            onCheckedChange={(checked) =>
+                                              handlePermissionChange(permission.key, checked as boolean)
+                                            }
+                                            disabled={updateUserPermissionsMutation.isPending}
+                                          />
+                                          <Label
+                                            htmlFor={`${user.id}-${permission.key}`}
+                                            className="text-sm font-normal cursor-pointer"
+                                          >
+                                            {permission.label}
+                                          </Label>
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
+                                  </div>
+                                ))}
+                                <div className="pt-4 border-t">
+                                  <p className="text-sm text-muted-foreground">
+                                    💡 <strong>Tip:</strong> Unchecked items will be hidden from {user.username}'s sidebar.
+                                    Role-based permissions still apply - this only controls visibility.
+                                  </p>
                                 </div>
                               </div>
-                            ))}
-                            <div className="pt-4 border-t">
-                              <p className="text-sm text-muted-foreground">
-                                💡 <strong>Tip:</strong> Unchecked items will be hidden from {user.username}'s sidebar. 
-                                Role-based permissions still apply - this only controls visibility.
-                              </p>
-                            </div>
-                          </div>
-                        </DialogContent>
-                        )}
-                      </Dialog>
+                            </DialogContent>
+                          )}
+                        </Dialog>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          title="Not applicable: creators/clients/sales agents use a role-specific sidebar (not the staff/admin full menu)."
+                        >
+                          <Settings2 className="w-4 h-4" />
+                        </Button>
+                      )}
 
                       {/* Edit Role Button */}
                       <Dialog>

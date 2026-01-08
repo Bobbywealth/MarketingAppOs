@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,83 +60,129 @@ export default function AIBusinessManager() {
     inputRef.current?.focus();
   }, []);
 
-  const sendMessageMutation = useMutation({
-    mutationFn: async (userMessage: string) => {
-      const response = await apiRequest("POST", "/api/ai-business-manager/chat", {
-        message: userMessage,
-        conversationHistory: messages.slice(-10).map(m => ({
-          role: m.role,
-          content: m.content,
-        })),
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      const assistantMessage: Message = {
-        id: Date.now().toString(),
-        role: data.success ? "assistant" : "error",
-        content: data.response || data.message || "I received your request.",
-        timestamp: new Date(),
-        actionTaken: data.actionTaken,
-        errorDetails: data.error,
-      };
+  const streamChat = async (userMessage: string, assistantMessageId: string) => {
+    const conversationHistory = messages
+      .slice(-10)
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role === "user" ? "user" : "assistant",
+        content: m.content,
+      }));
 
-      if (data.actionTaken) {
-        const successMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "success",
-          content: `✅ Successfully: ${data.actionTaken}`,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage, successMessage]);
-      } else if (data.error) {
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "error",
-          content: `❌ Error: ${data.error}`,
-          timestamp: new Date(),
-          errorDetails: data.errorDetails,
-        };
-        setMessages((prev) => [...prev, assistantMessage, errorMessage]);
-      } else {
-        setMessages((prev) => [...prev, assistantMessage]);
+    const res = await fetch("/api/ai-business-manager/chat-stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: userMessage,
+        conversationHistory,
+      }),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      // Reuse existing apiRequest error parsing when possible
+      try {
+        const fallback = await apiRequest("POST", "/api/ai-business-manager/chat", {
+          message: userMessage,
+          conversationHistory,
+        });
+        const data = await fallback.json();
+        throw new Error(data?.error || data?.message || "Request failed");
+      } catch (e: any) {
+        throw new Error(e?.message || "Request failed");
       }
-      
-      setIsProcessing(false);
-    },
-    onError: (error: any) => {
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        role: "error",
-        content: `❌ Failed to process request: ${error?.message || "Unknown error"}`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      setIsProcessing(false);
-      toast({
-        title: "Error",
-        description: error?.message || "Something went wrong",
-        variant: "destructive",
-      });
-    },
-  });
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("Streaming not supported by this browser");
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let event: any;
+        try {
+          event = JSON.parse(line);
+        } catch {
+          continue;
+        }
+
+        if (event.type === "delta") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessageId ? { ...m, content: (m.content || "") + String(event.content || "") } : m
+            )
+          );
+        } else if (event.type === "action" && event.actionTaken) {
+          const successMessage: Message = {
+            id: `${Date.now()}-success`,
+            role: "success",
+            content: `✅ Successfully: ${event.actionTaken}`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, successMessage]);
+        } else if (event.type === "error") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessageId
+                ? { ...m, role: "error", content: m.content || `❌ ${event.error || "Error"}`, errorDetails: event.errorDetails }
+                : m
+            )
+          );
+        }
+      }
+    }
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isProcessing || user?.role !== "admin") return;
 
+    const userText = input.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input.trim(),
+      content: userText,
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const assistantId = `${Date.now()}-assistant`;
+    const assistantMessage: Message = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setInput("");
     setIsProcessing(true);
 
-    sendMessageMutation.mutate(input.trim());
+    try {
+      await streamChat(userText, assistantId);
+    } catch (error: any) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, role: "error", content: `❌ ${error?.message || "Unknown error"}` } : m
+        )
+      );
+      toast({
+        title: "Error",
+        description: error?.message || "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const startRecording = async () => {

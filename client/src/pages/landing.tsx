@@ -67,7 +67,6 @@ import {
 } from "@/components/ui/sheet";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import heroImage from "@assets/hero-header-image.png";
-import resultsImage from "@assets/stock_images/woman_working_on_lap_e8e31683.jpg";
 import instagramLogo from "@assets/instagram-logo.png";
 import tiktokLogo from "@assets/tiktok-logo.png";
 import linkedinLogo from "@assets/linkedin-logo.png";
@@ -129,7 +128,9 @@ function LogoCloud() {
               whileHover={{ opacity: 1, scale: 1.1, filter: "grayscale(0%)" }}
               src={logo.icon} 
               alt={logo.name} 
-              className="h-8 md:h-12 grayscale transition-all duration-300 cursor-pointer" 
+              className="h-8 md:h-12 grayscale transition-all duration-300 cursor-pointer"
+              loading="lazy"
+              decoding="async"
             />
           ))}
         </div>
@@ -197,17 +198,28 @@ export default function LandingPage() {
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const testimonialIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [expandedService, setExpandedService] = useState<string | null>(null);
+  const pricingSectionRef = useRef<HTMLElement | null>(null);
+  const testimonialsSectionRef = useRef<HTMLElement | null>(null);
+  const isPricingInView = useInView(pricingSectionRef, { once: true, margin: "-200px" });
+  const isTestimonialsInView = useInView(testimonialsSectionRef, { once: true, margin: "-200px" });
 
   // Scroll-triggered sticky CTA
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setShowStickyCTA(window.scrollY > 600);
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        setShowStickyCTA(window.scrollY > 600);
+        ticking = false;
+      });
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll as any);
   }, []);
 
-  // Auto-rotate testimonials every 5 seconds on mobile
+  // Auto-rotate testimonials every 5 seconds on mobile (only once section is visible)
   useEffect(() => {
     const startAutoRotate = () => {
       testimonialIntervalRef.current = setInterval(() => {
@@ -216,6 +228,7 @@ export default function LandingPage() {
     };
 
     // Only auto-rotate on mobile
+    if (!isTestimonialsInView) return;
     if (window.innerWidth < 768) {
       startAutoRotate();
     }
@@ -239,7 +252,7 @@ export default function LandingPage() {
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [isTestimonialsInView]);
 
   const testimonials = [
     {
@@ -322,6 +335,11 @@ export default function LandingPage() {
       const response = await apiRequest("GET", "/api/subscription-packages");
       return response.json();
     },
+    // Don't fetch pricing data until the pricing section is about to be visible
+    enabled: isPricingInView,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
     retry: false,
     meta: { returnNull: true },
   });
@@ -361,17 +379,7 @@ export default function LandingPage() {
     auditMutation.mutate(auditForm);
   };
 
-  const [heroWordIndex, setHeroWordIndex] = useState(0);
-  const heroWords = ["Team", "Partner", "Growth Engine", "Strategy"];
-
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHeroWordIndex((prev) => (prev + 1) % heroWords.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden scroll-smooth relative">
@@ -674,10 +682,10 @@ export default function LandingPage() {
                 </div>
 
                 <div className="pt-10 md:pt-12 flex flex-wrap items-center justify-center lg:justify-start gap-6 sm:gap-10 opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
-                  <img src={instagramLogo} alt="Instagram" className="h-6 sm:h-7 md:h-9" />
-                  <img src={tiktokLogo} alt="TikTok" className="h-6 sm:h-7 md:h-9" />
-                  <img src={linkedinLogo} alt="LinkedIn" className="h-6 sm:h-7 md:h-9" />
-                  <img src={googleAdsLogo} alt="Google Ads" className="h-6 sm:h-7 md:h-9" />
+                  <img src={instagramLogo} alt="Instagram" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
+                  <img src={tiktokLogo} alt="TikTok" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
+                  <img src={linkedinLogo} alt="LinkedIn" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
+                  <img src={googleAdsLogo} alt="Google Ads" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
                 </div>
 
                 {/* Live Activity Feed */}
@@ -708,10 +716,13 @@ export default function LandingPage() {
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-[2.5rem] blur-3xl -z-10 transform rotate-6 scale-110"></div>
                 <div className="relative bg-white/10 dark:bg-slate-900/10 backdrop-blur-sm border border-white/20 dark:border-slate-800/50 p-2 rounded-[2.5rem] shadow-2xl shadow-blue-500/10">
                   <div className="rounded-[2rem] overflow-hidden shadow-inner ring-1 ring-black/5">
-                    <img 
-                      src={heroImage} 
-                      alt="Marketing Dashboard" 
+                    <img
+                      src={heroImage}
+                      alt="Marketing Dashboard"
                       className="w-full h-auto object-cover"
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
                     />
                   </div>
                   
@@ -1030,7 +1041,7 @@ export default function LandingPage() {
               className="text-center group w-full"
             >
               <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={tiktokLogo} alt="TikTok" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+                <img src={tiktokLogo} alt="TikTok" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" loading="lazy" decoding="async" />
               </div>
               <p className="text-[10px] sm:text-sm font-semibold text-gray-700">TikTok</p>
             </motion.div>
@@ -1060,7 +1071,7 @@ export default function LandingPage() {
               className="text-center group w-full"
             >
               <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={linkedinLogo} alt="LinkedIn" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+                <img src={linkedinLogo} alt="LinkedIn" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" loading="lazy" decoding="async" />
               </div>
               <p className="text-[10px] sm:text-sm font-semibold text-gray-700">LinkedIn</p>
             </motion.div>
@@ -1070,7 +1081,7 @@ export default function LandingPage() {
               className="text-center group w-full"
             >
               <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={instagramLogo} alt="Instagram" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+                <img src={instagramLogo} alt="Instagram" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" loading="lazy" decoding="async" />
               </div>
               <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Instagram</p>
             </motion.div>
@@ -1081,7 +1092,7 @@ export default function LandingPage() {
               className="text-center group w-full"
             >
               <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
-                <img src={googleAdsLogo} alt="Google Ads" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" />
+                <img src={googleAdsLogo} alt="Google Ads" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" loading="lazy" decoding="async" />
               </div>
               <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Google Ads</p>
             </motion.div>
@@ -1207,7 +1218,7 @@ export default function LandingPage() {
                           />
                         </div>
                         <div className="relative">
-                          <img src={instagramLogo} alt="IG" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 grayscale opacity-50" />
+                          <img src={instagramLogo} alt="IG" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 grayscale opacity-50" loading="lazy" decoding="async" />
                           <Input
                             type="url"
                             placeholder="Instagram URL (optional)"
@@ -1407,7 +1418,11 @@ export default function LandingPage() {
       </section>
 
       {/* All Packages Section with Tabs */}
-      <section className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
+      <section
+        ref={pricingSectionRef as any}
+        id="pricing"
+        className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white"
+      >
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-12">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Pricing & Packages</p>
@@ -1666,7 +1681,11 @@ export default function LandingPage() {
       </section>
 
       {/* Client Success Stories */}
-      <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
+      <section
+        ref={testimonialsSectionRef as any}
+        id="testimonials"
+        className="py-20 px-4 bg-gradient-to-b from-white to-gray-50"
+      >
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Client Success</p>

@@ -12,6 +12,68 @@ if (process.env.OPENAI_API_KEY) {
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
+type ChatRole = "user" | "assistant";
+
+type ConversationMessage = { role: ChatRole; content: string };
+
+type PendingAction = {
+  functionName: string;
+  args: any;
+  createdAt: number;
+};
+
+const WRITE_FUNCTIONS = new Set(["create_client", "create_task", "send_message"]);
+const pendingActionsByUserId = new Map<number, PendingAction>();
+
+function sanitizeConversationHistory(
+  conversationHistory: Array<{ role: string; content: string }> = []
+): ConversationMessage[] {
+  return (Array.isArray(conversationHistory) ? conversationHistory : [])
+    .filter((m) => m && typeof m.content === "string" && m.content.trim())
+    .map((m) => ({
+      role: m.role === "user" ? "user" : "assistant",
+      content: String(m.content),
+    }));
+}
+
+function isConfirmMessage(message: string): boolean {
+  const normalized = String(message || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  return [
+    "confirm",
+    "yes",
+    "y",
+    "ok",
+    "okay",
+    "do it",
+    "proceed",
+    "go ahead",
+    "sounds good",
+  ].includes(normalized);
+}
+
+function describePendingAction(action: PendingAction): string {
+  try {
+    const args = action.args || {};
+    switch (action.functionName) {
+      case "create_client":
+        return `Create client "${args.name}"${args.email ? ` (${args.email})` : ""}`;
+      case "create_task":
+        return `Create task "${args.title}"${args.dueDate ? ` (due ${args.dueDate})` : ""}`;
+      case "send_message":
+        return `Send message to "${args.recipientName}": "${String(args.message || "").slice(0, 80)}"${
+          String(args.message || "").length > 80 ? "…" : ""
+        }`;
+      default:
+        return `${action.functionName}`;
+    }
+  } catch {
+    return `${action.functionName}`;
+  }
+}
+
 // Define the tools/functions the AI can use
 const tools = [
   {
@@ -205,8 +267,9 @@ async function executeFunction(name: string, args: any, userId: number) {
         email: args.email || null,
         phone: args.phone || null,
         company: args.company || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        startDate: null,
+        lastPostDate: null,
+        lastVisitDate: null,
       });
       return { success: true, client: { name: newClient.name, id: newClient.id } };
     }
@@ -230,16 +293,16 @@ async function executeFunction(name: string, args: any, userId: number) {
     }
 
     case "create_task": {
+      const priority =
+        args.priority === "high" ? "high" : args.priority === "low" ? "low" : "normal";
       const newTask = await storage.createTask({
         title: args.title,
         description: null,
-        status: 'pending',
-        priority: args.priority || 'medium',
-        assignedTo: String(userId),
-        createdBy: String(userId),
+        status: "todo",
+        priority,
+        assignedToId: userId,
         dueDate: args.dueDate ? new Date(args.dueDate) : null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        recurringEndDate: null,
       });
       return { success: true, task: { title: newTask.title, id: newTask.id } };
     }
@@ -285,10 +348,10 @@ async function executeFunction(name: string, args: any, userId: number) {
       }
       
       await storage.createMessage({
-        senderId: userId,
+        userId,
         recipientId: recipient.id,
         content: args.message,
-        createdAt: new Date(),
+        isInternal: true,
       });
       
       return { success: true, recipient: recipient.username };
@@ -319,7 +382,7 @@ async function executeFunction(name: string, args: any, userId: number) {
         invoices: filtered.slice(0, 10).map(i => ({
           number: i.invoiceNumber,
           clientName: i.clientId,
-          amount: i.totalAmount,
+          amount: i.amount,
           status: i.status,
           dueDate: i.dueDate
         }))
@@ -393,6 +456,12 @@ async function executeFunction(name: string, args: any, userId: number) {
   }
 }
 
+export type AIChatStreamEvent =
+  | { type: "delta"; content: string }
+  | { type: "action"; actionTaken: string }
+  | { type: "done"; success: boolean; functionsCalled?: string[] }
+  | { type: "error"; error: string; errorDetails?: string };
+
 /**
  * Process AI chat message with GPT-4
  */
@@ -418,7 +487,27 @@ export async function processAIChat(
   try {
     console.log('🤖 AI Chat Request:', message);
 
+    const pending = pendingActionsByUserId.get(userId);
+    if (pending && isConfirmMessage(message)) {
+      pendingActionsByUserId.delete(userId);
+      try {
+        await executeFunction(pending.functionName, pending.args, userId);
+        return {
+          success: true,
+          response: `✅ Done! ${describePendingAction(pending)}`,
+          functionsCalled: [pending.functionName],
+        };
+      } catch (e: any) {
+        return {
+          success: false,
+          response: `❌ I couldn't complete that action: ${e?.message || "Unknown error"}`,
+          error: e?.message || "Unknown error",
+        };
+      }
+    }
+
     // Build conversation messages
+    const safeHistory = sanitizeConversationHistory(conversationHistory);
     const messages: any[] = [
       {
         role: "system",
@@ -434,9 +523,13 @@ You can help users:
 
 Be warm, encouraging, and use emojis occasionally! 😊 When you take actions, confirm what you did. If you need more information, ask naturally.
 
+IMPORTANT TOOL USAGE RULES:
+- If you decide you need to call tools, respond ONLY with tool calls and DO NOT output any user-facing text in that message.
+- For any write action (create_client, create_task, send_message), you MUST ask for confirmation first. After the user confirms by replying "confirm", then you may call the tool.
+
 Current user ID: ${userId}`
       },
-      ...conversationHistory,
+      ...safeHistory,
       { role: "user", content: message }
     ];
 
@@ -454,12 +547,36 @@ Current user ID: ${userId}`
 
     // If GPT-4 wants to call functions
     if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      // Safe-mode: require confirmation for write actions
+      const writeCall = (responseMessage.tool_calls as any[]).find((c: any) =>
+        WRITE_FUNCTIONS.has(c?.function?.name)
+      );
+      if (writeCall) {
+        try {
+          const functionName = (writeCall as any).function.name;
+          const functionArgs = JSON.parse((writeCall as any).function.arguments || "{}");
+          const pendingAction: PendingAction = { functionName, args: functionArgs, createdAt: Date.now() };
+          pendingActionsByUserId.set(userId, pendingAction);
+          return {
+            success: true,
+            response: `I can do that. Please reply **confirm** to proceed:\n\n- ${describePendingAction(pendingAction)}`,
+            functionsCalled: [functionName],
+          };
+        } catch (e: any) {
+          return {
+            success: false,
+            response: `❌ I couldn't parse that action request: ${e?.message || "Unknown error"}`,
+            error: e?.message || "Unknown error",
+          };
+        }
+      }
+
       // Execute all requested functions
       const functionResults = [];
       
       for (const toolCall of responseMessage.tool_calls) {
-        const functionName = toolCall.function.name;
-        const functionArgs = JSON.parse(toolCall.function.arguments);
+        const functionName = (toolCall as any).function.name;
+        const functionArgs = JSON.parse((toolCall as any).function.arguments);
         
         functionsCalled.push(functionName);
         
@@ -512,6 +629,184 @@ Current user ID: ${userId}`
       response: "Sorry, I had trouble processing that. Could you try again? 🤔",
       error: error.message,
     };
+  }
+}
+
+/**
+ * Streaming variant (NDJSON/SSE friendly): yields deltas and final metadata.
+ */
+export async function* processAIChatStream(
+  message: string,
+  userId: number,
+  conversationHistory: Array<{ role: string; content: string }> = []
+): AsyncGenerator<AIChatStreamEvent> {
+  if (!openai || !process.env.OPENAI_API_KEY) {
+    yield {
+      type: "error",
+      error: "AI features require OpenAI API key to be configured.",
+      errorDetails: "OpenAI API key not set",
+    };
+    return;
+  }
+
+  const pending = pendingActionsByUserId.get(userId);
+  if (pending && isConfirmMessage(message)) {
+    pendingActionsByUserId.delete(userId);
+    try {
+      await executeFunction(pending.functionName, pending.args, userId);
+      yield { type: "delta", content: `✅ Done! ${describePendingAction(pending)}` };
+      yield { type: "action", actionTaken: describePendingAction(pending) };
+      yield { type: "done", success: true, functionsCalled: [pending.functionName] };
+      return;
+    } catch (e: any) {
+      yield { type: "error", error: e?.message || "Failed to execute pending action" };
+      return;
+    }
+  }
+
+  const safeHistory = sanitizeConversationHistory(conversationHistory);
+  const baseMessages: any[] = [
+    {
+      role: "system",
+      content: `You are an AI Business Manager assistant for a marketing platform. You're helpful, friendly, and conversational - like ChatGPT, but with the ability to take real actions!
+
+IMPORTANT TOOL USAGE RULES:
+- If you decide you need to call tools, respond ONLY with tool calls and DO NOT output any user-facing text in that message.
+- For any write action (create_client, create_task, send_message), you MUST ask for confirmation first. After the user confirms by replying "confirm", then you may call the tool.
+
+Current user ID: ${userId}`,
+    },
+    ...safeHistory,
+    { role: "user", content: message },
+  ];
+
+  const functionsCalled: string[] = [];
+  let collectedContent = "";
+  const toolCallsByIndex = new Map<
+    number,
+    { id?: string; name?: string; args: string }
+  >();
+
+  try {
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: baseMessages,
+      tools,
+      tool_choice: "auto",
+      temperature: 0.7,
+      stream: true,
+    });
+
+    for await (const chunk of stream as any) {
+      const delta = chunk?.choices?.[0]?.delta;
+      const contentDelta = delta?.content;
+      if (typeof contentDelta === "string" && contentDelta.length > 0) {
+        collectedContent += contentDelta;
+        yield { type: "delta", content: contentDelta };
+      }
+
+      const toolDeltas = delta?.tool_calls;
+      if (Array.isArray(toolDeltas)) {
+        for (const td of toolDeltas) {
+          const idx = td.index;
+          const existing = toolCallsByIndex.get(idx) || { args: "" };
+          toolCallsByIndex.set(idx, {
+            id: td.id ?? existing.id,
+            name: td.function?.name ?? existing.name,
+            args: (existing.args || "") + (td.function?.arguments || ""),
+          });
+        }
+      }
+    }
+
+    // If tools were requested, execute them and stream the final answer
+    if (toolCallsByIndex.size > 0) {
+      const toolCalls = Array.from(toolCallsByIndex.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([, v]) => ({
+          id: v.id || `${Date.now()}`,
+          type: "function" as const,
+          function: {
+            name: v.name || "unknown",
+            arguments: v.args || "{}",
+          },
+        }));
+
+      // Safe-mode confirmation for write tools
+      const firstWrite = toolCalls.find((c) => WRITE_FUNCTIONS.has(c.function.name));
+      if (firstWrite) {
+        const functionName = firstWrite.function.name;
+        const functionArgs = JSON.parse(firstWrite.function.arguments || "{}");
+        const pendingAction: PendingAction = { functionName, args: functionArgs, createdAt: Date.now() };
+        pendingActionsByUserId.set(userId, pendingAction);
+        yield {
+          type: "delta",
+          content: `I can do that. Please reply **confirm** to proceed:\n\n- ${describePendingAction(pendingAction)}`,
+        };
+        yield { type: "done", success: true, functionsCalled: [functionName] };
+        return;
+      }
+
+      const toolResults: any[] = [];
+      for (const tc of toolCalls) {
+        const fn = tc.function.name;
+        functionsCalled.push(fn);
+        let args: any = {};
+        try {
+          args = JSON.parse(tc.function.arguments || "{}");
+        } catch {
+          args = {};
+        }
+        try {
+          const result = await executeFunction(fn, args, userId);
+          toolResults.push({
+            tool_call_id: tc.id,
+            role: "tool",
+            name: fn,
+            content: JSON.stringify(result),
+          });
+        } catch (e: any) {
+          toolResults.push({
+            tool_call_id: tc.id,
+            role: "tool",
+            name: fn,
+            content: JSON.stringify({ error: e?.message || "Tool execution failed" }),
+          });
+        }
+      }
+
+      const finalMessages: any[] = [
+        ...baseMessages,
+        {
+          role: "assistant",
+          content: collectedContent || null,
+          tool_calls: toolCalls,
+        },
+        ...toolResults,
+      ];
+
+      const finalStream = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: finalMessages,
+        temperature: 0.7,
+        stream: true,
+      });
+
+      for await (const chunk of finalStream as any) {
+        const delta = chunk?.choices?.[0]?.delta?.content;
+        if (typeof delta === "string" && delta.length > 0) {
+          yield { type: "delta", content: delta };
+        }
+      }
+
+      yield { type: "done", success: true, functionsCalled };
+      return;
+    }
+
+    // No tools, streamed content already
+    yield { type: "done", success: true };
+  } catch (e: any) {
+    yield { type: "error", error: e?.message || "AI streaming failed" };
   }
 }
 

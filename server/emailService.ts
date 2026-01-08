@@ -46,6 +46,12 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
   const publicLogoUrl = `${appUrl}/logo.png`;
   const logoSrc = overriddenLogoUrl || (resolveEmailLogoPath() ? cidLogoSrc : publicLogoUrl);
 
+  // Email-safe logo sizing:
+  // Keep header branding visible but not dominant across desktop/mobile clients.
+  // (Many clients ignore CSS, so we set size both in CSS and inline on the <img>.)
+  const headerLogoWidth = 120;
+  const footerLogoWidth = 96;
+
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -58,11 +64,11 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
         .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
         .header { background: #ffffff; padding: 40px 20px; text-align: center; border-bottom: 1px solid #f1f5f9; }
         /* Email clients (especially iOS Gmail/Mail) can ignore some CSS, so we also inline critical sizing on the <img>. */
-        .header img { display: block; margin: 0 auto 20px; max-width: 220px; width: 220px; height: auto; }
+        .header img { display: block; margin: 0 auto 20px; max-width: ${headerLogoWidth}px; width: ${headerLogoWidth}px; height: auto; }
         .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; color: #0f172a; }
         .content { padding: 40px 40px; background-color: #ffffff; }
         .footer { text-align: center; padding: 40px; background-color: #f8fafc; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9; }
-        .footer-logo { display: block; margin: 0 auto 16px; max-width: 160px; width: 160px; height: auto; filter: grayscale(1); opacity: 0.5; }
+        .footer-logo { display: block; margin: 0 auto 16px; max-width: ${footerLogoWidth}px; width: ${footerLogoWidth}px; height: auto; filter: grayscale(1); opacity: 0.5; }
         .button { display: inline-block; background-color: ${themeColor}; color: white !important; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; margin: 24px 0; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0; }
         .info-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
@@ -79,8 +85,8 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
             <img
               src="${logoSrc}"
               alt="Marketing Team App Logo"
-              width="220"
-              style="display:block; margin:0 auto 20px; max-width:220px; width:220px; height:auto;"
+              width="${headerLogoWidth}"
+              style="display:block; margin:0 auto 20px; max-width:${headerLogoWidth}px; width:${headerLogoWidth}px; height:auto;"
             >
             <h1>${title}</h1>
           </div>
@@ -92,8 +98,8 @@ function renderEmail(title: string, content: string, themeColor: string = '#3b82
               src="${logoSrc}"
               alt="Marketing Team App Logo"
               class="footer-logo"
-              width="160"
-              style="display:block; margin:0 auto 16px; max-width:160px; width:160px; height:auto; filter:grayscale(1); opacity:0.5;"
+              width="${footerLogoWidth}"
+              style="display:block; margin:0 auto 16px; max-width:${footerLogoWidth}px; width:${footerLogoWidth}px; height:auto; filter:grayscale(1); opacity:0.5;"
             >
             <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Marketing Team. All rights reserved.</p>
           </div>
@@ -593,6 +599,48 @@ export const emailTemplates = {
     };
   },
 
+  // Creator application received
+  creatorApplicationReceived: (creatorName: string, verifyUrl?: string | null) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${creatorName}! 👋</h2>
+      <p>We received your application to join the <strong>Marketing Team Creator Network</strong>.</p>
+      
+      <div class="card">
+        <div class="badge" style="background-color: #ffedd5; color: #9a3412;">APPLICATION RECEIVED</div>
+        <div class="info-label">WHAT HAPPENS NEXT</div>
+        <div class="info-value">Review in 24–72 hours</div>
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">
+          Our team reviews applications daily. You’ll receive an email once a decision is made.
+        </p>
+      </div>
+
+      ${verifyUrl ? `
+        <p style="margin-top: 0;">One quick step: please verify your email so you don’t miss updates.</p>
+        <div style="text-align: center;">
+          <a href="${verifyUrl}" class="button" style="background-color: #1a1a1a;">Verify Email →</a>
+        </div>
+        <p style="font-size: 12px; color: #6b7280; margin-top: 12px;">
+          If the button doesn’t work, copy and paste this link:
+          <br><span style="word-break: break-all;">${verifyUrl}</span>
+        </p>
+      ` : `
+        <div style="text-align: center;">
+          <a href="${appUrl}/creator-signup" class="button" style="background-color: #1a1a1a;">View Creator Program →</a>
+        </div>
+      `}
+
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">
+        Tip: You won’t be able to log in until your application is approved — once approved, you’ll get access to your creator back office.
+      </p>
+    `;
+    return {
+      subject: `✅ Creator application received: ${creatorName}`,
+      html: renderEmail('Application Received', content, '#f59e0b')
+    };
+  },
+
   // Creator Decline notification
   creatorDeclined: (creatorName: string) => {
     const content = `
@@ -768,6 +816,11 @@ export const emailNotifications = {
 
   async sendCreatorDeclinedEmail(toEmail: string, creatorName: string) {
     const { subject, html } = emailTemplates.creatorDeclined(creatorName);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendCreatorApplicationReceivedEmail(toEmail: string, creatorName: string, verifyUrl?: string | null) {
+    const { subject, html } = emailTemplates.creatorApplicationReceived(creatorName, verifyUrl);
     return sendEmail(toEmail, subject, html);
   },
 };
