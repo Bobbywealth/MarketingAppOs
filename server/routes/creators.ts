@@ -59,11 +59,11 @@ router.post("/public/creators/:id/book", async (req: Request, res: Response) => 
 
     // Notify admins and creator
     try {
-      const { emailNotifications } = await import("../emailService");
+      const { sendEmail, emailNotifications } = await import("../emailService");
       const [creator] = await db.select().from(creators).where(eq(creators.id, req.params.id));
       
       if (creator && creator.email) {
-        await emailNotifications.sendEmail(
+        await sendEmail(
           creator.email,
           "📅 New Booking Request!",
           `<h2>Hi ${creator.fullName},</h2>
@@ -77,7 +77,7 @@ router.post("/public/creators/:id/book", async (req: Request, res: Response) => 
 
       // Notify admins
       const adminUsers = await db.select().from(users).where(eq(users.role, UserRole.ADMIN));
-      const adminEmails = adminUsers.map(a => a.email).filter(Boolean) as string[];
+      const adminEmails = adminUsers.map((a: any) => a.email).filter(Boolean) as string[];
       
       if (adminEmails.length > 0) {
         await emailNotifications.sendActionAlertEmail(
@@ -154,7 +154,7 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
     const rawIp = req.ip || req.get('x-forwarded-for') || req.socket.remoteAddress;
     const ipAddress = Array.isArray(rawIp) ? rawIp[0] : rawIp || null;
 
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       // Prevent duplicate accounts (by username/email) case-insensitively.
       const existingUser = await tx
         .select({
@@ -271,7 +271,7 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
       try {
         const { emailNotifications } = await import("../emailService");
         const adminUsers = await tx.select().from(users).where(eq(users.role, UserRole.ADMIN));
-        const adminEmails = adminUsers.map(a => a.email).filter(Boolean) as string[];
+        const adminEmails = adminUsers.map((a: any) => a.email).filter(Boolean) as string[];
         
         if (adminEmails.length > 0) {
           await emailNotifications.sendActionAlertEmail(
@@ -307,6 +307,34 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
       }
     } catch (err) {
       console.error("Failed to send creator application received email (outer):", err);
+    }
+
+    // Create in-app + push notifications for admins (best-effort)
+    try {
+      const adminUsers = await storage.getAdminUsers();
+      const { sendPushToUser } = await import("../push");
+
+      for (const admin of adminUsers) {
+        await storage
+          .createNotification({
+            userId: admin.id,
+            type: "info",
+            title: "🆕 New Creator Application",
+            message: `${data.fullName} (${normalizedEmail}) submitted a creator application.`,
+            category: "creators",
+            actionUrl: "/creators",
+            isRead: false,
+          })
+          .catch(() => {});
+
+        await sendPushToUser(admin.id, {
+          title: "🆕 New Creator Application",
+          body: `${data.fullName} applied to join the creator network.`,
+          url: "/creators",
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error("Failed to create admin creator-application notifications:", err);
     }
 
     res.status(201).json({ 
@@ -474,6 +502,38 @@ router.post("/creators/:id/accept", isAuthenticated, requireRole(UserRole.ADMIN,
       console.error("Failed to send approval email:", err);
     }
 
+    // Notify the creator inside the app (if they have a linked user account) + push
+    try {
+      const [creatorUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.creatorId, creator.id))
+        .limit(1);
+
+      if (creatorUser?.id) {
+        await storage
+          .createNotification({
+            userId: creatorUser.id,
+            type: "success",
+            title: "✅ Creator Application Approved",
+            message: "Welcome aboard! Your creator application has been approved.",
+            category: "creators",
+            actionUrl: "/creator-dashboard",
+            isRead: false,
+          })
+          .catch(() => {});
+
+        const { sendPushToUser } = await import("../push");
+        await sendPushToUser(creatorUser.id, {
+          title: "✅ Application Approved",
+          body: "Your Marketing Team creator application has been approved.",
+          url: "/creator-dashboard",
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error("Failed to notify creator about approval:", err);
+    }
+
     res.json({ success: true, creator });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -501,6 +561,38 @@ router.post("/creators/:id/decline", isAuthenticated, requireRole(UserRole.ADMIN
       }
     } catch (err) {
       console.error("Failed to send decline email:", err);
+    }
+
+    // Notify the creator inside the app (if they have a linked user account) + push
+    try {
+      const [creatorUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.creatorId, creator.id))
+        .limit(1);
+
+      if (creatorUser?.id) {
+        await storage
+          .createNotification({
+            userId: creatorUser.id,
+            type: "warning",
+            title: "Creator Application Update",
+            message: "Thanks for applying. At this time, your creator application was not approved.",
+            category: "creators",
+            actionUrl: "/creator-dashboard",
+            isRead: false,
+          })
+          .catch(() => {});
+
+        const { sendPushToUser } = await import("../push");
+        await sendPushToUser(creatorUser.id, {
+          title: "Creator Application Update",
+          body: "Your creator application was not approved at this time.",
+          url: "/creator-dashboard",
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error("Failed to notify creator about decline:", err);
     }
 
     res.json({ success: true, creator });
@@ -806,7 +898,7 @@ router.post("/creators/:id/payouts", isAuthenticated, requireRole(UserRole.ADMIN
       return res.status(400).json({ message: "At least one visit must be selected for payout" });
     }
 
-    const [payout] = await db.transaction(async (tx) => {
+    const [payout] = await db.transaction(async (tx: any) => {
       // 1. Create the payout record
       const [p] = await tx
         .insert(creatorPayouts)
