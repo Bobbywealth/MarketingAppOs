@@ -4708,7 +4708,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.patch("/api/user/profile", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const currentUserId = (req.user as any).id;
-      const { firstName, lastName, email, username } = req.body;
+      const { firstName, lastName, email, username, profileImageUrl } = req.body;
       
       // Check if username is being changed and if it's already taken
       if (username !== undefined) {
@@ -4723,6 +4723,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       if (lastName !== undefined) updateData.lastName = lastName;
       if (email !== undefined) updateData.email = email;
       if (username !== undefined) updateData.username = username;
+      if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
 
       await storage.updateUser(currentUserId, updateData);
       

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, Bell, Shield, Database, RefreshCw, Smartphone } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { SimpleUploader } from "@/components/SimpleUploader";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -22,7 +23,19 @@ export default function SettingsPage() {
     lastName: user?.lastName || "",
     email: user?.email || "",
     username: user?.username || "",
+    profileImageUrl: (user as any)?.profileImageUrl || "",
   });
+
+  // Keep local form state in sync when user loads/changes
+  useEffect(() => {
+    setProfileData({
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      username: user?.username || "",
+      profileImageUrl: (user as any)?.profileImageUrl || "",
+    });
+  }, [user]);
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -286,6 +299,48 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleProfileUpdate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Profile Photo</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 rounded-full overflow-hidden bg-muted flex items-center justify-center border">
+                      {profileData.profileImageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={profileData.profileImageUrl}
+                          alt="Profile"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No photo</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <SimpleUploader
+                        accept="image/*"
+                        maxSizeMB={10}
+                        buttonText={profileData.profileImageUrl ? "Change Photo" : "Upload Photo"}
+                        onUploadComplete={(url) => {
+                          setProfileData((prev) => ({ ...prev, profileImageUrl: url }));
+                          toast({ title: "✅ Photo uploaded", description: "Click Save Changes to apply it." });
+                        }}
+                      />
+                      {profileData.profileImageUrl && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setProfileData((prev) => ({ ...prev, profileImageUrl: "" }))}
+                        >
+                          Remove photo
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Upload a square image for best results.
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
