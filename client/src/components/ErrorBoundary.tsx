@@ -19,6 +19,22 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     this.state = { hasError: false };
   }
 
+  private hasRecentRecoveryAttempt(key: string, windowMs: number) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      const ts = raw ? Number(raw) : 0;
+      return Boolean(ts && !Number.isNaN(ts) && Date.now() - ts < windowMs);
+    } catch {
+      return false;
+    }
+  }
+
+  private markRecoveryAttempt(key: string) {
+    try {
+      sessionStorage.setItem(key, String(Date.now()));
+    } catch {}
+  }
+
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
@@ -29,6 +45,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     // Auto-reload on chunk load failures (common after deployments)
     const chunkFailedMessage = /Failed to fetch dynamically imported module|Loading chunk .* failed/;
     if (error?.message && chunkFailedMessage.test(error.message)) {
+      // Prevent infinite reload loops
+      if (this.hasRecentRecoveryAttempt("__recovery_chunk", 60_000)) {
+        console.warn("Chunk reload already attempted recently; showing fallback instead.");
+        return;
+      }
+      this.markRecoveryAttempt("__recovery_chunk");
       console.log('Chunk load failure detected. Forcing page reload...');
       window.location.reload();
     }
@@ -37,6 +59,13 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     // serves stale JS/CSS bundles across deployments (minified var names like 're', 'ae', etc).
     const tdzInitError = /Cannot access '.+' before initialization/;
     if (error?.message && tdzInitError.test(error.message)) {
+      // Prevent infinite reload loops
+      if (this.hasRecentRecoveryAttempt("__recovery_tdz", 5 * 60_000)) {
+        console.warn("TDZ recovery already attempted; showing fallback instead.");
+        return;
+      }
+      this.markRecoveryAttempt("__recovery_tdz");
+
       console.log('TDZ initialization error detected. Clearing caches + forcing reload...');
       try {
         // Best-effort: clear CacheStorage (SW + page cache)
@@ -57,14 +86,16 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         }
       } catch {}
 
-      // Cache-busting reload
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('__reload', String(Date.now()));
-        window.location.replace(url.toString());
-      } catch {
-        window.location.reload();
-      }
+      // Cache-busting reload (delay a beat so cache deletion/unregister can run)
+      setTimeout(() => {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('__reload', String(Date.now()));
+          window.location.replace(url.toString());
+        } catch {
+          window.location.reload();
+        }
+      }, 500);
     }
   }
 
