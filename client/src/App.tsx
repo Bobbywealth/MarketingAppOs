@@ -160,6 +160,8 @@ function Router() {
         {isCreator && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
         
         {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
+        {/* Clients should use /content (keep /client-content for backwards compat) */}
+        {isClient && <ProtectedRoute path="/content" component={ClientContent} />}
         {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
         {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
         {isClient && <ProtectedRoute path="/client-billing" component={ClientBilling} />}

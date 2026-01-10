@@ -103,7 +103,7 @@ const clientTools: SidebarNavItem[] = [
   },
   {
     title: "My Content",
-    url: "/client-content",
+    url: "/content",
     icon: Calendar,
   },
   {
