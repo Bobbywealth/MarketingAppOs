@@ -1,9 +1,9 @@
 import twilio from 'twilio';
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+const fromNumber = process.env.TWILIO_PHONE_NUMBER?.trim();
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID?.trim();
 
 const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
 
