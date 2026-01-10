@@ -12,6 +12,7 @@ import { createCheckoutSession } from "./stripeService";
 import { emailNotifications } from "./emailService";
 import { dialpadService } from "./dialpadService";
 import { processAIChat } from "./aiManager";
+import { sendSms } from "./twilioService";
 import {
   insertClientSchema,
   insertClientSocialStatsSchema,
@@ -2920,6 +2921,44 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         createdBy: firstAdminId,
       });
       console.log("✅ Calendar event created:", event.id);
+
+      // Send SMS confirmation to booker (transactional)
+      try {
+        const smsEnabled =
+          process.env.BOOKING_SMS_ENABLED === "true" ||
+          process.env.BOOKING_SMS_ENABLED === "1";
+
+        if (smsEnabled) {
+          const whenEt = new Date(datetime).toLocaleString("en-US", {
+            dateStyle: "full",
+            timeStyle: "short",
+            timeZone: "America/New_York",
+          });
+
+          const defaultTemplate =
+            "Hi {name}! Your Marketing Team strategy session is booked for {whenEt}. We'll call you at {phone}. Reply STOP to opt out.";
+
+          const template = (process.env.BOOKING_SMS_TEMPLATE || defaultTemplate).trim();
+
+          const smsBody = template
+            .replaceAll("{name}", String(name))
+            .replaceAll("{whenEt}", String(whenEt))
+            .replaceAll("{phone}", String(phone))
+            .replaceAll("{email}", String(email))
+            .replaceAll("{company}", String(company || ""))
+            .replaceAll("{eventId}", String(event.id));
+
+          const smsResult = await sendSms(String(phone), smsBody);
+          if (!smsResult.success) {
+            console.warn("⚠️ Booking SMS failed:", smsResult);
+          } else {
+            console.log("✅ Booking SMS sent:", smsResult.sid);
+          }
+        }
+      } catch (smsErr) {
+        console.error("⚠️ Booking SMS threw error:", smsErr);
+        // Do not fail booking if SMS fails
+      }
 
       // Create a notification for all admins
       try {
