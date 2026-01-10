@@ -4,6 +4,8 @@ async function quickConsoleTest() {
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
+
+  const baseUrl = process.env.BASE_URL || 'https://www.marketingteam.app';
   
   // Track errors
   const errors = [];
@@ -25,7 +27,7 @@ async function quickConsoleTest() {
   try {
     // Test Admin Login
     console.log('📝 Testing Admin Login...');
-    await page.goto('https://marketingappos.onrender.com/auth');
+    await page.goto(`${baseUrl}/auth`);
     await page.waitForTimeout(3000);
     
     await page.fill('input[type="text"]', 'admin');
@@ -44,7 +46,7 @@ async function quickConsoleTest() {
     console.log('🔧 Testing Previously Failing Pages...');
     for (const testPage of testPages) {
       console.log(`  📄 Testing ${testPage.name}...`);
-      await page.goto(`https://marketingappos.onrender.com${testPage.url}`);
+      await page.goto(`${baseUrl}${testPage.url}`);
       await page.waitForTimeout(5000);
       
       const title = await page.title();
@@ -53,7 +55,7 @@ async function quickConsoleTest() {
 
     // Test Client Login
     console.log('\n👤 Testing Client Login...');
-    await page.goto('https://marketingappos.onrender.com/auth');
+    await page.goto(`${baseUrl}/auth`);
     await page.waitForTimeout(2000);
     
     // Clear existing inputs
@@ -67,7 +69,7 @@ async function quickConsoleTest() {
 
     // Test Client Campaigns (was 403 error)
     console.log('  📄 Testing Client Campaigns...');
-    await page.goto('https://marketingappos.onrender.com/client-campaigns');
+    await page.goto(`${baseUrl}/client-campaigns`);
     await page.waitForTimeout(5000);
     
     const title = await page.title();

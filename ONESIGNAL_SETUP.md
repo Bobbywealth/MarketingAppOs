@@ -24,7 +24,7 @@
 
 ### 3. Configure Web Push
 1. **Site Name**: Marketing Team App
-2. **Site URL**: `https://marketingappos.onrender.com`
+2. **Site URL**: `https://www.marketingteam.app`
 3. **Auto Resubscribe**: Enable (recommended)
 4. **Default Notification Icon**: Upload your MTA logo
 5. Click "Save"

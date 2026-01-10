@@ -4,6 +4,8 @@ async function testAllPages() {
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
+
+  const baseUrl = process.env.BASE_URL || 'https://www.marketingteam.app';
   
   // Collect console logs
   const consoleLogs = [];
@@ -37,7 +39,7 @@ async function testAllPages() {
   try {
     // Test 1: Login as Admin
     console.log('📝 Testing Admin Login...');
-    await page.goto('https://marketingappos.onrender.com/auth');
+    await page.goto(`${baseUrl}/auth`);
     await page.waitForTimeout(3000);
     
     await page.fill('input[type="text"]', 'admin');
@@ -69,7 +71,7 @@ async function testAllPages() {
     console.log('🔧 Testing Admin Pages...');
     for (const adminPage of adminPages) {
       console.log(`  📄 Testing ${adminPage.name}...`);
-      await page.goto(`https://marketingappos.onrender.com${adminPage.url}`);
+      await page.goto(`${baseUrl}${adminPage.url}`);
       await page.waitForTimeout(4000); // Wait for page to fully load
       
       // Check if page loaded successfully
@@ -79,7 +81,7 @@ async function testAllPages() {
 
     // Test 2: Login as Client
     console.log('\n👤 Testing Client Login...');
-    await page.goto('https://marketingappos.onrender.com/auth');
+    await page.goto(`${baseUrl}/auth`);
     await page.waitForTimeout(2000);
     
     await page.fill('input[type="text"]', 'carson');
@@ -104,7 +106,7 @@ async function testAllPages() {
     console.log('👥 Testing Client Pages...');
     for (const clientPage of clientPages) {
       console.log(`  📄 Testing ${clientPage.name}...`);
-      await page.goto(`https://marketingappos.onrender.com${clientPage.url}`);
+      await page.goto(`${baseUrl}${clientPage.url}`);
       await page.waitForTimeout(4000); // Wait for page to fully load
       
       // Check if page loaded successfully
@@ -123,7 +125,7 @@ async function testAllPages() {
 
     for (const publicPage of publicPages) {
       console.log(`  📄 Testing ${publicPage.name}...`);
-      await page.goto(`https://marketingappos.onrender.com${publicPage.url}`);
+      await page.goto(`${baseUrl}${publicPage.url}`);
       await page.waitForTimeout(3000);
       
       const title = await page.title();

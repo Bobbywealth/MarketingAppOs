@@ -62,6 +62,22 @@ type SmsInboxRow = {
   lead_name?: string | null;
 };
 
+type BroadcastRecipientRow = {
+  id: number;
+  broadcast_id: string;
+  lead_id: string | null;
+  client_id: string | null;
+  custom_recipient: string | null;
+  status: "pending" | "sent" | "failed";
+  error_message: string | null;
+  sent_at: string | null;
+  lead_company?: string | null;
+  lead_name?: string | null;
+  lead_phone?: string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+};
+
 export default function MarketingCenter() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("composer");
@@ -128,6 +144,45 @@ export default function MarketingCenter() {
         variant: "destructive"
       });
     }
+  });
+
+  const viewFailuresMutation = useMutation({
+    mutationFn: async (broadcastId: string) => {
+      const res = await apiRequest("GET", `/api/marketing-center/broadcasts/${broadcastId}/recipients`, undefined);
+      return (await res.json()) as BroadcastRecipientRow[];
+    },
+    onSuccess: (rows) => {
+      const failed = rows.filter((r) => r.status === "failed");
+      if (failed.length === 0) {
+        toast({ title: "No failures found", description: "All recipients show as sent (or pending)." });
+        return;
+      }
+
+      const counts = new Map<string, number>();
+      for (const r of failed) {
+        const key = (r.error_message || "Unknown error").trim();
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+
+      const top = Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([msg, count]) => `${count}× ${msg}`)
+        .join(" | ");
+
+      toast({
+        title: `Failed deliveries: ${failed.length}`,
+        description: top,
+        variant: "destructive",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to load failures",
+        description: error.message || "Could not fetch broadcast recipient details.",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleSend = () => {
@@ -485,6 +540,19 @@ export default function MarketingCenter() {
                           ) : (
                             <Badge variant="destructive" className="font-black uppercase text-[10px]">{broadcast.status}</Badge>
                           )}
+
+                          {/* Always-visible diagnostics button (mobile-friendly) */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
+                            onClick={() => viewFailuresMutation.mutate(broadcast.id)}
+                            disabled={viewFailuresMutation.isPending || !(broadcast.failedCount && broadcast.failedCount > 0)}
+                            title={broadcast.failedCount && broadcast.failedCount > 0 ? "View failure reasons" : "No failures to show"}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            {viewFailuresMutation.isPending ? "Loading..." : "View failures"}
+                          </Button>
                         </div>
                         <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
                           <Zap className="w-3 h-3" />{" "}
@@ -512,9 +580,21 @@ export default function MarketingCenter() {
                             className="h-2 bg-zinc-200 dark:bg-zinc-800"
                           />
                           {broadcast.failedCount! > 0 && (
-                            <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 uppercase tracking-widest">
-                              <AlertCircle className="w-3 h-3" /> {broadcast.failedCount} Failed Deliveries
-                            </p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 uppercase tracking-widest">
+                                <AlertCircle className="w-3 h-3" /> {broadcast.failedCount} Failed Deliveries
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
+                                onClick={() => viewFailuresMutation.mutate(broadcast.id)}
+                                disabled={viewFailuresMutation.isPending}
+                              >
+                                <Eye className="w-3 h-3 mr-1" />
+                                {viewFailuresMutation.isPending ? "Loading..." : "View failures"}
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>

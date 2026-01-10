@@ -35,10 +35,10 @@ Your code has been pushed to GitHub. Now deploy to Render:
 
 Your webhook endpoint is now live at:
 ```
-https://your-app.onrender.com/webhooks/dialpad/sms
+https://www.marketingteam.app/webhooks/dialpad/sms
 ```
 
-Replace `your-app` with your actual Render app name.
+If you’re running a non-production environment, replace the domain with your deployed public URL.
 
 ### Step 3: Register Webhook in Dialpad
 
@@ -57,7 +57,7 @@ Replace `your-app` with your actual Render app name.
    
    ```
    Name: MarketingOS SMS Sync
-   URL: https://your-app.onrender.com/webhooks/dialpad/sms
+   URL: https://www.marketingteam.app/webhooks/dialpad/sms
    Events to subscribe:
      ☑️ sms.sent
      ☑️ sms.received
@@ -201,7 +201,7 @@ If webhook setup isn't working:
 1. Check Render logs for webhook events
 2. Test webhook manually:
    ```bash
-   curl -X POST https://your-app.onrender.com/webhooks/dialpad/sms \
+   curl -X POST https://www.marketingteam.app/webhooks/dialpad/sms \
      -H "Content-Type: application/json" \
      -d '{"type":"sms.sent","data":{"id":"test","from_number":"+15551234567","to_number":"+15559876543","text":"Test message","timestamp":"2025-11-10T10:00:00Z"}}'
    ```

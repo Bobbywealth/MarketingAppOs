@@ -6,6 +6,7 @@ import { UserRole } from "@shared/roles";
 import { insertMarketingBroadcastSchema } from "@shared/schema";
 import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
+import { sendSms } from "../twilioService";
 
 const router = Router();
 
@@ -49,6 +50,85 @@ router.get("/broadcasts", async (_req: Request, res: Response) => {
   }
 });
 
+// Get recipient status/error details for a broadcast (useful for debugging failures)
+router.get("/broadcasts/:id/recipients", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ message: "Missing broadcast id" });
+
+    const result = await pool.query(
+      `
+      SELECT
+        r.id,
+        r.broadcast_id,
+        r.lead_id,
+        r.client_id,
+        r.custom_recipient,
+        r.status,
+        r.error_message,
+        r.sent_at,
+        l.company AS lead_company,
+        l.name AS lead_name,
+        l.phone AS lead_phone,
+        c.name AS client_name,
+        c.phone AS client_phone
+      FROM marketing_broadcast_recipients r
+      LEFT JOIN leads l ON l.id::text = r.lead_id::text
+      LEFT JOIN clients c ON c.id::text = r.client_id::text
+      WHERE r.broadcast_id = $1
+      ORDER BY r.id ASC
+      `,
+      [id]
+    );
+
+    return res.json(result.rows);
+  } catch (error: any) {
+    console.error("Error fetching broadcast recipients:", error);
+    return res.status(500).json({ message: error.message || "Failed to fetch broadcast recipients" });
+  }
+});
+
+// Twilio outbound SMS diagnostics (admin-only)
+// - /twilio/status: confirms which env vars are present (no secrets)
+// - /twilio/test-sms: sends a single SMS and returns Twilio error details
+router.get("/twilio/status", async (_req: Request, res: Response) => {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const from = process.env.TWILIO_PHONE_NUMBER;
+    const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+
+    return res.json({
+      configured: Boolean(accountSid && process.env.TWILIO_AUTH_TOKEN),
+      accountSidLast4: accountSid ? accountSid.slice(-4) : null,
+      hasFromNumber: Boolean(from),
+      fromNumberLast4: from ? from.replace(/[^\d]/g, "").slice(-4) : null,
+      hasMessagingServiceSid: Boolean(messagingServiceSid),
+      messagingServiceSidLast4: messagingServiceSid ? messagingServiceSid.slice(-4) : null,
+      notes:
+        "If configured=false, Render env vars are missing. If configured=true but sends fail, use /twilio/test-sms to see Twilio error code.",
+    });
+  } catch (error: any) {
+    console.error("Error getting Twilio status:", error);
+    return res.status(500).json({ message: error.message || "Failed to get Twilio status" });
+  }
+});
+
+router.post("/twilio/test-sms", async (req: Request, res: Response) => {
+  try {
+    const to = String((req.body as any)?.to ?? "").trim();
+    const body = String((req.body as any)?.body ?? "Test message from Marketing Center").trim();
+    if (!to) return res.status(400).json({ message: "Missing 'to' phone number" });
+    if (!body) return res.status(400).json({ message: "Missing 'body' message" });
+
+    const result = await sendSms(to, body);
+    // Always return 200 so you can see Twilio error details in response body.
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error sending Twilio test SMS:", error);
+    return res.status(500).json({ message: error.message || "Failed to send test SMS" });
+  }
+});
+
 // Admin SMS inbox (Twilio inbound + anything else stored in sms_messages)
 router.get("/sms-inbox", async (req: Request, res: Response) => {
   try {
@@ -71,8 +151,8 @@ router.get("/sms-inbox", async (req: Request, res: Response) => {
         l.company AS lead_company,
         l.name AS lead_name
       FROM sms_messages sm
-      LEFT JOIN leads l ON l.id = sm.lead_id
-      WHERE sm.direction = 'inbound'
+      LEFT JOIN leads l ON l.id::text = sm.lead_id::text
+      WHERE sm.direction::text = 'inbound'
       ORDER BY sm.timestamp DESC
       LIMIT $1
       `,
