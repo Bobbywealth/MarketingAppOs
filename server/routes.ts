@@ -2922,6 +2922,56 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       });
       console.log("✅ Calendar event created:", event.id);
 
+      // Send email confirmation to booker + alert admins (best-effort)
+      try {
+        const emailEnabled =
+          process.env.BOOKING_EMAIL_ENABLED === undefined ||
+          process.env.BOOKING_EMAIL_ENABLED === "true" ||
+          process.env.BOOKING_EMAIL_ENABLED === "1";
+
+        if (emailEnabled) {
+          const whenEt = new Date(datetime).toLocaleString("en-US", {
+            dateStyle: "full",
+            timeStyle: "short",
+            timeZone: "America/New_York",
+          });
+
+          const { emailNotifications } = await import("./emailService");
+
+          // Booker confirmation
+          if (email) {
+            const r = await emailNotifications.sendBookingConfirmationEmail(String(email), String(name), whenEt, String(phone));
+            if (!r?.success) console.warn("⚠️ Booking confirmation email failed:", r);
+          }
+
+          // Admin alert email (respects admin notification prefs if present)
+          try {
+            const adminsWithEmail = adminUsers.filter((a: any) => Boolean(a.email));
+            const adminEmails: string[] = [];
+            for (const admin of adminsWithEmail) {
+              const prefs = await storage.getUserNotificationPreferences(admin.id).catch(() => null);
+              if (prefs?.emailNotifications === false) continue;
+              adminEmails.push(String(admin.email));
+            }
+
+            if (adminEmails.length > 0) {
+              const appUrl = process.env.APP_URL || "https://www.marketingteam.app";
+              await emailNotifications.sendActionAlertEmail(
+                adminEmails,
+                "📞 New Strategy Call Booked",
+                `${name}${company ? ` (${company})` : ""} booked a strategy call for ${whenEt}.`,
+                `${appUrl}/company-calendar`,
+                "info"
+              );
+            }
+          } catch (adminEmailErr) {
+            console.error("⚠️ Booking admin alert email failed:", adminEmailErr);
+          }
+        }
+      } catch (emailErr) {
+        console.error("⚠️ Booking email block failed:", emailErr);
+      }
+
       // Send SMS confirmation to booker (transactional)
       try {
         const smsEnabled =

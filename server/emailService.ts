@@ -680,6 +680,32 @@ export const emailTemplates = {
       html: renderEmail(title, content, themeColor)
     };
   },
+
+  // Strategy session booking confirmation (to the person who booked)
+  bookingConfirmation: (bookerName: string, whenEt: string, phone: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">📞 Strategy Session Booked</h2>
+      <p>Hi ${bookerName},</p>
+      <p>Your strategy session with <strong>Marketing Team</strong> is confirmed.</p>
+
+      <div class="card" style="border-left: 4px solid #3b82f6;">
+        <p style="margin: 0;"><strong>When (ET):</strong> ${whenEt}</p>
+        <p style="margin: 8px 0 0;"><strong>We’ll call:</strong> ${phone}</p>
+        <p style="margin: 8px 0 0;"><strong>Duration:</strong> 30 minutes</p>
+      </div>
+
+      <p style="color:#6b7280; font-size:14px;">
+        If you need to make changes, reply to this email or use our contact page.
+      </p>
+      <div style="text-align:center;">
+        <a href="https://www.marketingteam.app/contact" class="button">Contact Us →</a>
+      </div>
+    `;
+    return {
+      subject: `✅ Strategy session confirmed (${whenEt})`,
+      html: renderEmail("Strategy Session Confirmed", content, "#3b82f6"),
+    };
+  },
 };
 
 // Marketing Email Template
@@ -821,6 +847,11 @@ export const emailNotifications = {
 
   async sendCreatorApplicationReceivedEmail(toEmail: string, creatorName: string, verifyUrl?: string | null) {
     const { subject, html } = emailTemplates.creatorApplicationReceived(creatorName, verifyUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendBookingConfirmationEmail(toEmail: string, bookerName: string, whenEt: string, phone: string) {
+    const { subject, html } = emailTemplates.bookingConfirmation(bookerName, whenEt, phone);
     return sendEmail(toEmail, subject, html);
   },
 };
