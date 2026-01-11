@@ -370,6 +370,41 @@ export async function ensureMinimumSchema() {
     "idx_contact_submissions_email",
     `CREATE INDEX IF NOT EXISTS idx_contact_submissions_email ON contact_submissions(email);`
   );
+
+  // Blog Posts table (CMS for public website)
+  await safeQuery(
+    "blog_posts table",
+    `
+    CREATE TABLE IF NOT EXISTS blog_posts (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      slug TEXT NOT NULL,
+      title TEXT NOT NULL,
+      excerpt TEXT,
+      content TEXT NOT NULL,
+      author TEXT,
+      category TEXT,
+      tags TEXT[],
+      read_time TEXT,
+      featured BOOLEAN DEFAULT FALSE,
+      image_url TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      published_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    `
+  );
+  await safeQuery("uq_blog_posts_slug", `CREATE UNIQUE INDEX IF NOT EXISTS uq_blog_posts_slug ON blog_posts(slug);`);
+  await safeQuery("idx_blog_posts_status", `CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);`);
+  await safeQuery("idx_blog_posts_published_at", `CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON blog_posts(published_at);`);
+
+  // Diagnostic: Check if table is actually accessible
+  try {
+    const res = await pool.query(`SELECT COUNT(*) FROM blog_posts;`);
+    console.log(`✅ blog_posts table is accessible, current count: ${res.rows[0].count}`);
+  } catch (e: any) {
+    console.error(`❌ blog_posts table diagnostic failed: ${e.message}`);
+  }
 }
 
 

@@ -78,7 +78,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { format } from "date-fns";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from "recharts";
+import { format, formatDistanceToNow } from "date-fns";
 import type { Lead, InsertLead } from "@shared/schema";
 import { LeadsKanban } from "@/components/LeadsKanban";
 import { LeadCard } from "@/components/leads/LeadCard";
@@ -204,6 +212,60 @@ function LeadActivityTimeline({ leadId }: { leadId: string }) {
     </ScrollArea>
   );
 }
+
+// Modern UI Helpers
+const sparklineData = [
+  { value: 400 },
+  { value: 300 },
+  { value: 600 },
+  { value: 800 },
+  { value: 500 },
+  { value: 900 },
+  { value: 1000 },
+];
+
+const PipelineCard = ({ title, value, change, trend, color, icon: Icon, score }: any) => (
+  <Card className="overflow-hidden border-slate-200/60 shadow-sm hover:shadow-md transition-all">
+    <CardContent className="p-5">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-2xl font-bold text-slate-900">{value}</h3>
+            <span className={`text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-slate-500'}`}>
+              {trend === 'up' ? '+' : ''}{change} {change.includes('%') ? '' : ''} | This week
+            </span>
+          </div>
+        </div>
+        <div className="relative">
+          <div className={`p-2 rounded-lg ${color}`}>
+            <Icon className="w-5 h-5" />
+          </div>
+          {score && (
+            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
+              <div className="bg-emerald-500 text-[8px] text-white px-1 rounded-full font-bold">
+                .{score}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="h-10 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={sparklineData}>
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke={trend === 'up' ? '#10b981' : '#6366f1'} 
+              strokeWidth={2} 
+              dot={false} 
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 export default function LeadsPage() {
   const { toast } = useToast();

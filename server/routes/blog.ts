@@ -116,36 +116,75 @@ router.post(
   requirePermission("canManageContent"),
   async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
+      console.log(`📝 POST /api/admin/blog-posts by user: ${user?.username} (Role: ${user?.role})`);
       const body = req.body ?? {};
+      console.log("Payload body:", JSON.stringify(body, null, 2));
+      
       const title = String(body.title || "");
+      console.log("Processing title:", title);
       const desiredSlug = String(body.slug || slugify(title));
+      console.log("Desired slug:", desiredSlug);
       const slug = await ensureUniqueSlug(desiredSlug);
+      console.log("Final unique slug:", slug);
+      
+      console.log("DB object status:", !!db ? "Defined" : "UNDEFINED!");
+      console.log("blogPosts table status:", !!blogPosts ? "Defined" : "UNDEFINED!");
+
+      const tags = normalizeTags(body.tags);
+      console.log("Normalized tags:", tags);
 
       const validated = insertBlogPostSchema.parse({
         ...body,
         slug,
-        tags: normalizeTags(body.tags),
+        tags,
         publishedAt: body.publishedAt ?? null,
       });
+      console.log("Zod validation successful");
 
       const shouldAutoPublishAt =
-        validated.status === "published" && (validated.publishedAt == null || Number.isNaN((validated.publishedAt as any)?.getTime?.()));
+        validated.status === "published" && (validated.publishedAt == null);
+
+      const insertData = {
+        ...validated,
+        publishedAt: shouldAutoPublishAt ? new Date() : validated.publishedAt,
+      };
+      console.log("Inserting data keys:", Object.keys(insertData).join(", "));
+      console.log("Inserting data values summary:", {
+        title: insertData.title,
+        slug: insertData.slug,
+        status: insertData.status,
+        tagsCount: insertData.tags?.length ?? 0
+      });
 
       const [created] = await db
         .insert(blogPosts)
-        .values({
-          ...validated,
-          publishedAt: shouldAutoPublishAt ? new Date() : validated.publishedAt,
-        })
+        .values(insertData)
         .returning();
 
+      if (!created) {
+        console.error("❌ No row returned from DB insert");
+        throw new Error("Database insertion failed: no data returned");
+      }
+
+      console.log("✅ Blog post created successfully, ID:", created.id);
       return res.status(201).json(created);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid payload", issues: error.issues });
+        console.error("❌ Zod Validation Error:", JSON.stringify(error.issues, null, 2));
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          issues: error.issues 
+        });
       }
-      console.error("POST /api/admin/blog-posts error:", error);
-      return res.status(500).json({ message: "Failed to create blog post" });
+      
+      console.error("❌ Database or Server Error:", error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return res.status(500).json({ 
+        message: "Failed to create blog post", 
+        error: errorMsg,
+        stack: process.env.NODE_ENV === 'development' ? (error as any).stack : undefined
+      });
     }
   }
 );

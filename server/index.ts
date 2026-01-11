@@ -83,8 +83,9 @@ app.use("/api/signup-simple", publicSignupLimiter);
 app.use("/api/early-lead", publicSignupLimiter);
 app.use("/api/social-audit", publicSignupLimiter);
 
-app.use(express.json({ limit: "10kb" })); // Limit body size to prevent DoS
-app.use(express.urlencoded({ extended: false, limit: "10kb" }));
+// Blog posts and other content can be large
+app.use(express.json({ limit: "1mb" })); 
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 
 // #region agent log
 app.use((req, _res, next) => {
