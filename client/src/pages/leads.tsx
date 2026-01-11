@@ -302,7 +302,8 @@ export default function LeadsPage() {
   const [isDrafting, setIsDrafting] = useState(false);
   
   // New state for modern UI
-  const [viewMode, setViewMode] = useState<"card" | "list" | "kanban">("card");
+  // Default to the table view (matches the desired CRM layout)
+  const [viewMode, setViewMode] = useState<"card" | "list" | "kanban">("list");
   const [quickFilterStage, setQuickFilterStage] = useState<string | null>(null);
   const [quickFilterScore, setQuickFilterScore] = useState<string | null>(null);
   const [quickFilterSource, setQuickFilterSource] = useState<string | null>(null);
@@ -2350,92 +2351,42 @@ export default function LeadsPage() {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto bg-muted/5">
-        {/* Stats Cards - Horizontal Scroll on Mobile */}
-        <div className="px-4 md:px-6 py-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-          <div className="flex md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 min-w-max md:min-w-0">
-            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Total</p>
-                    <p className="text-xl md:text-2xl font-bold">{leadStats.total}</p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-blue-500/10 rounded-xl">
-                    <Target className="w-5 h-5 md:w-6 h-6 text-blue-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">New</p>
-                    <p className="text-xl md:text-2xl font-bold">{leadStats.new}</p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-purple-500/10 rounded-xl">
-                    <Zap className="w-5 h-5 md:w-6 h-6 text-purple-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Contacted</p>
-                    <p className="text-xl md:text-2xl font-bold">{leadStats.contacted}</p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-indigo-500/10 rounded-xl">
-                    <MessageSquare className="w-5 h-5 md:w-6 h-6 text-indigo-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Qualified</p>
-                    <p className="text-xl md:text-2xl font-bold">{leadStats.qualified}</p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-green-500/10 rounded-xl">
-                    <CheckCircle2 className="w-5 h-5 md:w-6 h-6 text-green-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Won</p>
-                    <p className="text-xl md:text-2xl font-bold">{leadStats.converted}</p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-emerald-500/10 rounded-xl">
-                    <TrendingUp className="w-5 h-5 md:w-6 h-6 text-emerald-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover-elevate w-[160px] md:w-auto snap-center flex-shrink-0">
-              <CardContent className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] md:text-sm text-muted-foreground font-medium uppercase tracking-wider">Lost</p>
-                    <p className="text-xl md:text-2xl font-bold">{leadStats.lost}</p>
-                  </div>
-                  <div className="p-2 md:p-3 bg-red-500/10 rounded-xl">
-                    <XCircle className="w-5 h-5 md:w-6 h-6 text-red-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Pipeline Health (matches CRM-style dashboard) */}
+        <div className="px-4 md:px-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <PipelineCard
+              title="New Leads"
+              value={leadStats.new}
+              change="12%"
+              trend="up"
+              color="bg-blue-50 text-blue-600"
+              icon={Target}
+            />
+            <PipelineCard
+              title="Engaged"
+              value={leadStats.contacted}
+              change="211"
+              trend="up"
+              color="bg-emerald-50 text-emerald-600"
+              icon={Zap}
+            />
+            <PipelineCard
+              title="Active Deals"
+              value={leadStats.qualified}
+              change="321+"
+              trend="up"
+              color="bg-indigo-50 text-indigo-600"
+              icon={Calendar}
+            />
+            <PipelineCard
+              title="Revenue Potential"
+              value={`$${(leads.reduce((sum, l) => sum + (Number(l.value) || 0), 0) / 100).toLocaleString()}`}
+              change="AI Score"
+              trend="up"
+              color="bg-slate-50 text-slate-600"
+              icon={TrendingUp}
+              score="54"
+            />
           </div>
         </div>
 
