@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { resolveApiUrl } from '@/lib/api';
 
 // Generate a session ID that persists for the browser session
 function getSessionId(): string {
@@ -14,7 +15,7 @@ function getSessionId(): string {
 // Track page view to backend
 async function trackPageView(page: string) {
   try {
-    await fetch('/api/track/pageview', {
+    await fetch(resolveApiUrl('/api/track/pageview'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

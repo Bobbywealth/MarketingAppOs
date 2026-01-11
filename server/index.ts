@@ -3,6 +3,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
+import { appendFile, mkdir } from "node:fs/promises";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
@@ -17,6 +18,13 @@ import { startMarketingBroadcastScheduler } from "./marketingBroadcastScheduler"
 import { startBackgroundJobs } from "./backgroundJobs";
 import { storage } from "./storage";
 import { ensureMinimumSchema } from "./ensureSchema";
+
+// #region agent log
+const AGENT_DEBUG_LOG_PATH = "/Users/bobbyc/Downloads/MarketingOS 2/.cursor/debug.log";
+function agentAppendLog(payload: any) {
+  void appendFile(AGENT_DEBUG_LOG_PATH, `${JSON.stringify(payload)}\n`).catch(() => {});
+}
+// #endregion
 
 const app = express();
 app.set('trust proxy', 1); // Trust the first proxy (e.g. Nginx, Replit, Heroku)
@@ -78,6 +86,24 @@ app.use("/api/social-audit", publicSignupLimiter);
 app.use(express.json({ limit: "10kb" })); // Limit body size to prevent DoS
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
+// #region agent log
+app.use((req, _res, next) => {
+  // Minimal request tracing for login route only (no secrets).
+  if (req.path === "/api/login") {
+    agentAppendLog({
+      sessionId: "debug-session",
+      runId: "login-pre",
+      hypothesisId: "A",
+      location: "server/index.ts:middleware",
+      message: "Request hit /api/login",
+      data: { method: req.method, origin: req.headers.origin, host: req.headers.host },
+      timestamp: Date.now(),
+    });
+  }
+  next();
+});
+// #endregion
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -116,6 +142,20 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = createServer(app);
+
+  // #region agent log
+  // Ensure log dir exists and write a boot marker so we can prove this server is running.
+  await mkdir("/Users/bobbyc/Downloads/MarketingOS 2/.cursor", { recursive: true }).catch(() => {});
+  agentAppendLog({
+    sessionId: "debug-session",
+    runId: "login-pre",
+    hypothesisId: "Z",
+    location: "server/index.ts:boot",
+    message: "Server boot",
+    data: { nodeEnv: process.env.NODE_ENV || null, port: process.env.PORT || null },
+    timestamp: Date.now(),
+  });
+  // #endregion
   
   // Ensure critical schema pieces exist (prevents 500s if prod DB hasn't been migrated yet)
   await ensureMinimumSchema();

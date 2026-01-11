@@ -32,6 +32,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -56,6 +57,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { getEffectiveRole } from "@/lib/effective-role";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { resolveApiUrl } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -309,6 +311,14 @@ const contentCreatorsTools: SidebarNavItem[] = [
     sidebarKey: "content" as const,
   },
   {
+    title: "Blog Posts",
+    url: "/admin/blog",
+    icon: BookOpen,
+    permission: "canManageContent" as const,
+    sidebarKey: "blog" as const,
+    roles: ["admin", "manager", "staff", "creator_manager"] as const,
+  },
+  {
     title: "Creators",
     url: "/creators",
     icon: UsersRound,
@@ -453,7 +463,7 @@ function NavItem({
   onClick,
   badgeCount 
 }: { 
-  item: typeof companyTools[0];
+  item: SidebarNavItem;
   isActive: boolean;
   isCollapsed: boolean;
   onClick: () => void;
@@ -729,7 +739,7 @@ export function AppSidebar() {
   const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
                 (window.navigator as any).standalone === true;
   
-  const logoutUrl = isPWA ? '/api/logout?pwa=true' : '/api/logout';
+  const logoutUrl = resolveApiUrl(isPWA ? '/api/logout?pwa=true' : '/api/logout');
 
   const handleLinkClick = () => {
     setOpenMobile(false);

@@ -48,17 +48,7 @@ export function SimpleUploader({
       setProgress(30);
 
       // Upload file to backend
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include', // Include cookies for authentication
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Upload failed");
-      }
-
+      const response = await apiRequest("POST", "/api/upload", formData);
       const data = await response.json();
       
       setProgress(90);

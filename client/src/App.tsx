@@ -1,5 +1,7 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
+import { resolveApiUrl } from "./lib/api";
+import { isNativeApp } from "./lib/runtime";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -41,7 +43,7 @@ const SignupPage = lazy(() => import("@/pages/signup"));
 const PostPaymentOnboarding = lazy(() => import("@/pages/post-payment-onboarding"));
 const PaymentSuccessPage = lazy(() => import("@/pages/payment-success"));
 const ContactPage = lazy(() => import("@/pages/contact"));
-const BlogPage = lazy(() => import("@/pages/blog"));
+const BlogPage = lazy(() => import("@/pages/blog-db"));
 const PrivacyPolicyPage = lazy(() => import("@/pages/privacy"));
 const TermsOfServicePage = lazy(() => import("@/pages/terms"));
 const Dashboard = lazy(() => import("@/pages/dashboard")); // /dashboard redirect
@@ -86,6 +88,7 @@ const PWAHomePage = lazy(() => import("@/pages/pwa-home"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const AdminSocialOverview = lazy(() => import("@/pages/admin-social-overview"));
 const AdminSocialAccounts = lazy(() => import("@/pages/admin-social-accounts"));
+const AdminBlog = lazy(() => import("@/pages/admin-blog"));
 const AIBusinessManager = lazy(() => import("@/pages/ai-business-manager"));
 const Commissions = lazy(() => import("@/pages/commissions"));
 const Creators = lazy(() => import("@/pages/creators"));
@@ -181,6 +184,7 @@ function Router() {
         {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
         {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
         {isInternal && <ProtectedRoute path="/content" component={Content} />}
+        {isInternal && <ProtectedRoute path="/admin/blog" component={AdminBlog} />}
         {isInternal && <ProtectedRoute path="/invoices" component={canAccess("canManageInvoices") ? Invoices : Dashboard} />}
         {isInternal && <ProtectedRoute path="/commissions" component={(isAdmin || isManager) ? Commissions : Dashboard} />}
         {isInternal && <ProtectedRoute path="/subscription-packages" component={isAdmin ? SubscriptionPackages : Dashboard} />}
@@ -253,6 +257,7 @@ function AppContent() {
     })();
   const { isSupported, isSubscribed, subscribe, loading } = usePushNotifications({ enabled: !!user });
   const shouldShowPushPrompt = !!user && isSupported && !isSubscribed && typeof Notification !== 'undefined' && Notification.permission === 'default' && !localStorage.getItem('pushPromptShownV2');
+  const native = isNativeApp();
 
   // #region agent log (hypothesis A/B: page is scrolling instead of chat container, or main isn't overflow-hidden at runtime)
   useEffect(() => {
@@ -262,7 +267,7 @@ function AppContent() {
       const mainStyle = main ? window.getComputedStyle(main) : null;
       const docEl = document.documentElement;
       fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/App.tsx:route-effect',message:'route/layout snapshot',data:{routeLocation,routePathname,isMessagesRoute,mainOverflowY:mainStyle?.overflowY,mainOverflowX:mainStyle?.overflowX,mainClientH:(main as any)?.clientHeight,mainScrollH:(main as any)?.scrollHeight,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
-      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/App.tsx:route-effect',message:'route/layout snapshot',data:{routeLocation,routePathname,isMessagesRoute,mainOverflowY:mainStyle?.overflowY,mainOverflowX:mainStyle?.overflowX,mainClientH:(main as any)?.clientHeight,mainScrollH:(main as any)?.scrollHeight,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+      fetch(resolveApiUrl('/api/__debug/log'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/App.tsx:route-effect',message:'route/layout snapshot',data:{routeLocation,routePathname,isMessagesRoute,mainOverflowY:mainStyle?.overflowY,mainOverflowX:mainStyle?.overflowX,mainClientH:(main as any)?.clientHeight,mainScrollH:(main as any)?.scrollHeight,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
     } catch {}
   }, [routeLocation, routePathname, isMessagesRoute, debugEnabled]);
   // #endregion agent log
@@ -284,6 +289,7 @@ function AppContent() {
 
   // Handle navigation from push notifications
   useEffect(() => {
+    if (native) return;
     const handleMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'NAVIGATE') {
         console.log('Navigating to:', event.data.url);
@@ -296,7 +302,7 @@ function AppContent() {
     return () => {
       navigator.serviceWorker?.removeEventListener('message', handleMessage);
     };
-  }, [setLocation]);
+  }, [setLocation, native]);
 
   // Persist last visited route for offline retry UX
   useEffect(() => {

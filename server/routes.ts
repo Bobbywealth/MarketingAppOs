@@ -58,6 +58,7 @@ import tasksRouter from "./routes/tasks";
 import marketingCenterRouter from "./routes/marketing-center";
 import socialRouter from "./routes/social";
 import aiRouter from "./routes/ai";
+import blogRouter from "./routes/blog";
 import { 
   getCurrentUserContext, 
   getAccessibleClientOr404, 
@@ -189,6 +190,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/social", socialRouter);
   app.use("/api", tasksRouter);
   app.use("/api/ai-business-manager", aiRouter);
+  app.use("/api", blogRouter);
 
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {

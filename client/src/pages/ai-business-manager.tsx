@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { resolveApiUrl } from "@/lib/api";
 
 interface Message {
   id: string;
@@ -69,7 +70,7 @@ export default function AIBusinessManager() {
         content: m.content,
       }));
 
-    const res = await fetch("/api/ai-business-manager/chat-stream", {
+    const res = await fetch(resolveApiUrl("/api/ai-business-manager/chat-stream"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

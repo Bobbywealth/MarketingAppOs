@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { isNativeApp } from '@/lib/runtime';
 
 type UsePushNotificationsOptions = {
   /**
@@ -17,6 +18,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const native = isNativeApp();
 
   const syncSubscriptionToServer = useCallback(
     async (sub: PushSubscription) => {
@@ -34,12 +36,17 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
   );
 
   useEffect(() => {
+    // Web Push is not supported inside iOS/Android native WebViews (Capacitor).
+    if (native) {
+      setIsSupported(false);
+      return;
+    }
     // Check if push notifications are supported
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       setIsSupported(true);
       checkSubscription();
     }
-  }, []);
+  }, [native]);
 
   async function checkSubscription() {
     try {
@@ -94,7 +101,9 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       .replace(/_/g, '/');
 
     const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
+    // Ensure the backing buffer is a real ArrayBuffer (not ArrayBufferLike),
+    // to satisfy DOM typings for PushManager in newer TS versions.
+    const outputArray = new Uint8Array(new ArrayBuffer(rawData.length));
 
     for (let i = 0; i < rawData.length; ++i) {
       outputArray[i] = rawData.charCodeAt(i);
@@ -103,6 +112,14 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
   }
 
   async function subscribe() {
+    if (native) {
+      toast({
+        title: "Not available in the native app yet",
+        description: "Push notifications are currently supported in the web/PWA version.",
+        variant: "destructive",
+      });
+      return false;
+    }
     if (!enabled) {
       toast({
         title: "Login required",
@@ -165,7 +182,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
       const registration = await navigator.serviceWorker.ready;
       const pushSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
       });
 
       // Send subscription to server

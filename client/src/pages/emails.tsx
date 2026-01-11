@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DOMPurify from 'dompurify';
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { resolveApiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -307,7 +308,7 @@ export default function EmailsPage() {
       }
     }
     // Redirect to Microsoft OAuth
-    window.location.href = '/api/auth/microsoft';
+    window.location.href = resolveApiUrl('/api/auth/microsoft');
   };
 
   const [loadingEmailBody, setLoadingEmailBody] = useState(false);
@@ -441,7 +442,7 @@ export default function EmailsPage() {
           {!isConnected ? (
             <Button 
               className="gap-2" 
-              onClick={() => window.location.href = '/api/auth/microsoft'}
+              onClick={() => window.location.href = resolveApiUrl('/api/auth/microsoft')}
             >
               <LinkIcon className="w-4 h-4" />
               Connect Outlook Email

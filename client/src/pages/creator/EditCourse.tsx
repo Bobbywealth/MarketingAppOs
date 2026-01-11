@@ -136,10 +136,7 @@ export default function EditCourse() {
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await apiRequest("POST", "/api/upload", formData);
       const data = await res.json();
       
       if (data.url) {
@@ -246,7 +243,7 @@ export default function EditCourse() {
                       if (!file) return;
                       const formData = new FormData();
                       formData.append("file", file);
-                      const res = await fetch("/api/upload", { method: "POST", body: formData });
+                      const res = await apiRequest("POST", "/api/upload", formData);
                       const data = await res.json();
                       if (data.url) setEditingCourse({...editingCourse, thumbnailUrl: data.url});
                     }}

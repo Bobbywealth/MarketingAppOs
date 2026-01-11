@@ -4,6 +4,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { appendFile } from "node:fs/promises";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
@@ -11,6 +12,12 @@ import { pool } from "./db";
 import { User as SelectUser, insertUserSchema } from "@shared/schema";
 import { UserRole } from "@shared/roles";
 import { rolePermissions } from "./rbac";
+
+const AGENT_DEBUG_LOG_PATH = "/Users/bobbyc/Downloads/MarketingOS 2/.cursor/debug.log";
+function agentAppendLog(payload: any) {
+  // Best-effort local file logging (for debug-mode evidence). Never log secrets.
+  void appendFile(AGENT_DEBUG_LOG_PATH, `${JSON.stringify(payload)}\n`).catch(() => {});
+}
 
 declare global {
   namespace Express {
@@ -93,8 +100,21 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'B',location:'server/auth.ts:LocalStrategy',message:'LocalStrategy attempt',data:{username:(typeof username==='string'?username.slice(0,80):String(username))},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        // #region agent log
+        agentAppendLog({sessionId:'debug-session',runId:'login-pre',hypothesisId:'B',location:'server/auth.ts:LocalStrategy',message:'LocalStrategy attempt (file)',data:{username:(typeof username==='string'?username.slice(0,80):String(username))},timestamp:Date.now()});
+        // #endregion
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'B',location:'server/auth.ts:LocalStrategy',message:'LocalStrategy user lookup result',data:{username:(typeof username==='string'?username.slice(0,80):String(username)),userFound:!!user,userId:user?user.id:undefined,role:user?(user as any).role:undefined},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        const passwordOk = !!user && (await comparePasswords(password, user.password));
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'B',location:'server/auth.ts:LocalStrategy',message:'LocalStrategy password compare result',data:{username:(typeof username==='string'?username.slice(0,80):String(username)),passwordOk},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (!user || !passwordOk) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
@@ -231,7 +251,16 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", (req, res, next) => {
     console.log('🔐 Login attempt', { origin: req.headers.origin, host: req.headers.host, cookieDomain: process.env.COOKIE_DOMAIN });
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'A',location:'server/auth.ts:/api/login',message:'POST /api/login entry',data:{origin:req.headers.origin,host:req.headers.host,protocol:req.protocol,secure:(req as any).secure,ip:req.ip,username:typeof req.body?.username==='string'?req.body.username.slice(0,80):undefined,hasCookieHeader:!!req.headers.cookie,cookieDomain:process.env.COOKIE_DOMAIN||null,cookieSecure:process.env.NODE_ENV==='production',cookieSameSite:'lax'},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    // #region agent log
+    agentAppendLog({sessionId:'debug-session',runId:'login-pre',hypothesisId:'A',location:'server/auth.ts:/api/login',message:'POST /api/login entry (file)',data:{origin:req.headers.origin,host:req.headers.host,protocol:req.protocol,secure:(req as any).secure,ip:req.ip,username:typeof req.body?.username==='string'?req.body.username.slice(0,80):undefined,hasCookieHeader:!!req.headers.cookie},timestamp:Date.now()});
+    // #endregion
     passport.authenticate("local", async (err: any, user: SelectUser | false, info: any) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'E',location:'server/auth.ts:/api/login',message:'passport.authenticate(local) callback',data:{err:err?String(err?.message||err):null,userOk:!!user,infoMessage:info?.message||null},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (err) return next(err);
       if (!user) {
         // Track failed login attempt
@@ -244,6 +273,9 @@ export function setupAuth(app: Express) {
           );
         } catch (notifError) {
           console.error('Failed to send security notification:', notifError);
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'E',location:'server/auth.ts:/api/login',message:'Security notification failed during login failure',data:{notifError:String((notifError as any)?.message||notifError)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
         }
         
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
@@ -264,8 +296,14 @@ export function setupAuth(app: Express) {
           });
         } catch (error) {
           console.error("Failed to log activity:", error);
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'E',location:'server/auth.ts:/api/login',message:'Activity log write failed during login',data:{error:String((error as any)?.message||error)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
         }
-        
+
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'C',location:'server/auth.ts:/api/login',message:'Login success; session info',data:{sessionID:(req as any).sessionID||null,isAuthenticated:typeof (req as any).isAuthenticated==='function'?(req as any).isAuthenticated():null,cookieDomain:(req as any).session?.cookie?.domain||null,cookieSecure:(req as any).session?.cookie?.secure||null,cookieSameSite:(req as any).session?.cookie?.sameSite||null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         res.status(200).json({
           id: user.id,
           username: user.username,

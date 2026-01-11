@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { resolveApiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -350,7 +351,7 @@ export default function CompanyCalendarPage() {
 
   const handleGoogleSync = () => {
     // Connect Outlook (Microsoft) account; callback will redirect back here.
-    window.location.href = "/api/auth/microsoft?redirect=/company-calendar";
+    window.location.href = resolveApiUrl("/api/auth/microsoft?redirect=/company-calendar");
   };
 
   const filteredUpcomingEvents = eventTypeFilter === "all" 

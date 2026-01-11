@@ -1,4 +1,27 @@
 import { QueryFunction } from "@tanstack/react-query";
+import { isNativeApp } from "./runtime";
+
+function getApiBaseUrl(): string {
+  const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
+  if (fromEnv && fromEnv.trim()) return fromEnv.trim();
+
+  // When bundled into a native app, the WebView origin becomes `capacitor://localhost`,
+  // so relative `/api/*` calls won't reach your hosted backend unless we pin a base URL.
+  if (isNativeApp()) return "https://www.marketingteam.app";
+
+  // In normal web/PWA mode, keep relative URLs so same-origin cookies/sessions work.
+  return "";
+}
+
+export function resolveApiUrl(url: string): string {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+
+  const base = getApiBaseUrl();
+  if (!base) return url;
+
+  return new URL(url, base).toString();
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -44,7 +67,7 @@ export async function apiRequest(
   // Check if data is FormData (for file uploads)
   const isFormData = data instanceof FormData;
   
-  const res = await fetch(url, {
+  const res = await fetch(resolveApiUrl(url), {
     method,
     headers: isFormData ? {} : (data ? { "Content-Type": "application/json" } : {}),
     body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
@@ -61,7 +84,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const path = queryKey.join("/") as string;
+    const res = await fetch(resolveApiUrl(path), {
       credentials: "include",
     });
 

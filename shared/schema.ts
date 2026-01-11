@@ -786,6 +786,29 @@ export const contentPostsRelations = relations(contentPosts, ({ one }) => ({
   }),
 }));
 
+// Blog Posts table (public website blog / CMS)
+export const blogPosts = pgTable("blog_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: varchar("slug").notNull(),
+  title: varchar("title").notNull(),
+  excerpt: text("excerpt"),
+  content: text("content").notNull(), // markdown/plaintext
+  author: varchar("author"),
+  category: varchar("category"),
+  tags: text("tags").array(),
+  readTime: varchar("read_time"),
+  featured: boolean("featured").default(false),
+  imageUrl: text("image_url"),
+  status: varchar("status").notNull().default("draft"), // draft | published | archived
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("UQ_blog_posts_slug").on(table.slug),
+  index("IDX_blog_posts_status").on(table.status),
+  index("IDX_blog_posts_published_at").on(table.publishedAt),
+]);
+
 // Invoices table
 export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1310,6 +1333,18 @@ export const insertContentPostSchema = createInsertSchema(contentPosts)
       z.date().nullable().optional()
     ),
   });
+
+export const insertBlogPostSchema = createInsertSchema(blogPosts)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    tags: z.array(z.string().min(1)).optional().nullable(),
+    publishedAt: z
+      .union([z.string(), z.date()])
+      .optional()
+      .nullable()
+      .transform((val) => (val ? new Date(val) : null))
+      .refine((d) => d == null || !Number.isNaN(d.getTime()), "Invalid publishedAt"),
+  });
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMessageSchema = createInsertSchema(messages)
@@ -1358,6 +1393,9 @@ export type Lead = typeof leads.$inferSelect;
 
 export type InsertContentPost = z.infer<typeof insertContentPostSchema>;
 export type ContentPost = typeof contentPosts.$inferSelect;
+
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;
 
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
@@ -1708,7 +1746,44 @@ export const insertClientCreatorSchema = createInsertSchema(clientCreators).omit
 export type InsertClientCreator = z.infer<typeof insertClientCreatorSchema>;
 export type ClientCreator = typeof clientCreators.$inferSelect;
 
-export const insertCreatorVisitSchema = createInsertSchema(creatorVisits).omit({ id: true, createdAt: true });
+export const insertCreatorVisitSchema = createInsertSchema(creatorVisits)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    // Allow API clients to send ISO strings for timestamps
+    scheduledStart: z
+      .union([z.string(), z.date()])
+      .transform((val) => new Date(val))
+      .refine((d) => !Number.isNaN(d.getTime()), "Invalid scheduledStart"),
+    scheduledEnd: z
+      .union([z.string(), z.date()])
+      .transform((val) => new Date(val))
+      .refine((d) => !Number.isNaN(d.getTime()), "Invalid scheduledEnd"),
+
+    completedAt: z
+      .union([z.string(), z.date()])
+      .optional()
+      .nullable()
+      .transform((val) => (val ? new Date(val) : null))
+      .refine((d) => d == null || !Number.isNaN(d.getTime()), "Invalid completedAt"),
+    uploadTimestamp: z
+      .union([z.string(), z.date()])
+      .optional()
+      .nullable()
+      .transform((val) => (val ? new Date(val) : null))
+      .refine((d) => d == null || !Number.isNaN(d.getTime()), "Invalid uploadTimestamp"),
+    uploadDueAt: z
+      .union([z.string(), z.date()])
+      .optional()
+      .nullable()
+      .transform((val) => (val ? new Date(val) : null))
+      .refine((d) => d == null || !Number.isNaN(d.getTime()), "Invalid uploadDueAt"),
+    paymentReleasedAt: z
+      .union([z.string(), z.date()])
+      .optional()
+      .nullable()
+      .transform((val) => (val ? new Date(val) : null))
+      .refine((d) => d == null || !Number.isNaN(d.getTime()), "Invalid paymentReleasedAt"),
+  });
 export type InsertCreatorVisit = z.infer<typeof insertCreatorVisitSchema>;
 export type CreatorVisit = typeof creatorVisits.$inferSelect;
 

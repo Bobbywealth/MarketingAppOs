@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -66,6 +67,7 @@ type CreatorRow = {
 export default function CreatorsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [viewTab, setViewTab] = useState<"creators" | "applicants" | "all">("creators");
   const [city, setCity] = useState<string>("");
   const [zip, setZip] = useState<string>("");
   const [status, setStatus] = useState<string>("all");
@@ -86,6 +88,10 @@ export default function CreatorsPage() {
   const { data: creators = [], isLoading, error } = useQuery<CreatorRow[]>({
     queryKey: [queryUrl],
   });
+
+  const creatorsAccepted = useMemo(() => creators.filter((c) => c.applicationStatus === "accepted"), [creators]);
+  const creatorsPending = useMemo(() => creators.filter((c) => c.applicationStatus === "pending"), [creators]);
+  const creatorsDeclined = useMemo(() => creators.filter((c) => c.applicationStatus === "declined"), [creators]);
 
   const acceptMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -108,6 +114,140 @@ export default function CreatorsPage() {
       toast({ title: "Creator Declined", description: "The creator has been declined." });
     },
   });
+
+  const getNetworkBadge = (networkStatus: CreatorRow["status"]) => {
+    if (networkStatus === "active") return <Badge className="bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">Active</Badge>;
+    if (networkStatus === "backup") return <Badge className="bg-amber-500/10 text-amber-700 border border-amber-500/20">Backup</Badge>;
+    return <Badge variant="secondary" className="border">Inactive</Badge>;
+  };
+
+  const renderTable = (rows: CreatorRow[]) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Creator</TableHead>
+          <TableHead>Instagram</TableHead>
+          <TableHead>Location</TableHead>
+          <TableHead>Legal Status</TableHead>
+          <TableHead>Application</TableHead>
+          <TableHead>Network</TableHead>
+          <TableHead>Tier / Score</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((c) => {
+          const tier = getCreatorTier(c.performanceScore);
+          return (
+            <TableRow key={c.id}>
+              <TableCell className="font-medium cursor-pointer" onClick={() => setLocation(`/creators/${c.id}`)}>
+                <div>{c.fullName}</div>
+                <div className="text-xs text-muted-foreground font-normal">{c.email}</div>
+                <div className="text-xs text-muted-foreground font-normal">{c.phone}</div>
+              </TableCell>
+              <TableCell>
+                {c.instagramUsername ? (
+                  <a
+                    href={`https://instagram.com/${c.instagramUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-pink-600 hover:underline font-medium"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Instagram className="w-3.5 h-3.5" />
+                    @{c.instagramUsername}
+                  </a>
+                ) : "—"}
+              </TableCell>
+              <TableCell>
+                <div className="text-sm">
+                  {c.homeCity || "—"}
+                  <div className="text-xs text-muted-foreground">{c.baseZip} ({c.serviceRadiusMiles || 25}mi)</div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <div title="Terms & Conditions" className={`p-1 rounded ${c.termsSigned ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
+                    <Info className="w-4 h-4" />
+                  </div>
+                  <div title="Liability Waiver" className={`p-1 rounded ${c.waiverSigned ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
+                    <Clock className="w-4 h-4" />
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge
+                  variant={
+                    c.applicationStatus === "accepted" ? "default" :
+                    c.applicationStatus === "pending" ? "secondary" :
+                    "destructive"
+                  }
+                  className="capitalize"
+                >
+                  {c.applicationStatus || "pending"}
+                </Badge>
+              </TableCell>
+              <TableCell>{getNetworkBadge(c.status)}</TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${tier.bg} ${tier.color} ${tier.border} uppercase`}>
+                    <Award className="w-2.5 h-2.5" />
+                    {tier.label}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs">
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    <span>{c.performanceScore ?? "5.0"}</span>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  {/* Applicants: show approve/decline buttons */}
+                  {c.applicationStatus === "pending" && (
+                    <>
+                      <Button
+                        size="sm"
+                        className="h-8 bg-green-600 hover:bg-green-700"
+                        onClick={(e) => { e.stopPropagation(); acceptMutation.mutate(c.id); }}
+                        disabled={acceptMutation.isPending}
+                      >
+                        <Check className="w-4 h-4 mr-1" /> Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-8"
+                        onClick={(e) => { e.stopPropagation(); declineMutation.mutate(c.id); }}
+                        disabled={declineMutation.isPending}
+                      >
+                        <X className="w-4 h-4 mr-1" /> Decline
+                      </Button>
+                    </>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={(e) => { e.stopPropagation(); setLocation(`/creators/${c.id}`); }}
+                  >
+                    View Profile
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+        {rows.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
+              No creators found matching these filters.
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
 
   return (
     <div className="min-h-full gradient-mesh">
@@ -179,124 +319,79 @@ export default function CreatorsPage() {
             <CardTitle>Creators & Applications</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+              <Tabs value={viewTab} onValueChange={(v) => setViewTab(v as any)} className="w-full md:w-auto">
+                <TabsList className="w-full md:w-auto">
+                  <TabsTrigger value="creators" className="gap-2">
+                    Creators
+                    <Badge variant="secondary" className="ml-1">{creatorsAccepted.length}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="applicants" className="gap-2">
+                    Applicants
+                    <Badge variant="secondary" className="ml-1">{creatorsPending.length}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="all" className="gap-2">
+                    All
+                    <Badge variant="secondary" className="ml-1">{creators.length}</Badge>
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="creators" />
+                <TabsContent value="applicants" />
+                <TabsContent value="all" />
+              </Tabs>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant={viewTab === "applicants" && appStatus === "pending" ? "default" : "outline"}
+                  onClick={() => { setViewTab("applicants"); setAppStatus("pending"); }}
+                >
+                  Pending Applicants
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewTab === "creators" && appStatus === "accepted" ? "default" : "outline"}
+                  onClick={() => { setViewTab("creators"); setAppStatus("accepted"); }}
+                >
+                  Accepted Creators
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setViewTab("all"); setAppStatus("all"); setStatus("all"); }}
+                >
+                  Show All
+                </Button>
+              </div>
+            </div>
+
             {isLoading ? (
               <div className="py-10 text-center text-muted-foreground">Loading creators…</div>
             ) : error ? (
               <div className="py-10 text-center text-muted-foreground">Failed to load creators.</div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Creator</TableHead>
-                    <TableHead>Instagram</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Legal Status</TableHead>
-                    <TableHead>App Status</TableHead>
-                    <TableHead>Tier / Score</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {creators.map((c) => {
-                    const tier = getCreatorTier(c.performanceScore);
-                    return (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium cursor-pointer" onClick={() => setLocation(`/creators/${c.id}`)}>
-                          <div>{c.fullName}</div>
-                          <div className="text-xs text-muted-foreground font-normal">{c.email}</div>
-                          <div className="text-xs text-muted-foreground font-normal">{c.phone}</div>
-                        </TableCell>
-                        <TableCell>
-                          {c.instagramUsername ? (
-                            <a 
-                              href={`https://instagram.com/${c.instagramUsername}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-pink-600 hover:underline font-medium"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Instagram className="w-3.5 h-3.5" />
-                              @{c.instagramUsername}
-                            </a>
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {c.homeCity || "—"}
-                            <div className="text-xs text-muted-foreground">{c.baseZip} ({c.serviceRadiusMiles || 25}mi)</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <div title="Terms & Conditions" className={`p-1 rounded ${c.termsSigned ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
-                              <Info className="w-4 h-4" />
-                            </div>
-                            <div title="Liability Waiver" className={`p-1 rounded ${c.waiverSigned ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
-                              <Clock className="w-4 h-4" />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            c.applicationStatus === "accepted" ? "default" : 
-                            c.applicationStatus === "pending" ? "secondary" : 
-                            "destructive"
-                          } className="capitalize">
-                            {c.applicationStatus || "pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${tier.bg} ${tier.color} ${tier.border} uppercase`}>
-                              <Award className="w-2.5 h-2.5" />
-                              {tier.label}
-                            </div>
-                            <div className="flex items-center gap-1 text-xs">
-                              <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                              <span>{c.performanceScore ?? "5.0"}</span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {c.applicationStatus === "pending" && (
-                              <>
-                                <Button 
-                                  size="sm" 
-                                  className="h-8 bg-green-600 hover:bg-green-700"
-                                  onClick={(e) => { e.stopPropagation(); acceptMutation.mutate(c.id); }}
-                                  disabled={acceptMutation.isPending}
-                                >
-                                  <Check className="w-4 h-4 mr-1" /> Accept
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="destructive" 
-                                  className="h-8"
-                                  onClick={(e) => { e.stopPropagation(); declineMutation.mutate(c.id); }}
-                                  disabled={declineMutation.isPending}
-                                >
-                                  <X className="w-4 h-4 mr-1" /> Decline
-                                </Button>
-                              </>
-                            )}
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setLocation(`/creators/${c.id}`)}>
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {creators.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                        No creators found matching these filters.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <>
+                {viewTab === "creators" && renderTable(creatorsAccepted)}
+                {viewTab === "applicants" && (
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">Pending Applicants</h3>
+                        <Badge variant="secondary">{creatorsPending.length}</Badge>
+                      </div>
+                      {renderTable(creatorsPending)}
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold">Declined</h3>
+                        <Badge variant="secondary">{creatorsDeclined.length}</Badge>
+                      </div>
+                      {renderTable(creatorsDeclined)}
+                    </div>
+                  </div>
+                )}
+                {viewTab === "all" && renderTable(creators)}
+              </>
             )}
             <div className="pt-4 text-sm text-muted-foreground">
               <Link href="/visits" className="underline">

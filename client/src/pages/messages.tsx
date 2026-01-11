@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Search, Users, MessageSquare, Check, CheckCheck, ArrowLeft, Mic, StopCircle, Play, Pause, SkipBack, Trash2, Image as ImageIcon, X, Filter, ChevronDown, Smile, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { resolveApiUrl } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import type { Message, User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
@@ -212,11 +213,16 @@ export default function Messages() {
       return response.json();
     },
     refetchInterval: selectedUserId && messageMode === "direct" ? 1500 : false, // Auto-refresh every 1.5 seconds when conversation is open for faster messaging
-    onSuccess: () => {
-      // Invalidate unread counts after viewing a conversation
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
-    },
   });
+
+  // Invalidate unread counts after viewing a conversation (TanStack v5 removed onSuccess for useQuery).
+  useEffect(() => {
+    if (messageMode !== "direct") return;
+    if (!selectedUserId) return;
+    // Only invalidate when we actually have messages loaded (avoids extra churn)
+    if (!messages) return;
+    queryClient.invalidateQueries({ queryKey: ["/api/messages/unread-counts"] });
+  }, [messageMode, selectedUserId, messages?.length]);
 
   const { data: groupMessages, isLoading: groupMessagesLoading } = useQuery<GroupMessage[]>({
     queryKey: ["/api/group-conversations", selectedGroupId, "messages"],
@@ -252,13 +258,16 @@ export default function Messages() {
       mediaUrl: msg.mediaUrl,
       mediaType: msg.mediaType,
       durationMs: (msg as any).durationMs,
-      createdAt: msg.createdAt,
+      createdAt: msg.createdAt ? new Date(msg.createdAt as any).toISOString() : "",
       authorName: msg.userId === user?.id ? (user?.username || "You") : selectedUser?.username || "User",
       authorRole: msg.userId === user?.id ? ((user as any)?.role || "staff") : selectedUser?.role || "staff",
-      readAt: msg.readAt,
-      deliveredAt: msg.deliveredAt,
+      readAt: msg.readAt ? new Date(msg.readAt as any).toISOString() : null,
+      deliveredAt: msg.deliveredAt ? new Date(msg.deliveredAt as any).toISOString() : null,
     }));
   }, [messageMode, groupMessages, messages, user, selectedUser]);
+
+  const isLoadingCurrentMessages = isGroupMode ? groupMessagesLoading : messagesLoading;
+  const hasActiveConversation = isGroupMode ? Boolean(selectedGroupId) : Boolean(selectedUserId);
 
   // #region agent log (hypothesis C/D: message list duplicates/appends unexpectedly and inflates heights)
   useEffect(() => {
@@ -267,7 +276,7 @@ export default function Messages() {
       const el = conversationScrollRef.current;
       const docEl = document.documentElement;
       fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'C',location:'client/src/pages/messages.tsx:messages-effect',message:'messages changed snapshot',data:{messageMode,selectedUserId,selectedGroupId,messageCount:normalizedMessages?.length ?? null,isLoadingCurrentMessages,convClientH:el?.clientHeight,convScrollH:el?.scrollHeight,convScrollTop:el?.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
-      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'C',location:'client/src/pages/messages.tsx:messages-effect',message:'messages changed snapshot',data:{messageMode,selectedUserId,selectedGroupId,messageCount:normalizedMessages?.length ?? null,isLoadingCurrentMessages,convClientH:el?.clientHeight,convScrollH:el?.scrollHeight,convScrollTop:el?.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+      fetch(resolveApiUrl('/api/__debug/log'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'C',location:'client/src/pages/messages.tsx:messages-effect',message:'messages changed snapshot',data:{messageMode,selectedUserId,selectedGroupId,messageCount:normalizedMessages?.length ?? null,isLoadingCurrentMessages,convClientH:el?.clientHeight,convScrollH:el?.scrollHeight,convScrollTop:el?.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
     } catch {}
   }, [messageMode, selectedUserId, selectedGroupId, normalizedMessages?.length, isLoadingCurrentMessages, debugEnabled]);
   // #endregion agent log
@@ -281,7 +290,7 @@ export default function Messages() {
         windowScrollLogCountRef.current += 1;
         const docEl = document.documentElement;
         fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/pages/messages.tsx:window-scroll',message:'window scrolled',data:{windowScrollY:window.scrollY,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
-        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/pages/messages.tsx:window-scroll',message:'window scrolled',data:{windowScrollY:window.scrollY,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
+        fetch(resolveApiUrl('/api/__debug/log'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'A',location:'client/src/pages/messages.tsx:window-scroll',message:'window scrolled',data:{windowScrollY:window.scrollY,windowInnerH:window.innerHeight,docClientH:docEl.clientHeight,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight},timestamp:Date.now()})}).catch(()=>{});
       } catch {}
     };
     window.addEventListener("scroll", onWinScroll, { passive: true });
@@ -299,13 +308,10 @@ export default function Messages() {
       scrollLogCountRef.current += 1;
       const docEl = document.documentElement;
       fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'B',location:'client/src/pages/messages.tsx:conversation-scroll',message:'conversation scrolled',data:{convClientH:el.clientHeight,convScrollH:el.scrollHeight,convScrollTop:el.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight,messageCount:normalizedMessages?.length ?? null},timestamp:Date.now()})}).catch(()=>{});
-      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'B',location:'client/src/pages/messages.tsx:conversation-scroll',message:'conversation scrolled',data:{convClientH:el.clientHeight,convScrollH:el.scrollHeight,convScrollTop:el.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight,messageCount:normalizedMessages?.length ?? null},timestamp:Date.now()})}).catch(()=>{});
+      fetch(resolveApiUrl('/api/__debug/log'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'messages-height-pre',hypothesisId:'B',location:'client/src/pages/messages.tsx:conversation-scroll',message:'conversation scrolled',data:{convClientH:el.clientHeight,convScrollH:el.scrollHeight,convScrollTop:el.scrollTop,docScrollH:docEl.scrollHeight,bodyScrollH:document.body?.scrollHeight,messageCount:normalizedMessages?.length ?? null},timestamp:Date.now()})}).catch(()=>{});
     } catch {}
   };
   // #endregion agent log
-
-  const isLoadingCurrentMessages = isGroupMode ? groupMessagesLoading : messagesLoading;
-  const hasActiveConversation = isGroupMode ? Boolean(selectedGroupId) : Boolean(selectedUserId);
 
   // Presence: heartbeat every 45s when page is open
   useEffect(() => {
@@ -585,13 +591,7 @@ export default function Messages() {
       const fileName = `voice_${Date.now()}.${recordedBlob.type.includes('mp4') ? 'mp4' : 'mp3'}`;
       formData.append('file', recordedBlob, fileName);
       
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-      });
-      
-      if (!uploadRes.ok) throw new Error('Upload failed');
+      const uploadRes = await apiRequest("POST", "/api/upload", formData);
       const uploaded = await uploadRes.json();
       
       if (isGroupMode) {
@@ -667,8 +667,7 @@ export default function Messages() {
     try {
       const form = new FormData();
       form.append('file', file, file.name);
-      const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' });
-      if (!res.ok) throw new Error('Upload failed');
+      const res = await apiRequest("POST", "/api/upload", form);
       const uploaded = await res.json();
       if (isGroupMode) {
         sendGroupMessageMutation.mutate({
@@ -1069,7 +1068,7 @@ export default function Messages() {
                                         {message.mediaType?.startsWith('image') ? (
                                           <div 
                                             className="cursor-pointer overflow-hidden rounded-lg shadow-md hover:ring-4 hover:ring-primary/20 transition-all"
-                                            onClick={() => setSelectedImage(message.mediaUrl)}
+                                            onClick={() => setSelectedImage(message.mediaUrl || null)}
                                           >
                                             <img src={message.mediaUrl} alt="message attachment" className="max-w-full h-auto max-h-[300px] object-cover" />
                                           </div>
