@@ -621,6 +621,29 @@ async function runMigrations() {
         console.log('⚠️ role_permissions table already exists or error:', e.message);
       }
 
+      // ===== Password Vault (admin-only encrypted secrets) =====
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS password_vault_items (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR NOT NULL,
+            username VARCHAR,
+            url TEXT,
+            password_encrypted TEXT NOT NULL,
+            notes_encrypted TEXT,
+            created_by INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_password_vault_items_created_at ON password_vault_items(created_at);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_password_vault_items_created_by ON password_vault_items(created_by);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_password_vault_items_name ON password_vault_items(name);`);
+        console.log('✅ Ensured password_vault_items table');
+      } catch (e) {
+        console.log('⚠️ password_vault_items table already exists or error:', e.message);
+      }
+
       // Create push_notification_history table
       try {
         await client.query(`

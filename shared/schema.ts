@@ -1235,6 +1235,31 @@ export const rolePermissions = pgTable("role_permissions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Password Vault (Admin-only secret storage; encrypted at rest by server)
+export const passwordVaultItems = pgTable("password_vault_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // e.g. "Google Ads", "Meta Business", "Client FTP"
+  username: varchar("username"),
+  url: text("url"),
+  passwordEncrypted: text("password_encrypted").notNull(),
+  notesEncrypted: text("notes_encrypted"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_password_vault_items_created_at").on(table.createdAt),
+  index("IDX_password_vault_items_created_by").on(table.createdBy),
+  index("IDX_password_vault_items_name").on(table.name),
+]);
+
+export const insertPasswordVaultItemSchema = createInsertSchema(passwordVaultItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertPasswordVaultItem = z.infer<typeof insertPasswordVaultItemSchema>;
+export type PasswordVaultItem = typeof passwordVaultItems.$inferSelect;
+
 // Subscription Packages table
 export const subscriptionPackages = pgTable("subscription_packages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

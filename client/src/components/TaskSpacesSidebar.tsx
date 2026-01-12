@@ -28,6 +28,13 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     queryKey: ["/api/task-spaces"],
   });
 
+  const getChildren = (parentId: string | null) =>
+    spaces
+      .filter((s) => (s.parentSpaceId ?? null) === parentId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+
+  const hasChildren = (spaceId: string) => getChildren(spaceId).length > 0;
+
   const createSpaceMutation = useMutation({
     mutationFn: async (data: { name: string; icon: string; color: string }) => {
       const response = await apiRequest("POST", "/api/task-spaces", data);
@@ -78,10 +85,12 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
   const handleCreateSpace = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const parentSpaceIdRaw = (formData.get("parentSpaceId") as string) || "";
     createSpaceMutation.mutate({
       name: formData.get("name") as string,
       icon: (formData.get("icon") as string) || "📁",
       color: (formData.get("color") as string) || "#3B82F6",
+      ...(parentSpaceIdRaw ? { parentSpaceId: parentSpaceIdRaw } : {}),
     });
   };
 
@@ -89,12 +98,14 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     e.preventDefault();
     if (!editingSpace) return;
     const formData = new FormData(e.currentTarget);
+    const parentSpaceIdRaw = (formData.get("parentSpaceId") as string) || "";
     updateSpaceMutation.mutate({
       id: editingSpace.id,
       data: {
         name: formData.get("name") as string,
         icon: (formData.get("icon") as string) || editingSpace.icon,
         color: (formData.get("color") as string) || editingSpace.color,
+        parentSpaceId: parentSpaceIdRaw ? parentSpaceIdRaw : null,
       },
     });
   };
@@ -109,6 +120,81 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     setCollapsedSpaces(newCollapsed);
   };
 
+  const renderSpaceRow = (space: TaskSpace, depth: number) => {
+    const children = getChildren(space.id);
+    const isCollapsed = collapsedSpaces.has(space.id);
+    const showChevron = children.length > 0;
+    const paddingLeft = depth === 0 ? "pl-0" : depth === 1 ? "pl-4" : depth === 2 ? "pl-7" : "pl-10";
+
+    return (
+      <div key={space.id} className="space-y-1">
+        <div
+          className={`flex items-center gap-1 rounded-md hover:bg-accent transition-colors ${
+            selectedSpaceId === space.id ? "bg-accent" : ""
+          } ${paddingLeft}`}
+        >
+          {showChevron ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => toggleSpaceCollapse(space.id)}
+              aria-label={isCollapsed ? "Expand group" : "Collapse group"}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </Button>
+          ) : (
+            <div className="h-8 w-8" />
+          )}
+
+          <button
+            className="flex-1 flex items-center gap-2 text-sm py-1.5 px-2 rounded hover:bg-accent text-left min-w-0"
+            onClick={() => onSpaceSelect(space.id)}
+            title={space.name}
+          >
+            <span className="text-lg">{space.icon}</span>
+            <span className="flex-1 truncate">{space.name}</span>
+          </button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditingSpace(space)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => {
+                  if (confirm(`Delete "${space.name}"? Tasks will not be deleted.`)) {
+                    deleteSpaceMutation.mutate(space.id);
+                  }
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {children.length > 0 && !isCollapsed && (
+          <div className="space-y-1">
+            {children.map((child) => renderSpaceRow(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="p-4">
@@ -121,8 +207,10 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     );
   }
 
+  const topLevelSpaces = getChildren(null);
+
   return (
-    <div className="space-y-2 p-4 border-r">
+    <div className="space-y-2 p-3">
       {/* All Tasks Button */}
       <Button
         variant={selectedSpaceId === null ? "default" : "ghost"}
@@ -158,6 +246,25 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
                   placeholder="e.g., Client Projects, Marketing"
                   required
                 />
+              </div>
+              <div>
+                <Label htmlFor="parentSpaceId">Parent group (optional)</Label>
+                <select
+                  id="parentSpaceId"
+                  name="parentSpaceId"
+                  defaultValue=""
+                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">No parent</option>
+                  {topLevelSpaces.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.icon} {s.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Choose a parent to group spaces in the sidebar.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -199,61 +306,7 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
 
       {/* Spaces List */}
       <div className="space-y-1">
-        {spaces.map((space) => (
-          <div key={space.id}>
-            <div
-              className={`flex items-center gap-1 rounded-md hover:bg-accent transition-colors ${
-                selectedSpaceId === space.id ? "bg-accent" : ""
-              }`}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => toggleSpaceCollapse(space.id)}
-              >
-                {collapsedSpaces.has(space.id) ? (
-                  <ChevronRight className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
-              </Button>
-
-              <button
-                className="flex-1 flex items-center gap-2 text-sm py-1.5 px-2 rounded hover:bg-accent text-left"
-                onClick={() => onSpaceSelect(space.id)}
-              >
-                <span className="text-lg">{space.icon}</span>
-                <span className="flex-1 truncate">{space.name}</span>
-              </button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setEditingSpace(space)}>
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => {
-                      if (confirm(`Delete "${space.name}"? Tasks will not be deleted.`)) {
-                        deleteSpaceMutation.mutate(space.id);
-                      }
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        ))}
+        {topLevelSpaces.map((space) => renderSpaceRow(space, 0))}
       </div>
 
       {/* Edit Space Dialog */}
@@ -273,6 +326,24 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
                   defaultValue={editingSpace.name}
                   required
                 />
+              </div>
+              <div>
+                <Label htmlFor="edit-parentSpaceId">Parent group (optional)</Label>
+                <select
+                  id="edit-parentSpaceId"
+                  name="parentSpaceId"
+                  defaultValue={editingSpace.parentSpaceId ?? ""}
+                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">No parent</option>
+                  {topLevelSpaces
+                    .filter((s) => s.id !== editingSpace.id)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.icon} {s.name}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

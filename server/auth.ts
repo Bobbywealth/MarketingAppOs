@@ -106,7 +106,13 @@ export function setupAuth(app: Express) {
         // #region agent log
         agentAppendLog({sessionId:'debug-session',runId:'login-pre',hypothesisId:'B',location:'server/auth.ts:LocalStrategy',message:'LocalStrategy attempt (file)',data:{username:(typeof username==='string'?username.slice(0,80):String(username))},timestamp:Date.now()});
         // #endregion
-        const user = await storage.getUserByUsername(username);
+        const identifierRaw = typeof username === "string" ? username.trim() : String(username || "").trim();
+        // Support "Email or Username" login (the UI prompts for this).
+        // We keep username-first so accounts with username=email continue working.
+        let user = await storage.getUserByUsername(identifierRaw);
+        if (!user && identifierRaw.includes("@")) {
+          user = await storage.getUserByEmail(identifierRaw.toLowerCase());
+        }
         // #region agent log
         fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'B',location:'server/auth.ts:LocalStrategy',message:'LocalStrategy user lookup result',data:{username:(typeof username==='string'?username.slice(0,80):String(username)),userFound:!!user,userId:user?user.id:undefined,role:user?(user as any).role:undefined},timestamp:Date.now()})}).catch(()=>{});
         // #endregion

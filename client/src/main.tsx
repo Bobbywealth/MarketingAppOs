@@ -3,6 +3,17 @@ import App from "./App";
 import "./index.css";
 import { isNativeApp } from "@/lib/runtime";
 
+// Theme bootstrap:
+// - Always default to light unless user explicitly saved a preference.
+// - Apply before React renders to avoid a "flash" of the wrong theme.
+try {
+  const saved = localStorage.getItem("theme");
+  const initialTheme = saved === "dark" || saved === "light" ? saved : "light";
+  document.documentElement.classList.toggle("dark", initialTheme === "dark");
+} catch {
+  // ignore (e.g. private mode / blocked storage)
+}
+
 // Register Service Worker for PWA
 if (!isNativeApp() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

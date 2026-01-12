@@ -37,6 +37,8 @@ export default defineConfig({
     fs: {
       strict: true,
       deny: ["**/.*"],
+      // Allow importing internal docs (used by Help Center / command palette).
+      allow: [path.resolve(__dirname), path.resolve(__dirname, "docs")],
     },
   },
 });

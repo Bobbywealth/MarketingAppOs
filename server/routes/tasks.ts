@@ -87,8 +87,17 @@ router.delete("/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, U
 // Get tasks by space
 router.get("/task-spaces/:id/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
   try {
-    const tasks = await storage.getTasksBySpace(req.params.id);
-    res.json(tasks);
+    const { userId, role } = getCurrentUserContext(req);
+    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const restrictToAssignee = normalizedRole === UserRole.STAFF;
+
+    const spaceTasks = await storage.getTasksBySpace(req.params.id);
+    if (restrictToAssignee) {
+      if (!userId) return res.json([]);
+      return res.json(spaceTasks.filter((t: any) => Number(t.assignedToId) === Number(userId)));
+    }
+
+    res.json(spaceTasks);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch tasks for space" });
@@ -101,21 +110,43 @@ router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
     const { userId, role } = getCurrentUserContext(req);
     const currentUser = req.user as any;
 
-    if (role === UserRole.CLIENT) {
+    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const isAllAccessRole =
+      normalizedRole === UserRole.ADMIN ||
+      normalizedRole === UserRole.MANAGER ||
+      normalizedRole === UserRole.CREATOR_MANAGER;
+
+    // Least-privilege default: if role context is missing/unknown, return nothing (do NOT fall back to "all tasks").
+    if (!normalizedRole) {
+      return res.json([]);
+    }
+
+    if (normalizedRole === UserRole.CLIENT) {
       const clientId = currentUser?.clientId;
       const tasksList = clientId ? await storage.getTasksByClient(clientId) : [];
       return res.json(tasksList);
     }
 
-    if (role === UserRole.STAFF) {
+    // Non-admin internal roles should only see tasks assigned to them.
+    // This prevents staff (and similar roles) from seeing the entire team's tasks.
+    const restrictToAssignee =
+      normalizedRole === UserRole.STAFF ||
+      normalizedRole === UserRole.SALES_AGENT ||
+      normalizedRole === UserRole.CREATOR;
+
+    if (restrictToAssignee) {
       if (!userId) return res.json([]);
       const tasksList = await storage.getTasksAssignedToUser(userId);
       return res.json(tasksList);
     }
 
-    // Admin/Manager: show all tasks
-    const allTasks = await storage.getTasks();
-    res.json(allTasks);
+    if (isAllAccessRole) {
+      const allTasks = await storage.getTasks();
+      return res.json(allTasks);
+    }
+
+    // Unknown role: safest behavior is "no tasks"
+    return res.json([]);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to fetch tasks" });

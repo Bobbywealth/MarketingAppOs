@@ -85,6 +85,7 @@ const AdminSecondMeUpload = lazy(() => import("@/pages/admin-second-me-upload"))
 const Training = lazy(() => import("@/pages/training"));
 const PushNotifications = lazy(() => import("@/pages/push-notifications"));
 const PWAHomePage = lazy(() => import("@/pages/pwa-home"));
+const HelpPage = lazy(() => import("@/pages/help"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const AdminSocialOverview = lazy(() => import("@/pages/admin-social-overview"));
 const AdminSocialAccounts = lazy(() => import("@/pages/admin-social-accounts"));
@@ -93,6 +94,7 @@ const AIBusinessManager = lazy(() => import("@/pages/ai-business-manager"));
 const Commissions = lazy(() => import("@/pages/commissions"));
 const Creators = lazy(() => import("@/pages/creators"));
 const AdminPayouts = lazy(() => import("@/pages/admin-payouts"));
+const AdminVault = lazy(() => import("@/pages/admin-vault"));
 const CreatorNew = lazy(() => import("@/pages/creator-new"));
 const CreatorDetail = lazy(() => import("@/pages/creator-detail"));
 const CreatorEdit = lazy(() => import("@/pages/creator-edit"));
@@ -185,6 +187,7 @@ function Router() {
         {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
         {isInternal && <ProtectedRoute path="/content" component={Content} />}
         {isInternal && <ProtectedRoute path="/admin/blog" component={AdminBlog} />}
+        {isInternal && <ProtectedRoute path="/admin/vault" component={isAdmin ? AdminVault : Dashboard} />}
         {isInternal && <ProtectedRoute path="/invoices" component={canAccess("canManageInvoices") ? Invoices : Dashboard} />}
         {isInternal && <ProtectedRoute path="/commissions" component={(isAdmin || isManager) ? Commissions : Dashboard} />}
         {isInternal && <ProtectedRoute path="/subscription-packages" component={isAdmin ? SubscriptionPackages : Dashboard} />}
@@ -197,6 +200,7 @@ function Router() {
         {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
         {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
         {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
+        {isInternal && <ProtectedRoute path="/help" component={HelpPage} />}
         {isInternal && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
         {isInternal && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
         {isInternal && <ProtectedRoute path="/training" component={isAdmin ? Training : Dashboard} />}

@@ -22,6 +22,7 @@ import {
   Sparkles,
   BookOpen,
   Bell,
+  KeyRound,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -396,6 +397,13 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     icon: BarChart3,
     permission: "canManageClients" as const,
     sidebarKey: "analytics" as const,
+  },
+  {
+    title: "Password Vault",
+    url: "/admin/vault",
+    icon: KeyRound,
+    roles: ["admin"] as const,
+    sidebarKey: "vault" as const,
   },
   {
     title: "Social Stats",

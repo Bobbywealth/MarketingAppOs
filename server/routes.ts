@@ -59,6 +59,7 @@ import marketingCenterRouter from "./routes/marketing-center";
 import socialRouter from "./routes/social";
 import aiRouter from "./routes/ai";
 import blogRouter from "./routes/blog";
+import { vaultRouter } from "./routes/vault";
 import { 
   getCurrentUserContext, 
   getAccessibleClientOr404, 
@@ -184,6 +185,7 @@ export function registerRoutes(app: Express) {
   app.use("/api/leads", leadsRouter);
   app.use("/api/marketing-center", marketingCenterRouter);
   app.use("/api/clients", clientsRouter);
+  app.use("/api/vault", vaultRouter);
   app.use("/api", marketingRouter);
   app.use("/api", creatorsRouter);
   app.use("/api/courses", coursesRouter);

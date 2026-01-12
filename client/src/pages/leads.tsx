@@ -318,6 +318,21 @@ export default function LeadsPage() {
   });
   console.log("DEBUG: leads received from API:", leads.length, leads);
 
+  // Allow deep-linking from the global help/search bar:
+  // /leads?leadId=<id> will auto-open that lead.
+  useEffect(() => {
+    try {
+      if (!leads?.length) return;
+      const params = new URLSearchParams(window.location.search);
+      const leadId = params.get("leadId");
+      if (!leadId) return;
+      const found = leads.find((l) => l.id === leadId);
+      if (found) {
+        setSelectedLead(found);
+      }
+    } catch {}
+  }, [leads]);
+
   // Populate editTags when editing a lead
   useEffect(() => {
     if (editingLead && editingLead.tags) {
