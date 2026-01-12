@@ -160,6 +160,7 @@ export interface IStorage {
 
   // Task Spaces operations
   getTaskSpaces(): Promise<TaskSpace[]>;
+  getTaskSpacesForAssignee(userId: number): Promise<TaskSpace[]>;
   getTaskSpace(id: string): Promise<TaskSpace | undefined>;
   createTaskSpace(space: InsertTaskSpace): Promise<TaskSpace>;
   updateTaskSpace(id: string, data: Partial<InsertTaskSpace>): Promise<TaskSpace>;
@@ -764,6 +765,42 @@ export class DatabaseStorage implements IStorage {
   // Task Spaces operations
   async getTaskSpaces(): Promise<TaskSpace[]> {
     return await db.select().from(taskSpaces).orderBy(taskSpaces.order, taskSpaces.name);
+  }
+
+  async getTaskSpacesForAssignee(userId: number): Promise<TaskSpace[]> {
+    // Fetch all spaces once, then filter by spaces that have tasks assigned to this user.
+    // Also include parent spaces so nested sidebar groups still render.
+    const allSpaces = await this.getTaskSpaces();
+
+    const assignedSpaceRows = await db
+      .select({ spaceId: tasks.spaceId })
+      .from(tasks)
+      .where(and(eq(tasks.assignedToId, userId), isNotNull(tasks.spaceId)))
+      .groupBy(tasks.spaceId);
+
+    const assignedSpaceIds = new Set(
+      assignedSpaceRows.map((r) => r.spaceId).filter((id): id is string => Boolean(id))
+    );
+
+    if (assignedSpaceIds.size === 0) return [];
+
+    const byId = new Map(allSpaces.map((s) => [s.id, s] as const));
+    const includeIds = new Set<string>();
+
+    const includeWithParents = (spaceId: string) => {
+      let current: TaskSpace | undefined = byId.get(spaceId);
+      while (current) {
+        if (includeIds.has(current.id)) break;
+        includeIds.add(current.id);
+        const parentId = current.parentSpaceId ?? null;
+        if (!parentId) break;
+        current = byId.get(parentId);
+      }
+    };
+
+    for (const id of assignedSpaceIds) includeWithParents(id);
+
+    return allSpaces.filter((s) => includeIds.has(s.id));
   }
 
   async getTaskSpace(id: string): Promise<TaskSpace | undefined> {

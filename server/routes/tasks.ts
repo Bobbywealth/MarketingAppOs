@@ -37,9 +37,16 @@ function stableRecurrenceSeriesId(task: any): string {
 }
 
 // Task Spaces routes
-router.get("/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (_req: Request, res: Response) => {
+router.get("/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
   try {
-    const spaces = await storage.getTaskSpaces();
+    const { userId, role } = getCurrentUserContext(req);
+    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const restrictToAssignee = normalizedRole === UserRole.STAFF;
+
+    const spaces = restrictToAssignee
+      ? (userId ? await storage.getTaskSpacesForAssignee(userId) : [])
+      : await storage.getTaskSpaces();
+
     res.json(spaces);
   } catch (error) {
     console.error(error);
