@@ -360,22 +360,22 @@ function AppContent() {
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
         <div className="flex h-screen w-full">
           <AppSidebar />
-          <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex flex-col flex-1 overflow-hidden min-w-0">
             <UpdateBanner />
             <OfflineBanner />
-            <header className="sticky top-0 z-50 flex items-center gap-2 px-3 md:px-6 py-3 md:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className="sticky top-0 z-50 flex items-center gap-2 px-2 md:px-6 py-3 md:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden w-full">
               {/* Left: Hamburger (logo removed on mobile) */}
-              <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
                 <HamburgerMenu />
               </div>
               
               {/* Center: Search Bar (all screens) */}
-              <div className="flex items-center justify-center flex-1">
+              <div className="flex items-center justify-center flex-1 min-w-0">
                 <GlobalSearch />
               </div>
               
               {/* Right: Actions */}
-              <div className="flex items-center gap-1 md:gap-2 ml-auto">
+              <div className="flex items-center gap-1 md:gap-2 ml-auto flex-shrink-0">
                 {user?.role === 'admin' && <DashboardSwitcher />}
                 <NotificationsCenter />
                 {!isMobile && <ThemeToggle />}
@@ -393,7 +393,7 @@ function AppContent() {
               </div>
             )}
             {/* Messages needs its own internal scroll containers; avoid body/main growing with long threads */}
-            <main className={`flex-1 min-h-0 ${isMessagesRoute ? 'overflow-hidden' : 'overflow-auto'} ${isMobile ? 'pb-20' : ''}`}>
+            <main className={`flex-1 min-h-0 ${isMessagesRoute ? 'overflow-hidden' : 'overflow-auto'} ${isMobile ? 'pb-20' : ''} overflow-x-hidden w-full`}>
               <AnimatePresence mode="wait" initial={false}>
                 <PageTransition routeKey={routeLocation}>
                   <Router />

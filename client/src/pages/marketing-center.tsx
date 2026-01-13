@@ -546,41 +546,41 @@ export default function MarketingCenter() {
     : null;
 
   return (
-    <div className="min-h-full p-3 md:p-8 lg:p-12 space-y-6 md:space-y-8 bg-zinc-50/50 dark:bg-zinc-950/50">
+    <div className="min-h-full w-full max-w-full overflow-x-hidden p-3 md:p-8 lg:p-12 space-y-6 md:space-y-8 bg-zinc-50/50 dark:bg-zinc-950/50">
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 overflow-hidden">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="space-y-2"
+          className="space-y-2 min-w-0"
         >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Megaphone className="w-6 h-6 text-primary" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-gradient-purple">Marketing Center</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-gradient-purple break-words">Marketing Center</h1>
           </div>
-          <p className="text-muted-foreground text-lg font-medium">Broadcast mass communications to your audience</p>
+          <p className="text-muted-foreground text-sm sm:text-lg font-medium leading-tight">Broadcast mass communications to your audience</p>
         </motion.div>
 
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Card className="glass px-3 sm:px-6 py-2 sm:py-3 border-primary/20 flex items-center gap-3 sm:gap-4 shadow-xl">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <Card className="glass px-3 sm:px-6 py-2 sm:py-3 border-primary/20 flex items-center gap-2 sm:gap-4 shadow-xl">
             <div className="text-right">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Total Reach</p>
-              <p className="text-2xl font-black text-primary tabular-nums">{totalReachDisplay}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Total Reach</p>
+              <p className="text-xl sm:text-2xl font-black text-primary tabular-nums">{totalReachDisplay}</p>
               {statsIsError && (
                 <button
                   type="button"
-                  className="mt-1 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:underline"
+                  className="mt-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-red-500 hover:underline"
                   onClick={() => dbStatusMutation.mutate()}
                   title={statsErrorMessage ?? undefined}
                 >
-                  Stats error — check DB
+                  Error
                 </button>
               )}
             </div>
-            <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800" />
-            <Users className="w-6 h-6 text-primary/60" />
+            <div className="w-px h-6 sm:h-8 bg-zinc-200 dark:bg-zinc-800" />
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary/60" />
           </Card>
 
           {statsIsError && (
