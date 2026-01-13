@@ -546,9 +546,9 @@ export default function MarketingCenter() {
     : null;
 
   return (
-    <div className="min-h-full p-4 md:p-8 lg:p-12 space-y-8 bg-zinc-50/50 dark:bg-zinc-950/50">
+    <div className="min-h-full p-3 md:p-8 lg:p-12 space-y-6 md:space-y-8 bg-zinc-50/50 dark:bg-zinc-950/50">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -563,8 +563,8 @@ export default function MarketingCenter() {
           <p className="text-muted-foreground text-lg font-medium">Broadcast mass communications to your audience</p>
         </motion.div>
 
-        <div className="flex items-center gap-4">
-          <Card className="glass px-6 py-3 border-primary/20 flex items-center gap-4 shadow-xl">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Card className="glass px-3 sm:px-6 py-2 sm:py-3 border-primary/20 flex items-center gap-3 sm:gap-4 shadow-xl">
             <div className="text-right">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Total Reach</p>
               <p className="text-2xl font-black text-primary tabular-nums">{totalReachDisplay}</p>
@@ -597,23 +597,25 @@ export default function MarketingCenter() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-        <TabsList className="glass p-1 bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 h-12 inline-flex items-center">
-          <TabsTrigger value="composer" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
-            <Plus className="w-4 h-4 mr-2" /> New Campaign
-          </TabsTrigger>
-          <TabsTrigger value="history" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
-            <History className="w-4 h-4 mr-2" /> History & Status
-          </TabsTrigger>
-          <TabsTrigger value="groups" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
-            <Users className="w-4 h-4 mr-2" /> Groups
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
-            <Layout className="w-4 h-4 mr-2" /> Templates
-          </TabsTrigger>
-          <TabsTrigger value="sms-inbox" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
-            <MessageSquare className="w-4 h-4 mr-2" /> SMS Inbox
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2 -mb-2 scrollbar-hide">
+          <TabsList className="glass p-1 bg-zinc-100/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 h-12 inline-flex items-center min-w-max">
+            <TabsTrigger value="composer" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+              <Plus className="w-4 h-4 mr-2" /> New Campaign
+            </TabsTrigger>
+            <TabsTrigger value="history" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+              <History className="w-4 h-4 mr-2" /> History & Status
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+              <Users className="w-4 h-4 mr-2" /> Groups
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+              <Layout className="w-4 h-4 mr-2" /> Templates
+            </TabsTrigger>
+            <TabsTrigger value="sms-inbox" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+              <MessageSquare className="w-4 h-4 mr-2" /> SMS Inbox
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="composer" className="space-y-8 animate-in fade-in duration-500">
           <div className="grid lg:grid-cols-12 gap-8">
@@ -621,17 +623,18 @@ export default function MarketingCenter() {
             <div className="lg:col-span-8 space-y-8">
               <Card className="glass-strong border-0 shadow-2xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 pointer-events-none" />
-                <CardHeader className="border-b bg-white/50 dark:bg-zinc-900/50">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+                <CardHeader className="border-b bg-white/50 dark:bg-zinc-900/50 p-4 md:p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <CardTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold">
                       <Target className="w-6 h-6 text-primary" /> Campaign Details
                     </CardTitle>
-                      <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg border">
+                    <div className="w-full lg:w-auto overflow-x-auto pb-1">
+                      <div className="flex flex-nowrap lg:flex-wrap gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg border min-w-max lg:min-w-0">
                         <Button 
                           variant={broadcastType === 'email' ? 'default' : 'ghost'} 
                           size="sm" 
                           onClick={() => setBroadcastType('email')}
-                          className="font-bold h-8"
+                          className="font-bold h-8 px-3 md:px-4"
                         >
                           <Mail className="w-4 h-4 mr-2" /> Email
                         </Button>
@@ -639,7 +642,7 @@ export default function MarketingCenter() {
                           variant={broadcastType === 'sms' ? 'default' : 'ghost'} 
                           size="sm" 
                           onClick={() => setBroadcastType('sms')}
-                          className="font-bold h-8"
+                          className="font-bold h-8 px-3 md:px-4"
                         >
                           <MessageSquare className="w-4 h-4 mr-2" /> SMS
                         </Button>
@@ -647,7 +650,7 @@ export default function MarketingCenter() {
                           variant={broadcastType === 'whatsapp' ? 'default' : 'ghost'} 
                           size="sm" 
                           onClick={() => setBroadcastType('whatsapp')}
-                          className="font-bold h-8"
+                          className="font-bold h-8 px-3 md:px-4"
                         >
                           <MessageSquare className="w-4 h-4 mr-2 text-emerald-500" /> WhatsApp
                         </Button>
@@ -655,7 +658,7 @@ export default function MarketingCenter() {
                           variant={broadcastType === 'telegram' ? 'default' : 'ghost'} 
                           size="sm" 
                           onClick={() => setBroadcastType('telegram')}
-                          className="font-bold h-8"
+                          className="font-bold h-8 px-3 md:px-4"
                         >
                           <MessageSquare className="w-4 h-4 mr-2 text-sky-500" /> Telegram
                         </Button>
@@ -663,14 +666,15 @@ export default function MarketingCenter() {
                           variant={broadcastType === 'voice' ? 'default' : 'ghost'} 
                           size="sm" 
                           onClick={() => setBroadcastType('voice')}
-                          className="font-bold h-8"
+                          className="font-bold h-8 px-3 md:px-4"
                         >
                           <Phone className="w-4 h-4 mr-2 text-rose-500" /> AI Voice
                         </Button>
                       </div>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-8 space-y-6 relative">
+                <CardContent className="p-4 md:p-8 space-y-6 relative">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Select Audience</Label>
@@ -1181,8 +1185,8 @@ export default function MarketingCenter() {
 
         <TabsContent value="history" className="animate-in fade-in duration-500">
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
+            <div className="flex items-center justify-between overflow-x-auto pb-2 -mb-2 scrollbar-hide">
+              <div className="flex gap-2 min-w-max">
                 <Button 
                   variant={historyFilter === 'all' ? 'default' : 'outline'} 
                   size="sm" 
@@ -1232,9 +1236,9 @@ export default function MarketingCenter() {
                   animate={{ opacity: 1, y: 0 }}
                 >
                   <Card className="glass hover:shadow-xl transition-all duration-300 border-primary/10 overflow-hidden group">
-                    <div className="flex flex-col md:flex-row md:items-center">
+                    <div className="flex flex-col lg:flex-row lg:items-stretch">
                       {/* Left: Type Icon */}
-                      <div className={`w-full md:w-32 h-20 md:h-auto flex items-center justify-center ${broadcast.type === 'email' ? 'bg-blue-500/10' : broadcast.type === 'whatsapp' ? 'bg-emerald-500/10' : broadcast.type === 'voice' ? 'bg-rose-500/10' : 'bg-green-500/10'}`}>
+                      <div className={`w-full lg:w-32 py-6 lg:py-0 flex items-center justify-center ${broadcast.type === 'email' ? 'bg-blue-500/10' : broadcast.type === 'whatsapp' ? 'bg-emerald-500/10' : broadcast.type === 'voice' ? 'bg-rose-500/10' : 'bg-green-500/10'}`}>
                         {broadcast.type === 'email' ? (
                           <Mail className="w-8 h-8 text-blue-500" />
                         ) : broadcast.type === 'whatsapp' ? (
@@ -1249,39 +1253,41 @@ export default function MarketingCenter() {
                       </div>
 
                       {/* Center: Content */}
-                      <div className="flex-1 p-6 space-y-2 min-w-0">
+                      <div className="flex-1 p-4 md:p-6 space-y-2 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-bold truncate max-w-[300px]">
+                          <h3 className="text-lg md:text-xl font-bold truncate max-w-full">
                             {broadcast.type === 'email' 
                               ? broadcast.subject 
                               : broadcast.type === 'voice'
-                                ? `Voice: ${broadcast.content.substring(0, 8)}...`
+                                ? `Voice: ${broadcast.content.substring(0, 15)}...`
                                 : broadcast.content.substring(0, 50) + '...'}
                           </h3>
-                          <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
-                            {broadcast.audience === 'individual' ? `Individual: ${broadcast.customRecipient}` : broadcast.audience}
-                          </Badge>
-                          {broadcast.status === 'pending' ? (
-                            <Badge className="bg-amber-500 text-white font-black uppercase text-[10px]">Scheduled</Badge>
-                          ) : broadcast.status === 'sending' ? (
-                            <Badge className="bg-primary animate-pulse font-black uppercase text-[10px]">Sending...</Badge>
-                          ) : broadcast.status === 'completed' ? (
-                            <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px]">Completed</Badge>
-                          ) : (
-                            <Badge variant="destructive" className="font-black uppercase text-[10px]">{broadcast.status}</Badge>
-                          )}
-                          {broadcast.mediaUrls && broadcast.mediaUrls.length > 0 && (
-                            <Badge variant="outline" className="font-bold text-[10px] bg-primary/5 text-primary border-primary/20">
-                              <Image className="w-3 h-3 mr-1" /> {broadcast.mediaUrls.length} Media
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
+                              {broadcast.audience === 'individual' ? `Individual: ${broadcast.customRecipient}` : broadcast.audience}
                             </Badge>
-                          )}
+                            {broadcast.status === 'pending' ? (
+                              <Badge className="bg-amber-500 text-white font-black uppercase text-[10px]">Scheduled</Badge>
+                            ) : broadcast.status === 'sending' ? (
+                              <Badge className="bg-primary animate-pulse font-black uppercase text-[10px]">Sending...</Badge>
+                            ) : broadcast.status === 'completed' ? (
+                              <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px]">Completed</Badge>
+                            ) : (
+                              <Badge variant="destructive" className="font-black uppercase text-[10px]">{broadcast.status}</Badge>
+                            )}
+                            {broadcast.mediaUrls && broadcast.mediaUrls.length > 0 && (
+                              <Badge variant="outline" className="font-bold text-[10px] bg-primary/5 text-primary border-primary/20">
+                                <Image className="w-3 h-3 mr-1" /> {broadcast.mediaUrls.length} Media
+                              </Badge>
+                            )}
+                          </div>
 
                           {/* Always-visible diagnostics button (mobile-friendly) */}
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
+                              className="h-7 px-2 text-[10px] font-black uppercase tracking-widest flex-1 sm:flex-initial"
                               onClick={() => setSelectedBroadcastId(broadcast.id)}
                               disabled={broadcast.status === 'pending'}
                             >
@@ -1314,15 +1320,15 @@ export default function MarketingCenter() {
                       </div>
 
                       {/* Right: Progress */}
-                      <div className="p-6 md:w-80 border-t md:border-t-0 md:border-l bg-zinc-50/50 dark:bg-zinc-900/50">
+                      <div className="p-4 md:p-6 lg:w-80 border-t lg:border-t-0 lg:border-l bg-zinc-50/50 dark:bg-zinc-900/50">
                         <div className="space-y-3">
                           <div className="flex justify-between items-end">
                             <div className="space-y-1">
-                              <p className="text-2xl font-black">{broadcast.successCount}</p>
+                              <p className="text-xl md:text-2xl font-black">{broadcast.successCount}</p>
                               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Successful</p>
                             </div>
                             <div className="text-right space-y-1">
-                              <p className="text-lg font-bold text-zinc-400">/ {broadcast.totalRecipients}</p>
+                              <p className="text-base md:text-lg font-bold text-zinc-400">/ {broadcast.totalRecipients}</p>
                               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</p>
                             </div>
                           </div>
@@ -1331,14 +1337,14 @@ export default function MarketingCenter() {
                             className="h-2 bg-zinc-200 dark:bg-zinc-800"
                           />
                           {broadcast.failedCount! > 0 && (
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                               <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 uppercase tracking-widest">
                                 <AlertCircle className="w-3 h-3" /> {broadcast.failedCount} Failed Deliveries
                               </p>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
+                                className="h-7 px-2 text-[10px] font-black uppercase tracking-widest w-full sm:w-auto"
                                 onClick={() => setSelectedBroadcastId(broadcast.id)}
                               >
                                 <Eye className="w-3 h-3 mr-1" />
@@ -1762,7 +1768,7 @@ export default function MarketingCenter() {
             ) : (
               smsInbox.map((m) => (
                 <Card key={`${m.id}`} className="glass border-primary/10 overflow-hidden">
-                  <CardContent className="p-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <CardContent className="p-4 md:p-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     <div className="space-y-2 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge className="font-black uppercase text-[10px] tracking-widest">
@@ -1828,8 +1834,8 @@ export default function MarketingCenter() {
                 <p className="text-muted-foreground">No recipient records found for this broadcast.</p>
               </div>
             ) : (
-              <div className="rounded-xl border overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="rounded-xl border overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead className="bg-zinc-50 dark:bg-zinc-900 border-b">
                     <tr>
                       <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Recipient</th>
