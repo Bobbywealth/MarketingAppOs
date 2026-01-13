@@ -187,6 +187,7 @@ export async function processMarketingBroadcast(broadcastId: string) {
                   : (recipient as any).phone
                 : null,
             status: "sent",
+            providerCallId: result.id || null,
             sentAt: new Date(),
           });
         } else {

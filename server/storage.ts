@@ -330,6 +330,7 @@ export interface IStorage {
   getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
   createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
   updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
+  getMarketingBroadcastRecipientByProviderCallId(callId: string): Promise<MarketingBroadcastRecipient | undefined>;
 
   // Marketing Group operations
   getMarketingGroups(): Promise<MarketingGroup[]>;
@@ -2526,6 +2527,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(marketingBroadcastRecipients.id, id))
       .returning();
     if (!recipient) throw new Error("Marketing broadcast recipient not found");
+    return recipient;
+  }
+
+  async getMarketingBroadcastRecipientByProviderCallId(callId: string): Promise<MarketingBroadcastRecipient | undefined> {
+    const [recipient] = await db
+      .select()
+      .from(marketingBroadcastRecipients)
+      .where(eq(marketingBroadcastRecipients.providerCallId, callId))
+      .limit(1);
     return recipient;
   }
 

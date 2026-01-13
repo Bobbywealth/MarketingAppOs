@@ -1836,6 +1836,7 @@ export default function MarketingCenter() {
                       <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Contact</th>
                       <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Status</th>
                       <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Sent At</th>
+                      <th className="text-right p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -1857,6 +1858,10 @@ export default function MarketingCenter() {
                             <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold uppercase text-[10px]">
                               Delivered
                             </Badge>
+                          ) : r.status === "completed" || r.status === "ended" ? (
+                            <Badge className="bg-emerald-500 text-white font-bold uppercase text-[10px]">
+                              Call Completed
+                            </Badge>
                           ) : r.status === "failed" ? (
                             <div className="space-y-1">
                               <Badge variant="destructive" className="font-bold uppercase text-[10px]">
@@ -1874,6 +1879,19 @@ export default function MarketingCenter() {
                         </td>
                         <td className="p-3 text-muted-foreground tabular-nums">
                           {r.sent_at ? format(new Date(r.sent_at), "MMM d, HH:mm") : "—"}
+                        </td>
+                        <td className="p-3 text-right">
+                          {r.provider_call_id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] font-bold uppercase"
+                              onClick={() => window.open(`https://dashboard.vapi.ai/calls/${r.provider_call_id}`, '_blank')}
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Call Logs
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}

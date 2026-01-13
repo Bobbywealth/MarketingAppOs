@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { storage } from "./storage";
 import { emailNotifications } from "./emailService";
+import { startVapiCall } from "./vapiService";
 import { log } from "./vite";
 
 /**
@@ -33,7 +34,7 @@ export async function processLeadAutomations() {
         }
 
         // Handle different action types
-        if (automation.type === "abandoned_cart_reminder") {
+        if (automation.type === "abandoned_cart_reminder" || automation.actionType === "email") {
           const { checkoutUrl, packageName, clientName } = automation.actionData as any;
           
           if (lead.email && checkoutUrl && packageName) {
@@ -55,6 +56,30 @@ export async function processLeadAutomations() {
             }
           } else {
             throw new Error("Missing required data for email reminder");
+          }
+        } else if (automation.actionType === "voice_call") {
+          const { assistantId } = automation.actionData as any;
+          
+          if (lead.phone && assistantId) {
+            const result = await startVapiCall(
+              lead.phone,
+              assistantId,
+              lead.company || lead.name || undefined
+            );
+            
+            if (result.success) {
+              await storage.updateLeadAutomation(automation.id, { 
+                status: "sent", 
+                executedAt: new Date(),
+                // @ts-ignore
+                actionData: { ...automation.actionData, vapiCallId: result.id }
+              });
+              log(`✅ AI Voice call initiated for ${lead.name || lead.phone}`, "automations");
+            } else {
+              throw new Error(result.error || "Failed to initiate voice call");
+            }
+          } else {
+            throw new Error("Missing phone or assistantId for voice call");
           }
         } else {
           // Future automation types can be handled here

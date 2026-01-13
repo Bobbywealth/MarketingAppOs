@@ -787,6 +787,7 @@ export const marketingBroadcastRecipients = pgTable("marketing_broadcast_recipie
   customRecipient: text("custom_recipient"),
   status: varchar("status").notNull().default("pending"), // 'pending', 'sent', 'failed'
   errorMessage: text("error_message"),
+  providerCallId: varchar("provider_call_id"),
   sentAt: timestamp("sent_at"),
 });
 

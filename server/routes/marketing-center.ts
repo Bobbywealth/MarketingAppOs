@@ -8,7 +8,7 @@ import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
 import { sendSms, sendWhatsApp } from "../twilioService";
 import { sendTelegramMessage } from "../telegramService";
-import { listVapiAssistants } from "../vapiService";
+import { listVapiAssistants, getVapiCall } from "../vapiService";
 import { upload } from "./common";
 
 const router = Router();
@@ -110,7 +110,7 @@ async function ensureMarketingCenterSchema() {
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS parent_broadcast_id VARCHAR;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
-    await pool.query(`ALTER TABLE marketing_templates ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
+    await pool.query(`ALTER TABLE marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`);
   })().catch((err) => {
     // Allow retry on next request if this fails.
     marketingSchemaEnsured = null;
@@ -440,6 +440,7 @@ router.get("/broadcasts/:id/recipients", async (req: Request, res: Response) => 
         r.custom_recipient,
         r.status,
         r.error_message,
+        r.provider_call_id,
         r.sent_at,
         l.company AS lead_company,
         l.name AS lead_name,
@@ -639,12 +640,87 @@ router.post("/upload", upload.array("files", 10), async (req: Request, res: Resp
 });
 
 // Vapi Proxy Routes
-router.get("/vapi/assistants", async (_req: Request, res: Response) => {
+router.get("/vapi/assistants", isAuthenticated, async (_req: Request, res: Response) => {
   try {
     const assistants = await listVapiAssistants();
     res.json(assistants);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/vapi/call/:callId", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const call = await getVapiCall(req.params.callId);
+    if (!call) return res.status(404).json({ message: "Call not found in Vapi" });
+    res.json(call);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Vapi Webhook (Placed BEFORE authentication middleware)
+router.post("/vapi/webhook", async (req: Request, res: Response) => {
+  try {
+    const { message } = req.body;
+    const type = message?.type;
+    const callId = message?.call?.id;
+
+    console.log(`📞 Vapi Webhook Received: ${type} for call ${callId}`);
+
+    if (callId) {
+      const recipient = await storage.getMarketingBroadcastRecipientByProviderCallId(callId);
+      
+      if (recipient) {
+        if (type === 'end-of-call-report') {
+          const { analysis, transcript, duration, status } = message.call;
+          
+          // Update recipient status
+          await storage.updateMarketingBroadcastRecipient(recipient.id, {
+            status: status === 'ended' ? 'completed' : 'failed',
+            errorMessage: analysis?.summary || status,
+          });
+
+          // Log activity for lead
+          if (recipient.leadId) {
+            await storage.createLeadActivity({
+              leadId: recipient.leadId,
+              type: 'call',
+              subject: 'AI Voice Call Completed',
+              description: analysis?.summary || 'AI voice call finished.',
+              outcome: analysis?.success ? 'positive' : 'neutral',
+              metadata: {
+                vapiCallId: callId,
+                duration,
+                transcript,
+                summary: analysis?.summary,
+                recordingUrl: message.call.recordingUrl
+              },
+            });
+          }
+        } else if (type === 'call-status-changed') {
+          await storage.updateMarketingBroadcastRecipient(recipient.id, {
+            status: message.call.status,
+          });
+        }
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    console.error("Vapi webhook error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Secure all other marketing center routes to Admin Only
+router.use(isAuthenticated, requireRole(UserRole.ADMIN), async (_req, _res, next) => {
+  try {
+    await ensureMarketingCenterSchema();
+    return next();
+  } catch (err) {
+    console.error("Marketing Center schema ensure failed:", err);
+    return next(err);
   }
 });
 

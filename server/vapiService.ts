@@ -91,3 +91,20 @@ export async function listVapiAssistants() {
     return [];
   }
 }
+
+/**
+ * Get call details from Vapi
+ */
+export async function getVapiCall(callId: string) {
+  if (!VAPI_API_KEY) return null;
+
+  try {
+    const response = await axios.get(`${VAPI_BASE_URL}/call/${callId}`, {
+      headers: { Authorization: `Bearer ${VAPI_API_KEY}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching Vapi call ${callId}:`, error);
+    return null;
+  }
+}
