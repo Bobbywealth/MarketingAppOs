@@ -99,7 +99,7 @@ type BroadcastRecipientRow = {
 export default function MarketingCenter() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("composer");
-  const [broadcastType, setBroadcastType] = useState<"email" | "sms" | "whatsapp">("email");
+  const [broadcastType, setBroadcastType] = useState<"email" | "sms" | "whatsapp" | "telegram">("email");
   const [audience, setAudience] = useState("all");
   const [groupId, setGroupId] = useState<string>("");
   const [customRecipient, setCustomRecipient] = useState("");
@@ -274,7 +274,12 @@ export default function MarketingCenter() {
       return;
     }
     if (audience === 'individual' && !customRecipient.trim()) {
-      toast({ title: "Recipient Required", description: `Please enter a recipient ${broadcastType === 'email' ? 'email' : 'phone number'}.`, variant: "destructive" });
+      toast({ title: "Recipient Required", description: `Please enter a recipient ${broadcastType === 'email' ? 'email' : broadcastType === 'telegram' ? 'chat_id' : 'phone number'}.`, variant: "destructive" });
+      return;
+    }
+    // Telegram broadcasts only support "Send to Individual" (a single group/channel chat_id)
+    if (broadcastType === "telegram" && audience !== "individual") {
+      toast({ title: "Telegram Target Required", description: "For Telegram, choose 'Send to Individual' and paste the group/channel chat_id.", variant: "destructive" });
       return;
     }
     if (sendMode === "scheduled") {
@@ -404,6 +409,14 @@ export default function MarketingCenter() {
                         >
                           <MessageSquare className="w-4 h-4 mr-2 text-emerald-500" /> WhatsApp
                         </Button>
+                      <Button 
+                        variant={broadcastType === 'telegram' ? 'default' : 'ghost'} 
+                        size="sm" 
+                        onClick={() => setBroadcastType('telegram')}
+                        className="font-bold h-8"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2 text-sky-500" /> Telegram
+                      </Button>
                       </div>
                   </div>
                 </CardHeader>
@@ -427,10 +440,20 @@ export default function MarketingCenter() {
                     {audience === 'individual' ? (
                       <div className="space-y-2 animate-in slide-in-from-left-2 duration-300">
                         <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                          {broadcastType === 'email' ? 'Recipient Email' : 'Recipient Phone Number'}
+                          {broadcastType === 'email'
+                            ? 'Recipient Email'
+                            : broadcastType === 'telegram'
+                              ? 'Recipient Telegram chat_id'
+                              : 'Recipient Phone Number'}
                         </Label>
                         <Input 
-                          placeholder={broadcastType === 'email' ? "hello@example.com" : "+1234567890"}
+                          placeholder={
+                            broadcastType === 'email'
+                              ? "hello@example.com"
+                              : broadcastType === 'telegram'
+                                ? "-1001234567890"
+                                : "+1234567890"
+                          }
                           value={customRecipient}
                           onChange={(e) => setCustomRecipient(e.target.value)}
                           className="h-12 glass border-2 font-semibold"
@@ -458,7 +481,15 @@ export default function MarketingCenter() {
                       <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sender Account</Label>
                       <Input 
                         disabled 
-                        value={broadcastType === 'email' ? "business@marketingteam.app" : broadcastType === 'whatsapp' ? "Twilio WhatsApp" : "Twilio Official"} 
+                          value={
+                            broadcastType === 'email'
+                              ? "business@marketingteam.app"
+                              : broadcastType === 'whatsapp'
+                                ? "Twilio WhatsApp"
+                                : broadcastType === 'telegram'
+                                  ? "Telegram Bot"
+                                  : "Twilio Official"
+                          } 
                         className="h-12 glass border-2 font-semibold text-primary"
                       />
                     </div>
@@ -572,7 +603,15 @@ export default function MarketingCenter() {
                   <div className="space-y-2">
                     <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Message Content</Label>
                     <Textarea 
-                      placeholder={broadcastType === 'email' ? "Write your premium marketing email here (HTML supported)..." : broadcastType === 'whatsapp' ? "Write your WhatsApp message here..." : "Write your concise SMS message here..."}
+                      placeholder={
+                        broadcastType === 'email'
+                          ? "Write your premium marketing email here (HTML supported)..."
+                          : broadcastType === 'whatsapp'
+                            ? "Write your WhatsApp message here..."
+                            : broadcastType === 'telegram'
+                              ? "Write your Telegram message here..."
+                              : "Write your concise SMS message here..."
+                      }
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       className="min-h-[300px] glass border-2 resize-none text-lg leading-relaxed focus-visible:ring-primary/20"
@@ -710,6 +749,8 @@ export default function MarketingCenter() {
                           <Mail className="w-8 h-8 text-blue-500" />
                         ) : broadcast.type === 'whatsapp' ? (
                           <MessageSquare className="w-8 h-8 text-emerald-500" />
+                        ) : broadcast.type === 'telegram' ? (
+                          <MessageSquare className="w-8 h-8 text-sky-500" />
                         ) : (
                           <MessageSquare className="w-8 h-8 text-green-500" />
                         )}

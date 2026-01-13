@@ -1,6 +1,7 @@
 import { storage } from "./storage";
 import { sendEmail, marketingTemplates } from "./emailService";
 import { sendSms, sendWhatsApp } from "./twilioService";
+import { sendTelegramMessage } from "./telegramService";
 
 /**
  * Background process to handle bulk sending for a marketing broadcast.
@@ -11,6 +12,45 @@ export async function processMarketingBroadcast(broadcastId: string) {
   if (!broadcast) return;
 
   try {
+    // Telegram is a single-destination broadcast (group/channel chat_id), not per-lead/client.
+    if (broadcast.type === "telegram") {
+      await storage.updateMarketingBroadcast(broadcastId, { totalRecipients: 1 });
+
+      let successCount = 0;
+      let failedCount = 0;
+
+      const result = await sendTelegramMessage(broadcast.customRecipient ?? null, broadcast.content);
+      if (result.success) {
+        successCount = 1;
+        await storage.createMarketingBroadcastRecipient({
+          broadcastId,
+          leadId: null,
+          clientId: null,
+          customRecipient: broadcast.customRecipient ?? null,
+          status: "sent",
+          sentAt: new Date(),
+        });
+      } else {
+        failedCount = 1;
+        await storage.createMarketingBroadcastRecipient({
+          broadcastId,
+          leadId: null,
+          clientId: null,
+          customRecipient: broadcast.customRecipient ?? null,
+          status: "failed",
+          errorMessage: result.error,
+        });
+      }
+
+      await storage.updateMarketingBroadcast(broadcastId, {
+        successCount,
+        failedCount,
+        status: "completed",
+        completedAt: new Date(),
+      });
+      return;
+    }
+
     let targetLeads: any[] = [];
     let targetClients: any[] = [];
 
@@ -71,7 +111,7 @@ export async function processMarketingBroadcast(broadcastId: string) {
             clientIds.includes(c.id) && 
             !targetClients.some(tc => tc.id === c.id) &&
             ((broadcast.type === "email" && c.optInEmail && c.email) || 
-             (broadcast.type === "sms" && c.optInSms && c.phone))
+             ((broadcast.type === "sms" || broadcast.type === "whatsapp") && c.optInSms && c.phone))
           )
         ];
       }

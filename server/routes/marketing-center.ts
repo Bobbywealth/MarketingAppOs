@@ -7,6 +7,7 @@ import { insertMarketingBroadcastSchema } from "@shared/schema";
 import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
 import { sendSms, sendWhatsApp } from "../twilioService";
+import { sendTelegramMessage } from "../telegramService";
 
 const router = Router();
 
@@ -209,6 +210,22 @@ router.post("/twilio/test-whatsapp", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error sending Twilio test WhatsApp:", error);
     return res.status(500).json({ message: error.message || "Failed to send test WhatsApp" });
+  }
+});
+
+// Telegram outbound diagnostics (admin-only)
+router.post("/telegram/test", async (req: Request, res: Response) => {
+  try {
+    const chatId = String((req.body as any)?.chatId ?? (req.body as any)?.to ?? "").trim();
+    const text = String((req.body as any)?.text ?? (req.body as any)?.body ?? "Test Telegram message from Marketing Center").trim();
+    if (!chatId) return res.status(400).json({ message: "Missing 'chatId' (Telegram group/channel chat_id)" });
+    if (!text) return res.status(400).json({ message: "Missing 'text' message" });
+
+    const result = await sendTelegramMessage(chatId, text);
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error sending Telegram test message:", error);
+    return res.status(500).json({ message: error.message || "Failed to send Telegram test message" });
   }
 });
 
