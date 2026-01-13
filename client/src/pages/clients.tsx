@@ -43,6 +43,7 @@ export default function Clients() {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [showFilters, setShowFilters] = useState(false);
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [billingFilter, setBillingFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { toast} = useToast();
 
@@ -361,7 +362,13 @@ export default function Clients() {
       const matchesTag = tagFilter === "all" || 
         client.serviceTags?.includes(tagFilter);
       
-      return matchesSearch && matchesStatus && matchesTag;
+      // Billing filter
+      const matchesBilling = billingFilter === "all" || 
+        (billingFilter === "paid" && !!client.stripeSubscriptionId) ||
+        (billingFilter === "unpaid" && !client.stripeSubscriptionId) ||
+        (billingFilter === "overdue" && client.billingStatus === "overdue");
+      
+      return matchesSearch && matchesStatus && matchesTag && matchesBilling;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -628,7 +635,7 @@ export default function Clients() {
             {/* Tag Filter */}
             {allTags.length > 0 && (
               <Select value={tagFilter} onValueChange={setTagFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[150px]">
                   <Tag className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Filter by tag" />
                 </SelectTrigger>
@@ -642,6 +649,20 @@ export default function Clients() {
                 </SelectContent>
               </Select>
             )}
+
+            {/* Billing Filter */}
+            <Select value={billingFilter} onValueChange={setBillingFilter}>
+              <SelectTrigger className="w-[150px]">
+                <DollarSign className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Billing Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Billing</SelectItem>
+                <SelectItem value="paid">Paid (Active Sub)</SelectItem>
+                <SelectItem value="unpaid">Unpaid (No Sub)</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
             
             {/* Filter Toggle */}
             <Button
@@ -794,8 +815,23 @@ export default function Clients() {
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-background shadow-sm"></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold ${viewMode === "grid" ? "text-lg" : "text-base"} truncate mb-1 group-hover:text-primary transition-colors`}>
+                    <h3 className={`font-semibold ${viewMode === "grid" ? "text-lg" : "text-base"} truncate mb-1 group-hover:text-primary transition-colors flex items-center gap-2`}>
                       {client.name}
+                      {client.billingStatus === "overdue" ? (
+                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] h-5 px-1.5 py-0">
+                          <Clock className="w-3 h-3 mr-0.5" />
+                          Overdue
+                        </Badge>
+                      ) : client.stripeSubscriptionId ? (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] h-5 px-1.5 py-0">
+                          <DollarSign className="w-3 h-3 mr-0.5" />
+                          Paid
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-500/20 text-[10px] h-5 px-1.5 py-0">
+                          Unpaid
+                        </Badge>
+                      )}
                     </h3>
                     {client.company && (
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
