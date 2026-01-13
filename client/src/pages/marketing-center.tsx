@@ -61,6 +61,7 @@ type MarketingCenterStats = {
   groups: {
     id: string;
     name: string;
+    memberCount: number;
   }[];
 };
 
@@ -312,13 +313,17 @@ export default function MarketingCenter() {
     }
 
     // If we're using audience stats, don't allow sending while stats are unavailable.
-    if ((audience === "all" || audience === "leads" || audience === "clients") && broadcastType !== "telegram") {
+    if ((audience === "all" || audience === "leads" || audience === "clients" || audience === "group") && broadcastType !== "telegram") {
       if (statsLoading) {
         toast({ title: "Loading audience…", description: "Please wait for audience stats to load before sending.", variant: "destructive" });
         return;
       }
       if (statsIsError || !stats) {
-        toast({ title: "Audience unavailable", description: "Could not load leads/clients from the database. Check DB status or refresh.", variant: "destructive" });
+        toast({ title: "Audience unavailable", description: "Could not load audience data from the database. Check DB status or refresh.", variant: "destructive" });
+        return;
+      }
+      if (getRecipientCount() === 0) {
+        toast({ title: "No recipients", description: "The selected audience has 0 opted-in recipients.", variant: "destructive" });
         return;
       }
     }
@@ -356,9 +361,8 @@ export default function MarketingCenter() {
   const getRecipientCount = () => {
     if (audience === 'individual') return customRecipient ? 1 : 0;
     if (audience === 'group') {
-      // Note: This is a rough estimate since group members might overlap with leads/clients
-      // In a real app, you'd fetch the exact count from the server
-      return 0; // We'll show "Group Selected" instead
+      const group = stats?.groups.find(g => g.id === groupId);
+      return group?.memberCount || 0;
     }
     if (!stats) return 0;
     if (audience === 'all') return stats.leads.optedIn + stats.clients.optedIn;
@@ -371,7 +375,7 @@ export default function MarketingCenter() {
     ? "—"
     : statsIsError
       ? "—"
-      : String((stats?.leads.optedIn || 0) + (stats?.clients.optedIn || 0));
+      : String(getRecipientCount() || (stats ? (stats.leads.optedIn + stats.clients.optedIn) : 0));
 
   const statsErrorMessage = statsIsError
     ? ((statsError as any)?.message ?? "Failed to load audience stats")

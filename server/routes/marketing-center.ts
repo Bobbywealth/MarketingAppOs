@@ -133,9 +133,13 @@ router.get("/stats", async (_req: Request, res: Response) => {
         total: allClients.length,
         optedIn: allClients.filter(c => c.optInEmail || c.optInSms).length,
       },
-      groups: allGroups.map(g => ({
-        id: g.id,
-        name: g.name,
+      groups: await Promise.all(allGroups.map(async (g) => {
+        const members = await storage.getMarketingGroupMembers(g.id);
+        return {
+          id: g.id,
+          name: g.name,
+          memberCount: members.length,
+        };
       })),
     };
 

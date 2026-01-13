@@ -3,6 +3,7 @@ import twilio from 'twilio';
 const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
 const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
 const fromNumber = process.env.TWILIO_PHONE_NUMBER?.trim();
+const whatsappFromNumber = process.env.TWILIO_WHATSAPP_NUMBER?.trim();
 const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID?.trim();
 
 const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
@@ -113,12 +114,13 @@ export async function sendWhatsApp(to: string, body: string) {
     if (messagingServiceSid) {
       createPayload.messagingServiceSid = messagingServiceSid;
     } else {
-      const normalizedFrom = normalizeE164Phone(String(fromNumber ?? ''));
+      const actualFrom = whatsappFromNumber || fromNumber;
+      const normalizedFrom = normalizeE164Phone(String(actualFrom ?? ''));
       if (!normalizedFrom.ok) {
         return {
           success: false,
           error:
-            'TWILIO_PHONE_NUMBER is missing/invalid. Set it to your Twilio WhatsApp-enabled number in E.164 (ex: +18885551234).',
+            'TWILIO_WHATSAPP_NUMBER or TWILIO_PHONE_NUMBER is missing/invalid. Set it to your Twilio WhatsApp-enabled number in E.164 (ex: +18885551234).',
         };
       }
       createPayload.from = `whatsapp:${normalizedFrom.value}`;
