@@ -320,6 +320,7 @@ export interface IStorage {
   getMarketingBroadcast(id: string): Promise<MarketingBroadcast | undefined>;
   createMarketingBroadcast(data: InsertMarketingBroadcast): Promise<MarketingBroadcast>;
   updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast>;
+  deleteMarketingBroadcast(id: string): Promise<void>;
   getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
   createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
   updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
@@ -2450,6 +2451,10 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!broadcast) throw new Error("Marketing broadcast not found");
     return broadcast;
+  }
+
+  async deleteMarketingBroadcast(id: string): Promise<void> {
+    await db.delete(marketingBroadcasts).where(eq(marketingBroadcasts.id, id));
   }
 
   async getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]> {

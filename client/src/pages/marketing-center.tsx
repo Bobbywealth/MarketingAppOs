@@ -99,6 +99,7 @@ type BroadcastRecipientRow = {
 export default function MarketingCenter() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("composer");
+  const [historyFilter, setHistoryFilter] = useState<"all" | "scheduled" | "completed">("all");
   const [broadcastType, setBroadcastType] = useState<"email" | "sms" | "whatsapp" | "telegram">("email");
   const [audience, setAudience] = useState("all");
   const [groupId, setGroupId] = useState<string>("");
@@ -144,6 +145,14 @@ export default function MarketingCenter() {
       return false;
     }
   });
+
+  const filteredBroadcasts = useMemo(() => {
+    if (!broadcasts) return [];
+    if (historyFilter === 'all') return broadcasts;
+    if (historyFilter === 'scheduled') return broadcasts.filter(b => b.status === 'pending');
+    if (historyFilter === 'completed') return broadcasts.filter(b => b.status === 'completed' || b.status === 'sending');
+    return broadcasts;
+  }, [broadcasts, historyFilter]);
 
   // Selected broadcast for recipient details dialog
   const [selectedBroadcastId, setSelectedBroadcastId] = useState<string | null>(null);
@@ -246,6 +255,19 @@ export default function MarketingCenter() {
       queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/stats"] });
       toast({ title: "Group Deleted" });
     },
+  });
+
+  const deleteBroadcastMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/marketing-center/broadcasts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/broadcasts"] });
+      toast({ title: "Broadcast Deleted", description: "The scheduled message has been removed." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
+    }
   });
 
   const addMemberMutation = useMutation({
@@ -768,8 +790,38 @@ export default function MarketingCenter() {
         </TabsContent>
 
         <TabsContent value="history" className="animate-in fade-in duration-500">
-          <div className="grid gap-6">
-            {!broadcasts || broadcasts.length === 0 ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button 
+                  variant={historyFilter === 'all' ? 'default' : 'outline'} 
+                  size="sm" 
+                  onClick={() => setHistoryFilter('all')}
+                  className="font-bold h-8"
+                >
+                  All
+                </Button>
+                <Button 
+                  variant={historyFilter === 'scheduled' ? 'default' : 'outline'} 
+                  size="sm" 
+                  onClick={() => setHistoryFilter('scheduled')}
+                  className="font-bold h-8"
+                >
+                  Scheduled
+                </Button>
+                <Button 
+                  variant={historyFilter === 'completed' ? 'default' : 'outline'} 
+                  size="sm" 
+                  onClick={() => setHistoryFilter('completed')}
+                  className="font-bold h-8"
+                >
+                  Sent
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-6">
+              {!filteredBroadcasts || filteredBroadcasts.length === 0 ? (
               <Card className="glass-strong border-dashed border-2 p-20 text-center space-y-4">
                 <div className="w-20 h-20 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto">
                   <History className="w-10 h-10 text-muted-foreground" />
@@ -783,7 +835,7 @@ export default function MarketingCenter() {
                 </Button>
               </Card>
             ) : (
-              broadcasts.map((broadcast) => (
+              filteredBroadcasts.map((broadcast) => (
                 <motion.div
                   key={broadcast.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -824,16 +876,33 @@ export default function MarketingCenter() {
                           )}
 
                           {/* Always-visible diagnostics button (mobile-friendly) */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
-                            onClick={() => setSelectedBroadcastId(broadcast.id)}
-                            disabled={broadcast.status === 'pending'}
-                          >
-                            <Eye className="w-3 h-3 mr-1" />
-                            View Recipients
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
+                              onClick={() => setSelectedBroadcastId(broadcast.id)}
+                              disabled={broadcast.status === 'pending'}
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              View Recipients
+                            </Button>
+                            {(broadcast.status === 'pending' || broadcast.status === 'failed') && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to delete this ${broadcast.status === 'pending' ? 'scheduled' : 'failed'} broadcast?`)) {
+                                    deleteBroadcastMutation.mutate(broadcast.id);
+                                  }
+                                }}
+                                disabled={deleteBroadcastMutation.isPending}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
                           <Zap className="w-3 h-3" />{" "}

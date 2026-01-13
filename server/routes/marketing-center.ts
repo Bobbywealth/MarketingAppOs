@@ -217,6 +217,24 @@ router.get("/broadcasts", async (_req: Request, res: Response) => {
   }
 });
 
+router.delete("/broadcasts/:id", async (req: Request, res: Response) => {
+  try {
+    const broadcast = await storage.getMarketingBroadcast(req.params.id);
+    if (!broadcast) return res.status(404).json({ message: "Broadcast not found" });
+    
+    // Only allow deleting pending or failed broadcasts
+    if (broadcast.status === "sending") {
+      return res.status(400).json({ message: "Cannot delete a broadcast that is currently sending" });
+    }
+
+    await storage.deleteMarketingBroadcast(req.params.id);
+    res.status(204).end();
+  } catch (error: any) {
+    console.error("Error deleting broadcast:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Database status diagnostics (admin-only)
 // Helps determine whether "0 recipients" is real data or a DB/schema issue.
 router.get("/db-status", async (_req: Request, res: Response) => {
