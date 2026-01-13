@@ -73,7 +73,7 @@ export function setupAuth(app: Express) {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    createTableIfMissing: true, // Auto-create if missing for resilience
     ttl: sessionTtl,
     tableName: "sessions",
   });
@@ -85,9 +85,11 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      // Only use secure cookies if explicitly in production AND using HTTPS
+      // This prevents login loops when running production builds locally or on HTTP
+      secure: process.env.NODE_ENV === "production" && process.env.DISABLE_SECURE_COOKIES !== "true",
       sameSite: "lax",
-      domain: process.env.COOKIE_DOMAIN || undefined, // e.g. .marketingteam.app
+      domain: process.env.COOKIE_DOMAIN || undefined, 
       maxAge: sessionTtl,
     },
   };
@@ -148,8 +150,12 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
+      if (!user) {
+        console.warn(`[Auth] Failed to deserialize user: id ${id} not found`);
+      }
       done(null, user);
     } catch (error) {
+      console.error(`[Auth] Error deserializing user ${id}:`, error);
       done(error);
     }
   });

@@ -141,6 +141,7 @@ export default function TasksPage() {
   const { data: spaces = [] } = useQuery<TaskSpace[]>({
     queryKey: ["/api/task-spaces"],
     retry: false,
+    meta: { returnNull: true }, // Don't throw error if forbidden
   });
 
   const buildSpaceOptions = () => {

@@ -448,6 +448,27 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`
   );
 
+  // Session storage table (Critical for persistent logins)
+  await safeQuery(
+    "sessions table",
+    `
+    CREATE TABLE IF NOT EXISTS sessions (
+      sid varchar NOT NULL COLLATE "default",
+      sess jsonb NOT NULL,
+      expire timestamp(6) NOT NULL
+    ) WITH (OIDS=FALSE);
+    
+    DO $$ 
+    BEGIN 
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sessions_pkey') THEN
+        ALTER TABLE sessions ADD CONSTRAINT sessions_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
+      END IF;
+    END $$;
+
+    CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON sessions ("expire");
+    `
+  );
+
   // Diagnostic: Check if table is actually accessible
   try {
     const res = await pool.query(`SELECT COUNT(*) FROM blog_posts;`);
