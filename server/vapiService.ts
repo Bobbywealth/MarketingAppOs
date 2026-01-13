@@ -32,17 +32,24 @@ export async function startVapiCall(
   }
 
   try {
+    const requestData: any = {
+      assistantId: assistantId,
+      customer: {
+        number: to,
+        name: customerName,
+      },
+      type: 'outboundPhoneCall',
+    };
+
+    // Only add phoneNumberId if it's a valid-looking UUID
+    const vapiPhoneId = process.env.VAPI_PHONE_NUMBER_ID;
+    if (vapiPhoneId && vapiPhoneId.length > 10) {
+      requestData.phoneNumberId = vapiPhoneId;
+    }
+
     const response = await axios.post(
       `${VAPI_BASE_URL}/call`,
-      {
-        assistantId: assistantId,
-        customer: {
-          number: to,
-          name: customerName,
-        },
-        type: 'outboundPhoneCall',
-        phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID, // Optional: specify the outbound number
-      },
+      requestData,
       {
         headers: {
           Authorization: `Bearer ${VAPI_API_KEY}`,
