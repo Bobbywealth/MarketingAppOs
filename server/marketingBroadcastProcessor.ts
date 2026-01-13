@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { sendEmail, marketingTemplates } from "./emailService";
-import { sendSms } from "./twilioService";
+import { sendSms, sendWhatsApp } from "./twilioService";
 
 /**
  * Background process to handle bulk sending for a marketing broadcast.
@@ -19,9 +19,9 @@ export async function processMarketingBroadcast(broadcastId: string) {
       const allLeads = await storage.getLeads();
       targetLeads = allLeads.filter((l) => {
         if (broadcast.type === "email" && !l.optInEmail) return false;
-        if (broadcast.type === "sms" && !l.optInSms) return false;
+        if ((broadcast.type === "sms" || broadcast.type === "whatsapp") && !l.optInSms) return false;
         if (!l.email && broadcast.type === "email") return false;
-        if (!l.phone && broadcast.type === "sms") return false;
+        if (!l.phone && (broadcast.type === "sms" || broadcast.type === "whatsapp")) return false;
 
         // Apply filters if specific
         if (broadcast.audience === "specific" && broadcast.filters) {
@@ -37,11 +37,44 @@ export async function processMarketingBroadcast(broadcastId: string) {
       const allClients = await storage.getClients();
       targetClients = allClients.filter((c) => {
         if (broadcast.type === "email" && !c.optInEmail) return false;
-        if (broadcast.type === "sms" && !c.optInSms) return false;
+        if ((broadcast.type === "sms" || broadcast.type === "whatsapp") && !c.optInSms) return false;
         if (!c.email && broadcast.type === "email") return false;
-        if (!c.phone && broadcast.type === "sms") return false;
+        if (!c.phone && (broadcast.type === "sms" || broadcast.type === "whatsapp")) return false;
         return true;
       });
+    }
+
+    // 1.2 Handle Group audience
+    if (broadcast.audience === "group" && broadcast.groupId) {
+      const members = await storage.getMarketingGroupMembers(broadcast.groupId);
+      const leadIds = members.filter(m => m.leadId).map(m => m.leadId!);
+      const clientIds = members.filter(m => m.clientId).map(m => m.clientId!);
+
+      if (leadIds.length > 0) {
+        const allLeads = await storage.getLeads();
+        targetLeads = [
+          ...targetLeads,
+          ...allLeads.filter(l => 
+            leadIds.includes(l.id) && 
+            !targetLeads.some(tl => tl.id === l.id) &&
+            ((broadcast.type === "email" && l.optInEmail && l.email) || 
+             ((broadcast.type === "sms" || broadcast.type === "whatsapp") && l.optInSms && l.phone))
+          )
+        ];
+      }
+
+      if (clientIds.length > 0) {
+        const allClients = await storage.getClients();
+        targetClients = [
+          ...targetClients,
+          ...allClients.filter(c => 
+            clientIds.includes(c.id) && 
+            !targetClients.some(tc => tc.id === c.id) &&
+            ((broadcast.type === "email" && c.optInEmail && c.email) || 
+             (broadcast.type === "sms" && c.optInSms && c.phone))
+          )
+        ];
+      }
     }
 
     // 1.5 Handle Individual Recipient
@@ -76,6 +109,8 @@ export async function processMarketingBroadcast(broadcastId: string) {
             broadcast.content
           );
           result = await sendEmail((recipient as any).email!, subject, html);
+        } else if (broadcast.type === "whatsapp") {
+          result = await sendWhatsApp((recipient as any).phone!, broadcast.content);
         } else {
           result = await sendSms((recipient as any).phone!, broadcast.content);
         }

@@ -6,7 +6,7 @@ import { UserRole } from "@shared/roles";
 import { insertMarketingBroadcastSchema } from "@shared/schema";
 import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
-import { sendSms } from "../twilioService";
+import { sendSms, sendWhatsApp } from "../twilioService";
 
 const router = Router();
 
@@ -18,6 +18,7 @@ router.get("/stats", async (_req: Request, res: Response) => {
   try {
     const allLeads = await storage.getLeads();
     const allClients = await storage.getClients();
+    const allGroups = await storage.getMarketingGroups();
 
     const stats = {
       leads: {
@@ -30,12 +31,78 @@ router.get("/stats", async (_req: Request, res: Response) => {
         total: allClients.length,
         optedIn: allClients.filter(c => c.optInEmail || c.optInSms).length,
       },
+      groups: allGroups.map(g => ({
+        id: g.id,
+        name: g.name,
+      })),
     };
 
     res.json(stats);
   } catch (error) {
     console.error("Error fetching marketing stats:", error);
     res.status(500).json({ message: "Failed to fetch audience statistics" });
+  }
+});
+
+// Marketing Group Routes
+router.get("/groups", async (_req: Request, res: Response) => {
+  try {
+    const groups = await storage.getMarketingGroups();
+    res.json(groups);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/groups", async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const group = await storage.createMarketingGroup({
+      ...req.body,
+      createdBy: user.id,
+    });
+    res.status(201).json(group);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.get("/groups/:id/members", async (req: Request, res: Response) => {
+  try {
+    const members = await storage.getMarketingGroupMembers(req.params.id);
+    res.json(members);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/groups/:id/members", async (req: Request, res: Response) => {
+  try {
+    const member = await storage.addMarketingGroupMember({
+      groupId: req.params.id,
+      ...req.body,
+    });
+    res.status(201).json(member);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete("/groups/members/:memberId", async (req: Request, res: Response) => {
+  try {
+    await storage.removeMarketingGroupMember(parseInt(req.params.memberId));
+    res.status(204).end();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/groups/:id", async (req: Request, res: Response) => {
+  try {
+    await storage.deleteMarketingGroup(req.params.id);
+    res.status(204).end();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -105,7 +172,7 @@ router.get("/twilio/status", async (_req: Request, res: Response) => {
       hasMessagingServiceSid: Boolean(messagingServiceSid),
       messagingServiceSidLast4: messagingServiceSid ? messagingServiceSid.slice(-4) : null,
       notes:
-        "If configured=false, Render env vars are missing. If configured=true but sends fail, use /twilio/test-sms to see Twilio error code.",
+        "If configured=false, Render env vars are missing. If configured=true but sends fail, use /twilio/test-sms or /twilio/test-whatsapp to see Twilio error code.",
     });
   } catch (error: any) {
     console.error("Error getting Twilio status:", error);
@@ -126,6 +193,22 @@ router.post("/twilio/test-sms", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error sending Twilio test SMS:", error);
     return res.status(500).json({ message: error.message || "Failed to send test SMS" });
+  }
+});
+
+router.post("/twilio/test-whatsapp", async (req: Request, res: Response) => {
+  try {
+    const to = String((req.body as any)?.to ?? "").trim();
+    const body = String((req.body as any)?.body ?? "Test WhatsApp message from Marketing Center").trim();
+    if (!to) return res.status(400).json({ message: "Missing 'to' phone number" });
+    if (!body) return res.status(400).json({ message: "Missing 'body' message" });
+
+    const result = await sendWhatsApp(to, body);
+    // Always return 200 so you can see Twilio error details in response body.
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error sending Twilio test WhatsApp:", error);
+    return res.status(500).json({ message: error.message || "Failed to send test WhatsApp" });
   }
 });
 
@@ -170,30 +253,38 @@ router.get("/sms-inbox", async (req: Request, res: Response) => {
 router.post("/broadcast", async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    const scheduledAtRaw = (req.body as any)?.scheduledAt;
-    const scheduledAt =
-      scheduledAtRaw ? new Date(scheduledAtRaw) : undefined;
+    const { scheduledAt: scheduledAtRaw, isRecurring, recurringPattern, recurringEndDate } = req.body;
+    
+    const scheduledAt = scheduledAtRaw ? new Date(scheduledAtRaw) : undefined;
 
     if (scheduledAtRaw && (Number.isNaN(scheduledAt?.getTime()) || !scheduledAt)) {
       return res.status(400).json({ message: "Invalid scheduledAt" });
     }
 
     const now = new Date();
+    
+    // If it's recurring and not scheduled for later, set nextRunAt to now
+    let nextRunAt = null;
+    if (isRecurring) {
+      nextRunAt = scheduledAt || now;
+    }
+
     const status =
       scheduledAt && scheduledAt.getTime() > now.getTime() ? "pending" : "sending";
 
     const validatedData = insertMarketingBroadcastSchema.parse({
       ...req.body,
       scheduledAt: scheduledAt ?? null,
+      nextRunAt,
       createdBy: user.id,
-      status,
+      status: isRecurring ? "pending" : status, // Recurring broadcasts always start as pending
     });
 
     // Create the broadcast record
     const broadcast = await storage.createMarketingBroadcast(validatedData);
 
-    // Start background sending process if immediate
-    if (broadcast.status === "sending") {
+    // Start background sending process if immediate and not recurring
+    if (!isRecurring && broadcast.status === "sending") {
       processMarketingBroadcast(broadcast.id).catch((err) =>
         console.error(`Broadcast ${broadcast.id} background error:`, err)
       );

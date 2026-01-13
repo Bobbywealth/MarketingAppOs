@@ -91,3 +91,62 @@ export async function sendSms(to: string, body: string) {
   }
 }
 
+export async function sendWhatsApp(to: string, body: string) {
+  if (!client) {
+    console.warn('⚠️ Twilio not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN in .env');
+    return { success: false, error: 'Twilio not configured' };
+  }
+
+  try {
+    const normalizedTo = normalizeE164Phone(to);
+    if (!normalizedTo.ok) return { success: false, error: normalizedTo.error };
+
+    const normalizedBody = String(body ?? '').trim();
+    if (!normalizedBody) return { success: false, error: 'Message body is required' };
+
+    const createPayload: Record<string, any> = {
+      body: normalizedBody,
+      to: `whatsapp:${normalizedTo.value}`,
+    };
+
+    // For WhatsApp, we MUST use a WhatsApp-enabled number or Messaging Service
+    if (messagingServiceSid) {
+      createPayload.messagingServiceSid = messagingServiceSid;
+    } else {
+      const normalizedFrom = normalizeE164Phone(String(fromNumber ?? ''));
+      if (!normalizedFrom.ok) {
+        return {
+          success: false,
+          error:
+            'TWILIO_PHONE_NUMBER is missing/invalid. Set it to your Twilio WhatsApp-enabled number in E.164 (ex: +18885551234).',
+        };
+      }
+      createPayload.from = `whatsapp:${normalizedFrom.value}`;
+    }
+
+    const message = await client.messages.create(createPayload);
+    console.log(`✅ WhatsApp message sent via Twilio: ${message.sid}`);
+    return { success: true, sid: message.sid };
+  } catch (error: any) {
+    const twilioCode = error?.code;
+    const twilioStatus = error?.status;
+    const twilioMoreInfo = error?.moreInfo;
+    const msg = error?.message || 'Unknown Twilio error';
+
+    console.error('❌ Twilio WhatsApp send error:', {
+      message: msg,
+      code: twilioCode,
+      status: twilioStatus,
+      moreInfo: twilioMoreInfo,
+    });
+
+    return {
+      success: false,
+      error: twilioCode ? `Twilio error ${twilioCode}: ${msg}` : msg,
+      code: twilioCode,
+      status: twilioStatus,
+      moreInfo: twilioMoreInfo,
+    };
+  }
+}
+

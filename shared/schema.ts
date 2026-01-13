@@ -697,6 +697,49 @@ export type InsertCourseLesson = z.infer<typeof insertCourseLessonSchema>;
 export type CourseEnrollment = typeof courseEnrollments.$inferSelect;
 export type InsertCourseEnrollment = z.infer<typeof insertCourseEnrollmentSchema>;
 
+// Marketing Groups table
+export const marketingGroups = pgTable("marketing_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const marketingGroupMembers = pgTable("marketing_group_members", {
+  id: serial("id").primaryKey(),
+  groupId: varchar("group_id")
+    .references(() => marketingGroups.id, { onDelete: "cascade" })
+    .notNull(),
+  leadId: varchar("lead_id").references(() => leads.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const marketingGroupsRelations = relations(marketingGroups, ({ one, many }) => ({
+  author: one(users, {
+    fields: [marketingGroups.createdBy],
+    references: [users.id],
+  }),
+  members: many(marketingGroupMembers),
+}));
+
+export const marketingGroupMembersRelations = relations(marketingGroupMembers, ({ one }) => ({
+  group: one(marketingGroups, {
+    fields: [marketingGroupMembers.groupId],
+    references: [marketingGroups.id],
+  }),
+  lead: one(leads, {
+    fields: [marketingGroupMembers.leadId],
+    references: [leads.id],
+  }),
+  client: one(clients, {
+    fields: [marketingGroupMembers.clientId],
+    references: [clients.id],
+  }),
+}));
+
 // Marketing Broadcasts table
 export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -704,7 +747,8 @@ export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   status: varchar("status").notNull().default("pending"), // 'pending', 'sending', 'completed', 'failed'
   subject: varchar("subject"),
   content: text("content").notNull(),
-  audience: varchar("audience").notNull(), // 'all', 'leads', 'clients', 'specific', 'individual'
+  audience: varchar("audience").notNull(), // 'all', 'leads', 'clients', 'specific', 'individual', 'group'
+  groupId: varchar("group_id").references(() => marketingGroups.id), // Added for custom groups
   customRecipient: text("custom_recipient"), // Specific email or phone number for 'individual' audience
   filters: jsonb("filters"), // { tags: [], industries: [] }
   totalRecipients: integer("total_recipients").default(0),
@@ -714,6 +758,13 @@ export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   scheduledAt: timestamp("scheduled_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  // Recurrence fields
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"), // 'daily', 'weekly', 'monthly'
+  recurringInterval: integer("recurring_interval").default(1),
+  recurringEndDate: timestamp("recurring_end_date"),
+  nextRunAt: timestamp("next_run_at"),
+  parentBroadcastId: varchar("parent_broadcast_id"), // Link to original recurring template
 });
 
 export const marketingBroadcastsRelations = relations(marketingBroadcasts, ({ one, many }) => ({
@@ -1816,9 +1867,23 @@ export const insertCreatorPayoutSchema = createInsertSchema(creatorPayouts).omit
 export type InsertCreatorPayout = z.infer<typeof insertCreatorPayoutSchema>;
 export type CreatorPayout = typeof creatorPayouts.$inferSelect;
 
-export const insertMarketingBroadcastSchema = createInsertSchema(marketingBroadcasts).omit({ id: true, createdAt: true });
+export const insertMarketingBroadcastSchema = createInsertSchema(marketingBroadcasts)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    scheduledAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+    recurringEndDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+    nextRunAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+  });
 export type InsertMarketingBroadcast = z.infer<typeof insertMarketingBroadcastSchema>;
 export type MarketingBroadcast = typeof marketingBroadcasts.$inferSelect;
+
+export const insertMarketingGroupSchema = createInsertSchema(marketingGroups).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMarketingGroup = z.infer<typeof insertMarketingGroupSchema>;
+export type MarketingGroup = typeof marketingGroups.$inferSelect;
+
+export const insertMarketingGroupMemberSchema = createInsertSchema(marketingGroupMembers).omit({ id: true, createdAt: true });
+export type InsertMarketingGroupMember = z.infer<typeof insertMarketingGroupMemberSchema>;
+export type MarketingGroupMember = typeof marketingGroupMembers.$inferSelect;
 
 export const insertMarketingBroadcastRecipientSchema = createInsertSchema(marketingBroadcastRecipients).omit({ id: true });
 export type InsertMarketingBroadcastRecipient = z.infer<typeof insertMarketingBroadcastRecipientSchema>;

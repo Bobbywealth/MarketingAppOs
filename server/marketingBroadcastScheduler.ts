@@ -1,36 +1,34 @@
 import cron from "node-cron";
-import { and, eq, isNotNull, lte } from "drizzle-orm";
+import { and, eq, isNotNull, lte, or } from "drizzle-orm";
 import { db } from "./db";
 import { marketingBroadcasts } from "@shared/schema";
 import { processMarketingBroadcast } from "./marketingBroadcastProcessor";
 import { log } from "./vite";
+import { storage } from "./storage";
 
 /**
- * Picks up scheduled marketing broadcasts and starts sending them.
- *
- * Note: This is intentionally lightweight (polling once per minute) and uses an
- * atomic status transition (pending -> sending) to avoid double-sends.
+ * Picks up scheduled and recurring marketing broadcasts and starts sending them.
  */
 export function startMarketingBroadcastScheduler() {
   async function tick() {
     try {
       const now = new Date();
+      
+      // 1. Pick up standard scheduled broadcasts
       const due = await db
         .select({ id: marketingBroadcasts.id })
         .from(marketingBroadcasts)
         .where(
           and(
             eq(marketingBroadcasts.status, "pending"),
+            eq(marketingBroadcasts.isRecurring, false),
             isNotNull(marketingBroadcasts.scheduledAt),
             lte(marketingBroadcasts.scheduledAt, now)
           )
         )
         .limit(25);
 
-      if (!due.length) return;
-
       for (const row of due) {
-        // Atomic claim (prevents multiple instances from starting same broadcast)
         const [claimed] = await db
           .update(marketingBroadcasts)
           .set({ status: "sending" })
@@ -41,6 +39,72 @@ export function startMarketingBroadcastScheduler() {
 
         processMarketingBroadcast(claimed.id).catch((err) =>
           console.error(`Broadcast ${claimed.id} scheduler background error:`, err)
+        );
+      }
+
+      // 2. Pick up recurring broadcasts
+      const recurringDue = await db
+        .select()
+        .from(marketingBroadcasts)
+        .where(
+          and(
+            eq(marketingBroadcasts.isRecurring, true),
+            isNotNull(marketingBroadcasts.nextRunAt),
+            lte(marketingBroadcasts.nextRunAt, now),
+            or(
+              isNotNull(marketingBroadcasts.recurringEndDate),
+              lte(marketingBroadcasts.nextRunAt, marketingBroadcasts.recurringEndDate)
+            )
+          )
+        )
+        .limit(10);
+
+      for (const template of recurringDue) {
+        // Calculate next run date
+        const nextRun = new Date(template.nextRunAt!);
+        const pattern = template.recurringPattern || "daily";
+        const interval = template.recurringInterval || 1;
+
+        if (pattern === "daily") {
+          nextRun.setDate(nextRun.getDate() + interval);
+        } else if (pattern === "weekly") {
+          nextRun.setDate(nextRun.getDate() + (interval * 7));
+        } else if (pattern === "monthly") {
+          nextRun.setMonth(nextRun.getMonth() + interval);
+        }
+
+        // Check if we passed the end date
+        let updatedNextRunAt: Date | null = nextRun;
+        if (template.recurringEndDate && nextRun > template.recurringEndDate) {
+          updatedNextRunAt = null;
+        }
+
+        // Update template first (atomic claim via nextRunAt update)
+        const [updatedTemplate] = await db
+          .update(marketingBroadcasts)
+          .set({ nextRunAt: updatedNextRunAt })
+          .where(and(eq(marketingBroadcasts.id, template.id), eq(marketingBroadcasts.nextRunAt, template.nextRunAt)))
+          .returning();
+
+        if (!updatedTemplate) continue;
+
+        // Create a child broadcast for this run
+        const childBroadcast = await storage.createMarketingBroadcast({
+          type: template.type,
+          status: "sending",
+          subject: template.subject,
+          content: template.content,
+          audience: template.audience,
+          groupId: template.groupId,
+          customRecipient: template.customRecipient,
+          filters: template.filters,
+          createdBy: template.createdBy,
+          parentBroadcastId: template.id,
+          isRecurring: false,
+        });
+
+        processMarketingBroadcast(childBroadcast.id).catch((err) =>
+          console.error(`Recurring child broadcast ${childBroadcast.id} background error:`, err)
         );
       }
     } catch (error) {

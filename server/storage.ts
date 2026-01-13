@@ -32,6 +32,8 @@ import {
   pageViews,
   marketingBroadcasts,
   marketingBroadcastRecipients,
+  marketingGroups,
+  marketingGroupMembers,
   courses,
   courseModules,
   courseLessons,
@@ -124,6 +126,10 @@ import {
   type InsertMarketingBroadcast,
   type MarketingBroadcastRecipient,
   type InsertMarketingBroadcastRecipient,
+  type MarketingGroup,
+  type InsertMarketingGroup,
+  type MarketingGroupMember,
+  type InsertMarketingGroupMember,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
@@ -317,6 +323,16 @@ export interface IStorage {
   getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
   createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
   updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
+
+  // Marketing Group operations
+  getMarketingGroups(): Promise<MarketingGroup[]>;
+  getMarketingGroup(id: string): Promise<MarketingGroup | undefined>;
+  createMarketingGroup(data: InsertMarketingGroup): Promise<MarketingGroup>;
+  updateMarketingGroup(id: string, data: Partial<InsertMarketingGroup>): Promise<MarketingGroup>;
+  deleteMarketingGroup(id: string): Promise<void>;
+  getMarketingGroupMembers(groupId: string): Promise<MarketingGroupMember[]>;
+  addMarketingGroupMember(data: InsertMarketingGroupMember): Promise<MarketingGroupMember>;
+  removeMarketingGroupMember(id: number): Promise<void>;
 
   // Course operations
   getCourses(creatorId?: string): Promise<Course[]>;
@@ -2453,6 +2469,48 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!recipient) throw new Error("Marketing broadcast recipient not found");
     return recipient;
+  }
+
+  // Marketing Group operations
+  async getMarketingGroups(): Promise<MarketingGroup[]> {
+    return await db.select().from(marketingGroups).orderBy(desc(marketingGroups.createdAt));
+  }
+
+  async getMarketingGroup(id: string): Promise<MarketingGroup | undefined> {
+    const [group] = await db.select().from(marketingGroups).where(eq(marketingGroups.id, id));
+    return group;
+  }
+
+  async createMarketingGroup(data: InsertMarketingGroup): Promise<MarketingGroup> {
+    const [group] = await db.insert(marketingGroups).values(data).returning();
+    return group;
+  }
+
+  async updateMarketingGroup(id: string, data: Partial<InsertMarketingGroup>): Promise<MarketingGroup> {
+    const [group] = await db
+      .update(marketingGroups)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketingGroups.id, id))
+      .returning();
+    if (!group) throw new Error("Marketing group not found");
+    return group;
+  }
+
+  async deleteMarketingGroup(id: string): Promise<void> {
+    await db.delete(marketingGroups).where(eq(marketingGroups.id, id));
+  }
+
+  async getMarketingGroupMembers(groupId: string): Promise<MarketingGroupMember[]> {
+    return await db.select().from(marketingGroupMembers).where(eq(marketingGroupMembers.groupId, groupId));
+  }
+
+  async addMarketingGroupMember(data: InsertMarketingGroupMember): Promise<MarketingGroupMember> {
+    const [member] = await db.insert(marketingGroupMembers).values(data).returning();
+    return member;
+  }
+
+  async removeMarketingGroupMember(id: number): Promise<void> {
+    await db.delete(marketingGroupMembers).where(eq(marketingGroupMembers.id, id));
   }
 
   // Course operations
