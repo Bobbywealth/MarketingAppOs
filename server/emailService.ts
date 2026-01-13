@@ -238,6 +238,35 @@ export const emailTemplates = {
     };
   },
 
+  // Abandoned cart reminder for potential clients
+  abandonedCartReminder: (clientName: string, packageName: string, checkoutUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Still thinking about it, ${clientName}? 🤔</h2>
+      <p>We noticed you started your enrollment for the <strong>${packageName}</strong> but didn't quite finish.</p>
+      
+      <div class="card">
+        <div class="info-label">SAVED FOR YOU</div>
+        <div class="info-value">${packageName}</div>
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">Your custom enrollment link is still active. Click below to pick up where you left off and activate your marketing services.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${checkoutUrl}" class="button" style="background-color: #3b82f6;">Complete Your Enrollment →</a>
+      </div>
+      
+      <p style="text-align: center; font-size: 14px; color: #6b7280;">
+        <strong>Need help?</strong> Just reply to this email and our team will be happy to assist you.
+      </p>
+      
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">If you've already completed your payment, please disregard this message.</p>
+    `;
+    return {
+      subject: `👋 Don't forget your ${packageName} enrollment`,
+      html: renderEmail('Pick Up Where You Left Off', content, '#3b82f6')
+    };
+  },
+
   // Alert admin about new user signup
   newUserAlert: (adminName: string, newUserName: string, newUserEmail: string, newUserRole: string) => {
     const content = `
@@ -817,6 +846,11 @@ export const emailNotifications = {
 
   async sendEnrollmentInvitation(toEmail: string, clientName: string, packageName: string, checkoutUrl: string) {
     const { subject, html } = emailTemplates.enrollmentInvitation(clientName, packageName, checkoutUrl);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendAbandonedCartReminder(toEmail: string, clientName: string, packageName: string, checkoutUrl: string) {
+    const { subject, html } = emailTemplates.abandonedCartReminder(clientName, packageName, checkoutUrl);
     return sendEmail(toEmail, subject, html);
   },
 

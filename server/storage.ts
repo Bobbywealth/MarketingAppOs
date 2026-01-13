@@ -230,9 +230,12 @@ export interface IStorage {
 
   // Lead automation operations
   getLeadAutomations(leadId: string): Promise<LeadAutomation[]>;
+  getDueLeadAutomations(): Promise<LeadAutomation[]>;
+  getLeadAutomationsByLeadIdAndType(leadId: string, type: string, status?: string): Promise<LeadAutomation[]>;
   createLeadAutomation(automation: InsertLeadAutomation): Promise<LeadAutomation>;
   updateLeadAutomation(id: string, data: Partial<InsertLeadAutomation>): Promise<LeadAutomation>;
   deleteLeadAutomation(id: string): Promise<void>;
+  cancelLeadAutomations(leadId: string, type: string): Promise<void>;
 
   // Content post operations
   getContentPosts(): Promise<ContentPost[]>;
@@ -1251,6 +1254,33 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(leadAutomations.createdAt));
   }
 
+  async getDueLeadAutomations(): Promise<LeadAutomation[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(leadAutomations)
+      .where(
+        and(
+          eq(leadAutomations.status, "pending"),
+          lte(leadAutomations.scheduledFor, now)
+        )
+      );
+  }
+
+  async getLeadAutomationsByLeadIdAndType(leadId: string, type: string, status?: string): Promise<LeadAutomation[]> {
+    const conditions = [
+      eq(leadAutomations.leadId, leadId),
+      eq(leadAutomations.type, type)
+    ];
+    if (status) {
+      conditions.push(eq(leadAutomations.status, status));
+    }
+    return await db
+      .select()
+      .from(leadAutomations)
+      .where(and(...conditions));
+  }
+
   async createLeadAutomation(automationData: InsertLeadAutomation): Promise<LeadAutomation> {
     const [automation] = await db.insert(leadAutomations).values(automationData).returning();
     return automation;
@@ -1270,6 +1300,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLeadAutomation(id: string): Promise<void> {
     await db.delete(leadAutomations).where(eq(leadAutomations.id, id));
+  }
+
+  async cancelLeadAutomations(leadId: string, type: string): Promise<void> {
+    await db
+      .update(leadAutomations)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(leadAutomations.leadId, leadId),
+          eq(leadAutomations.type, type),
+          eq(leadAutomations.status, "pending")
+        )
+      );
   }
 
   // Content post operations

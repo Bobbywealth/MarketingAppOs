@@ -8,6 +8,7 @@ import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
 import { sendSms, sendWhatsApp } from "../twilioService";
 import { sendTelegramMessage } from "../telegramService";
+import { listVapiAssistants } from "../vapiService";
 import { upload } from "./common";
 
 const router = Router();
@@ -621,19 +622,16 @@ router.post("/broadcast", async (req: Request, res: Response) => {
 
 // File upload route for marketing media
 router.post("/upload", upload.array("files", 10), async (req: Request, res: Response) => {
+... [35 lines] ...
+});
+
+// Vapi Proxy Routes
+router.get("/vapi/assistants", async (_req: Request, res: Response) => {
   try {
-    const files = req.files as Express.Multer.File[];
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: "No files uploaded" });
-    }
-
-    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
-    const mediaUrls = files.map((file) => `${appUrl}/uploads/${file.filename}`);
-
-    res.json({ mediaUrls });
+    const assistants = await listVapiAssistants();
+    res.json(assistants);
   } catch (error: any) {
-    console.error("Marketing media upload error:", error);
-    res.status(500).json({ message: error.message || "Failed to upload files" });
+    res.status(500).json({ message: error.message });
   }
 });
 

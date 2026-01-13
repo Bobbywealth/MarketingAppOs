@@ -181,6 +181,56 @@ export function registerRoutes(app: Express) {
   });
   // #endregion agent log
 
+  // File download/serve endpoint
+  app.get("/uploads/:filename", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const filename = req.params.filename;
+      const filePath = path.join(UPLOAD_DIR, filename);
+
+      // Check if file exists
+      if (!existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Get file stats for size and modified date
+      const stats = await fs.stat(filePath);
+      
+      // Set appropriate headers
+      const ext = path.extname(filename).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.ogg': 'video/ogg',
+        '.mov': 'video/quicktime'
+      };
+
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', stats.size);
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      
+      // If download query param is present, force download
+      if (req.query.download === 'true') {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      }
+
+      // Stream the file
+      res.sendFile(filePath);
+    } catch (error: any) {
+      console.error('Download error:', error);
+      res.status(500).json({ 
+        message: "Failed to download file", 
+        error: error.message 
+      });
+    }
+  });
+
   // Mount modularized routers
   app.use("/api/leads", leadsRouter);
   app.use("/api/marketing-center", marketingCenterRouter);
@@ -456,6 +506,43 @@ export function registerRoutes(app: Express) {
         checkoutUrl: session.checkoutUrl,
         sessionId: session.sessionId,
       });
+
+      // Schedule abandoned cart reminder
+      try {
+        let effectiveLeadId = leadId;
+        if (!effectiveLeadId && email) {
+          const matchedLead = await storage.getLeadByEmail(email);
+          if (matchedLead) {
+            effectiveLeadId = matchedLead.id;
+          }
+        }
+
+        if (effectiveLeadId) {
+          // Cancel any existing pending reminders first
+          await storage.cancelLeadAutomations(effectiveLeadId, "abandoned_cart_reminder");
+          
+          // Schedule new one for 24h from now
+          const scheduledFor = new Date();
+          scheduledFor.setHours(scheduledFor.getHours() + 24);
+          
+          await storage.createLeadAutomation({
+            leadId: effectiveLeadId,
+            type: "abandoned_cart_reminder",
+            trigger: "time_delay",
+            triggerConditions: { delayHours: 24 },
+            actionType: "email",
+            actionData: { 
+              checkoutUrl: session.checkoutUrl, 
+              packageName: pkg.name,
+              clientName: name
+            },
+            status: "pending",
+            scheduledFor
+          });
+        }
+      } catch (automationError) {
+        console.warn("⚠️ Failed to schedule abandoned cart reminder:", automationError);
+      }
     } catch (error: any) {
       console.error('Checkout session creation error:', error);
       res.status(500).json({
@@ -510,6 +597,43 @@ export function registerRoutes(app: Express) {
         success: true,
         message: "Enrollment email sent successfully",
       });
+
+      // Schedule abandoned cart reminder
+      try {
+        let effectiveLeadId = null;
+        if (email) {
+          const matchedLead = await storage.getLeadByEmail(email);
+          if (matchedLead) {
+            effectiveLeadId = matchedLead.id;
+          }
+        }
+
+        if (effectiveLeadId) {
+          // Cancel any existing pending reminders first
+          await storage.cancelLeadAutomations(effectiveLeadId, "abandoned_cart_reminder");
+          
+          // Schedule new one for 24h from now
+          const scheduledFor = new Date();
+          scheduledFor.setHours(scheduledFor.getHours() + 24);
+          
+          await storage.createLeadAutomation({
+            leadId: effectiveLeadId,
+            type: "abandoned_cart_reminder",
+            trigger: "time_delay",
+            triggerConditions: { delayHours: 24 },
+            actionType: "email",
+            actionData: { 
+              checkoutUrl: session.checkoutUrl, 
+              packageName: pkg.name,
+              clientName: name
+            },
+            status: "pending",
+            scheduledFor
+          });
+        }
+      } catch (automationError) {
+        console.warn("⚠️ Failed to schedule abandoned cart reminder for enrollment email:", automationError);
+      }
     } catch (error: any) {
       console.error('Send enrollment email error:', error);
       res.status(500).json({
@@ -605,6 +729,13 @@ export function registerRoutes(app: Express) {
             clientId: createdClient?.id || null,
             notes: `${matchedLead.notes || ""}\nConverted via Stripe payment on ${now.toISOString()} (session ${sessionId})`,
           } as any);
+
+          // Cancel any pending abandoned cart reminders
+          try {
+            await storage.cancelLeadAutomations(matchedLead.id, "abandoned_cart_reminder");
+          } catch (automationError) {
+            console.warn("⚠️ Failed to cancel abandoned cart reminders:", automationError);
+          }
 
           // Link user account if created during signup
           const sourceMetadata = matchedLead.sourceMetadata as any;
@@ -982,56 +1113,6 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error fetching discount analytics:", error);
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  // File download/serve endpoint
-  app.get("/uploads/:filename", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const filename = req.params.filename;
-      const filePath = path.join(UPLOAD_DIR, filename);
-
-      // Check if file exists
-      if (!existsSync(filePath)) {
-        return res.status(404).json({ message: "File not found" });
-      }
-
-      // Get file stats for size and modified date
-      const stats = await fs.stat(filePath);
-      
-      // Set appropriate headers
-      const ext = path.extname(filename).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.mp4': 'video/mp4',
-        '.webm': 'video/webm',
-        '.ogg': 'video/ogg',
-        '.mov': 'video/quicktime'
-      };
-
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-      
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', stats.size);
-      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-      
-      // If download query param is present, force download
-      if (req.query.download === 'true') {
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      }
-
-      // Stream the file
-      res.sendFile(filePath);
-    } catch (error: any) {
-      console.error('Download error:', error);
-      res.status(500).json({ 
-        message: "Failed to download file", 
-        error: error.message 
-      });
     }
   });
 

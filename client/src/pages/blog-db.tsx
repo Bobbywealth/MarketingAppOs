@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Calendar, User, Tag, ArrowRight } from "lucide-react";
+import { ArrowLeft, Search, Calendar, User, Tag, ArrowRight, Edit } from "lucide-react";
 import { HeaderLogo, FooterLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { getEffectiveRole } from "@/lib/effective-role";
 
 type BlogPost = {
   id: string;
@@ -28,6 +30,10 @@ export default function BlogPageDb() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
+
+  const { user } = useAuth();
+  const effectiveRole = getEffectiveRole(user?.role);
+  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'manager';
 
   const { data: blogPosts = [], isLoading } = useQuery<BlogPost[]>({
     queryKey: ["/api/blog-posts"],
@@ -107,6 +113,14 @@ export default function BlogPageDb() {
                 <HeaderLogo />
               </Link>
               <div className="flex items-center gap-4">
+                {isAdmin && (
+                  <Link href={`/admin/blog?edit=${viewingPost.id}`}>
+                    <Button variant="outline" size="sm">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Post
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="ghost" size="sm" onClick={() => setViewingPost(null)}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Blog
@@ -312,10 +326,19 @@ export default function BlogPageDb() {
                             </Badge>
                           ))}
                         </div>
-                        <Button className="w-full group-hover:bg-primary group-hover:text-white transition-colors" onClick={() => setViewingPost(post)}>
-                          Read More
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button className="flex-1 group-hover:bg-primary group-hover:text-white transition-colors" onClick={() => setViewingPost(post)}>
+                            Read More
+                            <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                          {isAdmin && (
+                            <Link href={`/admin/blog?edit=${post.id}`}>
+                              <Button variant="outline" size="icon" title="Edit Post">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -363,17 +386,31 @@ export default function BlogPageDb() {
                           <span>{new Date(post.publishedAt).toLocaleDateString()}</span>
                         </div>
                       )}
-                      <Button
-                        variant="outline"
-                        className="w-full group-hover:bg-primary group-hover:text-white transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewingPost(post);
-                        }}
-                      >
-                        Read More
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1 group-hover:bg-primary group-hover:text-white transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingPost(post);
+                          }}
+                        >
+                          Read More
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                        {isAdmin && (
+                          <Link href={`/admin/blog?edit=${post.id}`}>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              title="Edit Post"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

@@ -2,6 +2,7 @@ import { storage } from "./storage";
 import { sendEmail, marketingTemplates } from "./emailService";
 import { sendSms, sendWhatsApp } from "./twilioService";
 import { sendTelegramMessage } from "./telegramService";
+import { startVapiCall } from "./vapiService";
 
 /**
  * Background process to handle bulk sending for a marketing broadcast.
@@ -59,9 +60,9 @@ export async function processMarketingBroadcast(broadcastId: string) {
       const allLeads = await storage.getLeads();
       targetLeads = allLeads.filter((l) => {
         if (broadcast.type === "email" && !l.optInEmail) return false;
-        if ((broadcast.type === "sms" || broadcast.type === "whatsapp") && !l.optInSms) return false;
+        if ((broadcast.type === "sms" || broadcast.type === "whatsapp" || broadcast.type === "voice") && !l.optInSms) return false;
         if (!l.email && broadcast.type === "email") return false;
-        if (!l.phone && (broadcast.type === "sms" || broadcast.type === "whatsapp")) return false;
+        if (!l.phone && (broadcast.type === "sms" || broadcast.type === "whatsapp" || broadcast.type === "voice")) return false;
 
         // Apply filters if specific
         if (broadcast.audience === "specific" && broadcast.filters) {
@@ -77,9 +78,9 @@ export async function processMarketingBroadcast(broadcastId: string) {
       const allClients = await storage.getClients();
       targetClients = allClients.filter((c) => {
         if (broadcast.type === "email" && !c.optInEmail) return false;
-        if ((broadcast.type === "sms" || broadcast.type === "whatsapp") && !c.optInSms) return false;
+        if ((broadcast.type === "sms" || broadcast.type === "whatsapp" || broadcast.type === "voice") && !c.optInSms) return false;
         if (!c.email && broadcast.type === "email") return false;
-        if (!c.phone && (broadcast.type === "sms" || broadcast.type === "whatsapp")) return false;
+        if (!c.phone && (broadcast.type === "sms" || broadcast.type === "whatsapp" || broadcast.type === "voice")) return false;
         return true;
       });
     }
@@ -99,7 +100,7 @@ export async function processMarketingBroadcast(broadcastId: string) {
             leadIds.includes(l.id) && 
             !targetLeads.some(tl => tl.id === l.id) &&
             ((broadcast.type === "email" && l.optInEmail && l.email) || 
-             ((broadcast.type === "sms" || broadcast.type === "whatsapp") && l.optInSms && l.phone))
+             ((broadcast.type === "sms" || broadcast.type === "whatsapp" || broadcast.type === "voice") && l.optInSms && l.phone))
           )
         ];
       }
@@ -112,7 +113,7 @@ export async function processMarketingBroadcast(broadcastId: string) {
             clientIds.includes(c.id) && 
             !targetClients.some(tc => tc.id === c.id) &&
             ((broadcast.type === "email" && c.optInEmail && c.email) || 
-             ((broadcast.type === "sms" || broadcast.type === "whatsapp") && c.optInSms && c.phone))
+             ((broadcast.type === "sms" || broadcast.type === "whatsapp" || broadcast.type === "voice") && c.optInSms && c.phone))
           )
         ];
       }
@@ -162,6 +163,13 @@ export async function processMarketingBroadcast(broadcastId: string) {
           result = await sendEmail((recipient as any).email!, subject, html);
         } else if (broadcast.type === "whatsapp") {
           result = await sendWhatsApp((recipient as any).phone!, broadcast.content, broadcast.mediaUrls ?? undefined);
+        } else if (broadcast.type === "voice") {
+          // For Voice calls, we use broadcast.content as the assistantId
+          result = await startVapiCall(
+            (recipient as any).phone!, 
+            broadcast.content,
+            (recipient as any).company || (recipient as any).name || undefined
+          );
         } else {
           result = await sendSms((recipient as any).phone!, broadcast.content, broadcast.mediaUrls ?? undefined);
         }

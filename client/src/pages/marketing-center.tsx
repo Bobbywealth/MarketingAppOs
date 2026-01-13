@@ -24,7 +24,10 @@ import {
   Image,
   Video,
   X,
-  Layout
+  Layout,
+  Phone,
+  Sparkles,
+  ExternalLink
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -105,7 +108,7 @@ export default function MarketingCenter() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("composer");
   const [historyFilter, setHistoryFilter] = useState<"all" | "scheduled" | "completed">("all");
-  const [broadcastType, setBroadcastType] = useState<"email" | "sms" | "whatsapp" | "telegram">("email");
+  const [broadcastType, setBroadcastType] = useState<"email" | "sms" | "whatsapp" | "telegram" | "voice">("email");
   const [audience, setAudience] = useState("all");
   const [groupId, setGroupId] = useState<string>("");
   const [customRecipient, setCustomRecipient] = useState("");
@@ -130,7 +133,7 @@ export default function MarketingCenter() {
 
   // Template Management State
   const [newTemplateName, setNewTemplateName] = useState("");
-  const [newTemplateType, setNewTemplateType] = useState<"email" | "sms" | "whatsapp" | "telegram">("email");
+  const [newTemplateType, setNewTemplateType] = useState<"email" | "sms" | "whatsapp" | "telegram" | "voice">("email");
   const [newTemplateSubject, setNewTemplateSubject] = useState("");
   const [newTemplateContent, setNewTemplateContent] = useState("");
   const [newTemplateMediaUrls, setNewTemplateMediaUrls] = useState<string[]>([]);
@@ -167,6 +170,12 @@ export default function MarketingCenter() {
   // Templates Query
   const { data: templates = [], isLoading: templatesLoading } = useQuery<MarketingTemplate[]>({
     queryKey: ["/api/marketing-center/templates"],
+  });
+
+  // Vapi Assistants Query
+  const { data: vapiAssistants = [], isLoading: assistantsLoading } = useQuery<any[]>({
+    queryKey: ["/api/marketing-center/vapi/assistants"],
+    enabled: broadcastType === "voice",
   });
 
   const createTemplateMutation = useMutation({
@@ -419,7 +428,11 @@ export default function MarketingCenter() {
 
   const handleSend = () => {
     if (!content.trim()) {
-      toast({ title: "Content Required", description: "Please enter your message.", variant: "destructive" });
+      toast({ 
+        title: broadcastType === 'voice' ? "Assistant ID Required" : "Content Required", 
+        description: broadcastType === 'voice' ? "Please enter your Vapi Assistant ID." : "Please enter your message.", 
+        variant: "destructive" 
+      });
       return;
     }
     if (broadcastType === 'email' && !subject.trim()) {
@@ -495,6 +508,32 @@ export default function MarketingCenter() {
     if (audience === 'clients') return stats.clients.optedIn;
     return 0;
   };
+
+  const getSmsStats = () => {
+    // Basic GSM-7 detection
+    const isUnicode = /[^\u0000-\u007F]/.test(content);
+    const segmentLimit = isUnicode ? 70 : 160;
+    const segments = Math.ceil(content.length / segmentLimit) || 1;
+    const isMms = mediaUrls.length > 0;
+    
+    // Estimate costs (Standard Twilio US rates)
+    const recipients = getRecipientCount();
+    let estCostPerRecipient = 0;
+    if (broadcastType === 'sms') {
+      estCostPerRecipient = isMms ? 0.02 : (segments * 0.0079);
+    } else if (broadcastType === 'whatsapp') {
+      estCostPerRecipient = 0.005; // Simplified WhatsApp rate
+    }
+    
+    return {
+      segments,
+      isUnicode,
+      isMms,
+      totalEstCost: recipients * estCostPerRecipient
+    };
+  };
+
+  const smsStats = getSmsStats();
 
   const totalReachDisplay = statsLoading
     ? "—"
@@ -612,14 +651,22 @@ export default function MarketingCenter() {
                         >
                           <MessageSquare className="w-4 h-4 mr-2 text-emerald-500" /> WhatsApp
                         </Button>
-                      <Button 
-                        variant={broadcastType === 'telegram' ? 'default' : 'ghost'} 
-                        size="sm" 
-                        onClick={() => setBroadcastType('telegram')}
-                        className="font-bold h-8"
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2 text-sky-500" /> Telegram
-                      </Button>
+                        <Button 
+                          variant={broadcastType === 'telegram' ? 'default' : 'ghost'} 
+                          size="sm" 
+                          onClick={() => setBroadcastType('telegram')}
+                          className="font-bold h-8"
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2 text-sky-500" /> Telegram
+                        </Button>
+                        <Button 
+                          variant={broadcastType === 'voice' ? 'default' : 'ghost'} 
+                          size="sm" 
+                          onClick={() => setBroadcastType('voice')}
+                          className="font-bold h-8"
+                        >
+                          <Phone className="w-4 h-4 mr-2 text-rose-500" /> AI Voice
+                        </Button>
                       </div>
                   </div>
                 </CardHeader>
@@ -647,7 +694,9 @@ export default function MarketingCenter() {
                             ? 'Recipient Email'
                             : broadcastType === 'telegram'
                               ? 'Recipient Telegram chat_id'
-                              : 'Recipient Phone Number'}
+                              : broadcastType === 'voice'
+                                ? 'Recipient Phone (Voice)'
+                                : 'Recipient Phone Number'}
                         </Label>
                         <Input 
                           placeholder={
@@ -879,26 +928,93 @@ export default function MarketingCenter() {
                   )}
 
                   <div className="space-y-2">
-                    <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Message Content</Label>
-                    <Textarea 
-                      placeholder={
-                        broadcastType === 'email'
-                          ? "Write your premium marketing email here (HTML supported)..."
-                          : broadcastType === 'whatsapp'
-                            ? "Write your WhatsApp message here..."
-                            : broadcastType === 'telegram'
-                              ? "Write your Telegram message here..."
-                              : "Write your concise SMS message here..."
-                      }
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      className="min-h-[300px] glass border-2 resize-none text-lg leading-relaxed focus-visible:ring-primary/20"
-                    />
-                    {(broadcastType === 'sms' || broadcastType === 'whatsapp') && (
-                      <div className="flex justify-between items-center px-1">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase">Estimated Segments: {Math.ceil(content.length / 160)}</p>
-                        <p className={`text-xs font-bold ${content.length > 160 ? 'text-amber-500' : 'text-muted-foreground'}`}>{content.length} / 160 characters</p>
+                    <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                      {broadcastType === 'voice' ? 'Vapi Assistant ID' : 'Message Content'}
+                    </Label>
+                    {broadcastType === 'voice' ? (
+                      <div className="space-y-4">
+                        <div className="flex gap-4">
+                          <div className="flex-1 space-y-2">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Select Assistant</Label>
+                            <Select value={content} onValueChange={setContent}>
+                              <SelectTrigger className="h-12 glass border-2">
+                                <SelectValue placeholder={assistantsLoading ? "Loading assistants..." : "Choose a Vapi Assistant"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {vapiAssistants.map((assistant) => (
+                                  <SelectItem key={assistant.id} value={assistant.id}>
+                                    {assistant.name || assistant.id}
+                                  </SelectItem>
+                                ))}
+                                {vapiAssistants.length === 0 && !assistantsLoading && (
+                                  <SelectItem value="none" disabled>No assistants found</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Or Enter ID Manually</Label>
+                            <Input 
+                              placeholder="Assistant UUID"
+                              value={content}
+                              onChange={(e) => setContent(e.target.value)}
+                              className="h-12 glass border-2 font-mono"
+                            />
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 space-y-3">
+                          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                            <Sparkles className="w-4 h-4" />
+                            <span className="text-xs font-black uppercase">Vapi AI Voice Integration</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Launch automated AI voice calls to your selected audience. The assistant defined by this ID will engage in a human-like conversation with each recipient. 
+                            <br /><br />
+                            <span className="font-bold">Personalization:</span> The recipient's name and company will be passed to Vapi for a personalized experience.
+                          </p>
+                          <Button 
+                            variant="link" 
+                            className="p-0 h-auto text-xs text-rose-500 font-bold"
+                            onClick={() => window.open('https://dashboard.vapi.ai', '_blank')}
+                          >
+                            Open Vapi Dashboard <ExternalLink className="w-3 h-3 ml-1" />
+                          </Button>
+                        </div>
                       </div>
+                    ) : (
+                      <>
+                        <Textarea 
+                          placeholder={
+                            broadcastType === 'email'
+                              ? "Write your premium marketing email here (HTML supported)..."
+                              : broadcastType === 'whatsapp'
+                                ? "Write your WhatsApp message here..."
+                                : broadcastType === 'telegram'
+                                  ? "Write your Telegram message here..."
+                                  : "Write your concise SMS message here..."
+                          }
+                          value={content}
+                          onChange={(e) => setContent(e.target.value)}
+                          className="min-h-[300px] glass border-2 resize-none text-lg leading-relaxed focus-visible:ring-primary/20"
+                        />
+                        {(broadcastType === 'sms' || broadcastType === 'whatsapp') && (
+                          <div className="flex justify-between items-center px-1">
+                            <div className="flex gap-2">
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                                {smsStats.isMms ? 'MMS Mode (Higher Limit)' : `Segments: ${smsStats.segments}`}
+                              </p>
+                              {smsStats.isUnicode && (
+                                <Badge variant="outline" className="h-4 text-[8px] font-black uppercase text-amber-500 border-amber-500/20">
+                                  Unicode/Emoji Detected
+                                </Badge>
+                              )}
+                            </div>
+                            <p className={`text-xs font-bold ${content.length > (smsStats.isUnicode ? 70 : 160) ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                              {content.length} / {smsStats.isMms ? '1600' : (smsStats.isUnicode ? '70' : '160')}
+                            </p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -966,7 +1082,7 @@ export default function MarketingCenter() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center py-2 border-b border-dashed">
                       <span className="text-muted-foreground font-medium">Channel</span>
-                      <Badge className="font-black uppercase">{broadcastType}</Badge>
+                      <Badge className={`font-black uppercase ${broadcastType === 'voice' ? 'bg-rose-500 hover:bg-rose-600' : ''}`}>{broadcastType}</Badge>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-dashed">
                       <span className="text-muted-foreground font-medium">Recipients</span>
@@ -994,6 +1110,21 @@ export default function MarketingCenter() {
                         )}
                       </div>
                     </div>
+                    {broadcastType !== 'email' && (
+                      <div className="flex justify-between items-center py-2 border-b border-dashed bg-primary/5 -mx-6 px-6">
+                        <span className="text-muted-foreground font-medium">
+                          {broadcastType === 'voice' ? 'Est. Vapi Cost' : 'Est. Twilio Cost'}
+                        </span>
+                        <div className="text-right">
+                          <span className="text-lg font-black text-primary">
+                            ${broadcastType === 'voice' ? (getRecipientCount() * 0.15).toFixed(2) : smsStats.totalEstCost.toFixed(3)}
+                          </span>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold">
+                            {broadcastType === 'voice' ? '~$0.15 / min' : (smsStats.isMms ? 'MMS Rate' : `SMS Rate (${smsStats.segments} segments)`)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
@@ -1103,13 +1234,15 @@ export default function MarketingCenter() {
                   <Card className="glass hover:shadow-xl transition-all duration-300 border-primary/10 overflow-hidden group">
                     <div className="flex flex-col md:flex-row md:items-center">
                       {/* Left: Type Icon */}
-                      <div className={`w-full md:w-32 h-20 md:h-auto flex items-center justify-center ${broadcast.type === 'email' ? 'bg-blue-500/10' : broadcast.type === 'whatsapp' ? 'bg-emerald-500/10' : 'bg-green-500/10'}`}>
+                      <div className={`w-full md:w-32 h-20 md:h-auto flex items-center justify-center ${broadcast.type === 'email' ? 'bg-blue-500/10' : broadcast.type === 'whatsapp' ? 'bg-emerald-500/10' : broadcast.type === 'voice' ? 'bg-rose-500/10' : 'bg-green-500/10'}`}>
                         {broadcast.type === 'email' ? (
                           <Mail className="w-8 h-8 text-blue-500" />
                         ) : broadcast.type === 'whatsapp' ? (
                           <MessageSquare className="w-8 h-8 text-emerald-500" />
                         ) : broadcast.type === 'telegram' ? (
                           <MessageSquare className="w-8 h-8 text-sky-500" />
+                        ) : broadcast.type === 'voice' ? (
+                          <Phone className="w-8 h-8 text-rose-500" />
                         ) : (
                           <MessageSquare className="w-8 h-8 text-green-500" />
                         )}
@@ -1119,7 +1252,11 @@ export default function MarketingCenter() {
                       <div className="flex-1 p-6 space-y-2 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-xl font-bold truncate max-w-[300px]">
-                            {broadcast.type === 'email' ? broadcast.subject : broadcast.content.substring(0, 50) + '...'}
+                            {broadcast.type === 'email' 
+                              ? broadcast.subject 
+                              : broadcast.type === 'voice'
+                                ? `Voice: ${broadcast.content.substring(0, 8)}...`
+                                : broadcast.content.substring(0, 50) + '...'}
                           </h3>
                           <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
                             {broadcast.audience === 'individual' ? `Individual: ${broadcast.customRecipient}` : broadcast.audience}
@@ -1132,6 +1269,11 @@ export default function MarketingCenter() {
                             <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px]">Completed</Badge>
                           ) : (
                             <Badge variant="destructive" className="font-black uppercase text-[10px]">{broadcast.status}</Badge>
+                          )}
+                          {broadcast.mediaUrls && broadcast.mediaUrls.length > 0 && (
+                            <Badge variant="outline" className="font-bold text-[10px] bg-primary/5 text-primary border-primary/20">
+                              <Image className="w-3 h-3 mr-1" /> {broadcast.mediaUrls.length} Media
+                            </Badge>
                           )}
 
                           {/* Always-visible diagnostics button (mobile-friendly) */}

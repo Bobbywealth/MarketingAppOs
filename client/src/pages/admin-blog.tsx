@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,12 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Trash2, Edit, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Edit, ExternalLink, Eye, PenTool } from "lucide-react";
 import { SimpleUploader } from "@/components/SimpleUploader";
+import ReactMarkdown from "react-markdown";
 
 type BlogStatus = "draft" | "published" | "archived";
 
@@ -67,6 +69,20 @@ export default function AdminBlog() {
   const { data: posts = [], isLoading } = useQuery<BlogPost[]>({
     queryKey: ["/api/admin/blog-posts"],
   });
+
+  // Handle ?edit=ID query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get("edit");
+    if (editId && posts.length > 0 && !editing) {
+      const post = posts.find(p => p.id === editId);
+      if (post) {
+        onOpenEdit(post);
+        // Clear the param without refreshing
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [posts, editing]);
 
   const sorted = useMemo(() => {
     return [...posts].sort((a, b) => {
@@ -371,15 +387,42 @@ export default function AdminBlog() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="content">Content *</Label>
-                  <Textarea
-                    id="content"
-                    value={form.content}
-                    onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-                    rows={14}
-                    placeholder="Write the blog post content (markdown/plaintext)."
-                    required
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="content">Content *</Label>
+                    <span className="text-xs text-muted-foreground">Markdown supported</span>
+                  </div>
+                  <Tabs defaultValue="edit" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-2">
+                      <TabsTrigger value="edit" className="flex items-center gap-2">
+                        <PenTool className="w-4 h-4" />
+                        Edit
+                      </TabsTrigger>
+                      <TabsTrigger value="preview" className="flex items-center gap-2">
+                        <Eye className="w-4 h-4" />
+                        Preview
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="edit">
+                      <Textarea
+                        id="content"
+                        value={form.content}
+                        onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+                        rows={14}
+                        placeholder="Write the blog post content (markdown/plaintext)."
+                        required
+                        className="font-mono text-sm"
+                      />
+                    </TabsContent>
+                    <TabsContent value="preview">
+                      <div className="border rounded-md p-4 bg-white dark:bg-zinc-950 min-h-[350px] max-h-[500px] overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
+                        {form.content ? (
+                          <ReactMarkdown>{form.content}</ReactMarkdown>
+                        ) : (
+                          <p className="text-muted-foreground italic text-center py-20">Nothing to preview yet.</p>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </div>
 
@@ -426,7 +469,11 @@ export default function AdminBlog() {
               </TableHeader>
               <TableBody>
                 {sorted.map((p) => (
-                  <TableRow key={p.id}>
+                  <TableRow 
+                    key={p.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => onOpenEdit(p)}
+                  >
                     <TableCell>
                       <div className="font-medium">{p.title}</div>
                       <div className="text-xs text-muted-foreground">
@@ -434,19 +481,19 @@ export default function AdminBlog() {
                         {p.author || "—"}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Badge variant={p.status === "published" ? "default" : p.status === "archived" ? "secondary" : "outline"}>
                         {p.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <code className="text-xs bg-muted px-2 py-1 rounded">{p.slug}</code>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                       {p.publishedAt ? new Date(p.publishedAt).toLocaleString() : "—"}
                     </TableCell>
-                    <TableCell>{p.featured ? "Yes" : "No"}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell onClick={(e) => e.stopPropagation()}>{p.featured ? "Yes" : "No"}</TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"

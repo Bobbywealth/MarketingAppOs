@@ -481,7 +481,7 @@ export const leadAutomations = pgTable("lead_automations", {
   triggerConditions: jsonb("trigger_conditions"), // {stage: 'qualified', delay_days: 2}
   actionType: varchar("action_type").notNull(), // send_email, send_sms
   actionData: jsonb("action_data"), // {template_id, message, subject}
-  status: varchar("status").notNull().default("pending"), // pending, sent, failed
+  status: varchar("status").notNull().default("pending"), // pending, processing, sent, failed, cancelled
   scheduledFor: timestamp("scheduled_for"),
   executedAt: timestamp("executed_at"),
   createdAt: timestamp("created_at").defaultNow(),

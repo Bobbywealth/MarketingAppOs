@@ -16,8 +16,11 @@ import { startVisitsAutomation } from "./visitsAutomation";
 import { startTaskAutomation } from "./taskAutomation";
 import { startMarketingBroadcastScheduler } from "./marketingBroadcastScheduler";
 import { startBackgroundJobs } from "./backgroundJobs";
+import { startLeadAutomationProcessor } from "./leadAutomationProcessor";
 import { storage } from "./storage";
 import { ensureMinimumSchema } from "./ensureSchema";
+import path from "node:path";
+import { existsSync } from "node:fs";
 
 // #region agent log
 const AGENT_DEBUG_LOG_PATH = "/Users/bobbyc/Downloads/MarketingOS 2/.cursor/debug.log";
@@ -28,6 +31,32 @@ function agentAppendLog(payload: any) {
 
 const app = express();
 app.set('trust proxy', 1); // Trust the first proxy (e.g. Nginx, Replit, Heroku)
+
+// #region Twilio media bypass
+// We must allow Twilio to fetch media (images/video) for MMS without authentication.
+// This route is placed at the very top of the app to bypass all security/auth middleware.
+app.get("/uploads/:filename", (req, res, next) => {
+  const ua = (req.get("user-agent") || "").toLowerCase();
+  const hasTwilioHeader = !!req.get("x-twilio-signature") || ua.includes("twilio");
+  
+  if (hasTwilioHeader) {
+    const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
+    const filePath = path.join(UPLOAD_DIR, req.params.filename);
+
+    if (existsSync(filePath)) {
+      const ext = path.extname(req.params.filename).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+        '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4',
+        '.webm': 'video/webm', '.ogg': 'video/ogg', '.mov': 'video/quicktime'
+      };
+      res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+      return res.sendFile(filePath);
+    }
+  }
+  next();
+});
+// #endregion
 
 // Security Middleware
 // In development, relax CSP for Vite HMR; in production, use strict defaults but allow Vimeo
@@ -179,6 +208,8 @@ app.use((req, res, next) => {
   startMarketingBroadcastScheduler();
   // Start general background jobs (invoices, meeting reminders)
   startBackgroundJobs();
+  // Start lead automation processor (abandoned cart reminders, etc)
+  startLeadAutomationProcessor();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
