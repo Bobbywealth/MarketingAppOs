@@ -34,6 +34,7 @@ import {
   marketingBroadcastRecipients,
   marketingGroups,
   marketingGroupMembers,
+  marketingTemplatesTable,
   courses,
   courseModules,
   courseLessons,
@@ -130,6 +131,8 @@ import {
   type InsertMarketingGroup,
   type MarketingGroupMember,
   type InsertMarketingGroupMember,
+  type MarketingTemplate,
+  type InsertMarketingTemplate,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
@@ -334,6 +337,13 @@ export interface IStorage {
   getMarketingGroupMembers(groupId: string): Promise<MarketingGroupMember[]>;
   addMarketingGroupMember(data: InsertMarketingGroupMember): Promise<MarketingGroupMember>;
   removeMarketingGroupMember(id: number): Promise<void>;
+
+  // Marketing Template operations
+  getMarketingTemplates(): Promise<MarketingTemplate[]>;
+  getMarketingTemplate(id: string): Promise<MarketingTemplate | undefined>;
+  createMarketingTemplate(data: InsertMarketingTemplate): Promise<MarketingTemplate>;
+  updateMarketingTemplate(id: string, data: Partial<InsertMarketingTemplate>): Promise<MarketingTemplate>;
+  deleteMarketingTemplate(id: string): Promise<void>;
 
   // Course operations
   getCourses(creatorId?: string): Promise<Course[]>;
@@ -2516,6 +2526,34 @@ export class DatabaseStorage implements IStorage {
 
   async removeMarketingGroupMember(id: number): Promise<void> {
     await db.delete(marketingGroupMembers).where(eq(marketingGroupMembers.id, id));
+  }
+
+  // Marketing Template operations
+  async getMarketingTemplates(): Promise<MarketingTemplate[]> {
+    return await db.select().from(marketingTemplatesTable).orderBy(desc(marketingTemplatesTable.createdAt));
+  }
+
+  async getMarketingTemplate(id: string): Promise<MarketingTemplate | undefined> {
+    const [template] = await db.select().from(marketingTemplatesTable).where(eq(marketingTemplatesTable.id, id));
+    return template;
+  }
+
+  async createMarketingTemplate(data: InsertMarketingTemplate): Promise<MarketingTemplate> {
+    const [template] = await db.insert(marketingTemplatesTable).values(data).returning();
+    return template;
+  }
+
+  async updateMarketingTemplate(id: string, data: Partial<InsertMarketingTemplate>): Promise<MarketingTemplate> {
+    const [template] = await db
+      .update(marketingTemplatesTable)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketingTemplatesTable.id, id))
+      .returning();
+    return template;
+  }
+
+  async deleteMarketingTemplate(id: string): Promise<void> {
+    await db.delete(marketingTemplatesTable).where(eq(marketingTemplatesTable.id, id));
   }
 
   // Course operations

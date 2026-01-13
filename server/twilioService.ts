@@ -33,7 +33,7 @@ function normalizeE164Phone(input: string, defaultCountry: 'US' = 'US'): { ok: t
   return { ok: false, error: `Unrecognized phone format (expected E.164 like +15551234567): "${raw}"` };
 }
 
-export async function sendSms(to: string, body: string) {
+export async function sendSms(to: string, body: string, mediaUrl?: string | string[]) {
   if (!client) {
     console.warn('⚠️ Twilio not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER in .env');
     return { success: false, error: 'Twilio not configured' };
@@ -44,12 +44,16 @@ export async function sendSms(to: string, body: string) {
     if (!normalizedTo.ok) return { success: false, error: normalizedTo.error };
 
     const normalizedBody = String(body ?? '').trim();
-    if (!normalizedBody) return { success: false, error: 'Message body is required' };
+    if (!normalizedBody && !mediaUrl) return { success: false, error: 'Message body or media is required' };
 
     const createPayload: Record<string, any> = {
       body: normalizedBody,
       to: normalizedTo.value,
     };
+
+    if (mediaUrl) {
+      createPayload.mediaUrl = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
+    }
 
     // Prefer Messaging Service if provided (best practice for scaling/toll-free).
     if (messagingServiceSid) {
@@ -92,7 +96,7 @@ export async function sendSms(to: string, body: string) {
   }
 }
 
-export async function sendWhatsApp(to: string, body: string) {
+export async function sendWhatsApp(to: string, body: string, mediaUrl?: string | string[]) {
   if (!client) {
     console.warn('⚠️ Twilio not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN in .env');
     return { success: false, error: 'Twilio not configured' };
@@ -103,12 +107,16 @@ export async function sendWhatsApp(to: string, body: string) {
     if (!normalizedTo.ok) return { success: false, error: normalizedTo.error };
 
     const normalizedBody = String(body ?? '').trim();
-    if (!normalizedBody) return { success: false, error: 'Message body is required' };
+    if (!normalizedBody && !mediaUrl) return { success: false, error: 'Message body or media is required' };
 
     const createPayload: Record<string, any> = {
       body: normalizedBody,
       to: `whatsapp:${normalizedTo.value}`,
     };
+
+    if (mediaUrl) {
+      createPayload.mediaUrl = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
+    }
 
     // For WhatsApp, we MUST use a WhatsApp-enabled number or Messaging Service
     if (messagingServiceSid) {

@@ -161,9 +161,9 @@ export async function processMarketingBroadcast(broadcastId: string) {
           );
           result = await sendEmail((recipient as any).email!, subject, html);
         } else if (broadcast.type === "whatsapp") {
-          result = await sendWhatsApp((recipient as any).phone!, broadcast.content);
+          result = await sendWhatsApp((recipient as any).phone!, broadcast.content, broadcast.mediaUrls ?? undefined);
         } else {
-          result = await sendSms((recipient as any).phone!, broadcast.content);
+          result = await sendSms((recipient as any).phone!, broadcast.content, broadcast.mediaUrls ?? undefined);
         }
 
         if (result.success) {

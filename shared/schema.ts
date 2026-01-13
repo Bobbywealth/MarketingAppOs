@@ -748,6 +748,7 @@ export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   status: varchar("status").notNull().default("pending"), // 'pending', 'sending', 'completed', 'failed'
   subject: varchar("subject"),
   content: text("content").notNull(),
+  mediaUrls: text("media_urls").array(), // For images/videos
   audience: varchar("audience").notNull(), // 'all', 'leads', 'clients', 'specific', 'individual', 'group'
   groupId: varchar("group_id").references(() => marketingGroups.id), // Added for custom groups
   customRecipient: text("custom_recipient"), // Specific email or phone number for 'individual' audience
@@ -803,6 +804,30 @@ export const marketingBroadcastRecipientsRelations = relations(marketingBroadcas
     references: [clients.id],
   }),
 }));
+
+// Marketing Templates table
+export const marketingTemplatesTable = pgTable("marketing_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(), // 'email', 'sms', 'whatsapp', 'telegram'
+  subject: varchar("subject"),
+  content: text("content").notNull(),
+  mediaUrls: text("media_urls").array(), // For images/videos
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const marketingTemplatesRelations = relations(marketingTemplatesTable, ({ one }) => ({
+  author: one(users, {
+    fields: [marketingTemplatesTable.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const insertMarketingTemplateSchema = createInsertSchema(marketingTemplatesTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMarketingTemplate = z.infer<typeof insertMarketingTemplateSchema>;
+export type MarketingTemplate = typeof marketingTemplatesTable.$inferSelect;
 
 // Content Posts table (Content Calendar)
 export const contentPosts = pgTable("content_posts", {

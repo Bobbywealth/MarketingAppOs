@@ -17,10 +17,14 @@ import {
   Eye,
   ArrowRight,
   Plus,
-  Repeat,
-  Trash2,
-  UserPlus,
-  UserMinus
+  Repeat, 
+  Trash2, 
+  UserPlus, 
+  UserMinus,
+  Image,
+  Video,
+  X,
+  Layout
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -114,11 +118,23 @@ export default function MarketingCenter() {
   const [recurringInterval, setRecurringInterval] = useState(1);
   const [recurringEndDateLocal, setRecurringEndDateLocal] = useState("");
 
+  // Media Upload State
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
   // Group Management State
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [selectedGroupForMembers, setSelectedGroupForMembers] = useState<MarketingGroup | null>(null);
   const [manualRecipientInput, setManualRecipientInput] = useState("");
+
+  // Template Management State
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateType, setNewTemplateType] = useState<"email" | "sms" | "whatsapp" | "telegram">("email");
+  const [newTemplateSubject, setNewTemplateSubject] = useState("");
+  const [newTemplateContent, setNewTemplateContent] = useState("");
+  const [newTemplateMediaUrls, setNewTemplateMediaUrls] = useState<string[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<MarketingTemplate | null>(null);
   
   // Marketing Stats Query
   const {
@@ -146,6 +162,48 @@ export default function MarketingCenter() {
       if (data.some(b => b.status === 'pending')) return 15000;
       return false;
     }
+  });
+
+  // Templates Query
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<MarketingTemplate[]>({
+    queryKey: ["/api/marketing-center/templates"],
+  });
+
+  const createTemplateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/marketing-center/templates", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/templates"] });
+      toast({ title: "Template Created" });
+      setNewTemplateName("");
+      setNewTemplateSubject("");
+      setNewTemplateContent("");
+    },
+  });
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; [key: string]: any }) => {
+      const res = await apiRequest("PATCH", `/api/marketing-center/templates/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/templates"] });
+      toast({ title: "Template Updated" });
+      setEditingTemplate(null);
+      setNewTemplateMediaUrls([]);
+    },
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/marketing-center/templates/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/templates"] });
+      toast({ title: "Template Deleted" });
+    },
   });
 
   const filteredBroadcasts = useMemo(() => {
@@ -196,6 +254,7 @@ export default function MarketingCenter() {
       // Reset form
       setSubject("");
       setContent("");
+      setMediaUrls([]);
       setSendMode("now");
       setScheduledAtLocal("");
     },
@@ -295,6 +354,69 @@ export default function MarketingCenter() {
     },
   });
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+
+    try {
+      const res = await fetch("/api/marketing-center/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      setMediaUrls((prev) => [...prev, ...data.mediaUrls]);
+      toast({ title: "Media Uploaded", description: `Successfully uploaded ${data.mediaUrls.length} file(s).` });
+    } catch (error: any) {
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      // Clear the input
+      e.target.value = "";
+    }
+  };
+
+  const removeMedia = (url: string) => {
+    setMediaUrls((prev) => prev.filter((u) => u !== url));
+  };
+
+  const handleTemplateFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+
+    try {
+      const res = await fetch("/api/marketing-center/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      setNewTemplateMediaUrls((prev) => [...prev, ...data.mediaUrls]);
+      toast({ title: "Media Uploaded", description: `Successfully uploaded ${data.mediaUrls.length} file(s).` });
+    } catch (error: any) {
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const handleSend = () => {
     if (!content.trim()) {
       toast({ title: "Content Required", description: "Please enter your message.", variant: "destructive" });
@@ -352,6 +474,7 @@ export default function MarketingCenter() {
       customRecipient: audience === 'individual' ? customRecipient : null,
       subject: broadcastType === 'email' ? subject : null,
       content,
+      mediaUrls: mediaUrls.length > 0 ? mediaUrls : null,
       scheduledAt: sendMode === "scheduled" ? new Date(scheduledAtLocal).toISOString() : null,
       isRecurring,
       recurringPattern: isRecurring ? recurringPattern : null,
@@ -444,6 +567,9 @@ export default function MarketingCenter() {
           </TabsTrigger>
           <TabsTrigger value="groups" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
             <Users className="w-4 h-4 mr-2" /> Groups
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+            <Layout className="w-4 h-4 mr-2" /> Templates
           </TabsTrigger>
           <TabsTrigger value="sms-inbox" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
             <MessageSquare className="w-4 h-4 mr-2" /> SMS Inbox
@@ -714,6 +840,32 @@ export default function MarketingCenter() {
                     </div>
                   )}
 
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Quick Templates</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {templates.filter(t => t.type === broadcastType).map(t => (
+                        <Button
+                          key={t.id}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-[10px] font-bold uppercase tracking-widest bg-primary/5 hover:bg-primary/10 border-primary/20"
+                          onClick={() => {
+                            if (t.type === 'email' && t.subject) {
+                              setSubject(t.subject);
+                            }
+                            setContent(t.content);
+                            toast({ title: "Template Applied", description: t.name });
+                          }}
+                        >
+                          {t.name}
+                        </Button>
+                      ))}
+                      {templates.filter(t => t.type === broadcastType).length === 0 && (
+                        <p className="text-[10px] text-muted-foreground font-medium italic">No {broadcastType} templates found. Create one in the Templates tab.</p>
+                      )}
+                    </div>
+                  </div>
+
                   {broadcastType === 'email' && (
                     <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                       <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Email Subject</Label>
@@ -749,6 +901,57 @@ export default function MarketingCenter() {
                       </div>
                     )}
                   </div>
+
+                  {/* Media Upload Section */}
+                  {(broadcastType === 'sms' || broadcastType === 'whatsapp') && (
+                    <div className="space-y-4 pt-4 border-t border-dashed">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Attach Media (MMS)</Label>
+                        <span className="text-[10px] font-medium text-muted-foreground">Max 10 files. Images/Videos supported.</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {mediaUrls.map((url, i) => (
+                          <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border-2 border-primary/20 bg-zinc-100 dark:bg-zinc-800">
+                            {url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                              <video src={url} className="w-full h-full object-cover" />
+                            ) : (
+                              <img src={url} alt="Uploaded media" className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              onClick={() => removeMedia(url)}
+                              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {mediaUrls.length < 10 && (
+                          <label className="relative aspect-square rounded-xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer flex flex-col items-center justify-center gap-2">
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*,video/*"
+                              className="hidden"
+                              onChange={handleFileUpload}
+                              disabled={isUploading}
+                            />
+                            {isUploading ? (
+                              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                            ) : (
+                              <>
+                                <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                  <Plus className="w-5 h-5 text-muted-foreground" />
+                                </div>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Add Media</span>
+                              </>
+                            )}
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1165,6 +1368,219 @@ export default function MarketingCenter() {
                               onClick={() => {
                                 if (confirm("Are you sure you want to delete this group?")) {
                                   deleteGroupMutation.mutate(group.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="templates" className="animate-in fade-in duration-500">
+          <div className="grid lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-4 space-y-6">
+              <Card className="glass-strong border-0 shadow-xl overflow-hidden">
+                <CardHeader className="bg-primary/5 border-b">
+                  <CardTitle className="text-xl font-bold">
+                    {editingTemplate ? "Edit Template" : "Create New Template"}
+                  </CardTitle>
+                  <CardDescription>Save reusable message content</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Template Name</Label>
+                    <Input 
+                      placeholder="e.g., Welcome Email" 
+                      value={newTemplateName} 
+                      onChange={(e) => setNewTemplateName(e.target.value)}
+                      className="glass border-2"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Type</Label>
+                    <Select value={newTemplateType} onValueChange={(v: any) => setNewTemplateType(v)}>
+                      <SelectTrigger className="glass border-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="telegram">Telegram</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {newTemplateType === 'email' && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Default Subject</Label>
+                      <Input 
+                        placeholder="Subject line" 
+                        value={newTemplateSubject} 
+                        onChange={(e) => setNewTemplateSubject(e.target.value)}
+                        className="glass border-2"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Content</Label>
+                    <Textarea 
+                      placeholder="Template content..." 
+                      value={newTemplateContent} 
+                      onChange={(e) => setNewTemplateContent(e.target.value)}
+                      className="glass border-2 min-h-[200px]"
+                    />
+                  </div>
+                  {/* Template Media Upload */}
+                  {(newTemplateType === 'sms' || newTemplateType === 'whatsapp') && (
+                    <div className="space-y-4 pt-4 border-t border-dashed">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Template Media</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {newTemplateMediaUrls.map((url, i) => (
+                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden border bg-zinc-100 dark:bg-zinc-800">
+                            {url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                              <video src={url} className="w-full h-full object-cover" />
+                            ) : (
+                              <img src={url} alt="Template media" className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              onClick={() => setNewTemplateMediaUrls(prev => prev.filter(u => u !== url))}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center shadow-sm"
+                            >
+                              <X className="w-2 h-2" />
+                            </button>
+                          </div>
+                        ))}
+                        {newTemplateMediaUrls.length < 10 && (
+                          <label className="aspect-square rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-primary transition-all cursor-pointer flex items-center justify-center bg-zinc-50 dark:bg-zinc-900/50">
+                            <input type="file" multiple accept="image/*,video/*" className="hidden" onChange={handleTemplateFileUpload} disabled={isUploading} />
+                            {isUploading ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Plus className="w-4 h-4 text-muted-foreground" />}
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="bg-zinc-50/50 dark:bg-zinc-900/50 border-t p-6 flex gap-2">
+                  {editingTemplate && (
+                    <Button 
+                      variant="outline"
+                      className="flex-1 font-black"
+                      onClick={() => {
+                        setEditingTemplate(null);
+                        setNewTemplateName("");
+                        setNewTemplateSubject("");
+                        setNewTemplateContent("");
+                        setNewTemplateMediaUrls([]);
+                      }}
+                    >
+                      CANCEL
+                    </Button>
+                  )}
+                  <Button 
+                    className="flex-[2] font-black" 
+                    onClick={() => {
+                      if (editingTemplate) {
+                        updateTemplateMutation.mutate({
+                          id: editingTemplate.id,
+                          name: newTemplateName,
+                          type: newTemplateType,
+                          subject: newTemplateSubject,
+                          content: newTemplateContent,
+                          mediaUrls: newTemplateMediaUrls.length > 0 ? newTemplateMediaUrls : null,
+                        });
+                      } else {
+                        createTemplateMutation.mutate({
+                          name: newTemplateName,
+                          type: newTemplateType,
+                          subject: newTemplateSubject,
+                          content: newTemplateContent,
+                          mediaUrls: newTemplateMediaUrls.length > 0 ? newTemplateMediaUrls : null,
+                        });
+                      }
+                    }}
+                    disabled={!newTemplateName.trim() || !newTemplateContent.trim() || createTemplateMutation.isPending || updateTemplateMutation.isPending}
+                  >
+                    {(createTemplateMutation.isPending || updateTemplateMutation.isPending) ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Plus className="w-4 h-4 mr-2" />
+                    )}
+                    {editingTemplate ? "UPDATE TEMPLATE" : "CREATE TEMPLATE"}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+
+            <div className="lg:col-span-8">
+              <div className="grid gap-6">
+                {templatesLoading ? (
+                  <Card className="glass p-10 text-center">
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground font-semibold">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Loading templates...
+                    </div>
+                  </Card>
+                ) : templates.length === 0 ? (
+                  <Card className="glass-strong border-dashed border-2 p-20 text-center space-y-4">
+                    <div className="w-20 h-20 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto">
+                      <Target className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-black text-zinc-900 dark:text-white">No templates yet</h3>
+                      <p className="text-muted-foreground max-w-sm mx-auto">Create reusable templates for your marketing campaigns.</p>
+                    </div>
+                  </Card>
+                ) : (
+                  templates.map((template) => (
+                    <Card key={template.id} className="glass hover:shadow-xl transition-all duration-300 border-primary/10 overflow-hidden group">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-xl font-bold">{template.name}</h3>
+                              <Badge variant="outline" className="font-bold text-[10px] tracking-widest uppercase bg-primary/5 text-primary border-primary/20">
+                                {template.type}
+                              </Badge>
+                            </div>
+                            {template.subject && (
+                              <p className="text-sm font-semibold text-muted-foreground line-clamp-1">
+                                <span className="text-[10px] uppercase tracking-wider opacity-70">Subject:</span> {template.subject}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground line-clamp-2 italic bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border">
+                              {template.content}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="font-bold"
+                              onClick={() => {
+                                setEditingTemplate(template);
+                                setNewTemplateName(template.name);
+                                setNewTemplateType(template.type as any);
+                                setNewTemplateSubject(template.subject || "");
+                                setNewTemplateContent(template.content);
+                                setNewTemplateMediaUrls(template.mediaUrls || []);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this template?")) {
+                                  deleteTemplateMutation.mutate(template.id);
                                 }
                               }}
                             >

@@ -8,6 +8,7 @@ import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
 import { sendSms, sendWhatsApp } from "../twilioService";
 import { sendTelegramMessage } from "../telegramService";
+import { upload } from "./common";
 
 const router = Router();
 
@@ -80,6 +81,19 @@ async function ensureMarketingCenterSchema() {
       );
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_templates (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR NOT NULL,
+        type VARCHAR NOT NULL,
+        subject VARCHAR,
+        content TEXT NOT NULL,
+        created_by INTEGER NOT NULL REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     // Columns (schema drift fix)
     await pool.query(`ALTER TABLE marketing_group_members ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS group_id VARCHAR REFERENCES marketing_groups(id);`);
@@ -94,6 +108,8 @@ async function ensureMarketingCenterSchema() {
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_end_date TIMESTAMP;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS parent_broadcast_id VARCHAR;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
+    await pool.query(`ALTER TABLE marketing_templates ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
   })().catch((err) => {
     // Allow retry on next request if this fails.
     marketingSchemaEnsured = null;
@@ -206,6 +222,72 @@ router.delete("/groups/members/:memberId", async (req: Request, res: Response) =
 router.delete("/groups/:id", async (req: Request, res: Response) => {
   try {
     await storage.deleteMarketingGroup(req.params.id);
+    res.status(204).end();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Marketing Template Routes
+router.get("/templates", async (req: Request, res: Response) => {
+  try {
+    let templates = await storage.getMarketingTemplates();
+    
+    // Seed default templates if empty
+    if (templates.length === 0) {
+      const user = req.user as any;
+      const defaults = [
+        {
+          name: "Welcome Email",
+          type: "email",
+          subject: "Welcome to our community!",
+          content: "Hello,\n\nWe're excited to have you with us. Explore our latest offerings and let us know if you have any questions.\n\nBest,\nThe Team",
+          createdBy: user.id
+        },
+        {
+          name: "Promotional SMS",
+          type: "sms",
+          content: "Flash Sale! Get 20% off your next purchase with code FLASH20. Valid for 24h only! marketingteam.app",
+          createdBy: user.id
+        }
+      ];
+      for (const d of defaults) {
+        await storage.createMarketingTemplate(d as any);
+      }
+      templates = await storage.getMarketingTemplates();
+    }
+    
+    res.json(templates);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/templates", async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const template = await storage.createMarketingTemplate({
+      ...req.body,
+      createdBy: user.id,
+    });
+    res.status(201).json(template);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.patch("/templates/:id", async (req: Request, res: Response) => {
+  try {
+    const template = await storage.updateMarketingTemplate(req.params.id, req.body);
+    res.json(template);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete("/templates/:id", async (req: Request, res: Response) => {
+  try {
+    await storage.deleteMarketingTemplate(req.params.id);
     res.status(204).end();
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -534,6 +616,24 @@ router.post("/broadcast", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error creating broadcast:", error);
     res.status(400).json({ message: error.message || "Failed to create broadcast" });
+  }
+});
+
+// File upload route for marketing media
+router.post("/upload", upload.array("files", 10), async (req: Request, res: Response) => {
+  try {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+    const mediaUrls = files.map((file) => `${appUrl}/uploads/${file.filename}`);
+
+    res.json({ mediaUrls });
+  } catch (error: any) {
+    console.error("Marketing media upload error:", error);
+    res.status(500).json({ message: error.message || "Failed to upload files" });
   }
 });
 
