@@ -279,6 +279,7 @@ export default function MarketingCenter() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/groups", selectedGroupForMembers?.id, "members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/stats"] });
       toast({ title: "Member Added" });
     },
   });
@@ -289,6 +290,7 @@ export default function MarketingCenter() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/groups", selectedGroupForMembers?.id, "members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/stats"] });
       toast({ title: "Member Removed" });
     },
   });
@@ -1074,6 +1076,9 @@ export default function MarketingCenter() {
                             <div className="flex items-center gap-4 mt-2">
                               <Badge variant="secondary" className="font-bold text-[10px] tracking-widest uppercase">
                                 {format(new Date(group.createdAt!), "MMM d, yyyy")}
+                              </Badge>
+                              <Badge variant="outline" className="font-bold text-[10px] tracking-widest uppercase bg-primary/5 text-primary border-primary/20">
+                                {stats?.groups.find(g => g.id === group.id)?.memberCount || 0} Members
                               </Badge>
                             </div>
                           </div>
