@@ -11,8 +11,107 @@ import { sendTelegramMessage } from "../telegramService";
 
 const router = Router();
 
+// Ensure Marketing Center schema exists in production.
+// This guards against schema drift when startup migrations fail to run.
+let marketingSchemaEnsured: Promise<void> | null = null;
+async function ensureMarketingCenterSchema() {
+  if (marketingSchemaEnsured) return marketingSchemaEnsured;
+  marketingSchemaEnsured = (async () => {
+    // Tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_groups (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR NOT NULL,
+        description TEXT,
+        created_by INTEGER NOT NULL REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_group_members (
+        id SERIAL PRIMARY KEY,
+        group_id VARCHAR NOT NULL REFERENCES marketing_groups(id) ON DELETE CASCADE,
+        lead_id VARCHAR REFERENCES leads(id) ON DELETE CASCADE,
+        client_id VARCHAR REFERENCES clients(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_broadcasts (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        type VARCHAR NOT NULL,
+        status VARCHAR NOT NULL DEFAULT 'pending',
+        subject VARCHAR,
+        content TEXT NOT NULL,
+        audience VARCHAR NOT NULL,
+        group_id VARCHAR REFERENCES marketing_groups(id),
+        custom_recipient TEXT,
+        filters JSONB,
+        total_recipients INTEGER DEFAULT 0,
+        success_count INTEGER DEFAULT 0,
+        failed_count INTEGER DEFAULT 0,
+        created_by INTEGER NOT NULL REFERENCES users(id),
+        scheduled_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        is_recurring BOOLEAN DEFAULT false,
+        recurring_pattern VARCHAR,
+        recurring_interval INTEGER DEFAULT 1,
+        recurring_end_date TIMESTAMP,
+        next_run_at TIMESTAMP,
+        parent_broadcast_id VARCHAR
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_broadcast_recipients (
+        id SERIAL PRIMARY KEY,
+        broadcast_id VARCHAR NOT NULL REFERENCES marketing_broadcasts(id) ON DELETE CASCADE,
+        lead_id VARCHAR REFERENCES leads(id),
+        client_id VARCHAR REFERENCES clients(id),
+        custom_recipient TEXT,
+        status VARCHAR NOT NULL DEFAULT 'pending',
+        error_message TEXT,
+        sent_at TIMESTAMP
+      );
+    `);
+
+    // Columns (schema drift fix)
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS group_id VARCHAR REFERENCES marketing_groups(id);`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS filters JSONB;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_pattern VARCHAR;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_interval INTEGER DEFAULT 1;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_end_date TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS parent_broadcast_id VARCHAR;`);
+  })().catch((err) => {
+    // Allow retry on next request if this fails.
+    marketingSchemaEnsured = null;
+    throw err;
+  });
+
+  return marketingSchemaEnsured;
+}
+
 // Secure all marketing center routes to Admin Only
-router.use(isAuthenticated, requireRole(UserRole.ADMIN));
+router.use(isAuthenticated, requireRole(UserRole.ADMIN), async (_req, _res, next) => {
+  try {
+    await ensureMarketingCenterSchema();
+    return next();
+  } catch (err) {
+    console.error("Marketing Center schema ensure failed:", err);
+    return next(err);
+  }
+});
+
 
 // Get audience statistics for targeting
 router.get("/stats", async (_req: Request, res: Response) => {
@@ -178,6 +277,7 @@ router.get("/db-status", async (_req: Request, res: Response) => {
     const leadsInfo = await safeCountsForAudienceTable("leads");
     const clientsInfo = await safeCountsForAudienceTable("clients");
 
+    const groupsExists = await tableExists("marketing_groups");
     const broadcastsExists = await tableExists("marketing_broadcasts");
     const recipientsExists = await tableExists("marketing_broadcast_recipients");
     const broadcastsTotal = broadcastsExists
@@ -186,6 +286,10 @@ router.get("/db-status", async (_req: Request, res: Response) => {
     const recipientsTotal = recipientsExists
       ? Number((await pool.query(`SELECT COUNT(*)::int AS n FROM marketing_broadcast_recipients`)).rows?.[0]?.n ?? 0)
       : null;
+
+    const broadcastColumns = broadcastsExists
+      ? await hasColumns("marketing_broadcasts", ["group_id", "custom_recipient", "filters"])
+      : { group_id: false, custom_recipient: false, filters: false };
 
     return res.json({
       ok: true,
@@ -198,8 +302,10 @@ router.get("/db-status", async (_req: Request, res: Response) => {
       tables: {
         leads: leadsInfo,
         clients: clientsInfo,
+        marketing_groups: { exists: groupsExists },
         marketing_broadcasts: { exists: broadcastsExists, total: broadcastsTotal },
         marketing_broadcast_recipients: { exists: recipientsExists, total: recipientsTotal },
+        marketing_broadcasts_columns: broadcastColumns,
       },
     });
   } catch (error: any) {
