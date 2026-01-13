@@ -139,6 +139,18 @@ export default function MarketingCenter() {
     }
   });
 
+  // Selected broadcast for recipient details dialog
+  const [selectedBroadcastId, setSelectedBroadcastId] = useState<string | null>(null);
+
+  const { data: recipients = [], isLoading: recipientsLoading } = useQuery<BroadcastRecipientRow[]>({
+    queryKey: ["/api/marketing-center/broadcasts", selectedBroadcastId, "recipients"],
+    enabled: !!selectedBroadcastId,
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/marketing-center/broadcasts/${selectedBroadcastId}/recipients`);
+      return res.json();
+    }
+  });
+
   // SMS Inbox (inbound replies)
   const { data: smsInbox = [], isLoading: smsInboxLoading } = useQuery<SmsInboxRow[]>({
     queryKey: ["/api/marketing-center/sms-inbox"],
@@ -780,12 +792,11 @@ export default function MarketingCenter() {
                             variant="outline"
                             size="sm"
                             className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
-                            onClick={() => viewFailuresMutation.mutate(broadcast.id)}
-                            disabled={viewFailuresMutation.isPending || !(broadcast.failedCount && broadcast.failedCount > 0)}
-                            title={broadcast.failedCount && broadcast.failedCount > 0 ? "View failure reasons" : "No failures to show"}
+                            onClick={() => setSelectedBroadcastId(broadcast.id)}
+                            disabled={broadcast.status === 'pending'}
                           >
                             <Eye className="w-3 h-3 mr-1" />
-                            {viewFailuresMutation.isPending ? "Loading..." : "View failures"}
+                            View Recipients
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
@@ -822,11 +833,10 @@ export default function MarketingCenter() {
                                 variant="outline"
                                 size="sm"
                                 className="h-7 px-2 text-[10px] font-black uppercase tracking-widest"
-                                onClick={() => viewFailuresMutation.mutate(broadcast.id)}
-                                disabled={viewFailuresMutation.isPending}
+                                onClick={() => setSelectedBroadcastId(broadcast.id)}
                               >
                                 <Eye className="w-3 h-3 mr-1" />
-                                {viewFailuresMutation.isPending ? "Loading..." : "View failures"}
+                                View Details
                               </Button>
                             </div>
                           )}
@@ -1045,6 +1055,92 @@ export default function MarketingCenter() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!selectedBroadcastId} onOpenChange={(open) => !open && setSelectedBroadcastId(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Recipient Delivery Details
+            </DialogTitle>
+            <DialogDescription>
+              Full list of recipients and their delivery status for this campaign.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            {recipientsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-sm font-medium text-muted-foreground">Loading recipient data...</p>
+              </div>
+            ) : recipients.length === 0 ? (
+              <div className="text-center py-12 border-2 border-dashed rounded-xl">
+                <p className="text-muted-foreground">No recipient records found for this broadcast.</p>
+              </div>
+            ) : (
+              <div className="rounded-xl border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900 border-b">
+                    <tr>
+                      <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Recipient</th>
+                      <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Contact</th>
+                      <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Status</th>
+                      <th className="text-left p-3 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Sent At</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {recipients.map((r) => (
+                      <tr key={r.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50 transition-colors">
+                        <td className="p-3">
+                          <div className="font-bold">
+                            {r.lead_company || r.client_name || "Individual"}
+                          </div>
+                          {(r.lead_name) && (
+                            <div className="text-[10px] text-muted-foreground">{r.lead_name}</div>
+                          )}
+                        </td>
+                        <td className="p-3 font-medium">
+                          {r.lead_phone || r.client_phone || r.custom_recipient || "—"}
+                        </td>
+                        <td className="p-3">
+                          {r.status === "sent" ? (
+                            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-bold uppercase text-[10px]">
+                              Delivered
+                            </Badge>
+                          ) : r.status === "failed" ? (
+                            <div className="space-y-1">
+                              <Badge variant="destructive" className="font-bold uppercase text-[10px]">
+                                Failed
+                              </Badge>
+                              <p className="text-[10px] text-red-500 font-medium max-w-[200px] leading-tight">
+                                {r.error_message}
+                              </p>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary" className="font-bold uppercase text-[10px]">
+                              {r.status}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-3 text-muted-foreground tabular-nums">
+                          {r.sent_at ? format(new Date(r.sent_at), "MMM d, HH:mm") : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setSelectedBroadcastId(null)} className="font-bold">
+              Close Details
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

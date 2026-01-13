@@ -1,5 +1,5 @@
 import { db } from "./server/db";
-import { clients, leads } from "./shared/schema";
+import { clients, leads, marketingBroadcastRecipients } from "./shared/schema";
 import { eq, isNull, or } from "drizzle-orm";
 
 /**
@@ -49,6 +49,15 @@ async function migrateClientsToLeads() {
         console.log(`⏭️  Skipping ${client.name} (${client.email}) - already exists as lead`);
         skipped++;
         
+        // Find the existing lead to preserve history
+        const existingLead = existingLeads.find(l => l.email?.toLowerCase() === emailLower);
+        if (existingLead) {
+          await db
+            .update(marketingBroadcastRecipients)
+            .set({ leadId: existingLead.id, clientId: null })
+            .where(eq(marketingBroadcastRecipients.clientId, client.id));
+        }
+
         // Delete the duplicate client
         await db.delete(clients).where(eq(clients.id, client.id));
         deleted++;
@@ -89,9 +98,22 @@ Migrated to leads on ${new Date().toLocaleDateString()}.`,
       };
 
       // Create the lead
-      await db.insert(leads).values(leadData);
+      const [newLead] = await db.insert(leads).values(leadData).returning();
       console.log(`✅ Migrated ${client.name} (${client.email}) to leads`);
       migrated++;
+
+      if (newLead) {
+        // Migrate marketing history
+        const updatedRecipients = await db
+          .update(marketingBroadcastRecipients)
+          .set({ leadId: newLead.id, clientId: null })
+          .where(eq(marketingBroadcastRecipients.clientId, client.id))
+          .returning();
+        
+        if (updatedRecipients.length > 0) {
+          console.log(`   📝 Migrated ${updatedRecipients.length} marketing history records`);
+        }
+      }
 
       // Delete the client
       await db.delete(clients).where(eq(clients.id, client.id));
