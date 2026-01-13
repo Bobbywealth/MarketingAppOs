@@ -39,9 +39,13 @@ function stableRecurrenceSeriesId(task: any): string {
 // Task Spaces routes
 router.get("/task-spaces", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { userId, role } = getCurrentUserContext(req);
-    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const user = req.user as any;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+    const userId = user?.id ? Number(user.id) : null;
     
+    // DEBUG: Log spaces fetch
+    console.log(`📋 Spaces fetch for user: id=${userId}, role=${normalizedRole}`);
+
     // Admin and Managers see all spaces
     const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
     
@@ -49,6 +53,7 @@ router.get("/task-spaces", isAuthenticated, async (req: Request, res: Response) 
       ? await storage.getTaskSpaces()
       : (userId ? await storage.getTaskSpacesForAssignee(userId) : []);
 
+    console.log(`📋 Returning ${spaces.length} spaces for ${normalizedRole}`);
     res.json(spaces);
   } catch (error) {
     console.error("❌ Task spaces fetch error:", error);
@@ -58,8 +63,9 @@ router.get("/task-spaces", isAuthenticated, async (req: Request, res: Response) 
 
 router.post("/task-spaces", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { userId, role } = getCurrentUserContext(req);
-    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const user = req.user as any;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+    const userId = user?.id ? Number(user.id) : null;
     
     // Only Admin, Manager, and Staff can create spaces
     const canCreate = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "staff";
@@ -83,8 +89,8 @@ router.post("/task-spaces", isAuthenticated, async (req: Request, res: Response)
 
 router.patch("/task-spaces/:id", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { role } = getCurrentUserContext(req);
-    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const user = req.user as any;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
     
     if (normalizedRole !== "admin" && normalizedRole !== "manager" && normalizedRole !== "staff") {
       return res.status(403).json({ message: "Forbidden" });
@@ -129,8 +135,8 @@ router.patch("/task-spaces/:id", isAuthenticated, async (req: Request, res: Resp
 
 router.delete("/task-spaces/:id", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { role } = getCurrentUserContext(req);
-    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const user = req.user as any;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
     
     if (normalizedRole !== "admin" && normalizedRole !== "manager") {
       return res.status(403).json({ message: "Forbidden" });
@@ -147,8 +153,9 @@ router.delete("/task-spaces/:id", isAuthenticated, async (req: Request, res: Res
 // Get tasks by space
 router.get("/task-spaces/:id/tasks", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { userId, role } = getCurrentUserContext(req);
-    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const user = req.user as any;
+    const userId = user?.id ? Number(user.id) : null;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
     
     const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
 
@@ -159,7 +166,6 @@ router.get("/task-spaces/:id/tasks", isAuthenticated, async (req: Request, res: 
       return res.json(spaceTasks.filter((t: any) => Number(t.assignedToId) === Number(userId)));
     } else if (normalizedRole === "client") {
       // Clients see their tasks
-      const user = req.user as any;
       return res.json(spaceTasks.filter((t: any) => t.clientId === user.clientId));
     }
 
@@ -173,18 +179,17 @@ router.get("/task-spaces/:id/tasks", isAuthenticated, async (req: Request, res: 
 // Task routes
 router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const { userId, role } = getCurrentUserContext(req);
     const currentUser = req.user as any;
-
-    const normalizedRole = String(role ?? "").trim().toLowerCase();
+    const userId = currentUser?.id ? Number(currentUser.id) : null;
+    const rawRole = currentUser?.role;
+    const normalizedRole = String(rawRole ?? "").trim().toLowerCase();
     
-    // DEBUG: Log task fetch attempt
-    console.log(`📋 Tasks fetch: userId=${userId}, role=${role}, normalizedRole='${normalizedRole}'`);
+    // DEBUG: Log task fetch with full user context
+    console.log(`📋 Tasks fetch for user: id=${userId}, username=${currentUser?.username}, role=${rawRole}, normalizedRole='${normalizedRole}'`);
 
     // 1. Clients: Restricted to their own client ID
     if (normalizedRole === "client") {
       const clientId = currentUser?.clientId;
-      console.log(`📋 Client fetch: clientId=${clientId}`);
       const tasksList = clientId ? await storage.getTasksByClient(clientId) : [];
       return res.json(tasksList);
     }
@@ -193,7 +198,7 @@ router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
     const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
     if (isAllAccess) {
       const allTasks = await storage.getTasks();
-      console.log(`📋 All-access fetch (${normalizedRole}): returning ${allTasks.length} tasks`);
+      console.log(`📋 All-access fetch (${normalizedRole}): returning ${allTasks.length} total tasks`);
       return res.json(allTasks);
     }
 
@@ -204,8 +209,8 @@ router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
       return res.json(tasksList);
     }
 
-    // 4. Fallback: No role context, return empty
-    console.warn("⚠️ Task fetch fallback: No role or userId context");
+    // 4. Fallback: No role or userId context
+    console.warn("⚠️ Task fetch fallback: No role or userId context found in session");
     return res.json([]);
   } catch (error) {
     console.error("❌ Task fetch error:", error);
