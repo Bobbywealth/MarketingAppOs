@@ -118,6 +118,99 @@ router.get("/broadcasts", async (_req: Request, res: Response) => {
   }
 });
 
+// Database status diagnostics (admin-only)
+// Helps determine whether "0 recipients" is real data or a DB/schema issue.
+router.get("/db-status", async (_req: Request, res: Response) => {
+  try {
+    async function tableExists(table: string): Promise<boolean> {
+      const r = await pool.query(`SELECT to_regclass($1) AS reg`, [`public.${table}`]);
+      return Boolean(r.rows?.[0]?.reg);
+    }
+
+    async function hasColumns(table: string, columns: string[]): Promise<Record<string, boolean>> {
+      const out: Record<string, boolean> = {};
+      for (const c of columns) out[c] = false;
+      const r = await pool.query(
+        `
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = $1
+          AND column_name = ANY($2::text[])
+        `,
+        [table, columns]
+      );
+      for (const row of r.rows ?? []) {
+        if (row?.column_name) out[row.column_name] = true;
+      }
+      return out;
+    }
+
+    async function safeCountsForAudienceTable(table: string) {
+      const exists = await tableExists(table);
+      if (!exists) {
+        return { exists: false, total: null as number | null, optedIn: null as number | null, optedInSupported: false, error: null as string | null };
+      }
+
+      const col = await hasColumns(table, ["opt_in_email", "opt_in_sms"]);
+      const optedInSupported = Boolean(col.opt_in_email && col.opt_in_sms);
+
+      const totalRes = await pool.query(`SELECT COUNT(*)::int AS n FROM ${table}`);
+      const total = Number(totalRes.rows?.[0]?.n ?? 0);
+
+      if (!optedInSupported) {
+        return { exists: true, total, optedIn: null as number | null, optedInSupported: false, error: null as string | null };
+      }
+
+      const optedRes = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM ${table} WHERE opt_in_email = true OR opt_in_sms = true`
+      );
+      const optedIn = Number(optedRes.rows?.[0]?.n ?? 0);
+
+      return { exists: true, total, optedIn, optedInSupported: true, error: null as string | null };
+    }
+
+    const [dbNameRes, nowRes] = await Promise.all([
+      pool.query(`SELECT current_database() AS name`),
+      pool.query(`SELECT NOW() AS now`),
+    ]);
+
+    const leadsInfo = await safeCountsForAudienceTable("leads");
+    const clientsInfo = await safeCountsForAudienceTable("clients");
+
+    const broadcastsExists = await tableExists("marketing_broadcasts");
+    const recipientsExists = await tableExists("marketing_broadcast_recipients");
+    const broadcastsTotal = broadcastsExists
+      ? Number((await pool.query(`SELECT COUNT(*)::int AS n FROM marketing_broadcasts`)).rows?.[0]?.n ?? 0)
+      : null;
+    const recipientsTotal = recipientsExists
+      ? Number((await pool.query(`SELECT COUNT(*)::int AS n FROM marketing_broadcast_recipients`)).rows?.[0]?.n ?? 0)
+      : null;
+
+    return res.json({
+      ok: true,
+      database: dbNameRes.rows?.[0]?.name ?? null,
+      serverTime: nowRes.rows?.[0]?.now ?? null,
+      env: {
+        hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+        nodeEnv: process.env.NODE_ENV ?? null,
+      },
+      tables: {
+        leads: leadsInfo,
+        clients: clientsInfo,
+        marketing_broadcasts: { exists: broadcastsExists, total: broadcastsTotal },
+        marketing_broadcast_recipients: { exists: recipientsExists, total: recipientsTotal },
+      },
+    });
+  } catch (error: any) {
+    console.error("Error fetching DB status:", error);
+    return res.status(500).json({
+      ok: false,
+      message: error?.message || "Failed to fetch DB status",
+    });
+  }
+});
+
 // Get recipient status/error details for a broadcast (useful for debugging failures)
 router.get("/broadcasts/:id/recipients", async (req: Request, res: Response) => {
   try {

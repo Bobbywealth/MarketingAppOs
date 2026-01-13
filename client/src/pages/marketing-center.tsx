@@ -118,7 +118,13 @@ export default function MarketingCenter() {
   const [selectedGroupForMembers, setSelectedGroupForMembers] = useState<MarketingGroup | null>(null);
   
   // Marketing Stats Query
-  const { data: stats, isLoading: statsLoading } = useQuery<MarketingCenterStats>({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsIsError,
+    error: statsError,
+    refetch: refetchStats,
+  } = useQuery<MarketingCenterStats>({
     queryKey: ["/api/marketing-center/stats"],
   });
 
@@ -191,40 +197,27 @@ export default function MarketingCenter() {
     }
   });
 
-  const viewFailuresMutation = useMutation({
-    mutationFn: async (broadcastId: string) => {
-      const res = await apiRequest("GET", `/api/marketing-center/broadcasts/${broadcastId}/recipients`, undefined);
-      return (await res.json()) as BroadcastRecipientRow[];
+  const dbStatusMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/marketing-center/db-status", undefined);
+      return res.json();
     },
-    onSuccess: (rows) => {
-      const failed = rows.filter((r) => r.status === "failed");
-      if (failed.length === 0) {
-        toast({ title: "No failures found", description: "All recipients show as sent (or pending)." });
-        return;
-      }
-
-      const counts = new Map<string, number>();
-      for (const r of failed) {
-        const key = (r.error_message || "Unknown error").trim();
-        counts.set(key, (counts.get(key) || 0) + 1);
-      }
-
-      const top = Array.from(counts.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([msg, count]) => `${count}× ${msg}`)
-        .join(" | ");
+    onSuccess: (data: any) => {
+      const leadsTotal = data?.tables?.leads?.total;
+      const clientsTotal = data?.tables?.clients?.total;
+      const dbName = data?.database;
+      const leadsOptedInSupported = data?.tables?.leads?.optedInSupported;
+      const clientsOptedInSupported = data?.tables?.clients?.optedInSupported;
 
       toast({
-        title: `Failed deliveries: ${failed.length}`,
-        description: top,
-        variant: "destructive",
+        title: "DB Status",
+        description: `db=${dbName ?? "unknown"} | leads=${leadsTotal ?? "?"} | clients=${clientsTotal ?? "?"}${leadsOptedInSupported === false || clientsOptedInSupported === false ? " | opt-in columns missing" : ""}`,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to load failures",
-        description: error.message || "Could not fetch broadcast recipient details.",
+        title: "DB Status Failed",
+        description: error.message || "Could not fetch DB status",
         variant: "destructive",
       });
     },
@@ -294,6 +287,18 @@ export default function MarketingCenter() {
       toast({ title: "Telegram Target Required", description: "For Telegram, choose 'Send to Individual' and paste the group/channel chat_id.", variant: "destructive" });
       return;
     }
+
+    // If we're using audience stats, don't allow sending while stats are unavailable.
+    if ((audience === "all" || audience === "leads" || audience === "clients") && broadcastType !== "telegram") {
+      if (statsLoading) {
+        toast({ title: "Loading audience…", description: "Please wait for audience stats to load before sending.", variant: "destructive" });
+        return;
+      }
+      if (statsIsError || !stats) {
+        toast({ title: "Audience unavailable", description: "Could not load leads/clients from the database. Check DB status or refresh.", variant: "destructive" });
+        return;
+      }
+    }
     if (sendMode === "scheduled") {
       if (!scheduledAtLocal) {
         toast({ title: "Schedule Required", description: "Please select a date & time to schedule.", variant: "destructive" });
@@ -339,6 +344,16 @@ export default function MarketingCenter() {
     return 0;
   };
 
+  const totalReachDisplay = statsLoading
+    ? "—"
+    : statsIsError
+      ? "—"
+      : String((stats?.leads.optedIn || 0) + (stats?.clients.optedIn || 0));
+
+  const statsErrorMessage = statsIsError
+    ? ((statsError as any)?.message ?? "Failed to load audience stats")
+    : null;
+
   return (
     <div className="min-h-full p-4 md:p-8 lg:p-12 space-y-8 bg-zinc-50/50 dark:bg-zinc-950/50">
       {/* Header Section */}
@@ -361,11 +376,32 @@ export default function MarketingCenter() {
           <Card className="glass px-6 py-3 border-primary/20 flex items-center gap-4 shadow-xl">
             <div className="text-right">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Total Reach</p>
-              <p className="text-2xl font-black text-primary">{(stats?.leads.optedIn || 0) + (stats?.clients.optedIn || 0)}</p>
+              <p className="text-2xl font-black text-primary tabular-nums">{totalReachDisplay}</p>
+              {statsIsError && (
+                <button
+                  type="button"
+                  className="mt-1 text-[10px] font-bold uppercase tracking-widest text-red-500 hover:underline"
+                  onClick={() => dbStatusMutation.mutate()}
+                  title={statsErrorMessage ?? undefined}
+                >
+                  Stats error — check DB
+                </button>
+              )}
             </div>
             <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800" />
             <Users className="w-6 h-6 text-primary/60" />
           </Card>
+
+          {statsIsError && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-bold"
+              onClick={() => refetchStats()}
+            >
+              Retry Stats
+            </Button>
+          )}
         </div>
       </div>
 
