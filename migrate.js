@@ -104,6 +104,98 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ marketing tracking columns for leads already exist or error:', e.message);
       }
+
+      // ===== Marketing Center (Broadcasts + Groups) =====
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS marketing_groups (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR NOT NULL,
+            description TEXT,
+            created_by INTEGER NOT NULL REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Ensured marketing_groups table');
+      } catch (e) {
+        console.log('⚠️ marketing_groups table already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS marketing_group_members (
+            id SERIAL PRIMARY KEY,
+            group_id VARCHAR NOT NULL REFERENCES marketing_groups(id) ON DELETE CASCADE,
+            lead_id VARCHAR REFERENCES leads(id) ON DELETE CASCADE,
+            client_id VARCHAR REFERENCES clients(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        console.log('✅ Ensured marketing_group_members table');
+      } catch (e) {
+        console.log('⚠️ marketing_group_members table already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS marketing_broadcasts (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            type VARCHAR NOT NULL,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            subject VARCHAR,
+            content TEXT NOT NULL,
+            audience VARCHAR NOT NULL,
+            group_id VARCHAR REFERENCES marketing_groups(id),
+            custom_recipient TEXT,
+            filters JSONB,
+            total_recipients INTEGER DEFAULT 0,
+            success_count INTEGER DEFAULT 0,
+            failed_count INTEGER DEFAULT 0,
+            created_by INTEGER NOT NULL REFERENCES users(id),
+            scheduled_at TIMESTAMP,
+            completed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            is_recurring BOOLEAN DEFAULT false,
+            recurring_pattern VARCHAR,
+            recurring_interval INTEGER DEFAULT 1,
+            recurring_end_date TIMESTAMP,
+            next_run_at TIMESTAMP,
+            parent_broadcast_id VARCHAR
+          );
+        `);
+        console.log('✅ Ensured marketing_broadcasts table');
+      } catch (e) {
+        console.log('⚠️ marketing_broadcasts table already exists or error:', e.message);
+      }
+
+      // Ensure required columns exist (fixes prod schema drift)
+      try {
+        await client.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS group_id VARCHAR REFERENCES marketing_groups(id);`);
+        await client.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
+        await client.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS filters JSONB;`);
+        console.log('✅ Ensured marketing_broadcasts columns (group_id/custom_recipient/filters)');
+      } catch (e) {
+        console.log('⚠️ marketing_broadcasts column ensure skipped or error:', e.message);
+      }
+
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS marketing_broadcast_recipients (
+            id SERIAL PRIMARY KEY,
+            broadcast_id VARCHAR NOT NULL REFERENCES marketing_broadcasts(id) ON DELETE CASCADE,
+            lead_id VARCHAR REFERENCES leads(id),
+            client_id VARCHAR REFERENCES clients(id),
+            custom_recipient TEXT,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            error_message TEXT,
+            sent_at TIMESTAMP
+          );
+        `);
+        console.log('✅ Ensured marketing_broadcast_recipients table');
+      } catch (e) {
+        console.log('⚠️ marketing_broadcast_recipients table already exists or error:', e.message);
+      }
       
       // Create subscription_packages table
       try {
