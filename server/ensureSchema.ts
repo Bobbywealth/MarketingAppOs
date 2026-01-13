@@ -398,6 +398,56 @@ export async function ensureMinimumSchema() {
   await safeQuery("idx_blog_posts_status", `CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);`);
   await safeQuery("idx_blog_posts_published_at", `CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON blog_posts(published_at);`);
 
+  // Lead Automations table (Required for abandoned cart reminders and workflow engine)
+  await safeQuery(
+    "lead_automations table",
+    `
+    CREATE TABLE IF NOT EXISTS lead_automations (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      lead_id VARCHAR NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+      type VARCHAR NOT NULL,
+      trigger VARCHAR NOT NULL,
+      trigger_conditions JSONB,
+      action_type VARCHAR NOT NULL,
+      action_data JSONB,
+      status VARCHAR NOT NULL DEFAULT 'pending',
+      scheduled_for TIMESTAMP,
+      executed_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    `
+  );
+  await safeQuery(
+    "idx_lead_automations_lead_id",
+    `CREATE INDEX IF NOT EXISTS idx_lead_automations_lead_id ON lead_automations(lead_id);`
+  );
+  await safeQuery(
+    "idx_lead_automations_status",
+    `CREATE INDEX IF NOT EXISTS idx_lead_automations_status ON lead_automations(status);`
+  );
+  await safeQuery(
+    "idx_lead_automations_scheduled_for",
+    `CREATE INDEX IF NOT EXISTS idx_lead_automations_scheduled_for ON lead_automations(scheduled_for);`
+  );
+
+  // Ensure columns exist in case table was created partially (Fix for "column lead_id does not exist")
+  await safeQuery("lead_automations.lead_id column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS lead_id VARCHAR NOT NULL REFERENCES leads(id) ON DELETE CASCADE;`);
+  await safeQuery("lead_automations.type column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS type VARCHAR NOT NULL;`);
+  await safeQuery("lead_automations.trigger column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS trigger VARCHAR NOT NULL;`);
+  await safeQuery("lead_automations.trigger_conditions column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS trigger_conditions JSONB;`);
+  await safeQuery("lead_automations.action_type column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS action_type VARCHAR NOT NULL;`);
+  await safeQuery("lead_automations.action_data column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS action_data JSONB;`);
+  await safeQuery("lead_automations.status column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS status VARCHAR NOT NULL DEFAULT 'pending';`);
+  await safeQuery("lead_automations.scheduled_for column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMP;`);
+  await safeQuery("lead_automations.executed_at column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS executed_at TIMESTAMP;`);
+  await safeQuery("lead_automations.created_at column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+
+  // Marketing: provider_call_id for AI Voice calls
+  await safeQuery(
+    "marketing_broadcast_recipients.provider_call_id column",
+    `ALTER TABLE IF EXISTS marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`
+  );
+
   // Diagnostic: Check if table is actually accessible
   try {
     const res = await pool.query(`SELECT COUNT(*) FROM blog_posts;`);
