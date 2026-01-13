@@ -36,6 +36,14 @@ import {
   courseModules,
   courseLessons,
   courseEnrollments,
+  clientSocialStats,
+  socialAccounts,
+  socialAccountMetricsSnapshots,
+  clientCreators,
+  creatorVisits,
+  commissions,
+  discountRedemptions,
+  smsMessages,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -532,6 +540,10 @@ export class DatabaseStorage implements IStorage {
       await db.update(clients).set({ assignedToId: null }).where(eq(clients.assignedToId, userId));
       console.log(`   ✓ Updated clients (unassigned)`);
       
+      // Update users - set clientId to null
+      await db.update(users).set({ clientId: null }).where(eq(users.clientId, String(userId)));
+      console.log(`   ✓ Updated users (unlinked from client)`);
+      
       // Update leads - set assignedToId to null
       await db.update(leads).set({ assignedToId: null }).where(eq(leads.assignedToId, userId));
       console.log(`   ✓ Updated leads (unassigned)`);
@@ -728,7 +740,177 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClient(id: string): Promise<void> {
-    await db.delete(clients).where(eq(clients.id, id));
+    try {
+      console.log(`🗑️ Starting deletion process for client ${id}`);
+
+      // 1. Social & Stats
+      try {
+        await db.delete(clientSocialStats).where(eq(clientSocialStats.clientId, id));
+        console.log(`   ✓ Deleted social stats`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting social stats:`, err.message);
+      }
+
+      try {
+        const accounts = await db.select().from(socialAccounts).where(eq(socialAccounts.clientId, id));
+        for (const acc of accounts) {
+          await db.delete(socialAccountMetricsSnapshots).where(eq(socialAccountMetricsSnapshots.socialAccountId, acc.id));
+        }
+        await db.delete(socialAccounts).where(eq(socialAccounts.clientId, id));
+        console.log(`   ✓ Deleted social accounts and snapshots`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting social accounts:`, err.message);
+      }
+
+      try {
+        await db.delete(analyticsMetrics).where(eq(analyticsMetrics.clientId, id));
+        console.log(`   ✓ Deleted analytics metrics`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting analytics metrics:`, err.message);
+      }
+
+      // 2. Campaigns & Tasks
+      try {
+        const clientTasks = await db.select().from(tasks).where(eq(tasks.clientId, id));
+        if (clientTasks.length > 0) {
+          await db.delete(taskComments).where(inArray(taskComments.taskId, clientTasks.map(t => t.id)));
+        }
+        await db.delete(tasks).where(eq(tasks.clientId, id));
+        console.log(`   ✓ Deleted tasks and comments`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting tasks:`, err.message);
+      }
+
+      try {
+        await db.delete(campaigns).where(eq(campaigns.clientId, id));
+        console.log(`   ✓ Deleted campaigns`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting campaigns:`, err.message);
+      }
+
+      // 3. Leads
+      try {
+        await db.update(leads).set({ clientId: null }).where(eq(leads.clientId, id));
+        await db.update(leads).set({ convertedToClientId: null }).where(eq(leads.convertedToClientId, id));
+        console.log(`   ✓ Updated leads (unlinked)`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning updating leads:`, err.message);
+      }
+
+      // 3.1 Users
+      try {
+        await db.update(users).set({ clientId: null }).where(eq(users.clientId, id));
+        console.log(`   ✓ Updated users (unlinked)`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning updating users:`, err.message);
+      }
+
+      // 4. Content & Marketing
+      try {
+        await db.delete(contentPosts).where(eq(contentPosts.clientId, id));
+        console.log(`   ✓ Deleted content posts`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting content posts:`, err.message);
+      }
+
+      try {
+        await db.delete(marketingBroadcastRecipients).where(eq(marketingBroadcastRecipients.clientId, id));
+        console.log(`   ✓ Deleted marketing broadcast recipients`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting marketing broadcast recipients:`, err.message);
+      }
+
+      // 5. Billing & Support
+      try {
+        await db.delete(invoices).where(eq(invoices.clientId, id));
+        console.log(`   ✓ Deleted invoices`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting invoices:`, err.message);
+      }
+
+      try {
+        await db.delete(tickets).where(eq(tickets.clientId, id));
+        console.log(`   ✓ Deleted tickets`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting tickets:`, err.message);
+      }
+
+      try {
+        await db.update(commissions).set({ clientId: null }).where(eq(commissions.clientId, id));
+        console.log(`   ✓ Updated commissions (unlinked)`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning updating commissions:`, err.message);
+      }
+
+      try {
+        await db.delete(discountRedemptions).where(eq(discountRedemptions.clientId, id));
+        console.log(`   ✓ Deleted discount redemptions`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting discount redemptions:`, err.message);
+      }
+
+      // 6. Operations
+      try {
+        await db.delete(messages).where(eq(messages.clientId, id));
+        console.log(`   ✓ Deleted messages`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting messages:`, err.message);
+      }
+
+      try {
+        await db.delete(onboardingTasks).where(eq(onboardingTasks.clientId, id));
+        console.log(`   ✓ Deleted onboarding tasks`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting onboarding tasks:`, err.message);
+      }
+
+      try {
+        await db.delete(clientDocuments).where(eq(clientDocuments.clientId, id));
+        console.log(`   ✓ Deleted client documents`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting client documents:`, err.message);
+      }
+
+      // 7. Projects
+      try {
+        const projects = await db.select().from(websiteProjects).where(eq(websiteProjects.clientId, id));
+        for (const p of projects) {
+          await db.delete(projectFeedback).where(eq(projectFeedback.projectId, p.id));
+        }
+        await db.delete(websiteProjects).where(eq(websiteProjects.clientId, id));
+        console.log(`   ✓ Deleted website projects and feedback`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting website projects:`, err.message);
+      }
+
+      // 8. AI / Second Me
+      try {
+        await db.delete(secondMeContent).where(eq(secondMeContent.clientId, id));
+        await db.delete(secondMe).where(eq(secondMe.clientId, id));
+        console.log(`   ✓ Deleted AI/Second Me data`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting AI/Second Me data:`, err.message);
+      }
+
+      // 9. Creators
+      try {
+        await db.delete(clientCreators).where(eq(clientCreators.clientId, id));
+        await db.delete(creatorVisits).where(eq(creatorVisits.clientId, id));
+        console.log(`   ✓ Deleted creator assignments and visits`);
+      } catch (err: any) {
+        console.warn(`   ⚠ Warning deleting creator data:`, err.message);
+      }
+
+      // 10. Finally delete the client
+      const [deletedClient] = await db.delete(clients).where(eq(clients.id, id)).returning();
+      if (!deletedClient) {
+        throw new Error(`Client ${id} not found`);
+      }
+      console.log(`✅ Client ${id} deleted successfully`);
+    } catch (error: any) {
+      console.error(`❌ Error deleting client ${id}:`, error);
+      throw error;
+    }
   }
 
   // Campaign operations

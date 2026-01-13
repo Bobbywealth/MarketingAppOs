@@ -170,9 +170,18 @@ router.delete("/:id", isAuthenticated, requirePermission("canManageClients"), as
     if (!existing) return;
     await storage.deleteClient(req.params.id);
     res.status(204).send();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to delete client" });
+  } catch (error: any) {
+    console.error(`❌ Error deleting client ${req.params.id}:`, error);
+    
+    // Provide more specific error message for foreign key constraints if they still happen
+    if (error.code === '23503' || error.message?.includes('foreign key')) {
+      return res.status(400).json({ 
+        message: "Cannot delete client: This client has related records that prevent deletion.",
+        detail: error.detail || error.message
+      });
+    }
+    
+    res.status(500).json({ message: "Failed to delete client", error: error.message });
   }
 });
 
