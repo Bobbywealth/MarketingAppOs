@@ -622,7 +622,20 @@ router.post("/broadcast", async (req: Request, res: Response) => {
 
 // File upload route for marketing media
 router.post("/upload", upload.array("files", 10), async (req: Request, res: Response) => {
-... [35 lines] ...
+  try {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+    const mediaUrls = files.map((file) => `${appUrl}/uploads/${file.filename}`);
+
+    res.json({ mediaUrls });
+  } catch (error: any) {
+    console.error("Marketing media upload error:", error);
+    res.status(500).json({ message: error.message || "Failed to upload files" });
+  }
 });
 
 // Vapi Proxy Routes
