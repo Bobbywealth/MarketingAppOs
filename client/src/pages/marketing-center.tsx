@@ -799,8 +799,6 @@ export default function MarketingCenter() {
           </div>
         </TabsContent>
 
-        </TabsContent>
-
         <TabsContent value="groups" className="animate-in fade-in duration-500">
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-6">
