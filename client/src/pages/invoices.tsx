@@ -14,7 +14,8 @@ import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 
 interface StripeDashboardData {
-  activeSubscribers: number;
+  activeSubscriptions: number;
+  totalSubscriptions: number;
   mrr: number;
   grossVolume: number;
   totalRevenue: number;
@@ -409,7 +410,7 @@ export default function Invoices() {
               </div>
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">Active Subscribers</p>
-                <p className="text-2xl font-bold">{stripeData?.activeSubscribers || 0}</p>
+                <p className="text-2xl font-bold">{stripeData?.activeSubscriptions || 0}</p>
               </div>
             </div>
           </CardContent>

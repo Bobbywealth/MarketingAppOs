@@ -73,6 +73,35 @@ router.post("/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRol
 
 router.patch("/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
   try {
+    // Prevent invalid parent references (self-parenting / cycles)
+    if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "parentSpaceId")) {
+      const incoming = (req.body as any).parentSpaceId;
+      const parentSpaceId =
+        incoming === undefined || incoming === null || incoming === "" ? null : String(incoming);
+
+      if (parentSpaceId && parentSpaceId === req.params.id) {
+        return res.status(400).json({ message: "A space cannot be its own parent" });
+      }
+
+      if (parentSpaceId) {
+        const allSpaces = await storage.getTaskSpaces();
+        const byId = new Map(allSpaces.map((s) => [s.id, s] as const));
+        let current = byId.get(parentSpaceId);
+        let guard = 0;
+        while (current && guard < 1000) {
+          guard++;
+          if (current.id === req.params.id) {
+            return res.status(400).json({ message: "Invalid parent: would create a cycle" });
+          }
+          const nextParent = current.parentSpaceId ?? null;
+          if (!nextParent) break;
+          current = byId.get(nextParent);
+        }
+      }
+
+      (req.body as any).parentSpaceId = parentSpaceId;
+    }
+
     const space = await storage.updateTaskSpace(req.params.id, req.body);
     res.json(space);
   } catch (error) {

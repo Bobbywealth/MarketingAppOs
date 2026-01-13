@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat, Eye, EyeOff } from "lucide-react";
-import type { Task, InsertTask, Client, User as UserType } from "@shared/schema";
+import type { Task, InsertTask, Client, User as UserType, TaskSpace } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -138,10 +138,36 @@ export default function TasksPage() {
     retry: false,
   });
 
-  const { data: spaces = [] } = useQuery<any[]>({
+  const { data: spaces = [] } = useQuery<TaskSpace[]>({
     queryKey: ["/api/task-spaces"],
     retry: false,
   });
+
+  const buildSpaceOptions = () => {
+    const byParent = new Map<string | null, TaskSpace[]>();
+    for (const s of spaces) {
+      const pid = (s.parentSpaceId ?? null) as string | null;
+      const list = byParent.get(pid) || [];
+      list.push(s);
+      byParent.set(pid, list);
+    }
+    for (const [pid, list] of byParent) {
+      list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
+      byParent.set(pid, list);
+    }
+
+    const out: Array<{ id: string; label: string }> = [];
+    const walk = (parentId: string | null, depth: number) => {
+      const children = byParent.get(parentId) || [];
+      for (const s of children) {
+        const indent = depth > 0 ? `${"— ".repeat(Math.min(depth, 6))}` : "";
+        out.push({ id: s.id, label: `${indent}${s.icon ?? "📁"} ${s.name}` });
+        walk(s.id, depth + 1);
+      }
+    };
+    walk(null, 0);
+    return out;
+  };
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -1213,9 +1239,9 @@ export default function TasksPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {spaces.map((space) => (
+                            {buildSpaceOptions().map((space) => (
                               <SelectItem key={space.id} value={space.id}>
-                                {space.name}
+                                {space.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1546,9 +1572,9 @@ export default function TasksPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {spaces.map((space) => (
+                            {buildSpaceOptions().map((space) => (
                               <SelectItem key={space.id} value={space.id}>
-                                {space.name}
+                                {space.label}
                               </SelectItem>
                             ))}
                           </SelectContent>

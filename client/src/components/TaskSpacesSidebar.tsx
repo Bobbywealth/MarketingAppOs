@@ -35,6 +35,36 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
 
   const hasChildren = (spaceId: string) => getChildren(spaceId).length > 0;
 
+  const flattenSpaceOptions = (opts?: { excludeIds?: Set<string> }) => {
+    const excludeIds = opts?.excludeIds ?? new Set<string>();
+    const out: Array<{ id: string; label: string }> = [];
+
+    const walk = (parentId: string | null, depth: number) => {
+      for (const s of getChildren(parentId)) {
+        if (excludeIds.has(s.id)) continue;
+        const indent = depth > 0 ? `${"— ".repeat(Math.min(depth, 6))}` : "";
+        out.push({ id: s.id, label: `${indent}${s.icon ?? "📁"} ${s.name}` });
+        walk(s.id, depth + 1);
+      }
+    };
+
+    walk(null, 0);
+    return out;
+  };
+
+  const getDescendantIds = (rootId: string) => {
+    const out = new Set<string>();
+    const walk = (id: string) => {
+      for (const child of getChildren(id)) {
+        if (out.has(child.id)) continue;
+        out.add(child.id);
+        walk(child.id);
+      }
+    };
+    walk(rootId);
+    return out;
+  };
+
   const createSpaceMutation = useMutation({
     mutationFn: async (data: { name: string; icon: string; color: string }) => {
       const response = await apiRequest("POST", "/api/task-spaces", data);
@@ -208,6 +238,14 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
   }
 
   const topLevelSpaces = getChildren(null);
+  const parentSpaceOptions = flattenSpaceOptions();
+  const editParentExcludeIds =
+    editingSpace
+      ? new Set<string>([editingSpace.id, ...Array.from(getDescendantIds(editingSpace.id))])
+      : new Set<string>();
+  const editParentSpaceOptions = editingSpace
+    ? flattenSpaceOptions({ excludeIds: editParentExcludeIds })
+    : [];
 
   return (
     <div className="space-y-2 p-3">
@@ -256,9 +294,9 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 >
                   <option value="">No parent</option>
-                  {topLevelSpaces.map((s) => (
+                  {parentSpaceOptions.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.icon} {s.name}
+                      {s.label}
                     </option>
                   ))}
                 </select>
@@ -336,13 +374,11 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
                   className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
                 >
                   <option value="">No parent</option>
-                  {topLevelSpaces
-                    .filter((s) => s.id !== editingSpace.id)
-                    .map((s) => (
+                  {editParentSpaceOptions.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.icon} {s.name}
+                        {s.label}
                       </option>
-                    ))}
+                  ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">

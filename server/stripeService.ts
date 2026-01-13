@@ -57,6 +57,7 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
     // Get all data in parallel wrapped in circuit breaker
     const [
       activeSubscriptions,
+      allSubscriptions,
       charges,
       customers,
       invoices,
@@ -66,6 +67,11 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
       // Active subscriptions
       stripeInstance.subscriptions.list({
         status: 'active',
+        limit: 100,
+      }),
+      // All subscriptions (to get total count)
+      stripeInstance.subscriptions.list({
+        status: 'all',
         limit: 100,
       }),
       // Charges in date range
@@ -115,14 +121,24 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
       if (sub.items.data.length > 0) {
         const price = sub.items.data[0].price;
         if (price && price.recurring?.interval === 'month') {
-          return total + (price.unit_amount || 0);
+          return total + ((price.unit_amount || 0) * (sub.quantity || 1));
         } else if (price && price.recurring?.interval === 'year') {
           // Convert annual to monthly
-          return total + ((price.unit_amount || 0) / 12);
+          return total + (((price.unit_amount || 0) * (sub.quantity || 1)) / 12);
         }
       }
       return total;
     }, 0) / 100; // Convert from cents to dollars
+
+    // Format subscriptions for the UI
+    const formattedSubscriptions = allSubscriptions.data.map(sub => ({
+      id: sub.id,
+      status: sub.status,
+      customerId: sub.customer,
+      amount: (sub.items.data[0]?.price?.unit_amount || 0) / 100,
+      interval: sub.items.data[0]?.price?.recurring?.interval || 'month',
+      created: new Date(sub.created * 1000).toISOString(),
+    }));
 
     // Calculate gross volume
     const grossVolume = balanceTransactions.data
@@ -197,7 +213,10 @@ async function _getStripeDashboardMetrics(startDate?: Date, endDate?: Date) {
     };
 
     return {
-      activeSubscribers: activeSubscriptions.data.length,
+      activeSubscriptions: activeSubscriptions.data.length,
+      activeSubscribers: activeSubscriptions.data.length, // Keep for backward compatibility
+      totalSubscriptions: allSubscriptions.data.length,
+      subscriptions: formattedSubscriptions,
       mrr,
       grossVolume,
       totalRevenue,
