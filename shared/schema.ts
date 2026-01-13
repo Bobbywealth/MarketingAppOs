@@ -714,6 +714,7 @@ export const marketingGroupMembers = pgTable("marketing_group_members", {
     .notNull(),
   leadId: varchar("lead_id").references(() => leads.id, { onDelete: "cascade" }),
   clientId: varchar("client_id").references(() => clients.id, { onDelete: "cascade" }),
+  customRecipient: text("custom_recipient"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

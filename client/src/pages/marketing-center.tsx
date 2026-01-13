@@ -117,6 +117,7 @@ export default function MarketingCenter() {
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [selectedGroupForMembers, setSelectedGroupForMembers] = useState<MarketingGroup | null>(null);
+  const [manualRecipientInput, setManualRecipientInput] = useState("");
   
   // Marketing Stats Query
   const {
@@ -271,8 +272,8 @@ export default function MarketingCenter() {
   });
 
   const addMemberMutation = useMutation({
-    mutationFn: async ({ groupId, leadId, clientId }: { groupId: string; leadId?: string; clientId?: string }) => {
-      const res = await apiRequest("POST", `/api/marketing-center/groups/${groupId}/members`, { leadId, clientId });
+    mutationFn: async ({ groupId, leadId, clientId, customRecipient }: { groupId: string; leadId?: string; clientId?: string; customRecipient?: string }) => {
+      const res = await apiRequest("POST", `/api/marketing-center/groups/${groupId}/members`, { leadId, clientId, customRecipient });
       return res.json();
     },
     onSuccess: () => {
@@ -528,6 +529,55 @@ export default function MarketingCenter() {
                           onChange={(e) => setCustomRecipient(e.target.value)}
                           className="h-12 glass border-2 font-semibold"
                         />
+                        {broadcastType === 'telegram' && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] text-muted-foreground font-medium mt-1 leading-tight">
+                              <span className="text-sky-500 font-bold">Tip:</span> To find your ID, add your bot to a group and use <code>@userinfobot</code> or <code>/id</code> if supported. The bot <strong>must</strong> be an administrator in channels.
+                            </p>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 text-[10px] font-bold uppercase tracking-widest"
+                              onClick={async () => {
+                                if (!customRecipient.trim()) {
+                                  toast({
+                                    title: "Missing ID",
+                                    description: "Please enter a Telegram chat_id first.",
+                                    variant: "destructive"
+                                  });
+                                  return;
+                                }
+                                try {
+                                  const res = await apiRequest("POST", "/api/marketing-center/telegram/test", {
+                                    chatId: customRecipient,
+                                    text: "Verification from MarketingOS: Your bot connection is active!"
+                                  });
+                                  const data = await res.json();
+                                  if (data.success) {
+                                    toast({
+                                      title: "Success",
+                                      description: "Test message sent! Check your Telegram group/channel.",
+                                    });
+                                  } else {
+                                    toast({
+                                      title: "Connection Failed",
+                                      description: data.error || "Could not reach Telegram.",
+                                      variant: "destructive"
+                                    });
+                                  }
+                                } catch (err: any) {
+                                  toast({
+                                    title: "Error",
+                                    description: err.message,
+                                    variant: "destructive"
+                                  });
+                                }
+                              }}
+                            >
+                              <Zap className="w-3 h-3 mr-1 text-sky-500" /> Test Connection
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ) : audience === 'group' ? (
                       <div className="space-y-2 animate-in slide-in-from-left-2 duration-300">
@@ -1064,6 +1114,32 @@ export default function MarketingCenter() {
                                     </div>
                                   </div>
 
+                                  <div className="space-y-2 pt-2 border-t border-dashed">
+                                    <Label className="text-xs font-bold uppercase">Add Manual Recipient (Phone/Email)</Label>
+                                    <div className="flex gap-2">
+                                      <Input 
+                                        placeholder="+1234567890 or email@example.com"
+                                        value={manualRecipientInput}
+                                        onChange={(e) => setManualRecipientInput(e.target.value)}
+                                        className="glass border-2"
+                                      />
+                                      <Button 
+                                        size="sm"
+                                        onClick={() => {
+                                          if (!manualRecipientInput.trim()) return;
+                                          addMemberMutation.mutate({ 
+                                            groupId: group.id, 
+                                            customRecipient: manualRecipientInput.trim() 
+                                          });
+                                          setManualRecipientInput("");
+                                        }}
+                                        disabled={addMemberMutation.isPending || !manualRecipientInput.trim()}
+                                      >
+                                        {addMemberMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                      </Button>
+                                    </div>
+                                  </div>
+
                                   <div className="space-y-4">
                                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Current Members</Label>
                                     <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2">
@@ -1254,10 +1330,17 @@ export default function MarketingCenter() {
 // Helper Components for Group Management
 function LeadOptions() {
   const { data: leads = [] } = useQuery<any[]>({ queryKey: ["/api/leads"] });
+  
+  const sortedLeads = useMemo(() => {
+    return [...leads].sort((a, b) => (a.company || a.name || "").localeCompare(b.company || b.name || ""));
+  }, [leads]);
+
   return (
     <>
-      {leads.map(l => (
-        <SelectItem key={l.id} value={l.id}>{l.company} ({l.name})</SelectItem>
+      {sortedLeads.map(l => (
+        <SelectItem key={l.id} value={l.id}>
+          {l.company ? `${l.company}${l.name ? ` (${l.name})` : ""}` : l.name || "Unknown Lead"}
+        </SelectItem>
       ))}
       {leads.length === 0 && <SelectItem value="none" disabled>No leads found</SelectItem>}
     </>
@@ -1266,10 +1349,17 @@ function LeadOptions() {
 
 function ClientOptions() {
   const { data: clients = [] } = useQuery<any[]>({ queryKey: ["/api/clients"] });
+  
+  const sortedClients = useMemo(() => {
+    return [...clients].sort((a, b) => (a.company || a.name || "").localeCompare(b.company || b.name || ""));
+  }, [clients]);
+
   return (
     <>
-      {clients.map(c => (
-        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+      {sortedClients.map(c => (
+        <SelectItem key={c.id} value={c.id}>
+          {c.company ? `${c.company}${c.name ? ` (${c.name})` : ""}` : c.name || "Unknown Client"}
+        </SelectItem>
       ))}
       {clients.length === 0 && <SelectItem value="none" disabled>No clients found</SelectItem>}
     </>
@@ -1295,7 +1385,11 @@ function MemberList({ groupId, onRemove }: { groupId: string; onRemove: (id: num
         const client = allClients.find((c: any) => c.id === m.clientId);
         return {
           ...m,
-          name: lead ? `${lead.company} (Lead)` : client ? `${client.name} (Client)` : "Unknown"
+          name: lead 
+            ? `${lead.company || lead.name} (Lead)` 
+            : client 
+              ? `${client.company || client.name} (Client)` 
+              : m.customRecipient || "Unknown"
         };
       });
     }

@@ -40,7 +40,17 @@ export async function sendTelegramMessage(chatId: string | null | undefined, tex
 
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.ok) {
-      const description = data?.description || `HTTP ${res.status}`;
+      let description = data?.description || `HTTP ${res.status}`;
+      
+      // Provide more helpful guidance for common Telegram errors
+      if (description.toLowerCase().includes("chat not found")) {
+        description = "Chat not found. Ensure the Bot is added to the group/channel as an Administrator and the ID is correct.";
+      } else if (description.toLowerCase().includes("bot was blocked")) {
+        description = "Bot was blocked by the user. They need to unblock the bot or restart the conversation.";
+      } else if (description.toLowerCase().includes("forbidden")) {
+        description = "Access forbidden. Check if the bot has permission to post in this chat.";
+      }
+      
       return { success: false, error: `Telegram error: ${description}`, code: res.status };
     }
 

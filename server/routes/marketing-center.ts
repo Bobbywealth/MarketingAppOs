@@ -35,6 +35,7 @@ async function ensureMarketingCenterSchema() {
         group_id VARCHAR NOT NULL REFERENCES marketing_groups(id) ON DELETE CASCADE,
         lead_id VARCHAR REFERENCES leads(id) ON DELETE CASCADE,
         client_id VARCHAR REFERENCES clients(id) ON DELETE CASCADE,
+        custom_recipient TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
@@ -80,6 +81,7 @@ async function ensureMarketingCenterSchema() {
     `);
 
     // Columns (schema drift fix)
+    await pool.query(`ALTER TABLE marketing_group_members ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS group_id VARCHAR REFERENCES marketing_groups(id);`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS filters JSONB;`);

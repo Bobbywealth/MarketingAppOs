@@ -89,6 +89,7 @@ export async function processMarketingBroadcast(broadcastId: string) {
       const members = await storage.getMarketingGroupMembers(broadcast.groupId);
       const leadIds = members.filter(m => m.leadId).map(m => m.leadId!);
       const clientIds = members.filter(m => m.clientId).map(m => m.clientId!);
+      const customRecipients = members.filter(m => m.customRecipient).map(m => m.customRecipient!);
 
       if (leadIds.length > 0) {
         const allLeads = await storage.getLeads();
@@ -114,6 +115,16 @@ export async function processMarketingBroadcast(broadcastId: string) {
              ((broadcast.type === "sms" || broadcast.type === "whatsapp") && c.optInSms && c.phone))
           )
         ];
+      }
+
+      if (customRecipients.length > 0) {
+        customRecipients.forEach(r => {
+          if (broadcast.type === "email") {
+            individualRecipients.push({ email: r, type: "individual" });
+          } else {
+            individualRecipients.push({ phone: r, type: "individual" });
+          }
+        });
       }
     }
 
