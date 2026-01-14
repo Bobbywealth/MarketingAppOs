@@ -681,7 +681,11 @@ export default function MarketingCenter() {
       return;
     }
     if (audience === 'individual' && !customRecipient.trim()) {
-      toast({ title: "Recipient Required", description: `Please enter a recipient ${broadcastType === 'email' ? 'email' : broadcastType === 'telegram' ? 'chat_id' : 'phone number'}.`, variant: "destructive" });
+      toast({ 
+        title: "Recipient Required", 
+        description: `Please enter a recipient ${broadcastType === 'email' ? 'email' : broadcastType === 'telegram' ? 'chat ID (e.g. -100...)' : 'phone number'}.`, 
+        variant: "destructive" 
+      });
       return;
     }
     // Telegram broadcasts only support "Send to Individual" (a single group/channel chat_id)
@@ -962,7 +966,7 @@ export default function MarketingCenter() {
                         {broadcastType === 'telegram' && (
                           <div className="space-y-2">
                             <p className="text-[10px] text-muted-foreground font-medium mt-1 leading-tight">
-                              <span className="text-sky-500 font-bold">Tip:</span> To find your ID, add your bot to a group and use <code>@userinfobot</code> or <code>/id</code> if supported. The bot <strong>must</strong> be an administrator in channels.
+                              <span className="text-sky-500 font-bold">Tip:</span> To find your ID, add your bot to a group and use <code>@userinfobot</code>. Group/Channel IDs <strong>must</strong> start with <code>-100</code>.
                             </p>
                             <Button 
                               variant="outline" 
