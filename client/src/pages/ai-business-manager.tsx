@@ -4,12 +4,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Loader2, AlertCircle, CheckCircle2, Sparkles, Zap, MessageSquare, Mic, MicOff } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Bot, Send, Loader2, AlertCircle, CheckCircle2, Sparkles, Zap, MessageSquare, Mic, MicOff, Calendar as CalendarIcon, Clock, Trash2, Plus, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { resolveApiUrl } from "@/lib/api";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { type ScheduledAiCommand } from "@shared/schema";
 
 interface Message {
   id: string;
@@ -35,6 +57,9 @@ export default function AIBusinessManager() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(new Date());
+  const [recurringPattern, setRecurringPattern] = useState<string>("none");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -263,6 +288,47 @@ export default function AIBusinessManager() {
     }
   };
 
+  const { data: scheduledCommands = [], isLoading: isLoadingScheduled } = useQuery<ScheduledAiCommand[]>({
+    queryKey: ["/api/ai-business-manager/scheduled-commands"],
+  });
+
+  const createScheduledCommand = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/ai-business-manager/scheduled-commands", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-business-manager/scheduled-commands"] });
+      toast({ title: "Success", description: "AI command scheduled successfully!" });
+      setIsScheduleDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteScheduledCommand = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/ai-business-manager/scheduled-commands/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-business-manager/scheduled-commands"] });
+      toast({ title: "Success", description: "Scheduled command deleted" });
+    },
+  });
+
+  const handleScheduleSubmit = () => {
+    if (!input.trim() || !scheduledDate) return;
+
+    createScheduledCommand.mutate({
+      command: input.trim(),
+      scheduledAt: scheduledDate.toISOString(),
+      isRecurring: recurringPattern !== "none",
+      recurringPattern: recurringPattern !== "none" ? recurringPattern : null,
+      recurringInterval: 1,
+    });
+  };
+
   const quickActions = [
     { label: "Show all clients", prompt: "Hey, can you show me all my clients?" },
     { label: "Create a task", prompt: "I need to create a new task" },
@@ -427,6 +493,101 @@ export default function AIBusinessManager() {
                       <Mic className="w-4 h-4" />
                     )}
                   </Button>
+                  <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!input.trim() || isProcessing}
+                        className="gap-2"
+                      >
+                        <Clock className="w-4 h-4" />
+                        <span className="hidden md:inline">Schedule</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Schedule AI Command</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Command</Label>
+                          <div className="p-3 rounded-lg bg-muted text-sm italic">
+                            "{input}"
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Run Date & Time</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !scheduledDate && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {scheduledDate ? format(scheduledDate, "PPP p") : <span>Pick a date</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={scheduledDate}
+                                onSelect={setScheduledDate}
+                                initialFocus
+                              />
+                              <div className="p-3 border-t border-border">
+                                <Input
+                                  type="time"
+                                  value={scheduledDate ? format(scheduledDate, "HH:mm") : "09:00"}
+                                  onChange={(e) => {
+                                    const [hours, minutes] = e.target.value.split(":");
+                                    const newDate = new Date(scheduledDate || new Date());
+                                    newDate.setHours(parseInt(hours), parseInt(minutes));
+                                    setScheduledDate(newDate);
+                                  }}
+                                />
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Recurrence</Label>
+                          <Select value={recurringPattern} onValueChange={setRecurringPattern}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select frequency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Once</SelectItem>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handleScheduleSubmit}
+                          disabled={createScheduledCommand.isPending}
+                        >
+                          {createScheduledCommand.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Plus className="w-4 h-4 mr-2" />
+                          )}
+                          Schedule Run
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   <Button
                     type="submit"
                     disabled={!input.trim() || isProcessing || isRecording || isTranscribing}
@@ -467,6 +628,59 @@ export default function AIBusinessManager() {
                     {action.label}
                   </Button>
                 ))}
+              </div>
+
+              {/* Scheduled Commands List */}
+              <div className="pt-6 border-t border-border/50 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-primary" />
+                    Scheduled Runs
+                  </h3>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {scheduledCommands.length}
+                  </Badge>
+                </div>
+                
+                <ScrollArea className="h-[200px] -mx-2 px-2">
+                  <div className="space-y-2">
+                    {isLoadingScheduled ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : scheduledCommands.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4 italic">
+                        No scheduled commands yet
+                      </p>
+                    ) : (
+                      scheduledCommands.map((cmd) => (
+                        <div key={cmd.id} className="p-2 rounded-lg bg-muted/50 border border-border/50 space-y-1 group relative">
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="text-xs font-medium line-clamp-2">{cmd.command}</p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => deleteScheduledCommand.mutate(cmd.id)}
+                            >
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <CalendarIcon className="w-3 h-3" />
+                            <span>{format(new Date(cmd.nextRunAt || cmd.scheduledAt), "MMM d, h:mm a")}</span>
+                            {cmd.isRecurring && (
+                              <Badge variant="outline" className="text-[8px] h-3 px-1 gap-0.5">
+                                <Repeat className="w-2 h-2" />
+                                {cmd.recurringPattern}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
 
               <div className="pt-4 border-t border-border/50 space-y-3">

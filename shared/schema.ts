@@ -697,6 +697,46 @@ export type InsertCourseLesson = z.infer<typeof insertCourseLessonSchema>;
 export type CourseEnrollment = typeof courseEnrollments.$inferSelect;
 export type InsertCourseEnrollment = z.infer<typeof insertCourseEnrollmentSchema>;
 
+// Scheduled AI Commands table
+export const scheduledAiCommands = pgTable("scheduled_ai_commands", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  command: text("command").notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, processing, completed, failed
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly
+  recurringInterval: integer("recurring_interval").default(1),
+  recurringEndDate: timestamp("recurring_end_date"),
+  lastResponse: text("last_response"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_scheduled_ai_commands_user").on(table.userId),
+  index("IDX_scheduled_ai_commands_status").on(table.status),
+  index("IDX_scheduled_ai_commands_next_run").on(table.nextRunAt),
+]);
+
+export const scheduledAiCommandsRelations = relations(scheduledAiCommands, ({ one }) => ({
+  user: one(users, {
+    fields: [scheduledAiCommands.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertScheduledAiCommandSchema = createInsertSchema(scheduledAiCommands)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    scheduledAt: z.union([z.string(), z.date()]).transform(val => new Date(val)),
+    recurringEndDate: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+    nextRunAt: z.union([z.string(), z.date()]).optional().nullable().transform(val => val ? new Date(val) : null),
+  });
+
+export type ScheduledAiCommand = typeof scheduledAiCommands.$inferSelect;
+export type InsertScheduledAiCommand = z.infer<typeof insertScheduledAiCommandSchema>;
+
 // Marketing Groups table
 export const marketingGroups = pgTable("marketing_groups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

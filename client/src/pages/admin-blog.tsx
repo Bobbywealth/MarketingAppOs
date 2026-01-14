@@ -360,6 +360,27 @@ export default function AdminBlog() {
 
                 <div className="md:col-span-2 space-y-2">
                   <Label>Hero image (optional)</Label>
+                  {imageUrl && (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border mb-2 group">
+                      <img 
+                        src={imageUrl} 
+                        alt="Hero preview" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60';
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setImageUrl("")}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 flex-wrap">
                     <Input
                       value={imageUrl}

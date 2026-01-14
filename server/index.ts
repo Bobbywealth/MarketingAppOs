@@ -16,6 +16,7 @@ import { startVisitsAutomation } from "./visitsAutomation";
 import { startTaskAutomation } from "./taskAutomation";
 import { startMarketingBroadcastScheduler } from "./marketingBroadcastScheduler";
 import { startSeriesProcessor } from "./marketingSeriesProcessor";
+import { startAiCommandScheduler } from "./aiCommandScheduler";
 import { startBackgroundJobs } from "./backgroundJobs";
 import { startLeadAutomationProcessor } from "./leadAutomationProcessor";
 import { storage } from "./storage";
@@ -57,6 +58,9 @@ app.get("/uploads/:filename", (req, res, next) => {
   }
   next();
 });
+
+// Serve uploaded files for all other users
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 // #endregion
 
 // Security Middleware
@@ -68,7 +72,7 @@ app.use(helmet({
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
       "frame-src": ["'self'", "https://player.vimeo.com"],
       "script-src": ["'self'", "'unsafe-inline'", "https://player.vimeo.com", "https://apis.google.com"],
-      "img-src": ["'self'", "data:", "https://vimeo.com", "https://*.vimeocdn.com", "https://*.googleapis.com", "https://*.gstatic.com"],
+      "img-src": ["'self'", "data:", "https://vimeo.com", "https://*.vimeocdn.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://images.unsplash.com", "https://*.unsplash.com", "https://images.pexels.com", "https://*.pexels.com"],
       "connect-src": ["'self'", "https://vimeo.com", "https://*.vimeocdn.com", "https://*.googleapis.com", "https://*.gstatic.com"],
       "font-src": ["'self'", "https://*.googleapis.com", "https://*.gstatic.com", "https://r2cdn.perplexity.ai", "data:"],
       "style-src": ["'self'", "'unsafe-inline'", "https://*.googleapis.com"],
@@ -213,6 +217,8 @@ app.use((req, res, next) => {
   startBackgroundJobs();
   // Start lead automation processor (abandoned cart reminders, etc)
   startLeadAutomationProcessor();
+  // Start scheduled AI commands (every minute)
+  startAiCommandScheduler();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

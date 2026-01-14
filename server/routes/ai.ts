@@ -9,6 +9,7 @@ import { upload } from "./common";
 import fs from "fs/promises";
 import { createReadStream } from "fs";
 import OpenAI from "openai";
+import { insertScheduledAiCommandSchema } from "@shared/schema";
 
 const router = Router();
 
@@ -304,6 +305,78 @@ router.post("/generate-content", isAuthenticated, requireRole(UserRole.ADMIN), a
       message: "Failed to generate content",
       error: error.message 
     });
+  }
+});
+
+// Get all scheduled commands for the current user
+router.get("/scheduled-commands", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const userId = getNumericUserId(user);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const commands = await storage.getScheduledAiCommands(userId);
+    res.json(commands);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create a new scheduled command
+router.post("/scheduled-commands", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const userId = getNumericUserId(user);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const validatedData = insertScheduledAiCommandSchema.parse({
+      ...req.body,
+      userId
+    });
+
+    const command = await storage.createScheduledAiCommand(validatedData);
+    res.status(201).json(command);
+  } catch (error: any) {
+    console.error('Error creating scheduled AI command:', error);
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Update a scheduled command
+router.patch("/scheduled-commands/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const userId = getNumericUserId(user);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const command = await storage.getScheduledAiCommand(req.params.id);
+    if (!command || command.userId !== userId) {
+      return res.status(404).json({ message: "Command not found" });
+    }
+
+    const updated = await storage.updateScheduledAiCommand(req.params.id, req.body);
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Delete a scheduled command
+router.delete("/scheduled-commands/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const userId = getNumericUserId(user);
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const command = await storage.getScheduledAiCommand(req.params.id);
+    if (!command || command.userId !== userId) {
+      return res.status(404).json({ message: "Command not found" });
+    }
+
+    await storage.deleteScheduledAiCommand(req.params.id);
+    res.sendStatus(204);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

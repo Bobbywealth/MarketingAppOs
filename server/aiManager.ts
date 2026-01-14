@@ -28,7 +28,7 @@ type PendingAction = {
   createdAt: number;
 };
 
-const WRITE_FUNCTIONS = new Set(["create_client", "create_task", "send_message"]);
+const WRITE_FUNCTIONS = new Set(["create_client", "create_task", "send_message", "create_marketing_broadcast"]);
 const pendingActionsByUserId = new Map<number, PendingAction>();
 
 function sanitizeConversationHistory(
@@ -72,6 +72,8 @@ function describePendingAction(action: PendingAction): string {
         return `Send message to "${args.recipientName}": "${String(args.message || "").slice(0, 80)}"${
           String(args.message || "").length > 80 ? "…" : ""
         }`;
+      case "create_marketing_broadcast":
+        return `Create ${args.type} broadcast to ${args.audience}${args.groupId ? ` (Group ID: ${args.groupId})` : ""}: "${String(args.content || "").slice(0, 80)}…"`;
       default:
         return `${action.functionName}`;
     }
@@ -245,6 +247,45 @@ const tools = [
           companyName: { type: "string", description: "The name of the lead's company" },
         },
         required: ["companyName"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "list_marketing_groups",
+      description: "Get a list of all marketing groups",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_marketing_broadcast",
+      description: "Send a marketing broadcast (SMS, Email, WhatsApp, Telegram) to an audience or group",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { 
+            type: "string", 
+            enum: ["email", "sms", "whatsapp", "telegram", "voice"],
+            description: "The channel to use" 
+          },
+          audience: { 
+            type: "string", 
+            enum: ["all", "leads", "clients", "group", "individual"],
+            description: "Target audience" 
+          },
+          content: { type: "string", description: "The message content" },
+          subject: { type: "string", description: "Email subject (required for email)" },
+          groupId: { type: "string", description: "Group ID (if audience is 'group')" },
+          customRecipient: { type: "string", description: "Email/Phone (if audience is 'individual' or for telegram chat_id)" },
+        },
+        required: ["type", "audience", "content"],
       },
     },
   },
@@ -457,6 +498,36 @@ async function executeFunction(name: string, args: any, userId: number) {
       };
     }
 
+    case "list_marketing_groups": {
+      const groups = await storage.getMarketingGroups();
+      return {
+        count: groups.length,
+        groups: groups.map(g => ({ id: g.id, name: g.name }))
+      };
+    }
+
+    case "create_marketing_broadcast": {
+      const broadcast = await storage.createMarketingBroadcast({
+        type: args.type,
+        status: "pending",
+        subject: args.subject || null,
+        content: args.content,
+        audience: args.audience,
+        groupId: args.groupId || null,
+        customRecipient: args.customRecipient || null,
+        createdBy: userId,
+        scheduledAt: new Date(), // Send immediately
+        isRecurring: false,
+        useAiPersonalization: false,
+      });
+
+      // We need to trigger the processor for immediate send
+      // In a real scenario, the scheduler would pick it up in < 1 min,
+      // but we can import and call it if we want immediate execution.
+      // For now, returning success and letting the scheduler pick it up is safer.
+      return { success: true, broadcastId: broadcast.id, status: "scheduled for immediate delivery" };
+    }
+
     default:
       return { error: "Unknown function" };
   }
@@ -660,7 +731,8 @@ export type AIChatStreamEvent =
 export async function processAIChat(
   message: string, 
   userId: number,
-  conversationHistory: Array<{ role: string; content: string }> = []
+  conversationHistory: Array<{ role: string; content: string }> = [],
+  skipConfirmation: boolean = false
 ): Promise<{
   success: boolean;
   response: string;
@@ -677,10 +749,10 @@ export async function processAIChat(
   }
 
   try {
-    console.log('🤖 AI Chat Request:', message);
+    console.log(`🤖 AI Chat Request (skipConfirm=${skipConfirmation}):`, message);
 
     const pending = pendingActionsByUserId.get(userId);
-    if (pending && isConfirmMessage(message)) {
+    if (!skipConfirmation && pending && isConfirmMessage(message)) {
       pendingActionsByUserId.delete(userId);
       try {
         await executeFunction(pending.functionName, pending.args, userId);
@@ -743,7 +815,7 @@ Current user ID: ${userId}`
       const writeCall = (responseMessage.tool_calls as any[]).find((c: any) =>
         WRITE_FUNCTIONS.has(c?.function?.name)
       );
-      if (writeCall) {
+      if (writeCall && !skipConfirmation) {
         try {
           const functionName = (writeCall as any).function.name;
           const functionArgs = JSON.parse((writeCall as any).function.arguments || "{}");

@@ -26,6 +26,8 @@ type BlogPost = {
   imageUrl?: string | null;
 };
 
+const DEFAULT_BLOG_IMAGE = "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=60";
+
 export default function BlogPageDb() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -148,15 +150,16 @@ export default function BlogPageDb() {
             {viewingPost.readTime && <span className="text-sm text-muted-foreground">{viewingPost.readTime}</span>}
           </div>
 
-          {viewingPost.imageUrl && (
-            <div className="mb-10 rounded-3xl overflow-hidden shadow-2xl">
-              <img 
-                src={viewingPost.imageUrl} 
-                alt={viewingPost.title} 
-                className="w-full h-auto max-h-[500px] object-cover"
-              />
-            </div>
-          )}
+          <div className="mb-10 rounded-3xl overflow-hidden shadow-2xl bg-muted">
+            <img 
+              src={viewingPost.imageUrl || DEFAULT_BLOG_IMAGE} 
+              alt={viewingPost.title} 
+              className="w-full h-auto max-h-[500px] object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = DEFAULT_BLOG_IMAGE;
+              }}
+            />
+          </div>
 
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 leading-tight">{viewingPost.title}</h1>
 
@@ -298,15 +301,16 @@ export default function BlogPageDb() {
                       key={post.id}
                       className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20 overflow-hidden"
                     >
-                      {post.imageUrl && (
-                        <div className="aspect-[16/9] overflow-hidden">
-                          <img 
-                            src={post.imageUrl} 
-                            alt={post.title} 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                        </div>
-                      )}
+                      <div className="aspect-[16/9] overflow-hidden bg-muted">
+                        <img 
+                          src={post.imageUrl || DEFAULT_BLOG_IMAGE} 
+                          alt={post.title} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = DEFAULT_BLOG_IMAGE;
+                          }}
+                        />
+                      </div>
                       <CardHeader>
                         <div className="flex items-center gap-2 mb-2">
                           {post.category && (
@@ -378,15 +382,16 @@ export default function BlogPageDb() {
                     className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
                     onClick={() => setViewingPost(post)}
                   >
-                    {post.imageUrl && (
-                      <div className="aspect-video overflow-hidden">
-                        <img 
-                          src={post.imageUrl} 
-                          alt={post.title} 
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      </div>
-                    )}
+                    <div className="aspect-video overflow-hidden bg-muted">
+                      <img 
+                        src={post.imageUrl || DEFAULT_BLOG_IMAGE} 
+                        alt={post.title} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_BLOG_IMAGE;
+                        }}
+                      />
+                    </div>
                     <CardHeader>
                       <div className="flex items-center gap-2 mb-2">
                         {post.category && (

@@ -50,6 +50,7 @@ import {
   commissions,
   discountRedemptions,
   smsMessages,
+  scheduledAiCommands,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -136,6 +137,8 @@ import {
   type InsertMarketingGroupMember,
   type MarketingTemplate,
   type InsertMarketingTemplate,
+  type ScheduledAiCommand,
+  type InsertScheduledAiCommand,
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, asc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
@@ -404,6 +407,14 @@ export interface IStorage {
   createCreator(creator: InsertCreator): Promise<Creator>;
   updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator>;
   deleteCreator(id: string): Promise<void>;
+
+  // Scheduled AI Command operations
+  getScheduledAiCommands(userId: number): Promise<ScheduledAiCommand[]>;
+  getScheduledAiCommand(id: string): Promise<ScheduledAiCommand | undefined>;
+  getDueScheduledAiCommands(): Promise<ScheduledAiCommand[]>;
+  createScheduledAiCommand(command: InsertScheduledAiCommand): Promise<ScheduledAiCommand>;
+  updateScheduledAiCommand(id: string, data: Partial<ScheduledAiCommand>): Promise<ScheduledAiCommand>;
+  deleteScheduledAiCommand(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2904,6 +2915,48 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCreator(id: string): Promise<void> {
     await db.delete(creators).where(eq(creators.id, id));
+  }
+
+  // Scheduled AI Command operations
+  async getScheduledAiCommands(userId: number): Promise<ScheduledAiCommand[]> {
+    return await db.select().from(scheduledAiCommands).where(eq(scheduledAiCommands.userId, userId)).orderBy(desc(scheduledAiCommands.createdAt));
+  }
+
+  async getScheduledAiCommand(id: string): Promise<ScheduledAiCommand | undefined> {
+    const [row] = await db.select().from(scheduledAiCommands).where(eq(scheduledAiCommands.id, id));
+    return row;
+  }
+
+  async getDueScheduledAiCommands(): Promise<ScheduledAiCommand[]> {
+    const now = new Date();
+    return await db.select().from(scheduledAiCommands).where(
+      and(
+        or(
+          eq(scheduledAiCommands.status, "pending"),
+          eq(scheduledAiCommands.status, "completed") // For recurring
+        ),
+        isNotNull(scheduledAiCommands.nextRunAt),
+        lte(scheduledAiCommands.nextRunAt, now)
+      )
+    );
+  }
+
+  async createScheduledAiCommand(commandData: InsertScheduledAiCommand): Promise<ScheduledAiCommand> {
+    const [row] = await db.insert(scheduledAiCommands).values({
+      ...commandData,
+      nextRunAt: commandData.nextRunAt || commandData.scheduledAt
+    }).returning();
+    return row;
+  }
+
+  async updateScheduledAiCommand(id: string, data: Partial<ScheduledAiCommand>): Promise<ScheduledAiCommand> {
+    const [row] = await db.update(scheduledAiCommands).set({ ...data, updatedAt: new Date() }).where(eq(scheduledAiCommands.id, id)).returning();
+    if (!row) throw new Error("Scheduled AI command not found");
+    return row;
+  }
+
+  async deleteScheduledAiCommand(id: string): Promise<void> {
+    await db.delete(scheduledAiCommands).where(eq(scheduledAiCommands.id, id));
   }
 }
 
