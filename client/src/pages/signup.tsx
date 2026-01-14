@@ -120,6 +120,18 @@ export default function SignupPage() {
   const [validDiscount, setValidDiscount] = useState<any>(null);
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const { user } = useAuth();
+
+  // If user is already logged in as a prospective client, skip to appropriate step
+  useEffect(() => {
+    if (user && user.role === 'prospective_client' && step === 1) {
+      if (user.emailVerified) {
+        setStep(4);
+      } else {
+        setStep(3);
+      }
+    }
+  }, [user, step]);
 
   // Fetch subscription packages
   const { data: packages } = useQuery({

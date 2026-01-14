@@ -91,6 +91,7 @@ const AdminSocialOverview = lazy(() => import("@/pages/admin-social-overview"));
 const AdminSocialAccounts = lazy(() => import("@/pages/admin-social-accounts"));
 const AdminBlog = lazy(() => import("@/pages/admin-blog"));
 const AIBusinessManager = lazy(() => import("@/pages/ai-business-manager"));
+const AIContentGenerator = lazy(() => import("@/pages/ai-content-generator"));
 const Commissions = lazy(() => import("@/pages/commissions"));
 const Creators = lazy(() => import("@/pages/creators"));
 const AdminPayouts = lazy(() => import("@/pages/admin-payouts"));
@@ -128,6 +129,7 @@ function Router() {
   const isClient = effectiveRole === 'client';
   const isSalesAgent = effectiveRole === 'sales_agent';
   const isCreator = effectiveRole === 'creator';
+  const isProspectiveClient = effectiveRole === 'prospective_client';
   const isInternal = !!user && ["admin", "manager", "staff", "creator_manager"].includes(effectiveRole); // explicit allowlist
 
   return (
@@ -150,6 +152,7 @@ function Router() {
         {!user && <Route path="/" component={Landing} />}
         {/* Client-specific routes */}
         {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
+        {isProspectiveClient && <ProtectedRoute path="/" component={() => <Redirect to="/signup" />} />}
         {/* Sales Agent-specific routes */}
         {isSalesAgent && <ProtectedRoute path="/" component={SalesDashboard} />}
         {/* Creator-specific routes */}
@@ -216,6 +219,7 @@ function Router() {
         {isInternal && <ProtectedRoute path="/visits/new" component={VisitNew} />}
         {isInternal && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
         {isInternal && <ProtectedRoute path="/ai-manager" component={isAdmin ? AIBusinessManager : Dashboard} />}
+        {isInternal && <ProtectedRoute path="/ai-content-generator" component={isAdmin ? AIContentGenerator : Dashboard} />}
         {/* Shared routes (both clients and staff) */}
         <ProtectedRoute path="/tickets" component={Tickets} />
         <ProtectedRoute path="/settings" component={Settings} />

@@ -190,7 +190,7 @@ export function setupAuth(app: Express) {
       // Only allow client role via standard self-signup. 
       // Staff, Managers, and Admins must be created by an Admin.
       // Creators have their own specific signup flow.
-      const role = UserRole.CLIENT;
+      const role = UserRole.PROSPECTIVE_CLIENT;
       
       const user = await storage.createUser({
         ...validatedData,

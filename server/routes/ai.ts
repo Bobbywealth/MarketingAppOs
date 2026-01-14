@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { isAuthenticated } from "../auth";
-import { processAIChat, processAIChatStream } from "../aiManager";
+import { processAIChat, processAIChatStream, generateMarketingContent } from "../aiManager";
 import { UserRole } from "@shared/roles";
 import { requireRole } from "../rbac";
 import { emailNotifications } from "../emailService";
@@ -275,6 +275,34 @@ router.post("/transcribe", isAuthenticated, requireRole(UserRole.ADMIN), upload.
     res.status(500).json({
       success: false,
       error: error.message || "Failed to transcribe audio"
+    });
+  }
+});
+
+// AI Content Generation endpoint
+router.post("/generate-content", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const { prompt, channel, audience, context, provider } = req.body;
+    const user = req.user as any;
+    const userId = getNumericUserId(user);
+
+    if (!prompt || !channel) {
+      return res.status(400).json({ message: "Prompt and channel are required" });
+    }
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    console.log(`🤖 AI Content Generation Request from user ${userId} using ${provider || 'openai'}:`, { channel, audience });
+
+    const content = await generateMarketingContent(prompt, channel, audience, context, provider || "openai");
+    res.json({ success: true, content });
+  } catch (error: any) {
+    console.error('❌ AI Content Generation error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to generate content",
+      error: error.message 
     });
   }
 });

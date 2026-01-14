@@ -40,6 +40,8 @@ interface LeadCardProps {
   onCall: (phone: string) => void;
   onAIAnalyze: (lead: Lead) => void;
   onAIDraftOutreach: (lead: Lead) => void;
+  onSendPaymentLink: (lead: Lead) => void;
+  onConvert: (lead: Lead) => void;
 }
 
 const getStageBadge = (stage: string) => {
@@ -63,7 +65,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({
   onLogActivity,
   onCall,
   onAIAnalyze,
-  onAIDraftOutreach
+  onAIDraftOutreach,
+  onSendPaymentLink,
+  onConvert
 }) => {
   return (
     <Card 
@@ -273,6 +277,19 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                   className="text-purple-600 focus:text-purple-700"
                 >
                   <Wand2 className="w-4 h-4 mr-2" /> AI Outreach
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={(e) => { e.stopPropagation(); onSendPaymentLink(lead); }}
+                  className="text-emerald-600 focus:text-emerald-700"
+                >
+                  <DollarSign className="w-4 h-4 mr-2" /> Send Payment Link
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => { e.stopPropagation(); onConvert(lead); }}
+                  className="text-blue-600 focus:text-blue-700"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Convert to Client
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>

@@ -27,7 +27,10 @@ import {
   Layout,
   Phone,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Clock,
+  Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -139,6 +142,117 @@ export default function MarketingCenter() {
   const [newTemplateMediaUrls, setNewTemplateMediaUrls] = useState<string[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<MarketingTemplate | null>(null);
   
+  // AI Generation State
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiContext, setAiContext] = useState("");
+  const [smsAnalyses, setSmsAnalyses] = useState<Record<string, any>>({});
+  const [isAnalyzingSms, setIsAnalyzingSms] = useState<Record<string, boolean>>({});
+
+  // AI Group Builder State
+  const [isAiGroupDialogOpen, setIsAiGroupDialogOpen] = useState(false);
+  const [aiGroupQuery, setAiGroupQuery] = useState("");
+  const [isAiGroupBuilding, setIsAiGroupBuilding] = useState(false);
+  const [aiGroupPreview, setAiGroupPreview] = useState<any>(null);
+
+  const [useAiPersonalization, setUseAiPersonalization] = useState(false);
+
+  // Marketing Series State
+  const [isSeriesDialogOpen, setIsSeriesDialogOpen] = useState(false);
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
+  const [isStepDialogOpen, setIsStepDialogOpen] = useState(false);
+  const [editingStep, setEditingStep] = useState<any>(null);
+
+  // Marketing Series Queries
+  const { data: seriesList = [], isLoading: seriesLoading } = useQuery<any[]>({
+    queryKey: ["/api/marketing-center/series"],
+  });
+
+  const { data: currentSeries, isLoading: currentSeriesLoading } = useQuery<any>({
+    queryKey: ["/api/marketing-center/series", selectedSeriesId],
+    enabled: !!selectedSeriesId,
+  });
+
+  const createSeriesMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/marketing-center/series", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/series"] });
+      toast({ title: "Series Created" });
+      setIsSeriesDialogOpen(false);
+    },
+  });
+
+  const updateSeriesMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; [key: string]: any }) => {
+      const res = await apiRequest("PATCH", `/api/marketing-center/series/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/series"] });
+      toast({ title: "Series Updated" });
+    },
+  });
+
+  const deleteSeriesMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/marketing-center/series/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/series"] });
+      toast({ title: "Series Deleted" });
+      setSelectedSeriesId(null);
+    },
+  });
+
+  const addStepMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", `/api/marketing-center/series/${selectedSeriesId}/steps`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/series", selectedSeriesId] });
+      toast({ title: "Step Added" });
+      setIsStepDialogOpen(false);
+    },
+  });
+
+  const updateStepMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; [key: string]: any }) => {
+      const res = await apiRequest("PATCH", `/api/marketing-center/series-steps/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/series", selectedSeriesId] });
+      toast({ title: "Step Updated" });
+      setIsStepDialogOpen(false);
+      setEditingStep(null);
+    },
+  });
+
+  const deleteStepMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/marketing-center/series-steps/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/series", selectedSeriesId] });
+      toast({ title: "Step Deleted" });
+    },
+  });
+
+  const enrollMutation = useMutation({
+    mutationFn: async ({ seriesId, ...data }: { seriesId: string; [key: string]: any }) => {
+      const res = await apiRequest("POST", `/api/marketing-center/series/${seriesId}/enroll`, data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Recipients Enrolled", description: data.message });
+    },
+  });
+
   // Marketing Stats Query
   const {
     data: stats,
@@ -213,6 +327,133 @@ export default function MarketingCenter() {
       queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/templates"] });
       toast({ title: "Template Deleted" });
     },
+  });
+
+  const handleGenerateAiContent = async () => {
+    if (!aiPrompt.trim()) {
+      toast({
+        title: "Missing Prompt",
+        description: "Please describe what you want the AI to write.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAiGenerating(true);
+    try {
+      const res = await apiRequest("POST", "/api/marketing-center/generate-content", {
+        prompt: aiPrompt,
+        channel: broadcastType,
+        audience: audience === 'group' ? (groups.find((g: any) => g.id === groupId)?.name || "Target Group") : audience,
+        context: aiContext
+      });
+      
+      const data = await res.json();
+      
+      if (data.content) {
+        // If it's an email, try to extract subject line
+        if (broadcastType === 'email' && (data.content.toLowerCase().startsWith('subject:') || data.content.toLowerCase().includes('subject:'))) {
+          const lines = data.content.split('\n');
+          const subjectIndex = lines.findIndex((l: string) => l.toLowerCase().startsWith('subject:'));
+          if (subjectIndex !== -1) {
+            const subjectLine = lines[subjectIndex].replace(/^subject:\s*/i, '').trim();
+            // Remove the subject line from the content
+            lines.splice(subjectIndex, 1);
+            const body = lines.join('\n').trim();
+            setSubject(subjectLine);
+            setContent(body);
+          } else {
+            setContent(data.content);
+          }
+        } else {
+          setContent(data.content);
+        }
+        
+        toast({
+          title: "Content Generated",
+          description: "AI has successfully generated your message content.",
+        });
+        setIsAiDialogOpen(false);
+        setAiPrompt("");
+        setAiContext("");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate content with AI.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
+
+  const analyzeSms = async (id: string | number) => {
+    setIsAnalyzingSms(prev => ({ ...prev, [id]: true }));
+    try {
+      const res = await apiRequest("POST", `/api/marketing-center/sms-inbox/${id}/analyze`);
+      const data = await res.json();
+      setSmsAnalyses(prev => ({ ...prev, [id]: data }));
+    } catch (error: any) {
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Could not analyze message.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzingSms(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleBuildAiGroup = async () => {
+    if (!aiGroupQuery.trim()) return;
+    setIsAiGroupBuilding(true);
+    try {
+      const res = await apiRequest("POST", "/api/marketing-center/groups/ai-builder", { query: aiGroupQuery });
+      const data = await res.json();
+      setAiGroupPreview(data);
+    } catch (error: any) {
+      toast({
+        title: "Builder Failed",
+        description: error.message || "Could not build group.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAiGroupBuilding(false);
+    }
+  };
+
+  const saveAiGroup = useMutation({
+    mutationFn: async () => {
+      if (!aiGroupPreview) return;
+      
+      // 1. Create the group
+      const groupRes = await apiRequest("POST", "/api/marketing-center/groups", {
+        name: `AI: ${aiGroupQuery.slice(0, 30)}${aiGroupQuery.length > 30 ? '...' : ''}`,
+        description: aiGroupPreview.explanation
+      });
+      const group = await groupRes.json();
+      
+      // 2. Add members
+      const members = [
+        ...aiGroupPreview.preview.leads.map((l: any) => ({ leadId: l.id })),
+        ...aiGroupPreview.preview.clients.map((c: any) => ({ clientId: c.id }))
+      ];
+      
+      for (const m of members) {
+        await apiRequest("POST", `/api/marketing-center/groups/${group.id}/members`, m);
+      }
+      
+      return group;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/groups"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/stats"] });
+      toast({ title: "Group Created", description: "Your AI-powered group is ready!" });
+      setIsAiGroupDialogOpen(false);
+      setAiGroupQuery("");
+      setAiGroupPreview(null);
+    }
   });
 
   const filteredBroadcasts = useMemo(() => {
@@ -493,6 +734,7 @@ export default function MarketingCenter() {
       recurringPattern: isRecurring ? recurringPattern : null,
       recurringInterval: isRecurring ? recurringInterval : 1,
       recurringEndDate: isRecurring && recurringEndDateLocal ? new Date(recurringEndDateLocal).toISOString() : null,
+      useAiPersonalization,
     });
   };
 
@@ -613,6 +855,9 @@ export default function MarketingCenter() {
             </TabsTrigger>
             <TabsTrigger value="sms-inbox" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
               <MessageSquare className="w-4 h-4 mr-2" /> SMS Inbox
+            </TabsTrigger>
+            <TabsTrigger value="series" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+              <RefreshCw className="w-4 h-4 mr-2" /> Automated Series
             </TabsTrigger>
           </TabsList>
         </div>
@@ -893,8 +1138,19 @@ export default function MarketingCenter() {
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Quick Templates</Label>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Quick Templates</Label>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-black uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10 bg-primary/5 group"
+                        onClick={() => setIsAiDialogOpen(true)}
+                      >
+                        <Sparkles className="w-3 h-3 mr-1.5 text-primary group-hover:animate-pulse" />
+                        Generate with AI
+                      </Button>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {templates.filter(t => t.type === broadcastType).map(t => (
                         <Button
@@ -1021,6 +1277,25 @@ export default function MarketingCenter() {
                       </>
                     )}
                   </div>
+
+                  {broadcastType !== 'voice' && broadcastType !== 'telegram' && (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-primary/5 to-purple-500/5 border border-primary/10 space-y-3 animate-in fade-in duration-500">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <Label htmlFor="ai-personalization" className="text-sm font-bold cursor-pointer">Hyper-Personalization</Label>
+                        </div>
+                        <Checkbox 
+                          id="ai-personalization" 
+                          checked={useAiPersonalization} 
+                          onCheckedChange={(checked) => setUseAiPersonalization(checked as boolean)}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        When enabled, AI will generate a <span className="text-primary font-bold">unique, personalized opening hook</span> for every lead based on their company name and your private notes, making your messages feel human and 1-on-1.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Media Upload Section */}
                   {(broadcastType === 'sms' || broadcastType === 'whatsapp') && (
@@ -1367,11 +1642,48 @@ export default function MarketingCenter() {
           <div className="grid lg:grid-cols-12 gap-8">
             <div className="lg:col-span-4 space-y-6">
               <Card className="glass-strong border-0 shadow-xl overflow-hidden">
-                <CardHeader className="bg-primary/5 border-b">
-                  <CardTitle className="text-xl font-bold">Create New Group</CardTitle>
-                  <CardDescription>Group recipients for targeted campaigns</CardDescription>
+                <CardHeader className="bg-primary/5 border-b flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle className="text-xl font-bold">Create New Group</CardTitle>
+                    <CardDescription>Group recipients for targeted campaigns</CardDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-primary hover:bg-primary/10"
+                    onClick={() => setIsAiGroupDialogOpen(true)}
+                  >
+                    <Sparkles className="w-5 h-5" />
+                  </Button>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                      <span className="text-xs font-black uppercase tracking-widest text-primary">AI Powered Discovery</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Instead of manual filtering, let AI find your audience. Just describe who you want to reach.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full h-8 text-[10px] font-black uppercase tracking-widest border-primary/30 text-primary hover:bg-primary/10 bg-white/50 dark:bg-zinc-900/50"
+                      onClick={() => setIsAiGroupDialogOpen(true)}
+                    >
+                      Open AI Group Builder
+                    </Button>
+                  </div>
+                  
+                  <div className="relative py-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-dashed" />
+                    </div>
+                    <div className="relative flex justify-center text-[10px] uppercase font-bold">
+                      <span className="bg-white dark:bg-zinc-950 px-2 text-muted-foreground">Or Create Manually</span>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Group Name</Label>
                     <Input 
@@ -1788,13 +2100,69 @@ export default function MarketingCenter() {
                       <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
                         <Zap className="w-3 h-3" /> {formatDistanceToNow(new Date(m.timestamp), { addSuffix: true })}
                       </p>
+                      
+                      {smsAnalyses[m.id] && (
+                        <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/10 space-y-2 animate-in fade-in slide-in-from-top-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge 
+                              className={`font-black uppercase text-[10px] tracking-widest ${
+                                smsAnalyses[m.id].sentiment === 'positive' ? 'bg-emerald-500' : 
+                                smsAnalyses[m.id].sentiment === 'negative' ? 'bg-rose-500' : 'bg-zinc-500'
+                              }`}
+                            >
+                              {smsAnalyses[m.id].sentiment}
+                            </Badge>
+                            <Badge variant="outline" className="font-black uppercase text-[10px] tracking-widest border-primary/30 text-primary">
+                              {smsAnalyses[m.id].intent.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                            AI Summary: <span className="font-medium text-muted-foreground">{smsAnalyses[m.id].summary}</span>
+                          </p>
+                          <div className="pt-2 flex flex-col gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-primary">AI Suggested Reply:</span>
+                            <p className="text-xs p-2 bg-white dark:bg-zinc-900 rounded border border-primary/20 italic">
+                              "{smsAnalyses[m.id].suggestedReply}"
+                            </p>
+                            <Button 
+                              variant="link" 
+                              className="p-0 h-auto text-[10px] font-bold uppercase tracking-widest text-primary self-start"
+                              onClick={() => {
+                                setContent(smsAnalyses[m.id].suggestedReply);
+                                setAudience("individual");
+                                setCustomRecipient(m.from_number);
+                                setActiveTab("composer");
+                                toast({ title: "Reply copied to composer" });
+                              }}
+                            >
+                              Copy to Composer
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
+                        {!smsAnalyses[m.id] && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="font-bold text-primary group"
+                            onClick={() => analyzeSms(m.id)}
+                            disabled={isAnalyzingSms[m.id]}
+                          >
+                            {isAnalyzingSms[m.id] ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <Sparkles className="w-4 h-4 mr-2 group-hover:animate-pulse" />
+                            )}
+                            Analyze
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           className="font-bold"
                           onClick={() => {
-                            setBroadcastType(m.dialpad_id ? "sms" : "whatsapp"); // If it has dialpad_id, it's definitely SMS. In reality we'd need a field for channel
+                            setBroadcastType(m.dialpad_id ? "sms" : "whatsapp"); 
                             setAudience("individual");
                             setCustomRecipient(m.from_number);
                             setActiveTab("composer");
@@ -1807,6 +2175,183 @@ export default function MarketingCenter() {
                 </Card>
               ))
             )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="series" className="animate-in fade-in duration-500">
+          <div className="grid lg:grid-cols-12 gap-8">
+            {/* Left: Series List */}
+            <div className="lg:col-span-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black uppercase tracking-tight">Your Series</h3>
+                <Button size="sm" onClick={() => setIsSeriesDialogOpen(true)} className="font-bold">
+                  <Plus className="w-4 h-4 mr-2" /> Create
+                </Button>
+              </div>
+              
+              {seriesLoading ? (
+                <div className="flex justify-center p-10"><Loader2 className="w-6 h-6 animate-spin" /></div>
+              ) : seriesList.length === 0 ? (
+                <Card className="glass border-dashed p-10 text-center text-muted-foreground">
+                  No automated series created yet.
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {seriesList.map((s) => (
+                    <Card 
+                      key={s.id} 
+                      className={`glass cursor-pointer transition-all hover:border-primary/50 ${selectedSeriesId === s.id ? 'border-primary ring-1 ring-primary' : 'border-zinc-200'}`}
+                      onClick={() => setSelectedSeriesId(s.id)}
+                    >
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="space-y-1 min-w-0">
+                          <p className="font-bold truncate">{s.name}</p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] font-black uppercase">{s.type}</Badge>
+                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
+                              {s.isActive ? 'Active' : 'Paused'}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right: Series Editor/Detail */}
+            <div className="lg:col-span-8">
+              {!selectedSeriesId ? (
+                <Card className="glass-strong border-dashed border-2 h-[400px] flex items-center justify-center text-center">
+                  <div className="space-y-2">
+                    <RefreshCw className="w-12 h-12 text-muted-foreground/30 mx-auto" />
+                    <p className="font-bold text-muted-foreground">Select a series to manage steps</p>
+                  </div>
+                </Card>
+              ) : currentSeriesLoading ? (
+                <div className="flex justify-center p-20"><Loader2 className="w-8 h-8 animate-spin" /></div>
+              ) : (
+                <div className="space-y-6">
+                  <Card className="glass-strong overflow-hidden border-0 shadow-xl">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-500" />
+                    <CardHeader>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <CardTitle className="text-2xl font-black">{currentSeries.name}</CardTitle>
+                          <CardDescription>{currentSeries.description || 'No description provided'}</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="font-bold"
+                            onClick={() => updateSeriesMutation.mutate({ id: currentSeries.id, isActive: !currentSeries.isActive })}
+                          >
+                            {currentSeries.isActive ? 'Pause' : 'Activate'}
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="icon" 
+                            className="h-9 w-9"
+                            onClick={() => {
+                              if (confirm("Are you sure? This will delete the series and all steps.")) {
+                                deleteSeriesMutation.mutate(currentSeries.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-black uppercase tracking-widest text-primary">Sequence Steps</h4>
+                        <Button size="sm" variant="outline" onClick={() => { setEditingStep(null); setIsStepDialogOpen(true); }} className="font-bold">
+                          <Plus className="w-4 h-4 mr-2" /> Add Step
+                        </Button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {currentSeries.steps.length === 0 ? (
+                          <div className="text-center py-10 border-2 border-dashed rounded-xl text-muted-foreground font-medium">
+                            No steps added yet. Add your first message!
+                          </div>
+                        ) : (
+                          currentSeries.steps.map((step: any, idx: number) => (
+                            <div key={step.id} className="relative pl-8">
+                              {idx < currentSeries.steps.length - 1 && (
+                                <div className="absolute left-3.5 top-8 bottom-0 w-0.5 bg-zinc-200 dark:bg-zinc-800" />
+                              )}
+                              <div className="absolute left-0 top-0 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-black">
+                                {idx + 1}
+                              </div>
+                              <Card className="glass group hover:border-primary/30 transition-all">
+                                <CardContent className="p-4 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-800 font-bold">
+                                        <Clock className="w-3 h-3 mr-1" /> 
+                                        Delay: {step.delayDays || 0}d {step.delayHours || 0}h
+                                      </Badge>
+                                      {step.subject && (
+                                        <span className="text-sm font-bold truncate max-w-[200px]">{step.subject}</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingStep(step); setIsStepDialogOpen(true); }}>
+                                        <Settings className="w-4 h-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500" onClick={() => deleteStepMutation.mutate(step.id)}>
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm line-clamp-2 text-muted-foreground whitespace-pre-wrap">{step.content}</p>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                    <CardFooter className="bg-zinc-50 dark:bg-zinc-900/50 p-6 border-t">
+                      <div className="w-full flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Automation Status</p>
+                          <p className="text-xs font-medium">Ready to enroll leads or groups into this sequence.</p>
+                        </div>
+                        <Button 
+                          className="font-black bg-primary hover:bg-primary/90"
+                          onClick={() => {
+                            // Quick enroll from selected audience
+                            if (audience === 'individual' && customRecipient) {
+                              enrollMutation.mutate({
+                                seriesId: currentSeries.id,
+                                leadIds: [],
+                                clientIds: [],
+                                customRecipient
+                              });
+                            } else if (audience === 'group' && groupId) {
+                              enrollMutation.mutate({
+                                seriesId: currentSeries.id,
+                                groupIds: [groupId]
+                              });
+                            } else {
+                              toast({ title: "Select Audience", description: "Choose a group or individual in the Campaign Details above first." });
+                            }
+                          }}
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" /> Enroll Current Audience
+                        </Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>
@@ -1910,6 +2455,279 @@ export default function MarketingCenter() {
           <DialogFooter className="border-t pt-4">
             <Button variant="outline" onClick={() => setSelectedBroadcastId(null)} className="font-bold">
               Close Details
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      </Dialog>
+
+      <Dialog open={isAiGroupDialogOpen} onOpenChange={setIsAiGroupDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-black">
+              <Sparkles className="w-6 h-6 text-primary" />
+              AI Group Builder
+            </DialogTitle>
+            <DialogDescription>
+              Find the perfect audience by describing them in natural language.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Describe your target audience</Label>
+              <div className="flex gap-2">
+                <Input 
+                  placeholder="e.g. Find all hot leads in the real estate industry in California who opted in for SMS"
+                  value={aiGroupQuery}
+                  onChange={(e) => setAiGroupQuery(e.target.value)}
+                  className="glass border-2"
+                  onKeyDown={(e) => e.key === 'Enter' && handleBuildAiGroup()}
+                />
+                <Button 
+                  onClick={handleBuildAiGroup} 
+                  disabled={isAiGroupBuilding || !aiGroupQuery.trim()}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  {isAiGroupBuilding ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {aiGroupPreview && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4" /> Match Found
+                    </span>
+                    <Badge className="bg-emerald-500 font-bold">{aiGroupPreview.preview.totalCount} Members Found</Badge>
+                  </div>
+                  <p className="text-xs font-medium text-muted-foreground">{aiGroupPreview.explanation}</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Leads Matching ({aiGroupPreview.preview.leads.length})</Label>
+                    <div className="max-h-[200px] overflow-y-auto border rounded-lg p-2 space-y-1 bg-zinc-50/50 dark:bg-zinc-900/50">
+                      {aiGroupPreview.preview.leads.map((l: any) => (
+                        <div key={l.id} className="text-xs p-1.5 rounded bg-white dark:bg-zinc-800 border flex justify-between items-center">
+                          <span className="font-bold truncate">{l.company}</span>
+                          <span className="text-[10px] text-muted-foreground">{l.name}</span>
+                        </div>
+                      ))}
+                      {aiGroupPreview.preview.leads.length === 0 && <p className="text-xs text-muted-foreground text-center py-4 italic">No matching leads</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clients Matching ({aiGroupPreview.preview.clients.length})</Label>
+                    <div className="max-h-[200px] overflow-y-auto border rounded-lg p-2 space-y-1 bg-zinc-50/50 dark:bg-zinc-900/50">
+                      {aiGroupPreview.preview.clients.map((c: any) => (
+                        <div key={c.id} className="text-xs p-1.5 rounded bg-white dark:bg-zinc-800 border">
+                          <span className="font-bold truncate">{c.name}</span>
+                        </div>
+                      ))}
+                      {aiGroupPreview.preview.clients.length === 0 && <p className="text-xs text-muted-foreground text-center py-4 italic">No matching clients</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsAiGroupDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => saveAiGroup.mutate()} 
+              disabled={!aiGroupPreview || saveAiGroup.isPending || aiGroupPreview.preview.totalCount === 0}
+              className="font-black tracking-widest uppercase bg-gradient-to-r from-emerald-600 to-teal-600 border-0"
+            >
+              {saveAiGroup.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Plus className="w-4 h-4 mr-2" />
+              )}
+              Create AI Group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI Marketing Copilot
+            </DialogTitle>
+            <DialogDescription>
+              Describe what you want to say, and our AI will draft a high-converting message for you.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider">Goal / Instructions</Label>
+              <Textarea 
+                placeholder="e.g. Write a friendly follow-up message for a flash sale that ends in 2 hours. Mention a 20% discount."
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                className="min-h-[100px] resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider">Additional Context (Optional)</Label>
+              <Input 
+                placeholder="e.g. Product is a new CRM software"
+                value={aiContext}
+                onChange={(e) => setAiContext(e.target.value)}
+              />
+            </div>
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <span className="font-bold text-primary">Pro-tip:</span> The AI already knows you're sending this via <span className="font-bold uppercase">{broadcastType}</span> to <span className="font-bold uppercase">{audience === 'group' ? "a custom group" : audience}</span>.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAiDialogOpen(false)} disabled={isAiGenerating}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerateAiContent} 
+              disabled={isAiGenerating || !aiPrompt.trim()}
+              className="bg-gradient-to-r from-primary to-purple-600 border-0"
+            >
+              {isAiGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 mr-2" />
+                  Generate Content
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create/Edit Series Dialog */}
+      <Dialog open={isSeriesDialogOpen} onOpenChange={setIsSeriesDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] glass-strong border-0 shadow-2xl p-0 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-purple-600" />
+          <DialogHeader className="p-8 pb-4">
+            <DialogTitle className="text-2xl font-black uppercase">Create New Series</DialogTitle>
+            <DialogDescription>Set up a multi-step automated campaign.</DialogDescription>
+          </DialogHeader>
+          <div className="px-8 pb-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Series Name</Label>
+              <Input id="series-name" placeholder="e.g. 5-Day Welcome Sequence" className="font-bold h-12 glass border-2" />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Series Type</Label>
+              <Select defaultValue="email" onValueChange={(val) => {
+                const el = document.getElementById('series-type-hidden') as HTMLInputElement;
+                if (el) el.value = val;
+              }}>
+                <SelectTrigger className="h-12 font-bold glass border-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email" className="font-bold">Email Series</SelectItem>
+                  <SelectItem value="sms" className="font-bold">SMS Series</SelectItem>
+                </SelectContent>
+              </Select>
+              <input type="hidden" id="series-type-hidden" defaultValue="email" />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Description</Label>
+              <Textarea id="series-desc" placeholder="What is the goal of this sequence?" className="min-h-[100px] glass border-2" />
+            </div>
+          </div>
+          <DialogFooter className="p-8 bg-slate-50 border-t">
+            <Button variant="ghost" onClick={() => setIsSeriesDialogOpen(false)} className="font-bold uppercase text-xs tracking-widest">Cancel</Button>
+            <Button 
+              className="font-black bg-primary uppercase text-xs tracking-widest shadow-xl shadow-primary/20"
+              onClick={() => {
+                const name = (document.getElementById('series-name') as HTMLInputElement).value;
+                const type = (document.getElementById('series-type-hidden') as HTMLInputElement).value || 'email';
+                const description = (document.getElementById('series-desc') as HTMLTextAreaElement).value;
+                if (!name) return toast({ title: "Name required", variant: "destructive" });
+                createSeriesMutation.mutate({ name, type, description });
+              }}
+            >
+              Create Series
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Step Dialog */}
+      <Dialog open={isStepDialogOpen} onOpenChange={setIsStepDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] glass-strong border-0 shadow-2xl p-0 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-purple-600" />
+          <DialogHeader className="p-8 pb-4">
+            <DialogTitle className="text-2xl font-black uppercase">
+              {editingStep ? 'Edit Step' : 'Add New Step'}
+            </DialogTitle>
+            <DialogDescription>Configure the message and delay for this step.</DialogDescription>
+          </DialogHeader>
+          <div className="px-8 pb-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Delay Days</Label>
+                <Input id="step-days" type="number" defaultValue={editingStep?.delayDays || 0} className="font-bold h-12 glass border-2" />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Delay Hours</Label>
+                <Input id="step-hours" type="number" defaultValue={editingStep?.delayHours || 0} className="font-bold h-12 glass border-2" />
+              </div>
+            </div>
+            {currentSeries?.type === 'email' && (
+              <div className="space-y-2">
+                <Label className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Email Subject</Label>
+                <Input id="step-subject" defaultValue={editingStep?.subject || ''} placeholder="e.g. Welcome to the family!" className="font-bold h-12 glass border-2" />
+              </div>
+            )}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Message Content</Label>
+                <span className="text-[10px] text-muted-foreground font-medium">Use <code>{`{{name}}`}</code> for personalization</span>
+              </div>
+              <Textarea id="step-content" defaultValue={editingStep?.content || ''} placeholder="Write your message here..." className="min-h-[200px] font-medium glass border-2" />
+            </div>
+          </div>
+          <DialogFooter className="p-8 bg-slate-50 border-t">
+            <Button variant="ghost" onClick={() => setIsStepDialogOpen(false)} className="font-bold uppercase text-xs tracking-widest">Cancel</Button>
+            <Button 
+              className="font-black bg-primary uppercase text-xs tracking-widest shadow-xl shadow-primary/20"
+              onClick={() => {
+                const days = parseInt((document.getElementById('step-days') as HTMLInputElement).value) || 0;
+                const hours = parseInt((document.getElementById('step-hours') as HTMLInputElement).value) || 0;
+                const subject = (document.getElementById('step-subject') as HTMLInputElement)?.value;
+                const content = (document.getElementById('step-content') as HTMLTextAreaElement).value;
+                if (!content) return toast({ title: "Content required", variant: "destructive" });
+                
+                const stepData = {
+                  delayDays: days,
+                  delayHours: hours,
+                  subject,
+                  content,
+                  stepOrder: editingStep ? editingStep.stepOrder : (currentSeries?.steps?.length || 0)
+                };
+
+                if (editingStep) {
+                  updateStepMutation.mutate({ id: editingStep.id, ...stepData });
+                } else {
+                  addStepMutation.mutate(stepData);
+                }
+              }}
+            >
+              {editingStep ? 'Update Step' : 'Add Step'}
             </Button>
           </DialogFooter>
         </DialogContent>

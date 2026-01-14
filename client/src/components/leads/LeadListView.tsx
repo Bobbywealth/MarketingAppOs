@@ -11,6 +11,7 @@ import {
   Mail, 
   Edit, 
   Trash2,
+  DollarSign,
   MessageSquare,
   FileText,
   BrainCircuit,
@@ -45,6 +46,8 @@ interface LeadListViewProps {
   onCall: (phone: string) => void;
   onAIAnalyze: (lead: Lead) => void;
   onAIDraftOutreach: (lead: Lead) => void;
+  onSendPaymentLink: (lead: Lead) => void;
+  onConvert: (lead: Lead) => void;
 }
 
 const getScoreBadge = (score: string | null) => {
@@ -73,7 +76,8 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
   onLogActivity,
   onCall,
   onAIAnalyze,
-  onAIDraftOutreach
+  onAIDraftOutreach,
+  onSendPaymentLink
 }) => {
   return (
     <div className="overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -203,8 +207,13 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
                       <Mail className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
-                      <BrainCircuit className="w-4 h-4" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                      onClick={(e) => { e.stopPropagation(); onSendPaymentLink(lead); }}
+                    >
+                      <DollarSign className="w-4 h-4" />
                     </Button>
                     
                     <DropdownMenu>
@@ -216,6 +225,19 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
                       <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLeadClick(lead); }}>
                           <Eye className="w-4 h-4 mr-2" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={(e) => { e.stopPropagation(); onSendPaymentLink(lead); }}
+                          className="text-emerald-600 focus:text-emerald-700"
+                        >
+                          <DollarSign className="w-4 h-4 mr-2" /> Send Payment Link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => { e.stopPropagation(); onConvert(lead); }}
+                          className="text-blue-600 focus:text-blue-700"
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-2" /> Convert to Client
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>

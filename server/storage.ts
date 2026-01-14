@@ -34,6 +34,9 @@ import {
   marketingBroadcastRecipients,
   marketingGroups,
   marketingGroupMembers,
+  marketingSeries,
+  marketingSeriesSteps,
+  marketingSeriesEnrollments,
   marketingTemplatesTable,
   courses,
   courseModules,
@@ -135,7 +138,7 @@ import {
   type InsertMarketingTemplate,
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
+import { eq, desc, asc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
 
 export interface GroupConversationWithParticipants extends GroupConversation {
   participants: Array<{ id: number; username: string; role: string }>;
@@ -327,6 +330,24 @@ export interface IStorage {
   createMarketingBroadcast(data: InsertMarketingBroadcast): Promise<MarketingBroadcast>;
   updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast>;
   deleteMarketingBroadcast(id: string): Promise<void>;
+
+  // Marketing Series operations
+  getMarketingSeries(): Promise<MarketingSeries[]>;
+  getMarketingSeriesWithSteps(id: string): Promise<(MarketingSeries & { steps: MarketingSeriesStep[] }) | undefined>;
+  createMarketingSeries(data: InsertMarketingSeries): Promise<MarketingSeries>;
+  updateMarketingSeries(id: string, data: Partial<InsertMarketingSeries>): Promise<MarketingSeries>;
+  deleteMarketingSeries(id: string): Promise<void>;
+  
+  getMarketingSeriesSteps(seriesId: string): Promise<MarketingSeriesStep[]>;
+  createMarketingSeriesStep(data: InsertMarketingSeriesStep): Promise<MarketingSeriesStep>;
+  updateMarketingSeriesStep(id: string, data: Partial<InsertMarketingSeriesStep>): Promise<MarketingSeriesStep>;
+  deleteMarketingSeriesStep(id: string): Promise<void>;
+  
+  getMarketingSeriesEnrollments(seriesId?: string): Promise<MarketingSeriesEnrollment[]>;
+  getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]>;
+  createMarketingSeriesEnrollment(data: InsertMarketingSeriesEnrollment): Promise<MarketingSeriesEnrollment>;
+  updateMarketingSeriesEnrollment(id: string, data: Partial<InsertMarketingSeriesEnrollment>): Promise<MarketingSeriesEnrollment>;
+  deleteMarketingSeriesEnrollment(id: string): Promise<void>;
   getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
   createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
   updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
@@ -2581,6 +2602,101 @@ export class DatabaseStorage implements IStorage {
 
   async removeMarketingGroupMember(id: number): Promise<void> {
     await db.delete(marketingGroupMembers).where(eq(marketingGroupMembers.id, id));
+  }
+
+  // Marketing Series operations
+  async getMarketingSeries(): Promise<MarketingSeries[]> {
+    return await db.select().from(marketingSeries).orderBy(desc(marketingSeries.createdAt));
+  }
+
+  async getMarketingSeriesWithSteps(id: string): Promise<(MarketingSeries & { steps: MarketingSeriesStep[] }) | undefined> {
+    const [series] = await db.select().from(marketingSeries).where(eq(marketingSeries.id, id));
+    if (!series) return undefined;
+    
+    const steps = await db.select().from(marketingSeriesSteps)
+      .where(eq(marketingSeriesSteps.seriesId, id))
+      .orderBy(asc(marketingSeriesSteps.stepOrder));
+      
+    return { ...series, steps };
+  }
+
+  async createMarketingSeries(data: InsertMarketingSeries): Promise<MarketingSeries> {
+    const [series] = await db.insert(marketingSeries).values(data).returning();
+    return series;
+  }
+
+  async updateMarketingSeries(id: string, data: Partial<InsertMarketingSeries>): Promise<MarketingSeries> {
+    const [series] = await db
+      .update(marketingSeries)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketingSeries.id, id))
+      .returning();
+    if (!series) throw new Error("Marketing series not found");
+    return series;
+  }
+
+  async deleteMarketingSeries(id: string): Promise<void> {
+    await db.delete(marketingSeries).where(eq(marketingSeries.id, id));
+  }
+
+  async getMarketingSeriesSteps(seriesId: string): Promise<MarketingSeriesStep[]> {
+    return await db.select().from(marketingSeriesSteps)
+      .where(eq(marketingSeriesSteps.seriesId, seriesId))
+      .orderBy(asc(marketingSeriesSteps.stepOrder));
+  }
+
+  async createMarketingSeriesStep(data: InsertMarketingSeriesStep): Promise<MarketingSeriesStep> {
+    const [step] = await db.insert(marketingSeriesSteps).values(data).returning();
+    return step;
+  }
+
+  async updateMarketingSeriesStep(id: string, data: Partial<InsertMarketingSeriesStep>): Promise<MarketingSeriesStep> {
+    const [step] = await db
+      .update(marketingSeriesSteps)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketingSeriesSteps.id, id))
+      .returning();
+    if (!step) throw new Error("Marketing series step not found");
+    return step;
+  }
+
+  async deleteMarketingSeriesStep(id: string): Promise<void> {
+    await db.delete(marketingSeriesSteps).where(eq(marketingSeriesSteps.id, id));
+  }
+
+  async getMarketingSeriesEnrollments(seriesId?: string): Promise<MarketingSeriesEnrollment[]> {
+    if (seriesId) {
+      return await db.select().from(marketingSeriesEnrollments).where(eq(marketingSeriesEnrollments.seriesId, seriesId));
+    }
+    return await db.select().from(marketingSeriesEnrollments);
+  }
+
+  async getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]> {
+    const now = new Date();
+    return await db.select().from(marketingSeriesEnrollments)
+      .where(and(
+        eq(marketingSeriesEnrollments.status, "active"),
+        lte(marketingSeriesEnrollments.nextStepDueAt, now)
+      ));
+  }
+
+  async createMarketingSeriesEnrollment(data: InsertMarketingSeriesEnrollment): Promise<MarketingSeriesEnrollment> {
+    const [enrollment] = await db.insert(marketingSeriesEnrollments).values(data).returning();
+    return enrollment;
+  }
+
+  async updateMarketingSeriesEnrollment(id: string, data: Partial<InsertMarketingSeriesEnrollment>): Promise<MarketingSeriesEnrollment> {
+    const [enrollment] = await db
+      .update(marketingSeriesEnrollments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketingSeriesEnrollments.id, id))
+      .returning();
+    if (!enrollment) throw new Error("Marketing series enrollment not found");
+    return enrollment;
+  }
+
+  async deleteMarketingSeriesEnrollment(id: string): Promise<void> {
+    await db.delete(marketingSeriesEnrollments).where(eq(marketingSeriesEnrollments.id, id));
   }
 
   // Marketing Template operations

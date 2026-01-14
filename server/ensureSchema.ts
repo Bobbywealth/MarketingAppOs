@@ -442,6 +442,55 @@ export async function ensureMinimumSchema() {
   await safeQuery("lead_automations.executed_at column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS executed_at TIMESTAMP;`);
   await safeQuery("lead_automations.created_at column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
 
+  // Marketing Series tables
+  await safeQuery("marketing_series table", `
+    CREATE TABLE IF NOT EXISTS marketing_series (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR NOT NULL,
+      description TEXT,
+      type VARCHAR NOT NULL,
+      is_active BOOLEAN DEFAULT true,
+      created_by INTEGER NOT NULL REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await safeQuery("marketing_series_steps table", `
+    CREATE TABLE IF NOT EXISTS marketing_series_steps (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      series_id VARCHAR NOT NULL REFERENCES marketing_series(id) ON DELETE CASCADE,
+      step_order INTEGER NOT NULL,
+      delay_days INTEGER DEFAULT 0,
+      delay_hours INTEGER DEFAULT 0,
+      subject VARCHAR,
+      content TEXT NOT NULL,
+      media_urls TEXT[],
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await safeQuery("marketing_series_enrollments table", `
+    CREATE TABLE IF NOT EXISTS marketing_series_enrollments (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      series_id VARCHAR NOT NULL REFERENCES marketing_series(id) ON DELETE CASCADE,
+      lead_id VARCHAR REFERENCES leads(id) ON DELETE CASCADE,
+      client_id VARCHAR REFERENCES clients(id) ON DELETE CASCADE,
+      current_step INTEGER DEFAULT 0,
+      status VARCHAR NOT NULL DEFAULT 'active',
+      last_step_sent_at TIMESTAMP,
+      next_step_due_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_series_enrollments_series ON marketing_series_enrollments(series_id);
+    CREATE INDEX IF NOT EXISTS idx_series_enrollments_lead ON marketing_series_enrollments(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_series_enrollments_client ON marketing_series_enrollments(client_id);
+    CREATE INDEX IF NOT EXISTS idx_series_enrollments_status ON marketing_series_enrollments(status);
+    CREATE INDEX IF NOT EXISTS idx_series_enrollments_due ON marketing_series_enrollments(next_step_due_at);
+  `);
+
   // Marketing: provider_call_id for AI Voice calls
   await safeQuery(
     "marketing_broadcast_recipients.provider_call_id column",

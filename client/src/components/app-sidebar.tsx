@@ -20,6 +20,7 @@ import {
   LogOut,
   Settings,
   Sparkles,
+  Bot,
   BookOpen,
   Bell,
   KeyRound,
@@ -448,6 +449,13 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     sidebarKey: "aiManager" as const,
   },
   {
+    title: "AI Content Generator",
+    url: "/ai-content-generator",
+    icon: Bot,
+    roles: ["admin"] as const,
+    sidebarKey: "aiContentGenerator" as const,
+  },
+  {
     title: "Training",
     url: "/training",
     icon: BookOpen,
@@ -706,6 +714,7 @@ export function AppSidebar() {
   const effectiveRole = getEffectiveRole((user as any)?.role);
 
   const isClient = effectiveRole === 'client';
+  const isProspectiveClient = effectiveRole === 'prospective_client';
   const isSalesAgent = effectiveRole === 'sales_agent';
   const isCreator = effectiveRole === 'creator';
   const isCollapsed = state === "collapsed" && !isMobile;
@@ -768,6 +777,11 @@ export function AppSidebar() {
     if (badgeKey === "emails") return unreadEmails || null;
     return null;
   };
+
+  // For prospective clients who haven't paid yet, don't show the sidebar
+  if (isProspectiveClient) {
+    return null;
+  }
 
   // For clients, show client-specific menu
   if (isClient) {

@@ -9,6 +9,7 @@ import { pool } from "../db";
 import { sendSms, sendWhatsApp } from "../twilioService";
 import { sendTelegramMessage } from "../telegramService";
 import { listVapiAssistants, getVapiCall } from "../vapiService";
+import { generateMarketingContent, analyzeSmsSentiment, parseAiGroupQuery } from "../aiManager";
 import { upload } from "./common";
 
 const router = Router();
@@ -110,7 +111,52 @@ async function ensureMarketingCenterSchema() {
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS parent_broadcast_id VARCHAR;`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS use_ai_personalization BOOLEAN DEFAULT false;`);
     await pool.query(`ALTER TABLE marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`);
+
+    // Marketing Series tables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_series (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR NOT NULL,
+        description TEXT,
+        type VARCHAR NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_by INTEGER NOT NULL REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_series_steps (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        series_id VARCHAR NOT NULL REFERENCES marketing_series(id) ON DELETE CASCADE,
+        step_order INTEGER NOT NULL,
+        delay_days INTEGER DEFAULT 0,
+        delay_hours INTEGER DEFAULT 0,
+        subject VARCHAR,
+        content TEXT NOT NULL,
+        media_urls TEXT[],
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS marketing_series_enrollments (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        series_id VARCHAR NOT NULL REFERENCES marketing_series(id) ON DELETE CASCADE,
+        lead_id VARCHAR REFERENCES leads(id) ON DELETE CASCADE,
+        client_id VARCHAR REFERENCES clients(id) ON DELETE CASCADE,
+        current_step INTEGER DEFAULT 0,
+        status VARCHAR NOT NULL DEFAULT 'active',
+        last_step_sent_at TIMESTAMP,
+        next_step_due_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
   })().catch((err) => {
     // Allow retry on next request if this fails.
     marketingSchemaEnsured = null;
@@ -713,6 +759,84 @@ router.post("/vapi/webhook", async (req: Request, res: Response) => {
   }
 });
 
+// AI Content Generation Route
+router.post("/generate-content", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const { prompt, channel, audience, context } = req.body;
+    if (!prompt || !channel) {
+      return res.status(400).json({ message: "Prompt and channel are required" });
+    }
+
+    const content = await generateMarketingContent(prompt, channel, audience, context);
+    res.json({ content });
+  } catch (error: any) {
+    console.error("AI Content Generation error:", error);
+    res.status(500).json({ message: error.message || "Failed to generate AI content" });
+  }
+});
+
+// Analyze SMS sentiment/intent
+router.post("/sms-inbox/:id/analyze", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query("SELECT text FROM sms_messages WHERE id = $1", [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    const analysis = await analyzeSmsSentiment(result.rows[0].text);
+    res.json(analysis);
+  } catch (error: any) {
+    console.error("SMS Analysis error:", error);
+    res.status(500).json({ message: error.message || "Failed to analyze SMS" });
+  }
+});
+
+// AI Group Builder
+router.post("/groups/ai-builder", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ message: "Query is required" });
+
+    const { filters, explanation } = await parseAiGroupQuery(query);
+    
+    // Now find matching leads/clients to show a preview
+    const allLeads = await storage.getLeads();
+    const allClients = await storage.getClients();
+
+    const matchesLeads = allLeads.filter(l => {
+      if (filters.industry && l.industry?.toLowerCase() !== filters.industry.toLowerCase()) return false;
+      if (filters.score && l.score !== filters.score) return false;
+      if (filters.stage && l.stage !== filters.stage) return false;
+      if (filters.state && l.state?.toLowerCase() !== filters.state.toLowerCase()) return false;
+      if (filters.tags && !filters.tags.some((t: string) => l.tags?.includes(t))) return false;
+      if (filters.opt_in_email === true && !l.optInEmail) return false;
+      if (filters.opt_in_sms === true && !l.optInSms) return false;
+      return true;
+    });
+
+    const matchesClients = allClients.filter(c => {
+      if (filters.state && c.state?.toLowerCase() !== filters.state.toLowerCase()) return false;
+      if (filters.opt_in_email === true && !c.optInEmail) return false;
+      if (filters.opt_in_sms === true && !c.optInSms) return false;
+      return true;
+    });
+
+    res.json({
+      filters,
+      explanation,
+      preview: {
+        leads: matchesLeads.map(l => ({ id: l.id, name: l.name, company: l.company })),
+        clients: matchesClients.map(c => ({ id: c.id, name: c.name })),
+        totalCount: matchesLeads.length + matchesClients.length
+      }
+    });
+  } catch (error: any) {
+    console.error("AI Group Builder error:", error);
+    res.status(500).json({ message: error.message || "Failed to build group with AI" });
+  }
+});
+
 // Secure all other marketing center routes to Admin Only
 router.use(isAuthenticated, requireRole(UserRole.ADMIN), async (_req, _res, next) => {
   try {
@@ -721,6 +845,157 @@ router.use(isAuthenticated, requireRole(UserRole.ADMIN), async (_req, _res, next
   } catch (err) {
     console.error("Marketing Center schema ensure failed:", err);
     return next(err);
+  }
+});
+
+// Marketing Series (Sequences) Routes
+router.get("/series", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const series = await storage.getMarketingSeries();
+    res.json(series);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/series", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const series = await storage.createMarketingSeries({
+      ...req.body,
+      createdBy: (req.user as any).id,
+    });
+    res.status(201).json(series);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/series/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const series = await storage.getMarketingSeriesWithSteps(req.params.id);
+    if (!series) return res.status(404).json({ message: "Series not found" });
+    res.json(series);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/series/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const series = await storage.updateMarketingSeries(req.params.id, req.body);
+    res.json(series);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/series/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    await storage.deleteMarketingSeries(req.params.id);
+    res.status(204).end();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Series Steps
+router.post("/series/:id/steps", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const step = await storage.createMarketingSeriesStep({
+      ...req.body,
+      seriesId: req.params.id,
+    });
+    res.status(201).json(step);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/series-steps/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const step = await storage.updateMarketingSeriesStep(req.params.id, req.body);
+    res.json(step);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/series-steps/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    await storage.deleteMarketingSeriesStep(req.params.id);
+    res.status(204).end();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Series Enrollment
+router.post("/series/:id/enroll", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  try {
+    const { leadIds, clientIds, groupIds } = req.body;
+    const seriesId = req.params.id;
+    
+    // Get the first step to set initial nextStepDueAt
+    const steps = await storage.getMarketingSeriesSteps(seriesId);
+    if (steps.length === 0) {
+      return res.status(400).json({ message: "Series has no steps" });
+    }
+    
+    const firstStep = steps[0];
+    const nextStepDueAt = new Date();
+    nextStepDueAt.setDate(nextStepDueAt.getDate() + (firstStep.delayDays || 0));
+    nextStepDueAt.setHours(nextStepDueAt.getHours() + (firstStep.delayHours || 0));
+
+    const enrollments = [];
+    
+    // Enroll leads
+    if (leadIds && Array.isArray(leadIds)) {
+      for (const leadId of leadIds) {
+        enrollments.push(await storage.createMarketingSeriesEnrollment({
+          seriesId,
+          leadId,
+          currentStep: 0,
+          status: "active",
+          nextStepDueAt,
+        }));
+      }
+    }
+    
+    // Enroll clients
+    if (clientIds && Array.isArray(clientIds)) {
+      for (const clientId of clientIds) {
+        enrollments.push(await storage.createMarketingSeriesEnrollment({
+          seriesId,
+          clientId,
+          currentStep: 0,
+          status: "active",
+          nextStepDueAt,
+        }));
+      }
+    }
+    
+    // Enroll from groups
+    if (groupIds && Array.isArray(groupIds)) {
+      for (const groupId of groupIds) {
+        const members = await storage.getMarketingGroupMembers(groupId);
+        for (const member of members) {
+          if (member.leadId || member.clientId) {
+            enrollments.push(await storage.createMarketingSeriesEnrollment({
+              seriesId,
+              leadId: member.leadId || undefined,
+              clientId: member.clientId || undefined,
+              currentStep: 0,
+              status: "active",
+              nextStepDueAt,
+            }));
+          }
+        }
+      }
+    }
+
+    res.json({ message: `Enrolled ${enrollments.length} recipients`, count: enrollments.length });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

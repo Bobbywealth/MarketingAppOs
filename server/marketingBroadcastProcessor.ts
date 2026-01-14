@@ -3,6 +3,7 @@ import { sendEmail, marketingTemplates } from "./emailService";
 import { sendSms, sendWhatsApp } from "./twilioService";
 import { sendTelegramMessage } from "./telegramService";
 import { startVapiCall } from "./vapiService";
+import { generatePersonalizedHook } from "./aiManager";
 
 /**
  * Background process to handle bulk sending for a marketing broadcast.
@@ -155,14 +156,34 @@ export async function processMarketingBroadcast(broadcastId: string) {
     for (const recipient of recipients) {
       try {
         let result: any;
+        let personalizedContent = broadcast.content;
+
+        // Apply AI Personalization if enabled
+        if (broadcast.useAiPersonalization && (recipient as any).type === "lead") {
+          try {
+            const hook = await generatePersonalizedHook(
+              (recipient as any).name || "there",
+              (recipient as any).company || "your company",
+              (recipient as any).notes || "",
+              broadcast.content
+            );
+            if (hook) {
+              personalizedContent = `${hook}\n\n${broadcast.content}`;
+            }
+          } catch (aiErr) {
+            console.error(`AI Personalization failed for lead ${(recipient as any).id}:`, aiErr);
+            // Fallback to original content
+          }
+        }
+
         if (broadcast.type === "email") {
           const { subject, html } = marketingTemplates.broadcast(
             broadcast.subject || "Wolfpaq Marketing",
-            broadcast.content
+            personalizedContent
           );
           result = await sendEmail((recipient as any).email!, subject, html);
         } else if (broadcast.type === "whatsapp") {
-          result = await sendWhatsApp((recipient as any).phone!, broadcast.content, broadcast.mediaUrls ?? undefined);
+          result = await sendWhatsApp((recipient as any).phone!, personalizedContent, broadcast.mediaUrls ?? undefined);
         } else if (broadcast.type === "voice") {
           // For Voice calls, we use broadcast.content as the assistantId
           result = await startVapiCall(
@@ -171,7 +192,7 @@ export async function processMarketingBroadcast(broadcastId: string) {
             (recipient as any).company || (recipient as any).name || undefined
           );
         } else {
-          result = await sendSms((recipient as any).phone!, broadcast.content, broadcast.mediaUrls ?? undefined);
+          result = await sendSms((recipient as any).phone!, personalizedContent, broadcast.mediaUrls ?? undefined);
         }
 
         if (result.success) {

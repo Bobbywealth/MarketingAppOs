@@ -767,6 +767,7 @@ export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   recurringEndDate: timestamp("recurring_end_date"),
   nextRunAt: timestamp("next_run_at"),
   parentBroadcastId: varchar("parent_broadcast_id"), // Link to original recurring template
+  useAiPersonalization: boolean("use_ai_personalization").default(false),
 });
 
 export const marketingBroadcastsRelations = relations(marketingBroadcasts, ({ one, many }) => ({
@@ -805,6 +806,97 @@ export const marketingBroadcastRecipientsRelations = relations(marketingBroadcas
     references: [clients.id],
   }),
 }));
+
+// Marketing Series (Sequences/Drip Campaigns)
+export const marketingSeries = pgTable("marketing_series", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  type: varchar("type").notNull(), // 'email', 'sms'
+  isActive: boolean("is_active").default(true),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const marketingSeriesSteps = pgTable("marketing_series_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  seriesId: varchar("series_id")
+    .references(() => marketingSeries.id, { onDelete: "cascade" })
+    .notNull(),
+  stepOrder: integer("step_order").notNull(),
+  delayDays: integer("delay_days").default(0),
+  delayHours: integer("delay_hours").default(0),
+  subject: varchar("subject"),
+  content: text("content").notNull(),
+  mediaUrls: text("media_urls").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const marketingSeriesEnrollments = pgTable("marketing_series_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  seriesId: varchar("series_id")
+    .references(() => marketingSeries.id, { onDelete: "cascade" })
+    .notNull(),
+  leadId: varchar("lead_id").references(() => leads.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "cascade" }),
+  currentStep: integer("current_step").default(0), // The index of the next step to send
+  status: varchar("status").notNull().default("active"), // 'active', 'completed', 'paused', 'cancelled'
+  lastStepSentAt: timestamp("last_step_sent_at"),
+  nextStepDueAt: timestamp("next_step_due_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_series_enrollments_series").on(table.seriesId),
+  index("IDX_series_enrollments_lead").on(table.leadId),
+  index("IDX_series_enrollments_client").on(table.clientId),
+  index("IDX_series_enrollments_status").on(table.status),
+  index("IDX_series_enrollments_due").on(table.nextStepDueAt),
+]);
+
+export const marketingSeriesRelations = relations(marketingSeries, ({ one, many }) => ({
+  author: one(users, {
+    fields: [marketingSeries.createdBy],
+    references: [users.id],
+  }),
+  steps: many(marketingSeriesSteps),
+  enrollments: many(marketingSeriesEnrollments),
+}));
+
+export const marketingSeriesStepsRelations = relations(marketingSeriesSteps, ({ one }) => ({
+  series: one(marketingSeries, {
+    fields: [marketingSeriesSteps.seriesId],
+    references: [marketingSeries.id],
+  }),
+}));
+
+export const marketingSeriesEnrollmentsRelations = relations(marketingSeriesEnrollments, ({ one }) => ({
+  series: one(marketingSeries, {
+    fields: [marketingSeriesEnrollments.seriesId],
+    references: [marketingSeries.id],
+  }),
+  lead: one(leads, {
+    fields: [marketingSeriesEnrollments.leadId],
+    references: [leads.id],
+  }),
+  client: one(clients, {
+    fields: [marketingSeriesEnrollments.clientId],
+    references: [clients.id],
+  }),
+}));
+
+// Zod schemas for validation
+export const insertMarketingSeriesSchema = createInsertSchema(marketingSeries).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertMarketingSeriesStepSchema = createInsertSchema(marketingSeriesSteps).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertMarketingSeriesEnrollmentSchema = createInsertSchema(marketingSeriesEnrollments).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type MarketingSeries = typeof marketingSeries.$inferSelect;
+export type MarketingSeriesStep = typeof marketingSeriesSteps.$inferSelect;
+export type MarketingSeriesEnrollment = typeof marketingSeriesEnrollments.$inferSelect;
+export type InsertMarketingSeries = z.infer<typeof insertMarketingSeriesSchema>;
+export type InsertMarketingSeriesStep = z.infer<typeof insertMarketingSeriesStepSchema>;
+export type InsertMarketingSeriesEnrollment = z.infer<typeof insertMarketingSeriesEnrollmentSchema>;
 
 // Marketing Templates table
 export const marketingTemplatesTable = pgTable("marketing_templates", {

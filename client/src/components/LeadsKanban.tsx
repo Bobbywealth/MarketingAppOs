@@ -34,6 +34,8 @@ interface LeadsKanbanProps {
   onLeadClick: (lead: Lead) => void;
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (leadId: string) => void;
+  onSendPaymentLink?: (lead: Lead) => void;
+  onConvertLead?: (lead: Lead) => void;
 }
 
 const STAGES = [
@@ -234,6 +236,24 @@ export function LeadsKanban({ leads, onLeadClick, onEditLead, onDeleteLead }: Le
                                     <FileText className="w-4 h-4 mr-2" />
                                     Edit Lead
                                   </DropdownMenuItem>
+                                  {onSendPaymentLink && (
+                                    <DropdownMenuItem 
+                                      onClick={(e) => { e.stopPropagation(); onSendPaymentLink(lead); }}
+                                      className="text-emerald-600 focus:text-emerald-700"
+                                    >
+                                      <DollarSign className="w-4 h-4 mr-2" />
+                                      Send Payment Link
+                                    </DropdownMenuItem>
+                                  )}
+                                  {onConvertLead && (
+                                    <DropdownMenuItem 
+                                      onClick={(e) => { e.stopPropagation(); onConvertLead(lead); }}
+                                      className="text-blue-600 focus:text-blue-700"
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                                      Convert to Client
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuItem
                                     onClick={(e) => {
                                       e.stopPropagation();

@@ -30,6 +30,7 @@ export function usePermissions() {
   const isCreatorManager = role === "creator_manager";
   const isCreator = role === "creator";
   const isClient = role === "client";
+  const isProspectiveClient = role === "prospective_client";
 
   // Compute permissions based on role (matches server/rbac.ts)
   const permissions: RolePermissions = {
@@ -62,6 +63,7 @@ export function usePermissions() {
     isCreatorManager,
     isCreator,
     isClient,
+    isProspectiveClient,
     canAccess: (permission: keyof RolePermissions) => permissions[permission],
     canSeeSidebarItem,
   };

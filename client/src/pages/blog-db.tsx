@@ -148,6 +148,16 @@ export default function BlogPageDb() {
             {viewingPost.readTime && <span className="text-sm text-muted-foreground">{viewingPost.readTime}</span>}
           </div>
 
+          {viewingPost.imageUrl && (
+            <div className="mb-10 rounded-3xl overflow-hidden shadow-2xl">
+              <img 
+                src={viewingPost.imageUrl} 
+                alt={viewingPost.title} 
+                className="w-full h-auto max-h-[500px] object-cover"
+              />
+            </div>
+          )}
+
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 leading-tight">{viewingPost.title}</h1>
 
           <div className="flex items-center gap-4 mb-10 pb-10 border-b">
@@ -286,8 +296,17 @@ export default function BlogPageDb() {
                   {featuredPosts.map((post) => (
                     <Card
                       key={post.id}
-                      className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20"
+                      className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/20 overflow-hidden"
                     >
+                      {post.imageUrl && (
+                        <div className="aspect-[16/9] overflow-hidden">
+                          <img 
+                            src={post.imageUrl} 
+                            alt={post.title} 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        </div>
+                      )}
                       <CardHeader>
                         <div className="flex items-center gap-2 mb-2">
                           {post.category && (
@@ -356,9 +375,18 @@ export default function BlogPageDb() {
                 {regularPosts.map((post) => (
                   <Card
                     key={post.id}
-                    className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
+                    className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
                     onClick={() => setViewingPost(post)}
                   >
+                    {post.imageUrl && (
+                      <div className="aspect-video overflow-hidden">
+                        <img 
+                          src={post.imageUrl} 
+                          alt={post.title} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+                    )}
                     <CardHeader>
                       <div className="flex items-center gap-2 mb-2">
                         {post.category && (

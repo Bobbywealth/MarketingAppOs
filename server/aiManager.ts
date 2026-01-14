@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { storage } from './storage';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 /**
  * GPT-4 Powered AI Business Manager
@@ -7,9 +8,14 @@ import { storage } from './storage';
  */
 
 let openai: OpenAI | null = null;
+let gemini: GoogleGenerativeAI | null = null;
 
 if (process.env.OPENAI_API_KEY) {
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
+
+if (process.env.GOOGLE_GEMINI_API_KEY) {
+  gemini = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
 }
 
 type ChatRole = "user" | "assistant";
@@ -454,6 +460,192 @@ async function executeFunction(name: string, args: any, userId: number) {
     default:
       return { error: "Unknown function" };
   }
+}
+
+/**
+ * Generate marketing content using AI (OpenAI or Gemini)
+ */
+export async function generateMarketingContent(
+  prompt: string,
+  channel: string,
+  audience?: string,
+  context?: string,
+  provider: "openai" | "gemini" = "openai"
+): Promise<string> {
+  const systemPrompt = `You are an expert marketing copywriter for a high-end marketing platform.
+Generate high-converting content for the specified channel: ${channel.toUpperCase()}.
+
+${audience ? `Target Audience: ${audience}` : ""}
+${context ? `Additional Context: ${context}` : ""}
+
+Rules:
+1. Tone should be professional yet engaging.
+2. For SMS/WhatsApp/Telegram: Keep it concise and include a clear call to action.
+3. For Email: Include a compelling subject line at the top starting with "Subject: ".
+4. Use emojis sparingly but effectively.
+5. Focus on value and benefits.
+6. Do not use placeholders like [Name] unless specifically asked; write ready-to-use copy.`;
+
+  if (provider === "gemini") {
+    if (!gemini || !process.env.GOOGLE_GEMINI_API_KEY) {
+      throw new Error("Google Gemini API key not set");
+    }
+    const model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const fullPrompt = `${systemPrompt}\n\nUser Request: ${prompt}`;
+    const result = await model.generateContent(fullPrompt);
+    return result.response.text();
+  } else {
+    if (!openai || !process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key not set");
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.8,
+    });
+
+    return response.choices[0].message.content || "";
+  }
+}
+
+/**
+ * Analyze SMS sentiment and intent
+ */
+export async function analyzeSmsSentiment(text: string): Promise<{
+  sentiment: 'positive' | 'neutral' | 'negative';
+  intent: 'interested' | 'not_interested' | 'question' | 'unsubscribed' | 'other';
+  summary: string;
+  suggestedReply: string;
+}> {
+  if (!openai || !process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not set");
+  }
+
+  const systemPrompt = `Analyze the following incoming marketing SMS message.
+Determine the sentiment, the specific intent, a brief 1-sentence summary, and a suggested professional reply.
+
+Intents:
+- interested: Showing clear interest or asking for more info to buy
+- not_interested: Politely or firmly declining
+- question: Asking a specific question about the service/product
+- unsubscribed: Asking to stop, "STOP", "REMOVE", etc.
+- other: Anything else
+
+Respond ONLY with a JSON object in this format:
+{
+  "sentiment": "positive" | "neutral" | "negative",
+  "intent": "interested" | "not_interested" | "question" | "unsubscribed" | "other",
+  "summary": "...",
+  "suggestedReply": "..."
+}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: text }
+    ],
+    response_format: { type: "json_object" },
+    temperature: 0,
+  });
+
+  const content = response.choices[0].message.content || "{}";
+  return JSON.parse(content);
+}
+
+/**
+ * Parse natural language query into audience filters
+ */
+export async function parseAiGroupQuery(query: string): Promise<{
+  filters: any;
+  explanation: string;
+}> {
+  if (!openai || !process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not set");
+  }
+
+  const systemPrompt = `You are a data assistant for a marketing platform.
+Convert a natural language request into a set of filters for leads and clients.
+
+Available fields in the database:
+- industry (string)
+- tags (string array)
+- score (string: 'hot', 'warm', 'cold')
+- stage (string: 'prospect', 'contacted', 'qualified', 'closed', 'lost')
+- opt_in_email (boolean)
+- opt_in_sms (boolean)
+- city, state, country (string)
+
+Respond ONLY with a JSON object:
+{
+  "filters": {
+    "industry": string | null,
+    "tags": string[] | null,
+    "score": string | null,
+    "stage": string | null,
+    "opt_in_email": boolean | null,
+    "opt_in_sms": boolean | null,
+    "state": string | null
+  },
+  "explanation": "Briefly explain what criteria were found."
+}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: query }
+    ],
+    response_format: { type: "json_object" },
+    temperature: 0,
+  });
+
+  const content = response.choices[0].message.content || "{}";
+  return JSON.parse(content);
+}
+
+/**
+ * Generate a personalized hook for a lead
+ */
+export async function generatePersonalizedHook(
+  leadName: string,
+  companyName: string,
+  notes: string,
+  baseMessage: string
+): Promise<string> {
+  if (!openai || !process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not set");
+  }
+
+  const systemPrompt = `You are a personalized marketing assistant.
+Generate a short (1-2 sentence) personalized opening hook for a marketing message.
+Use the lead's name, company, and any notes provided to make it feel authentic and non-automated.
+
+Lead Name: ${leadName}
+Company: ${companyName}
+Context/Notes: ${notes}
+Base Message Intent: ${baseMessage.slice(0, 100)}...
+
+Rules:
+1. Keep it very short (under 120 characters if possible).
+2. Sound like a human who did their research.
+3. Don't use overly corporate "I hope this finds you well" language.
+4. Output ONLY the hook text.`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Generate a hook for ${leadName} at ${companyName}.` }
+    ],
+    temperature: 0.8,
+  });
+
+  return response.choices[0].message.content || "";
 }
 
 export type AIChatStreamEvent =

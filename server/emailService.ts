@@ -888,4 +888,13 @@ export const emailNotifications = {
     const { subject, html } = emailTemplates.bookingConfirmation(bookerName, whenEt, phone);
     return sendEmail(toEmail, subject, html);
   },
+
+  async sendMarketingEmail(toEmail: string, subject: string, content: string) {
+    const html = renderEmail(subject, `
+      <div style="white-space: pre-wrap; font-size: 16px; color: #374151;">
+        ${content}
+      </div>
+    `);
+    return sendEmail(toEmail, subject, html);
+  },
 };

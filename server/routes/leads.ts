@@ -17,12 +17,13 @@ import {
   getMissingFieldsForStage,
   upload
 } from "./common";
-import { insertLeadSchema } from "@shared/schema";
+import { insertLeadSchema, subscriptionPackages } from "@shared/schema";
 import { ZodError } from "zod";
 import fs from "fs/promises";
 import OpenAI from "openai";
 import { analyzeLeadWithAI } from "../leadIntelligence";
 import { notifyAboutLeadAction } from "../leadNotifications";
+import { createCheckoutSession } from "../stripeService";
 
 const router = Router();
 
@@ -493,6 +494,56 @@ Generate a draft ${type} message. Include a subject line if it's an email.`;
   } catch (error: any) {
     console.error("Outreach drafting error:", error);
     res.status(500).json({ message: "Failed to generate outreach draft", error: error.message });
+  }
+});
+
+router.post("/:id/payment-link", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+  try {
+    const lead = await getAccessibleLeadOr404(req, res, req.params.id);
+    if (!lead) return;
+
+    if (!lead.email) {
+      return res.status(400).json({ message: "Lead email is required to generate a payment link" });
+    }
+
+    if (!lead.packageId) {
+      return res.status(400).json({ message: "Please assign a subscription package to this lead before generating a payment link" });
+    }
+
+    // Fetch package details
+    const [pkg] = await db.select().from(subscriptionPackages).where(eq(subscriptionPackages.id, lead.packageId)).limit(1);
+    if (!pkg) {
+      return res.status(404).json({ message: "Subscription package not found" });
+    }
+
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+    
+    const session = await createCheckoutSession({
+      packageId: pkg.id,
+      packageName: pkg.name,
+      packagePrice: pkg.price,
+      clientEmail: lead.email,
+      clientName: lead.company || lead.name || "Valued Client",
+      leadId: lead.id,
+      successUrl: `${appUrl}/payment-success?sessionId={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${appUrl}/leads?leadId=${lead.id}`,
+    });
+
+    // Log activity
+    await storage.createLeadActivity({
+      leadId: lead.id,
+      userId: (req.user as any).id,
+      type: 'email',
+      subject: 'Payment Link Generated',
+      description: `Generated a payment link for ${pkg.name} ($${(pkg.price / 100).toFixed(2)}/mo).`,
+      outcome: 'neutral',
+      metadata: { checkoutUrl: session.checkoutUrl },
+    });
+
+    res.json({ checkoutUrl: session.checkoutUrl });
+  } catch (error: any) {
+    console.error("Payment link generation error:", error);
+    res.status(500).json({ message: "Failed to generate payment link", error: error.message });
   }
 });
 

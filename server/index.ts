@@ -15,6 +15,7 @@ import { startEmailSyncService } from "./emailSyncService";
 import { startVisitsAutomation } from "./visitsAutomation";
 import { startTaskAutomation } from "./taskAutomation";
 import { startMarketingBroadcastScheduler } from "./marketingBroadcastScheduler";
+import { startSeriesProcessor } from "./marketingSeriesProcessor";
 import { startBackgroundJobs } from "./backgroundJobs";
 import { startLeadAutomationProcessor } from "./leadAutomationProcessor";
 import { storage } from "./storage";
@@ -206,6 +207,8 @@ app.use((req, res, next) => {
   startTaskAutomation();
   // Start scheduled marketing broadcasts (every minute)
   startMarketingBroadcastScheduler();
+  // Start marketing series processor (every 15 minutes)
+  startSeriesProcessor();
   // Start general background jobs (invoices, meeting reminders)
   startBackgroundJobs();
   // Start lead automation processor (abandoned cart reminders, etc)

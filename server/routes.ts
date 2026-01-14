@@ -1279,7 +1279,7 @@ This lead will be updated if they complete the full signup process.`,
           email: data.email,
           firstName: data.name.split(' ')[0],
           lastName: data.name.split(' ').slice(1).join(' '),
-          role: "client", // Default to client for signups
+          role: "prospective_client", // Force payment before becoming full client
           emailVerified: false,
           emailVerificationToken: verificationToken,
         });

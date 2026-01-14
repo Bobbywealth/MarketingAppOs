@@ -613,6 +613,33 @@ export default function LeadsPage() {
     },
   });
 
+  const sendPaymentLinkMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const response = await apiRequest("POST", `/api/leads/${leadId}/payment-link`, undefined);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate payment link");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.checkoutUrl) {
+        window.open(data.checkoutUrl, '_blank');
+        toast({
+          title: "🚀 Payment Link Generated!",
+          description: "The payment link has been generated and opened in a new tab. You can now copy and share it with the lead.",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to generate link",
+        description: error.message || "Something went wrong.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = !searchQuery || 
       lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2496,6 +2523,11 @@ export default function LeadsPage() {
                 setIsEditDialogOpen(true);
               }}
               onDeleteLead={deleteLeadMutation.mutate}
+              onSendPaymentLink={(lead) => sendPaymentLinkMutation.mutate(lead.id)}
+              onConvertLead={(lead) => {
+                setConvertingLead(lead);
+                setIsConvertDialogOpen(true);
+              }}
             />
           ) : viewMode === "card" ? (
             <div className="space-y-2">
@@ -2532,6 +2564,11 @@ export default function LeadsPage() {
                     setIsAiDraftDialogOpen(true);
                     setAiDraftResult("");
                   }}
+                  onSendPaymentLink={(lead) => sendPaymentLinkMutation.mutate(lead.id)}
+                  onConvert={(lead) => {
+                    setConvertingLead(lead);
+                    setIsConvertDialogOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -2567,6 +2604,11 @@ export default function LeadsPage() {
                 setSelectedLead(lead);
                 setIsAiDraftDialogOpen(true);
                 setAiDraftResult("");
+              }}
+              onSendPaymentLink={(lead) => sendPaymentLinkMutation.mutate(lead.id)}
+              onConvert={(lead) => {
+                setConvertingLead(lead);
+                setIsConvertDialogOpen(true);
               }}
             />
           )}

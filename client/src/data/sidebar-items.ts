@@ -32,6 +32,7 @@ export const sidebarPermissionList = [
   { key: "discountCodes", label: "Discount Codes", category: "Business" },
   { key: "training", label: "Training", category: "Business" },
   { key: "aiManager", label: "AI Business Manager", category: "Business" },
+  { key: "aiContentGenerator", label: "AI Content Generator", category: "Business" },
   { key: "pushNotifications", label: "Push Notifications", category: "Business" },
 ];
 
