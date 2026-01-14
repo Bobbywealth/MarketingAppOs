@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { storage } from "./storage";
 import { processAIChat } from "./aiManager";
-import { notificationService } from "./notificationService";
+import { sendPushToUser } from "./push";
 import { log } from "./vite";
 
 /**
@@ -56,14 +56,25 @@ export function startAiCommandScheduler() {
           await storage.updateScheduledAiCommand(command.id, updates);
 
           // 5. Notify the user
-          await notificationService.createNotification({
+          const notificationTitle = "Scheduled AI Command Completed";
+          const notificationMessage = `Your scheduled command "${command.command.substring(0, 50)}..." has been executed. Check the results in the AI Business Manager.`;
+          const actionUrl = "/ai-business-manager";
+
+          await storage.createNotification({
             userId: command.userId,
-            title: "Scheduled AI Command Completed",
-            message: `Your scheduled command "${command.command.substring(0, 50)}..." has been executed. Check the results in the AI Business Manager.`,
+            title: notificationTitle,
+            message: notificationMessage,
             type: "success",
             category: "general",
-            actionUrl: "/ai-business-manager",
+            actionUrl,
           });
+
+          // Also send push notification
+          void sendPushToUser(command.userId, {
+            title: notificationTitle,
+            body: notificationMessage,
+            url: actionUrl,
+          }).catch((err) => log(`Failed to send push notification for AI command: ${err.message}`, "ai"));
 
         } catch (error: any) {
           console.error(`Error processing scheduled AI command ${command.id}:`, error);
