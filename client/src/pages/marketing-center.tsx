@@ -2464,8 +2464,6 @@ export default function MarketingCenter() {
         </DialogContent>
       </Dialog>
 
-      </Dialog>
-
       <Dialog open={isAiGroupDialogOpen} onOpenChange={setIsAiGroupDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
