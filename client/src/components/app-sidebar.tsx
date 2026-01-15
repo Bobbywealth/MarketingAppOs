@@ -32,6 +32,7 @@ import {
   User,
   Percent,
   Zap,
+  Search,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -92,6 +94,9 @@ type SidebarNavItem = {
   badgeKey?: any;
   roles?: readonly string[];
 };
+
+const RECENT_NAV_KEY = "marketingos:recent-nav";
+const MAX_RECENT_ITEMS = 6;
 
 // Client-specific navigation
 const clientTools: SidebarNavItem[] = [
@@ -482,7 +487,7 @@ function NavItem({
   item: SidebarNavItem;
   isActive: boolean;
   isCollapsed: boolean;
-  onClick: () => void;
+  onClick: (item: SidebarNavItem) => void;
   badgeCount?: number | null;
 }) {
   const Icon = item.icon;
@@ -499,7 +504,11 @@ function NavItem({
       }`}
       data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}
     >
-      <Link href={item.url} onClick={onClick} className="flex items-center gap-3 w-full py-0 px-3 overflow-hidden">
+      <Link
+        href={item.url}
+        onClick={() => onClick(item)}
+        className="flex items-center gap-3 w-full py-0 px-3 overflow-hidden"
+      >
         {/* Animated Left Border */}
         <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-primary rounded-r-full transition-all duration-300 ${
           isActive ? 'h-6 opacity-100' : 'group-hover:h-4 group-hover:opacity-50'
@@ -577,14 +586,16 @@ function NavCollapsibleGroup({
   isCollapsed,
   onClick,
   getBadgeCount,
+  forceOpen,
 }: {
   title: string;
   icon: any;
   items: SidebarNavItem[];
   location: string;
   isCollapsed: boolean;
-  onClick: () => void;
+  onClick: (item: SidebarNavItem) => void;
   getBadgeCount: (key?: string) => number | null;
+  forceOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const hasActiveItem = items.some(item => location === item.url);
@@ -593,6 +604,10 @@ function NavCollapsibleGroup({
   useEffect(() => {
     if (hasActiveItem && !isCollapsed) setIsOpen(true);
   }, [hasActiveItem, isCollapsed]);
+
+  useEffect(() => {
+    if (forceOpen && !isCollapsed) setIsOpen(true);
+  }, [forceOpen, isCollapsed]);
 
   if (items.length === 0) return null;
 
@@ -622,7 +637,11 @@ function NavCollapsibleGroup({
               const badge = getBadgeCount(item.badgeKey);
               return (
                 <DropdownMenuItem key={item.title} asChild className="rounded-md">
-                  <Link href={item.url} onClick={onClick} className="flex items-center gap-2 w-full cursor-pointer">
+                  <Link
+                    href={item.url}
+                    onClick={() => onClick(item)}
+                    className="flex items-center gap-2 w-full cursor-pointer"
+                  >
                     <item.icon className={`w-4 h-4 ${location === item.url ? 'text-primary' : 'text-zinc-400'}`} />
                     <span className={location === item.url ? 'font-semibold text-primary' : ''}>{item.title}</span>
                     {badge && (
@@ -681,7 +700,11 @@ function NavCollapsibleGroup({
                         : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                     }`}
                   >
-                    <Link href={item.url} onClick={onClick} className="flex items-center gap-2 w-full">
+                    <Link
+                      href={item.url}
+                      onClick={() => onClick(item)}
+                      className="flex items-center gap-2 w-full"
+                    >
                       <item.icon className={`w-4 h-4 ${isSubActive ? 'text-primary' : 'opacity-70'}`} />
                       <span className="text-sm">{item.title}</span>
                       {badge && (
@@ -709,6 +732,8 @@ export function AppSidebar() {
   const { user, switchRoleMutation } = useAuth();
   const { setOpenMobile, state, toggleSidebar, isMobile } = useSidebar();
   const { canAccess, canSeeSidebarItem } = usePermissions();
+  const [sidebarFilter, setSidebarFilter] = useState("");
+  const [recentUrls, setRecentUrls] = useState<string[]>([]);
 
   // Role override for testing
   const effectiveRole = getEffectiveRole((user as any)?.role);
@@ -721,6 +746,23 @@ export function AppSidebar() {
   const isHybrid = Boolean((user as any)?.clientId) && Boolean((user as any)?.creatorId);
   const switchLabel = isCreator ? "Switch to Client View" : "Switch to Creator View";
   const canShowSwitch = !isCollapsed && isHybrid && (isCreator || isClient);
+  const normalizedFilter = sidebarFilter.trim().toLowerCase();
+  const hasFilter = normalizedFilter.length > 0;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem(RECENT_NAV_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setRecentUrls(parsed.filter((url) => typeof url === "string"));
+        }
+      }
+    } catch {
+      setRecentUrls([]);
+    }
+  }, []);
 
   // Fetch unread message counts
   const { data: unreadCounts } = useQuery<Record<number, number>>({
@@ -762,6 +804,26 @@ export function AppSidebar() {
     setOpenMobile(false);
   };
 
+  const updateRecent = (url: string) => {
+    if (!url) return;
+    setRecentUrls((prev) => {
+      const next = [url, ...prev.filter((existing) => existing !== url)].slice(0, MAX_RECENT_ITEMS);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(RECENT_NAV_KEY, JSON.stringify(next));
+        } catch {
+          // Ignore storage write errors (private mode, etc.)
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleNavClick = (item: SidebarNavItem) => {
+    updateRecent(item.url);
+    handleLinkClick();
+  };
+
   const getUserInitials = () => {
     const u = user as any;
     if (u?.firstName && u?.lastName) {
@@ -785,6 +847,11 @@ export function AppSidebar() {
 
   // For clients, show client-specific menu
   if (isClient) {
+    const clientRecentItems = recentUrls
+      .map((url) => clientTools.find((item) => item.url === url))
+      .filter((item): item is SidebarNavItem => Boolean(item))
+      .filter((item) => !hasFilter || item.title.toLowerCase().includes(normalizedFilter));
+
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
         <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
@@ -808,6 +875,27 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
+          {!isCollapsed && clientRecentItems.length > 0 && (
+            <SidebarGroup className="mt-4">
+              <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+                Recently Used
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="px-2 gap-1">
+                  {clientRecentItems.map((item) => (
+                    <SidebarMenuItem key={`recent-${item.title}`}>
+                      <NavItem
+                        item={item}
+                        isActive={location === item.url}
+                        isCollapsed={isCollapsed}
+                        onClick={handleNavClick}
+                      />
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
           <SidebarGroup className="mt-4">
             <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Menu
@@ -820,7 +908,7 @@ export function AppSidebar() {
                       item={item}
                       isActive={location === item.url}
                       isCollapsed={isCollapsed}
-                      onClick={handleLinkClick}
+                      onClick={handleNavClick}
                       badgeCount={getBadgeCount((item as any).badgeKey)}
                     />
                   </SidebarMenuItem>
@@ -873,6 +961,11 @@ export function AppSidebar() {
 
   // For creators, show creator-specific menu
   if (isCreator) {
+    const creatorRecentItems = recentUrls
+      .map((url) => creatorTools.find((item) => item.url === url))
+      .filter((item): item is SidebarNavItem => Boolean(item))
+      .filter((item) => !hasFilter || item.title.toLowerCase().includes(normalizedFilter));
+
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
         <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
@@ -896,6 +989,27 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
+          {!isCollapsed && creatorRecentItems.length > 0 && (
+            <SidebarGroup className="mt-4">
+              <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+                Recently Used
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="px-2 gap-1">
+                  {creatorRecentItems.map((item) => (
+                    <SidebarMenuItem key={`recent-${item.title}`}>
+                      <NavItem
+                        item={item}
+                        isActive={location === item.url}
+                        isCollapsed={isCollapsed}
+                        onClick={handleNavClick}
+                      />
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
           <SidebarGroup className="mt-4">
             <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Creator Menu
@@ -908,7 +1022,7 @@ export function AppSidebar() {
                       item={item}
                       isActive={location === item.url}
                       isCollapsed={isCollapsed}
-                      onClick={handleLinkClick}
+                      onClick={handleNavClick}
                     />
                   </SidebarMenuItem>
                 ))}
@@ -960,6 +1074,11 @@ export function AppSidebar() {
 
   // For sales agents, show sales-specific menu
   if (isSalesAgent) {
+    const salesRecentItems = recentUrls
+      .map((url) => salesAgentTools.find((item) => item.url === url))
+      .filter((item): item is SidebarNavItem => Boolean(item))
+      .filter((item) => !hasFilter || item.title.toLowerCase().includes(normalizedFilter));
+
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
         <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
@@ -983,6 +1102,27 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
+          {!isCollapsed && salesRecentItems.length > 0 && (
+            <SidebarGroup className="mt-4">
+              <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+                Recently Used
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="px-2 gap-1">
+                  {salesRecentItems.map((item) => (
+                    <SidebarMenuItem key={`recent-${item.title}`}>
+                      <NavItem
+                        item={item}
+                        isActive={location === item.url}
+                        isCollapsed={isCollapsed}
+                        onClick={handleNavClick}
+                      />
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
           <SidebarGroup className="mt-4">
             <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Sales Tools
@@ -995,7 +1135,7 @@ export function AppSidebar() {
                       item={item}
                       isActive={location === item.url}
                       isCollapsed={isCollapsed}
-                      onClick={handleLinkClick}
+                      onClick={handleNavClick}
                     />
                   </SidebarMenuItem>
                 ))}
@@ -1087,11 +1227,47 @@ export function AppSidebar() {
   });
 
   // Split communication for better organization
-  const topLevelItems = filteredCommunication.filter(item => 
+  const matchesFilter = (item: SidebarNavItem) =>
+    item.title.toLowerCase().includes(normalizedFilter);
+
+  const visibleCommunication = hasFilter
+    ? filteredCommunication.filter(matchesFilter)
+    : filteredCommunication;
+  const visibleGrowth = hasFilter ? filteredGrowth.filter(matchesFilter) : filteredGrowth;
+  const visibleContentCreators = hasFilter
+    ? filteredContentCreators.filter(matchesFilter)
+    : filteredContentCreators;
+  const visibleManagement = hasFilter
+    ? filteredManagement.filter(matchesFilter)
+    : filteredManagement;
+  const visibleIntelligenceFinance = hasFilter
+    ? filteredIntelligenceFinance.filter(matchesFilter)
+    : filteredIntelligenceFinance;
+
+  const recentItems = recentUrls
+    .map((url) =>
+      [
+        ...visibleCommunication,
+        ...visibleGrowth,
+        ...visibleContentCreators,
+        ...visibleManagement,
+        ...visibleIntelligenceFinance,
+      ].find((item) => item.url === url),
+    )
+    .filter((item): item is SidebarNavItem => Boolean(item));
+
+  const totalVisibleItems =
+    visibleCommunication.length +
+    visibleGrowth.length +
+    visibleContentCreators.length +
+    visibleManagement.length +
+    visibleIntelligenceFinance.length;
+
+  const topLevelItems = visibleCommunication.filter(item => 
     ["dashboard", "team"].includes(item.sidebarKey)
   );
   
-  const communicationGroupItems = filteredCommunication.filter(item => 
+  const communicationGroupItems = visibleCommunication.filter(item => 
     !["dashboard", "team"].includes(item.sidebarKey)
   );
 
@@ -1159,6 +1335,49 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="data-[collapsible=icon]:overflow-hidden px-2">
+        {!isCollapsed && (
+          <div className="px-2 pt-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={sidebarFilter}
+                onChange={(event) => setSidebarFilter(event.target.value)}
+                placeholder="Search tools..."
+                className="pl-9 h-9 bg-white/70 dark:bg-zinc-900/40 border-zinc-200/70 dark:border-zinc-800"
+                aria-label="Search sidebar tools"
+              />
+            </div>
+            {hasFilter && (
+              <p className="text-xs text-muted-foreground mt-2 px-1">
+                {totalVisibleItems === 0
+                  ? "No matching tools"
+                  : `Showing ${totalVisibleItems} tool${totalVisibleItems === 1 ? "" : "s"}`}
+              </p>
+            )}
+          </div>
+        )}
+        {!isCollapsed && recentItems.length > 0 && (
+          <SidebarGroup className="mt-2">
+            <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+              Recently Used
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {recentItems.map((item) => (
+                  <SidebarMenuItem key={`recent-${item.title}`}>
+                    <NavItem
+                      item={item}
+                      isActive={location === item.url}
+                      isCollapsed={isCollapsed}
+                      onClick={handleNavClick}
+                      badgeCount={getBadgeCount((item as any).badgeKey)}
+                    />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {/* Main Section - Top Level Items */}
         <SidebarGroup className="mt-2">
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
@@ -1172,7 +1391,7 @@ export function AppSidebar() {
                     item={item}
                     isActive={location === item.url}
                     isCollapsed={isCollapsed}
-                    onClick={handleLinkClick}
+                    onClick={handleNavClick}
                     badgeCount={getBadgeCount((item as any).badgeKey)}
                   />
                 </SidebarMenuItem>
@@ -1199,52 +1418,57 @@ export function AppSidebar() {
                 items={communicationGroupItems}
                 location={location}
                 isCollapsed={isCollapsed}
-                onClick={handleLinkClick}
+                onClick={handleNavClick}
                 getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
               />
 
               {/* Growth Group */}
               <NavCollapsibleGroup 
                 title="Growth & Sales"
                 icon={Zap}
-                items={filteredGrowth}
+                items={visibleGrowth}
                 location={location}
                 isCollapsed={isCollapsed}
-                onClick={handleLinkClick}
+                onClick={handleNavClick}
                 getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
               />
 
               {/* Creators Group */}
               <NavCollapsibleGroup 
                 title="Creators & Content"
                 icon={Sparkles}
-                items={filteredContentCreators}
+                items={visibleContentCreators}
                 location={location}
                 isCollapsed={isCollapsed}
-                onClick={handleLinkClick}
+                onClick={handleNavClick}
                 getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
               />
 
               {/* Management Group */}
               <NavCollapsibleGroup 
                 title="Operations"
                 icon={ClipboardCheck}
-                items={filteredManagement}
+                items={visibleManagement}
                 location={location}
                 isCollapsed={isCollapsed}
-                onClick={handleLinkClick}
+                onClick={handleNavClick}
                 getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
               />
 
               {/* Intelligence Group */}
               <NavCollapsibleGroup 
                 title="Business Intelligence"
                 icon={BarChart3}
-                items={filteredIntelligenceFinance}
+                items={visibleIntelligenceFinance}
                 location={location}
                 isCollapsed={isCollapsed}
-                onClick={handleLinkClick}
+                onClick={handleNavClick}
                 getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
               />
             </SidebarMenu>
           </SidebarGroupContent>

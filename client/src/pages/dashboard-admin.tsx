@@ -15,12 +15,13 @@ import { Celebration } from "@/components/Celebration";
 import { motion } from "framer-motion";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getDefaultDashboardPath } from "@/lib/effective-role";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { role, isAdmin } = usePermissions();
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!isAdmin) navigate(getDefaultDashboardPath(role));
@@ -30,6 +31,9 @@ export default function AdminDashboard() {
     queryKey: ["/api/dashboard/admin-stats"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
     retry: 3,
+    onSuccess: () => {
+      setLastUpdatedAt(new Date());
+    },
   });
 
   const { data: stripeData } = useQuery({
@@ -63,6 +67,8 @@ export default function AdminDashboard() {
     return `Good evening, ${displayName}! ${playfulGreeting}`;
   };
 
+  const greeting = useMemo(() => getGreeting(), [user?.firstName, user?.username]);
+
   const getCurrentDate = () => {
     return new Date().toLocaleDateString('en-US', { 
       weekday: 'long', 
@@ -73,9 +79,9 @@ export default function AdminDashboard() {
   };
 
   // Placeholder for sparkline data (in production, this would come from historical API data)
-  const generateSparklineData = (baseValue: number, trend: number) => {
+  const generateSparklineData = (baseValue: number, _trend: number) => {
     // Return empty or flat data instead of random mock data
-    return Array(7).fill({ value: baseValue });
+    return Array.from({ length: 7 }, () => ({ value: baseValue }));
   };
 
   const metrics = [
@@ -248,6 +254,19 @@ export default function AdminDashboard() {
       <Celebration active={stats?.taskMetrics?.completionPercentage === 100} />
       <div className="min-h-full gradient-mesh overflow-x-hidden">
         <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 xl:p-12 space-y-6 md:space-y-8">
+        {error && (
+          <Card className="glass-strong border-0 shadow-lg">
+            <CardContent className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 p-4 md:p-6">
+              <div>
+                <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">We couldn't load the latest admin stats.</p>
+                <p className="text-xs text-muted-foreground mt-1">Try again or pull to refresh.</p>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         {/* Premium Header with Welcome Message */}
         <motion.div
           className="space-y-2 md:space-y-3"
@@ -258,9 +277,13 @@ export default function AdminDashboard() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
-                {getGreeting()}! 👋
+                {greeting}! 👋
               </h1>
               <p className="text-sm md:text-base lg:text-lg text-muted-foreground mt-1">{getCurrentDate()}</p>
+              <p className="text-xs md:text-sm text-muted-foreground/80 mt-0.5">
+                {lastUpdatedAt ? `Last updated ${lastUpdatedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : "Updating dashboard stats..."}
+                {" • Auto-refreshes every 30s"}
+              </p>
               <p className="text-xs md:text-sm text-muted-foreground/80 mt-0.5">
                 {user?.role === 'staff' ? "Here's your daily work overview" : "Here's your agency snapshot"}
               </p>
