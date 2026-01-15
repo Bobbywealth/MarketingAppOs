@@ -757,6 +757,34 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ push_notification_history table already exists or error:', e.message);
       }
+
+      // ===== Scheduled AI Commands (AI Business Manager) =====
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS scheduled_ai_commands (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            command TEXT NOT NULL,
+            status VARCHAR NOT NULL DEFAULT 'pending',
+            scheduled_at TIMESTAMP NOT NULL,
+            last_run_at TIMESTAMP,
+            next_run_at TIMESTAMP,
+            is_recurring BOOLEAN DEFAULT false,
+            recurring_pattern VARCHAR,
+            recurring_interval INTEGER DEFAULT 1,
+            recurring_end_date TIMESTAMP,
+            last_response TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_scheduled_ai_commands_user_id ON scheduled_ai_commands(user_id);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_scheduled_ai_commands_status ON scheduled_ai_commands(status);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_scheduled_ai_commands_next_run_at ON scheduled_ai_commands(next_run_at);`);
+        console.log('✅ Ensured scheduled_ai_commands table');
+      } catch (e) {
+        console.log('⚠️ scheduled_ai_commands table already exists or error:', e.message);
+      }
       
       try {
         await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS checklist JSONB DEFAULT '[]';`);
