@@ -95,8 +95,6 @@ type SidebarNavItem = {
   roles?: readonly string[];
 };
 
-const RECENT_NAV_KEY = "marketingos:recent-nav";
-const MAX_RECENT_ITEMS = 6;
 
 // Client-specific navigation
 const clientTools: SidebarNavItem[] = [
@@ -733,7 +731,6 @@ export function AppSidebar() {
   const { setOpenMobile, state, toggleSidebar, isMobile } = useSidebar();
   const { canAccess, canSeeSidebarItem } = usePermissions();
   const [sidebarFilter, setSidebarFilter] = useState("");
-  const [recentUrls, setRecentUrls] = useState<string[]>([]);
 
   // Role override for testing
   const effectiveRole = getEffectiveRole((user as any)?.role);
@@ -749,20 +746,6 @@ export function AppSidebar() {
   const normalizedFilter = sidebarFilter.trim().toLowerCase();
   const hasFilter = normalizedFilter.length > 0;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const stored = window.localStorage.getItem(RECENT_NAV_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setRecentUrls(parsed.filter((url) => typeof url === "string"));
-        }
-      }
-    } catch {
-      setRecentUrls([]);
-    }
-  }, []);
 
   // Fetch unread message counts
   const { data: unreadCounts } = useQuery<Record<number, number>>({
@@ -804,23 +787,7 @@ export function AppSidebar() {
     setOpenMobile(false);
   };
 
-  const updateRecent = (url: string) => {
-    if (!url) return;
-    setRecentUrls((prev) => {
-      const next = [url, ...prev.filter((existing) => existing !== url)].slice(0, MAX_RECENT_ITEMS);
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(RECENT_NAV_KEY, JSON.stringify(next));
-        } catch {
-          // Ignore storage write errors (private mode, etc.)
-        }
-      }
-      return next;
-    });
-  };
-
   const handleNavClick = (item: SidebarNavItem) => {
-    updateRecent(item.url);
     handleLinkClick();
   };
 
@@ -847,10 +814,6 @@ export function AppSidebar() {
 
   // For clients, show client-specific menu
   if (isClient) {
-    const clientRecentItems = recentUrls
-      .map((url) => clientTools.find((item) => item.url === url))
-      .filter((item): item is SidebarNavItem => Boolean(item))
-      .filter((item) => !hasFilter || item.title.toLowerCase().includes(normalizedFilter));
 
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
@@ -875,27 +838,6 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          {!isCollapsed && clientRecentItems.length > 0 && (
-            <SidebarGroup className="mt-4">
-              <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-                Recently Used
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="px-2 gap-1">
-                  {clientRecentItems.map((item) => (
-                    <SidebarMenuItem key={`recent-${item.title}`}>
-                      <NavItem
-                        item={item}
-                        isActive={location === item.url}
-                        isCollapsed={isCollapsed}
-                        onClick={handleNavClick}
-                      />
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
           <SidebarGroup className="mt-4">
             <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Menu
@@ -961,10 +903,6 @@ export function AppSidebar() {
 
   // For creators, show creator-specific menu
   if (isCreator) {
-    const creatorRecentItems = recentUrls
-      .map((url) => creatorTools.find((item) => item.url === url))
-      .filter((item): item is SidebarNavItem => Boolean(item))
-      .filter((item) => !hasFilter || item.title.toLowerCase().includes(normalizedFilter));
 
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
@@ -989,27 +927,6 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          {!isCollapsed && creatorRecentItems.length > 0 && (
-            <SidebarGroup className="mt-4">
-              <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-                Recently Used
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="px-2 gap-1">
-                  {creatorRecentItems.map((item) => (
-                    <SidebarMenuItem key={`recent-${item.title}`}>
-                      <NavItem
-                        item={item}
-                        isActive={location === item.url}
-                        isCollapsed={isCollapsed}
-                        onClick={handleNavClick}
-                      />
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
           <SidebarGroup className="mt-4">
             <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Creator Menu
@@ -1074,10 +991,6 @@ export function AppSidebar() {
 
   // For sales agents, show sales-specific menu
   if (isSalesAgent) {
-    const salesRecentItems = recentUrls
-      .map((url) => salesAgentTools.find((item) => item.url === url))
-      .filter((item): item is SidebarNavItem => Boolean(item))
-      .filter((item) => !hasFilter || item.title.toLowerCase().includes(normalizedFilter));
 
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
@@ -1102,27 +1015,6 @@ export function AppSidebar() {
           </Link>
         </SidebarHeader>
         <SidebarContent>
-          {!isCollapsed && salesRecentItems.length > 0 && (
-            <SidebarGroup className="mt-4">
-              <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-                Recently Used
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu className="px-2 gap-1">
-                  {salesRecentItems.map((item) => (
-                    <SidebarMenuItem key={`recent-${item.title}`}>
-                      <NavItem
-                        item={item}
-                        isActive={location === item.url}
-                        isCollapsed={isCollapsed}
-                        onClick={handleNavClick}
-                      />
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
           <SidebarGroup className="mt-4">
             <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
               Sales Tools
@@ -1244,17 +1136,6 @@ export function AppSidebar() {
     ? filteredIntelligenceFinance.filter(matchesFilter)
     : filteredIntelligenceFinance;
 
-  const recentItems = recentUrls
-    .map((url) =>
-      [
-        ...visibleCommunication,
-        ...visibleGrowth,
-        ...visibleContentCreators,
-        ...visibleManagement,
-        ...visibleIntelligenceFinance,
-      ].find((item) => item.url === url),
-    )
-    .filter((item): item is SidebarNavItem => Boolean(item));
 
   const totalVisibleItems =
     visibleCommunication.length +
@@ -1355,28 +1236,6 @@ export function AppSidebar() {
               </p>
             )}
           </div>
-        )}
-        {!isCollapsed && recentItems.length > 0 && (
-          <SidebarGroup className="mt-2">
-            <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-              Recently Used
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {recentItems.map((item) => (
-                  <SidebarMenuItem key={`recent-${item.title}`}>
-                    <NavItem
-                      item={item}
-                      isActive={location === item.url}
-                      isCollapsed={isCollapsed}
-                      onClick={handleNavClick}
-                      badgeCount={getBadgeCount((item as any).badgeKey)}
-                    />
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
         )}
         {/* Main Section - Top Level Items */}
         <SidebarGroup className="mt-2">
