@@ -594,11 +594,11 @@ export default function MarketingCenter() {
   });
 
   const removeMemberMutation = useMutation({
-    mutationFn: async (memberId: number) => {
+    mutationFn: async ({ memberId }: { memberId: number; groupId: string }) => {
       await apiRequest("DELETE", `/api/marketing-center/groups/members/${memberId}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/groups", selectedGroupForMembers?.id, "members"] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/groups", variables.groupId, "members"] });
       queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/stats"] });
       toast({ title: "Member Removed" });
     },
@@ -1819,7 +1819,10 @@ export default function MarketingCenter() {
                                   <div className="space-y-4">
                                     <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Current Members</Label>
                                     <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2">
-                                      <MemberList groupId={group.id} onRemove={(id) => removeMemberMutation.mutate(id)} />
+                                      <MemberList
+                                        groupId={group.id}
+                                        onRemove={(memberId) => removeMemberMutation.mutate({ memberId, groupId: group.id })}
+                                      />
                                     </div>
                                   </div>
                                 </div>
@@ -2782,36 +2785,50 @@ function MemberList({ groupId, onRemove }: { groupId: string; onRemove: (id: num
     queryKey: ["/api/marketing-center/groups", groupId, "members"],
     queryFn: async () => {
       const res = await apiRequest("GET", `/api/marketing-center/groups/${groupId}/members`);
-      const rawMembers = await res.json();
-      
-      // Fetch names for leads/clients
-      // In a production app, the server would join these
-      const leadRes = await apiRequest("GET", "/api/leads");
-      const clientRes = await apiRequest("GET", "/api/clients");
-      const allLeads = await leadRes.json();
-      const allClients = await clientRes.json();
-
-      return rawMembers.map((m: any) => {
-        const lead = allLeads.find((l: any) => l.id === m.leadId);
-        const client = allClients.find((c: any) => c.id === m.clientId);
-        return {
-          ...m,
-          name: lead 
-            ? `${lead.company || lead.name} (Lead)` 
-            : client 
-              ? `${client.company || client.name} (Client)` 
-              : m.customRecipient || "Unknown"
-        };
-      });
+      return res.json();
     }
   });
 
+  const cachedLeads = (queryClient.getQueryData<any[]>(["/api/leads"]) || []) as any[];
+  const cachedClients = (queryClient.getQueryData<any[]>(["/api/clients"]) || []) as any[];
+
+  const { data: leads = cachedLeads } = useQuery<any[]>({
+    queryKey: ["/api/leads"],
+    enabled: cachedLeads.length === 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: clients = cachedClients } = useQuery<any[]>({
+    queryKey: ["/api/clients"],
+    enabled: cachedClients.length === 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const membersWithNames = useMemo(() => {
+    const leadMap = new Map(leads.map((lead) => [lead.id, lead]));
+    const clientMap = new Map(clients.map((client) => [client.id, client]));
+
+    return members.map((member) => {
+      const lead = leadMap.get(member.leadId);
+      const client = clientMap.get(member.clientId);
+
+      return {
+        ...member,
+        name: lead
+          ? `${lead.company || lead.name} (Lead)`
+          : client
+            ? `${client.company || client.name} (Client)`
+            : member.customRecipient || "Unknown"
+      };
+    });
+  }, [members, leads, clients]);
+
   if (isLoading) return <div className="text-center py-4"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
-  if (members.length === 0) return <div className="text-center py-8 text-muted-foreground italic border-2 border-dashed rounded-lg">No members in this group yet.</div>;
+  if (membersWithNames.length === 0) return <div className="text-center py-8 text-muted-foreground italic border-2 border-dashed rounded-lg">No members in this group yet.</div>;
 
   return (
     <div className="space-y-2">
-      {members.map((m) => (
+      {membersWithNames.map((m) => (
         <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 group">
           <span className="font-medium text-sm">{m.name}</span>
           <Button 
