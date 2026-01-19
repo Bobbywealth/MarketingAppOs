@@ -33,11 +33,13 @@ import {
   Users,
   BarChart3,
   FileText,
+  FileIcon,
   CreditCard,
   Activity,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { SocialAccountManager } from "@/components/SocialAccountManager";
+import { ClientDocuments } from "@/components/ClientDocuments";
 
 export default function ClientDetail() {
   const [, params] = useRoute("/clients/:id");
@@ -380,7 +382,7 @@ export default function ClientDetail() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isSalesAgent ? "grid-cols-5" : "grid-cols-6"}`}>
+          <TabsList className={`grid w-full ${isSalesAgent ? "grid-cols-6" : "grid-cols-7"}`}>
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -392,6 +394,10 @@ export default function ClientDetail() {
             <TabsTrigger value="content" className="gap-2">
               <FileText className="w-4 h-4" />
               Content
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <FileIcon className="w-4 h-4" />
+              Documents
             </TabsTrigger>
             <TabsTrigger value="social" className="gap-2">
               <TrendingUp className="w-4 h-4" />
@@ -548,6 +554,11 @@ export default function ClientDetail() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Documents Tab */}
+          <TabsContent value="documents">
+            <ClientDocuments clientId={clientId!} />
           </TabsContent>
 
           {/* Social Tab */}

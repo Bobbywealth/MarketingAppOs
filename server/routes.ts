@@ -4281,6 +4281,33 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
+  // File upload endpoint for client documents
+  app.post("/api/clients/:clientId/documents/upload", isAuthenticated, requirePermission("canManageClients"), upload.array("files", 10), async (req: Request, res: Response) => {
+    try {
+      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
+      if (!client) return;
+      
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+      const uploadedFiles = files.map((file) => ({
+        originalName: file.originalname,
+        filename: file.filename,
+        fileUrl: `${appUrl}/uploads/${file.filename}`,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+      }));
+
+      res.json({ uploadedFiles });
+    } catch (error: any) {
+      console.error("Client document upload error:", error);
+      res.status(500).json({ message: error.message || "Failed to upload files" });
+    }
+  });
+
   app.post("/api/clients/:clientId/documents", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
       const client = await getAccessibleClientOr404(req, res, req.params.clientId);
@@ -4292,18 +4319,15 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         description: z.string().optional(),
         fileType: z.string().optional(),
         fileSize: z.number().optional(),
-        uploadUrl: z.string(),
+        fileUrl: z.string(),
+        originalName: z.string(),
+        mimeType: z.string().optional(),
       });
       
       const validatedData = requestSchema.parse(req.body);
       
-      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
-        validatedData.uploadUrl,
-        {
-          owner: userId,
-          visibility: "private",
-        }
-      );
+      // Extract filename from fileUrl for objectPath (to maintain compatibility)
+      const objectPath = validatedData.fileUrl.split('/').pop() || validatedData.fileUrl;
 
       const documentData = insertClientDocumentSchema.parse({
         clientId: req.params.clientId,
@@ -4312,7 +4336,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         objectPath: objectPath,
         fileType: validatedData.fileType,
         fileSize: validatedData.fileSize,
-        uploadedBy: userId?.toString(),
+        uploadedBy: userId,
       });
 
       const document = await storage.createClientDocument(documentData);

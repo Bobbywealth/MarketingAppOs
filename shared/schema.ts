@@ -128,6 +128,7 @@ export const clientsRelations = relations(clients, ({ one, many }) => ({
   tickets: many(tickets),
   contentPosts: many(contentPosts),
   onboardingTasks: many(onboardingTasks),
+  documents: many(clientDocuments),
 }));
 
 // Client Social Media Stats (Manual Entry)
@@ -1132,7 +1133,7 @@ export const clientDocuments = pgTable("client_documents", {
   objectPath: varchar("object_path").notNull(), // Path to object in storage
   fileType: varchar("file_type"), // pdf, doc, image, etc
   fileSize: integer("file_size"), // in bytes
-  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  uploadedBy: integer("uploaded_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
