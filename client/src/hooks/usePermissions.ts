@@ -29,16 +29,17 @@ export function usePermissions() {
   const isSalesAgent = role === "sales_agent";
   const isCreatorManager = role === "creator_manager";
   const isCreator = role === "creator";
+  const isStaffContentCreator = role === "staff_content_creator";
   const isClient = role === "client";
   const isProspectiveClient = role === "prospective_client";
 
   // Compute permissions based on role (matches server/rbac.ts)
   const permissions: RolePermissions = {
     canManageUsers: isAdmin,
-    canManageClients: isAdmin || isManager || isStaff || isSalesAgent || isCreatorManager,
+    canManageClients: isAdmin || isManager || isStaff || isSalesAgent || isCreatorManager || isStaffContentCreator,
     canManageCampaigns: isAdmin || isManager || isStaff,
     canManageLeads: isAdmin || isManager || isStaff || isSalesAgent,
-    canManageContent: isAdmin || isManager || isStaff || isCreatorManager || isCreator,
+    canManageContent: isAdmin || isManager || isStaff || isCreatorManager || isCreator || isStaffContentCreator,
     canManageInvoices: isAdmin || isManager, // Staff and sales agents cannot manage invoices
     canManageTickets: isAdmin || isManager || isStaff || isSalesAgent || isCreator || isClient,
     canViewReports: isAdmin || isManager || isCreatorManager, // Staff and sales agents cannot view full reports
@@ -62,6 +63,7 @@ export function usePermissions() {
     isSalesAgent,
     isCreatorManager,
     isCreator,
+    isStaffContentCreator,
     isClient,
     isProspectiveClient,
     canAccess: (permission: keyof RolePermissions) => permissions[permission],

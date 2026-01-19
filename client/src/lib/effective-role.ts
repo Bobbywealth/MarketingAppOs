@@ -5,6 +5,7 @@ export const VALID_ROLES = [
   "sales_agent",
   "creator_manager",
   "creator",
+  "staff_content_creator",
   "client",
   "prospective_client",
 ] as const;
@@ -55,6 +56,7 @@ export function getDefaultDashboardPath(role: AppRole): string {
   if (role === "admin") return "/dashboard/admin";
   if (role === "manager" || role === "creator_manager") return "/dashboard/manager";
   if (role === "staff") return "/dashboard/staff";
+  if (role === "staff_content_creator") return "/clients"; // Send to clients page to access documents
   if (role === "prospective_client") return "/signup";
   // Other roles still use existing dashboards (root route)
   return "/";

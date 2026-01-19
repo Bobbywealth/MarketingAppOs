@@ -2812,15 +2812,15 @@ function MemberList({ groupId, onRemove }: { groupId: string; onRemove: (id: num
       const lead = leadMap.get(member.leadId);
       const client = clientMap.get(member.clientId);
 
-      return {
+        return {
         ...member,
-        name: lead
-          ? `${lead.company || lead.name} (Lead)`
-          : client
-            ? `${client.company || client.name} (Client)`
+          name: lead 
+            ? `${lead.company || lead.name} (Lead)` 
+            : client 
+              ? `${client.company || client.name} (Client)` 
             : member.customRecipient || "Unknown"
-      };
-    });
+        };
+      });
   }, [members, leads, clients]);
 
   if (isLoading) return <div className="text-center py-4"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;

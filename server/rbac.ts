@@ -80,6 +80,17 @@ export const rolePermissions: Record<UserRole, RolePermissions> = {
     canViewReports: false,
     canManageSettings: false,
   },
+  [UserRole.STAFF_CONTENT_CREATOR]: {
+    canManageUsers: false,
+    canManageClients: true, // Need access to view all client documents/folders
+    canManageCampaigns: false,
+    canManageLeads: false,
+    canManageContent: true, // Need access to content calendar
+    canManageInvoices: false,
+    canManageTickets: false,
+    canViewReports: false,
+    canManageSettings: false,
+  },
   [UserRole.CLIENT]: {
     canManageUsers: false,
     canManageClients: false,

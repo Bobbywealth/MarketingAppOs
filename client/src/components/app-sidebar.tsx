@@ -304,6 +304,7 @@ const growthTools: SidebarNavItem[] = [
     icon: Globe,
     permission: "canManageClients" as const,
     sidebarKey: "websiteProjects" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
   },
 ];
 
@@ -360,6 +361,7 @@ const contentCreatorsTools: SidebarNavItem[] = [
     icon: Sparkles,
     permission: "canManageClients" as const,
     sidebarKey: "secondMe" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
   },
 ];
 
@@ -391,6 +393,7 @@ const managementTools: SidebarNavItem[] = [
     icon: ClipboardCheck,
     permission: "canManageClients" as const,
     sidebarKey: "onboarding" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
   },
 ];
 
@@ -401,6 +404,7 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     icon: BarChart3,
     permission: "canManageClients" as const,
     sidebarKey: "analytics" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
   },
   {
     title: "Password Vault",
@@ -415,6 +419,7 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     icon: LineChart,
     permission: "canManageClients" as const,
     sidebarKey: "socialStats" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
   },
   {
     title: "Invoices & Billing",

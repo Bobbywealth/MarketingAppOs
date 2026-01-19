@@ -14,6 +14,7 @@ MarketingOS uses **role-based access control (RBAC)** enforced on the API.
 - `sales_agent`
 - `creator_manager`
 - `creator`
+- `staff_content_creator`
 - `client`
 
 ## Default permissions by role (system-level)
@@ -28,12 +29,14 @@ These permissions gate *server capabilities* (API access).
 | **sales_agent** | ❌ | ✅* | ❌ | ✅* | ❌ | ❌ | ✅ | ❌ | ❌ |
 | **creator_manager** | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ |
 | **creator** | ❌ | ❌ | ❌ | ❌ | ✅* | ❌ | ✅ | ❌ | ❌ |
+| **staff_content_creator** | ❌ | ✅* | ❌ | ❌ | ✅* | ❌ | ❌ | ❌ | ❌ |
 | **client** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅* | ❌ | ❌ |
 
 \* Notes:
-- **Sales Agent**: “Clients” and “Leads” should be interpreted as **assigned** scope in UI/process (the server enforces many routes via permissions; assignment scoping is handled by specific endpoints/queries).
-- **Creator**: “Content” means creator self-service uploads / visit fulfillment, not full content admin.
-- **Client**: “Tickets” are *their own* tickets.
+- **Sales Agent**: "Clients" and "Leads" should be interpreted as **assigned** scope in UI/process (the server enforces many routes via permissions; assignment scoping is handled by specific endpoints/queries).
+- **Creator**: "Content" means creator self-service uploads / visit fulfillment, not full content admin.
+- **Staff Content Creator**: "Clients" means access to ALL client document folders only. "Content" means access to content calendar. This is an internal role for staff video/image creators who need to access client assets but nothing else.
+- **Client**: "Tickets" are *their own* tickets.
 
 ## Custom sidebar permissions (UI-level)
 
