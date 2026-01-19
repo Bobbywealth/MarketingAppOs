@@ -888,6 +888,29 @@ async function runMigrations() {
       } catch (e) {
         console.log('⚠️ content_posts.visit_id already exists or error:', e.message);
       }
+
+      // Client Documents table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS client_documents (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            client_id VARCHAR NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            name VARCHAR NOT NULL,
+            description TEXT,
+            object_path VARCHAR NOT NULL,
+            file_type VARCHAR,
+            file_size INTEGER,
+            uploaded_by INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
+        await client.query(`CREATE INDEX IF NOT EXISTS IDX_client_documents_client ON client_documents(client_id);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS IDX_client_documents_type ON client_documents(file_type);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS IDX_client_documents_created ON client_documents(created_at);`);
+        console.log('✅ Ensured client_documents table');
+      } catch (e) {
+        console.log('⚠️ client_documents table already exists or error:', e.message);
+      }
       
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop

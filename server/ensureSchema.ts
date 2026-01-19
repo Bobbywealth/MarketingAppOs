@@ -518,6 +518,34 @@ export async function ensureMinimumSchema() {
     `
   );
 
+  // Client Documents table (for client file uploads)
+  await safeQuery("client_documents table", `
+    CREATE TABLE IF NOT EXISTS client_documents (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      client_id VARCHAR NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+      name VARCHAR NOT NULL,
+      description TEXT,
+      object_path VARCHAR NOT NULL,
+      file_type VARCHAR,
+      file_size INTEGER,
+      uploaded_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  
+  await safeQuery(
+    "idx_client_documents_client",
+    `CREATE INDEX IF NOT EXISTS idx_client_documents_client ON client_documents(client_id);`
+  );
+  await safeQuery(
+    "idx_client_documents_type", 
+    `CREATE INDEX IF NOT EXISTS idx_client_documents_type ON client_documents(file_type);`
+  );
+  await safeQuery(
+    "idx_client_documents_created",
+    `CREATE INDEX IF NOT EXISTS idx_client_documents_created ON client_documents(created_at);`
+  );
+
   // Diagnostic: Check if table is actually accessible
   try {
     const res = await pool.query(`SELECT COUNT(*) FROM blog_posts;`);
