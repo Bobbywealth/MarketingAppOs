@@ -122,16 +122,16 @@ function PageLoader() {
   );
 }
 
+function RootRedirect() {
+  const { user } = useAuth();
+  const effectiveRole = getEffectiveRole(user?.role);
+  return <Redirect to={getDefaultDashboardPath(effectiveRole)} />;
+}
+
 function Router() {
   const { user } = useAuth();
   const effectiveRole = getEffectiveRole((user as any)?.role);
   const { canAccess, isAdmin, isManager } = usePermissions();
-  
-  const isClient = effectiveRole === 'client';
-  const isSalesAgent = effectiveRole === 'sales_agent';
-  const isCreator = effectiveRole === 'creator';
-  const isProspectiveClient = effectiveRole === 'prospective_client';
-  const isInternal = !!user && ["admin", "manager", "staff", "creator_manager"].includes(effectiveRole); // explicit allowlist
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -151,7 +151,7 @@ function Router() {
         <Route path="/privacy" component={PrivacyPolicyPage} />
         <Route path="/terms" component={TermsOfServicePage} />
         {!user && <Route path="/" component={Landing} />}
-        {user && <Route path="/" component={() => <Redirect to={getDefaultDashboardPath(effectiveRole)} />} />}
+        {user && <Route path="/" component={RootRedirect} />}
 
         {/* Portal Home Redirects */}
         <ProtectedRoute path="/client" component={ClientDashboard} allowedRoles={['client']} />
@@ -402,7 +402,7 @@ function AppContent() {
                 <div className="text-blue-900 dark:text-blue-100">Enable push notifications to get alerts on this device.</div>
                 <div className="flex items-center gap-2">
                   <Button size="sm" onClick={async () => { await subscribe(); localStorage.setItem('pushPromptShownV2', '1'); }} disabled={loading}>
-                    {loading ? 'Enabling…' : 'Enable'}
+                    {loading ? 'Enabling...' : 'Enable'}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => localStorage.setItem('pushPromptShownV2', '1')}>Later</Button>
                 </div>
