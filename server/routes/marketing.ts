@@ -21,17 +21,8 @@ const router = Router();
 // Campaign routes
 router.get("/campaigns", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const currentUser = req.user as any;
-    const allCampaigns = await storage.getCampaigns();
-    let campaignsList = allCampaigns;
-    
-    if (currentUser?.role === UserRole.CLIENT) {
-      const clientId = currentUser?.clientId;
-      campaignsList = clientId ? allCampaigns.filter((c) => c.clientId === clientId) : [];
-    } else if (currentUser?.role !== UserRole.ADMIN) {
-      campaignsList = allCampaigns.filter((c) => c.createdBy === currentUser?.id);
-    }
-    
+    const user = req.user as any;
+    const campaignsList = await storage.getCampaigns(user);
     res.json(campaignsList);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch campaigns" });

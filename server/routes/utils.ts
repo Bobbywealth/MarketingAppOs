@@ -17,36 +17,22 @@ export function getCurrentUserContext(req: Request): { userId: number | null; ro
 
 export async function getAccessibleClientOr404(req: Request, res: Response, clientId: string) {
   const { userId, role } = getCurrentUserContext(req);
-  const client = await storage.getClient(clientId);
+  const user = req.user as any;
+  const client = await storage.getClientForUser(clientId, user);
   if (!client) {
     res.status(404).json({ message: "Client not found" });
     return null;
-  }
-  if (role === UserRole.SALES_AGENT) {
-    const allowed =
-      (client as any).salesAgentId === userId ||
-      (client as any).assignedToId === userId;
-    if (!allowed) {
-      res.status(404).json({ message: "Client not found" });
-      return null;
-    }
   }
   return client;
 }
 
 export async function getAccessibleLeadOr404(req: Request, res: Response, leadId: string) {
   const { userId, role } = getCurrentUserContext(req);
-  const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+  const user = req.user as any;
+  const lead = await storage.getLeadForUser(leadId, user);
   if (!lead) {
     res.status(404).json({ message: "Lead not found" });
     return null;
-  }
-  if (role === UserRole.SALES_AGENT) {
-    const isAssigned = lead.assignedToId === userId;
-    if (!isAssigned) {
-      res.status(404).json({ message: "Lead not found" });
-      return null;
-    }
   }
   return lead;
 }

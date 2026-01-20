@@ -1,7 +1,8 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { resolveApiUrl } from "./lib/api";
 import { isNativeApp } from "./lib/runtime";
+import "./styles/print.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,7 +33,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { getEffectiveRole } from "@/lib/effective-role";
+import { getEffectiveRole, getDefaultDashboardPath } from "@/lib/effective-role";
 import { usePermissions } from "@/hooks/usePermissions";
 
 // Lazy load all pages for better mobile performance
@@ -150,76 +151,87 @@ function Router() {
         <Route path="/privacy" component={PrivacyPolicyPage} />
         <Route path="/terms" component={TermsOfServicePage} />
         {!user && <Route path="/" component={Landing} />}
-        {/* Client-specific routes */}
-        {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
-        {isProspectiveClient && <ProtectedRoute path="/" component={() => <Redirect to="/signup" />} />}
-        {/* Sales Agent-specific routes */}
-        {isSalesAgent && <ProtectedRoute path="/" component={SalesDashboard} />}
-        {/* Creator-specific routes */}
-        {isCreator && <ProtectedRoute path="/" component={CreatorDashboard} />}
-        {isCreator && <ProtectedRoute path="/course" component={CreatorCourse} />}
-        {isCreator && <ProtectedRoute path="/payouts" component={CreatorPayouts} />}
-        {isCreator && <ProtectedRoute path="/marketing" component={CreatorMarketing} />}
-        {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses" component={ManageCourses} />}
-        {effectiveRole === 'admin' && <ProtectedRoute path="/manage-courses/:id" component={EditCourse} />}
-        {isCreator && <ProtectedRoute path="/training/mastering-content" component={CreatorMasteringContent} />}
-        <ProtectedRoute path="/course/:id" component={CreatorCourse} />
-        {isCreator && <ProtectedRoute path="/visits" component={CreatorVisits} />}
-        {isCreator && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
+        {user && <Route path="/" component={() => <Redirect to={getDefaultDashboardPath(effectiveRole)} />} />}
+
+        {/* Portal Home Redirects */}
+        <ProtectedRoute path="/client" component={ClientDashboard} allowedRoles={['client']} />
+        <ProtectedRoute path="/creator" component={CreatorDashboard} allowedRoles={['creator']} />
+        <ProtectedRoute path="/sales" component={SalesDashboard} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/admin" component={Dashboard} allowedRoles={['admin', 'manager', 'staff', 'creator_manager', 'staff_content_creator']} />
+
+        {/* Client Portal Routes */}
+        <ProtectedRoute path="/client/campaigns" component={ClientCampaigns} allowedRoles={['client']} />
+        <ProtectedRoute path="/client/content" component={ClientContent} allowedRoles={['client']} />
+        <ProtectedRoute path="/client/analytics" component={ClientAnalytics} allowedRoles={['client']} />
+        <ProtectedRoute path="/client/billing" component={ClientBilling} allowedRoles={['client']} />
+        <ProtectedRoute path="/client/second-me" component={ClientSecondMeDashboard} allowedRoles={['client']} />
+        <ProtectedRoute path="/client/second-me/onboarding" component={SecondMeOnboarding} allowedRoles={['client']} />
         
-        {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
-        {/* Clients should use /content (keep /client-content for backwards compat) */}
-        {isClient && <ProtectedRoute path="/content" component={ClientContent} />}
-        {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
-        {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
-        {isClient && <ProtectedRoute path="/client-billing" component={ClientBilling} />}
-        {isClient && <ProtectedRoute path="/second-me" component={ClientSecondMeDashboard} />}
-        {isClient && <ProtectedRoute path="/second-me/onboarding" component={SecondMeOnboarding} />}
-        {/* Admin/Manager/Staff routes */}
-        {isInternal && <ProtectedRoute path="/dashboard/admin" component={AdminDashboard} />}
-        {isInternal && <ProtectedRoute path="/dashboard/manager" component={ManagerDashboard} />}
-        {isInternal && <ProtectedRoute path="/dashboard/staff" component={StaffDashboard} />}
-        {user && <ProtectedRoute path="/dashboard" component={Dashboard} />}
-        {isInternal && <ProtectedRoute path="/" component={Dashboard} />}
-        {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
-        {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
-        {isInternal && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
-        {isInternal && <ProtectedRoute path="/marketing-center" component={isAdmin ? MarketingCenter : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/campaigns" component={Campaigns} />}
-        {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
-        {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
-        {isInternal && <ProtectedRoute path="/content" component={Content} />}
-        {isInternal && <ProtectedRoute path="/admin/blog" component={AdminBlog} />}
-        {isInternal && <ProtectedRoute path="/admin/vault" component={isAdmin ? AdminVault : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/invoices" component={canAccess("canManageInvoices") ? Invoices : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/commissions" component={(isAdmin || isManager) ? Commissions : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/subscription-packages" component={isAdmin ? SubscriptionPackages : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/discount-codes" component={isAdmin ? DiscountCodes : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/onboarding" component={Onboarding} />}
-        {!isClient && <ProtectedRoute path="/messages" component={Messages} />}
-        {isInternal && <ProtectedRoute path="/website-projects" component={WebsiteProjects} />}
-        {isInternal && <ProtectedRoute path="/analytics" component={Analytics} />}
-        {isInternal && <ProtectedRoute path="/team" component={isAdmin ? Team : Dashboard} />}
-        {!isClient && <ProtectedRoute path="/emails" component={Emails} />}
-        {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
-        {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
-        {isInternal && <ProtectedRoute path="/help" component={HelpPage} />}
-        {isInternal && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
-        {isInternal && <ProtectedRoute path="/admin-second-me/upload" component={AdminSecondMeUpload} />}
-        {isInternal && <ProtectedRoute path="/training" component={isAdmin ? Training : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
-        {isInternal && <ProtectedRoute path="/social" component={AdminSocialOverview} />}
-        {isInternal && <ProtectedRoute path="/social/accounts" component={AdminSocialAccounts} />}
-        {isInternal && <ProtectedRoute path="/creators" component={Creators} />}
-        {isInternal && <ProtectedRoute path="/creators/payouts" component={(isAdmin || isManager) ? AdminPayouts : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/creators/new" component={CreatorNew} />}
-        {isInternal && <ProtectedRoute path="/creators/:id" component={CreatorDetail} />}
-        {isInternal && <ProtectedRoute path="/creators/:id/edit" component={CreatorEdit} />}
-        {isInternal && <ProtectedRoute path="/visits" component={Visits} />}
-        {isInternal && <ProtectedRoute path="/visits/new" component={VisitNew} />}
-        {isInternal && <ProtectedRoute path="/visits/:id" component={VisitDetail} />}
-        {isInternal && <ProtectedRoute path="/ai-manager" component={isAdmin ? AIBusinessManager : Dashboard} />}
-        {isInternal && <ProtectedRoute path="/ai-content-generator" component={isAdmin ? AIContentGenerator : Dashboard} />}
+        {/* Creator Portal Routes */}
+        <ProtectedRoute path="/creator/course" component={CreatorCourse} allowedRoles={['creator']} />
+        <ProtectedRoute path="/creator/course/:id" component={CreatorCourse} allowedRoles={['creator']} />
+        <ProtectedRoute path="/creator/payouts" component={CreatorPayouts} allowedRoles={['creator']} />
+        <ProtectedRoute path="/creator/marketing" component={CreatorMarketing} allowedRoles={['creator']} />
+        <ProtectedRoute path="/creator/training/mastering-content" component={CreatorMasteringContent} allowedRoles={['creator']} />
+        <ProtectedRoute path="/creator/visits" component={CreatorVisits} allowedRoles={['creator']} />
+        <ProtectedRoute path="/creator/visits/:id" component={VisitDetail} allowedRoles={['creator']} />
+
+        {/* Sales Portal Routes */}
+        <ProtectedRoute path="/sales/leads" component={Leads} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/sales/clients" component={Clients} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/sales/clients/:id" component={ClientDetail} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/sales/tasks" component={Tasks} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/sales/calendar" component={CompanyCalendar} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/sales/messages" component={Messages} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/sales/phone" component={Phone} allowedRoles={['sales_agent']} />
+        <ProtectedRoute path="/sales/emails" component={Emails} allowedRoles={['sales_agent']} />
+
+        {/* Admin/Manager/Staff Routes */}
+        <ProtectedRoute path="/admin/dashboard/admin" component={AdminDashboard} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/dashboard/manager" component={ManagerDashboard} allowedRoles={['admin', 'manager']} />
+        <ProtectedRoute path="/admin/dashboard/staff" component={StaffDashboard} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/clients" component={Clients} allowedRoles={['admin', 'manager', 'staff', 'creator_manager', 'staff_content_creator']} />
+        <ProtectedRoute path="/admin/clients/:id" component={ClientDetail} allowedRoles={['admin', 'manager', 'staff', 'creator_manager', 'staff_content_creator']} />
+        <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/marketing-center" component={MarketingCenter} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/campaigns" component={Campaigns} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/tasks" component={Tasks} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/leads" component={Leads} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/content" component={Content} allowedRoles={['admin', 'manager', 'staff', 'creator_manager', 'staff_content_creator']} />
+        <ProtectedRoute path="/admin/blog" component={AdminBlog} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/vault" component={AdminVault} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/invoices" component={Invoices} allowedRoles={['admin', 'manager']} />
+        <ProtectedRoute path="/admin/commissions" component={Commissions} allowedRoles={['admin', 'manager']} />
+        <ProtectedRoute path="/admin/subscription-packages" component={SubscriptionPackages} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/discount-codes" component={DiscountCodes} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/onboarding" component={Onboarding} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/messages" component={Messages} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/website-projects" component={WebsiteProjects} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/analytics" component={Analytics} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/team" component={Team} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/emails" component={Emails} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/phone" component={Phone} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/company-calendar" component={CompanyCalendar} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/help" component={HelpPage} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/second-me" component={AdminSecondMe} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/second-me/upload" component={AdminSecondMeUpload} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/training" component={Training} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/push-notifications" component={PushNotifications} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/social" component={AdminSocialOverview} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/social/accounts" component={AdminSocialAccounts} allowedRoles={['admin', 'manager', 'staff']} />
+        <ProtectedRoute path="/admin/creators" component={Creators} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/creators/payouts" component={AdminPayouts} allowedRoles={['admin', 'manager']} />
+        <ProtectedRoute path="/admin/creators/new" component={CreatorNew} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/creators/:id" component={CreatorDetail} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/creators/:id/edit" component={CreatorEdit} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/visits" component={Visits} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/visits/new" component={VisitNew} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/visits/:id" component={VisitDetail} allowedRoles={['admin', 'manager', 'staff', 'creator_manager']} />
+        <ProtectedRoute path="/admin/ai-manager" component={AIBusinessManager} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/ai-content-generator" component={AIContentGenerator} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/manage-courses" component={ManageCourses} allowedRoles={['admin']} />
+        <ProtectedRoute path="/admin/manage-courses/:id" component={EditCourse} allowedRoles={['admin']} />
+
         {/* Shared routes (both clients and staff) */}
         <ProtectedRoute path="/tickets" component={Tickets} />
         <ProtectedRoute path="/settings" component={Settings} />

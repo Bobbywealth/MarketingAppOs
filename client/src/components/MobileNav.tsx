@@ -56,31 +56,31 @@ export function MobileNav() {
   const getNavItems = () => {
     if (role === 'client') {
       return [
-        { title: "Home", url: "/", icon: LayoutDashboard },
-        { title: "Campaigns", url: "/client-campaigns", icon: Megaphone },
-        { title: "Content", url: "/client-content", icon: Calendar },
-        { title: "Second Me", url: "/second-me", icon: Sparkles },
+        { title: "Home", url: "/client", icon: LayoutDashboard },
+        { title: "Campaigns", url: "/client/campaigns", icon: Megaphone },
+        { title: "Content", url: "/client/content", icon: Calendar },
+        { title: "Second Me", url: "/client/second-me", icon: Sparkles },
         { title: "Tickets", url: "/tickets", icon: Ticket },
       ];
     }
     
     if (role === 'sales_agent') {
       return [
-        { title: "Home", url: "/", icon: LayoutDashboard },
-        { title: "Leads", url: "/leads", icon: UserPlus },
-        { title: "Messages", url: "/messages", icon: MessageSquare, badge: totalUnreadMessages },
-        { title: "Tasks", url: "/tasks", icon: ListTodo },
-        { title: "Clients", url: "/clients", icon: Users },
+        { title: "Home", url: "/sales", icon: LayoutDashboard },
+        { title: "Leads", url: "/sales/leads", icon: UserPlus },
+        { title: "Messages", url: "/sales/messages", icon: MessageSquare, badge: totalUnreadMessages },
+        { title: "Tasks", url: "/sales/tasks", icon: ListTodo },
+        { title: "Clients", url: "/sales/clients", icon: Users },
       ];
     }
 
     // Default for Internal (Admin/Manager/Staff)
     return [
-      { title: "Home", url: "/", icon: LayoutDashboard },
-      { title: "Clients", url: "/clients", icon: Users },
-      { title: "Leads", url: "/leads", icon: UserPlus },
-      { title: "Messages", url: "/messages", icon: MessageSquare, badge: totalUnreadMessages },
-      { title: "Tasks", url: "/tasks", icon: ListTodo },
+      { title: "Home", url: "/admin", icon: LayoutDashboard },
+      { title: "Clients", url: "/admin/clients", icon: Users },
+      { title: "Leads", url: "/admin/leads", icon: UserPlus },
+      { title: "Messages", url: "/admin/messages", icon: MessageSquare, badge: totalUnreadMessages },
+      { title: "Tasks", url: "/admin/tasks", icon: ListTodo },
     ];
   };
 
@@ -91,23 +91,23 @@ export function MobileNav() {
     if (role === "client") {
       return [
         { label: "Go to Tickets", url: "/tickets" },
-        { label: "Go to Campaigns", url: "/client-campaigns" },
-        { label: "Go to Content", url: "/client-content" },
+        { label: "Go to Campaigns", url: "/client/campaigns" },
+        { label: "Go to Content", url: "/client/content" },
         { label: "Settings", url: "/settings" },
       ];
     }
     if (role === "sales_agent") {
       return [
-        { label: "Go to Leads", url: "/leads" },
-        { label: "Go to Messages", url: "/messages" },
-        { label: "Go to Tasks", url: "/tasks" },
+        { label: "Go to Leads", url: "/sales/leads" },
+        { label: "Go to Messages", url: "/sales/messages" },
+        { label: "Go to Tasks", url: "/sales/tasks" },
         { label: "Settings", url: "/settings" },
       ];
     }
     return [
-      { label: "Go to Tasks", url: "/tasks" },
-      { label: "Go to Messages", url: "/messages" },
-      { label: "Go to Leads", url: "/leads" },
+      { label: "Go to Tasks", url: "/admin/tasks" },
+      { label: "Go to Messages", url: "/admin/messages" },
+      { label: "Go to Leads", url: "/admin/leads" },
       { label: "Settings", url: "/settings" },
     ];
   }, [role]);

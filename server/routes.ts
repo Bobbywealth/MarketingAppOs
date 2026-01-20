@@ -232,16 +232,18 @@ export function registerRoutes(app: Express) {
   });
 
   // Mount modularized routers
-  app.use("/api/leads", leadsRouter);
-  app.use("/api/marketing-center", marketingCenterRouter);
-  app.use("/api/clients", clientsRouter);
-  app.use("/api/vault", vaultRouter);
+  app.use("/api/leads", isAuthenticated, leadsRouter);
+  app.use("/api/marketing-center", isAuthenticated, requireRole(UserRole.ADMIN), marketingCenterRouter);
+  app.use("/api/clients", isAuthenticated, clientsRouter);
+  app.use("/api/vault", isAuthenticated, requireRole(UserRole.ADMIN), vaultRouter);
+  
+  // Feature routers mounted at /api (mostly private, some public mixed in)
   app.use("/api", marketingRouter);
   app.use("/api", creatorsRouter);
   app.use("/api/courses", coursesRouter);
-  app.use("/api/social", socialRouter);
+  app.use("/api/social", isAuthenticated, socialRouter);
   app.use("/api", tasksRouter);
-  app.use("/api/ai-business-manager", aiRouter);
+  app.use("/api/ai-business-manager", isAuthenticated, aiRouter);
   app.use("/api", blogRouter);
 
   // File upload endpoint
@@ -3531,9 +3533,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Invoice routes
-  app.get("/api/invoices", isAuthenticated, requirePermission("canManageInvoices"), async (_req: Request, res: Response) => {
+  app.get("/api/invoices", isAuthenticated, requirePermission("canManageInvoices"), async (req: Request, res: Response) => {
     try {
-      const invoices = await storage.getInvoices();
+      const user = req.user as any;
+      const invoices = await storage.getInvoices(user);
       res.json(invoices);
     } catch (error) {
       console.error(error);
@@ -3613,18 +3616,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Ticket routes
   app.get("/api/tickets", isAuthenticated, requirePermission("canManageTickets"), async (req: Request, res: Response) => {
     try {
-      const tickets = await storage.getTickets();
-      const userRole = (req as any).userRole;
       const user = req.user as any;
+      const tickets = await storage.getTickets(user);
+      const userRole = user?.role;
       
-      // Clients can only see their own tickets (based on clientId)
-      if (userRole === "client") {
-        const clientId = user?.clientId;
-        const filteredTickets = tickets.filter(t => t.clientId === clientId);
-        return res.json(filteredTickets);
-      }
-
-      // Creators can only see tickets for clients they have visited
+      // Additional complex logic for creators if needed (already handled by storage.getTickets pattern usually, but let's keep it consistent)
       if (userRole === "creator") {
         const creatorId = user?.creatorId;
         if (!creatorId) return res.json([]);
@@ -3750,10 +3746,18 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Message routes (all authenticated users)
-  app.get("/api/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.get("/api/messages", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const user = req.user as any;
       const clientId = req.query.clientId as string | undefined;
-      const messages = await storage.getMessages(clientId);
+      
+      // Restrict access to /api/messages for non-staff if they try to access other clients
+      if (!["admin", "manager", "staff"].includes(user.role)) {
+        const messages = await storage.getMessages(user);
+        return res.json(messages);
+      }
+
+      const messages = await storage.getMessages(user, clientId);
       res.json(messages);
     } catch (error) {
       console.error(error);
@@ -5067,12 +5071,22 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         .where(eq(users.id, Number(currentUserId)))
         .returning();
 
-      // Ensure the session user object reflects the new role for the rest of this request lifecycle
-      try {
-        (req.user as any).role = nextRole;
-      } catch {}
-
-      return res.json(updated);
+      // Security: Rotate session on role change to ensure permissions are refreshed correctly
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
+          console.error("Error regenerating session during role switch:", regenErr);
+          // Still return success since DB was updated, but user might need to relogin if session was lost
+        }
+        
+        // Re-login the user into the new session
+        req.login(updated, (err) => {
+          if (err) {
+            console.error("Error logging in after session regeneration:", err);
+            return res.status(500).json({ message: "Role switched but session update failed. Please re-login." });
+          }
+          return res.json(updated);
+        });
+      });
     } catch (error) {
       console.error("Error switching roles:", error);
       return res.status(500).json({ message: "Failed to switch roles" });

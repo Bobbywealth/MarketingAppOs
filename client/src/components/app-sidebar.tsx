@@ -100,32 +100,32 @@ type SidebarNavItem = {
 const clientTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/client",
     icon: LayoutDashboard,
   },
   {
     title: "My Campaigns",
-    url: "/client-campaigns",
+    url: "/client/campaigns",
     icon: Megaphone,
   },
   {
     title: "My Content",
-    url: "/content",
+    url: "/client/content",
     icon: Calendar,
   },
   {
     title: "Analytics",
-    url: "/client-analytics",
+    url: "/client/analytics",
     icon: BarChart3,
   },
   {
     title: "Billing",
-    url: "/client-billing",
+    url: "/client/billing",
     icon: DollarSign,
   },
   {
     title: "AI Digital Twin",
-    url: "/second-me",
+    url: "/client/second-me",
     icon: Sparkles,
   },
   {
@@ -144,27 +144,27 @@ const clientTools: SidebarNavItem[] = [
 const creatorTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/creator",
     icon: LayoutDashboard,
   },
   {
     title: "Training Course",
-    url: "/course",
+    url: "/creator/course",
     icon: BookOpen,
   },
   {
     title: "My Visits",
-    url: "/visits",
+    url: "/creator/visits",
     icon: Calendar,
   },
   {
     title: "Marketing",
-    url: "/marketing",
+    url: "/creator/marketing",
     icon: Megaphone,
   },
   {
     title: "My Payouts",
-    url: "/payouts",
+    url: "/creator/payouts",
     icon: DollarSign,
   },
   {
@@ -183,42 +183,42 @@ const creatorTools: SidebarNavItem[] = [
 const salesAgentTools: SidebarNavItem[] = [
   {
     title: "Sales Dashboard",
-    url: "/",
+    url: "/sales",
     icon: LayoutDashboard,
   },
   {
     title: "My Leads",
-    url: "/leads",
+    url: "/sales/leads",
     icon: UserPlus,
   },
   {
     title: "My Clients",
-    url: "/clients",
+    url: "/sales/clients",
     icon: Users,
   },
   {
     title: "Tasks",
-    url: "/tasks",
+    url: "/sales/tasks",
     icon: ListTodo,
   },
   {
     title: "My Calendar",
-    url: "/company-calendar",
+    url: "/sales/calendar",
     icon: Calendar,
   },
   {
     title: "Messages",
-    url: "/messages",
+    url: "/sales/messages",
     icon: MessageSquare,
   },
   {
     title: "Phone",
-    url: "/phone",
+    url: "/sales/phone",
     icon: Phone,
   },
   {
     title: "Emails",
-    url: "/emails",
+    url: "/sales/emails",
     icon: Mail,
   },
   {
@@ -232,21 +232,21 @@ const salesAgentTools: SidebarNavItem[] = [
 const communicationTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
-    url: "/dashboard",
+    url: "/admin",
     icon: LayoutDashboard,
     permission: null,
     sidebarKey: "dashboard" as const,
   },
   {
     title: "User Management",
-    url: "/team",
+    url: "/admin/team",
     icon: UsersRound,
     permission: "canManageUsers" as const,
     sidebarKey: "team" as const,
   },
   {
     title: "Messages",
-    url: "/messages",
+    url: "/admin/messages",
     icon: MessageSquare,
     permission: null,
     badgeKey: "messages",
@@ -254,7 +254,7 @@ const communicationTools: SidebarNavItem[] = [
   },
   {
     title: "Emails",
-    url: "/emails",
+    url: "/admin/emails",
     icon: Mail,
     permission: null,
     badgeKey: "emails",
@@ -262,14 +262,14 @@ const communicationTools: SidebarNavItem[] = [
   },
   {
     title: "Phone",
-    url: "/phone",
+    url: "/admin/phone",
     icon: Phone,
     permission: null,
     sidebarKey: "phone" as const,
   },
   {
     title: "My Calendar",
-    url: "/company-calendar",
+    url: "/admin/company-calendar",
     icon: Calendar,
     permission: null,
     sidebarKey: "calendar" as const,
@@ -279,28 +279,28 @@ const communicationTools: SidebarNavItem[] = [
 const growthTools: SidebarNavItem[] = [
   {
     title: "Leads",
-    url: "/leads",
+    url: "/admin/leads",
     icon: UserPlus,
     permission: "canManageLeads" as const,
     sidebarKey: "leads" as const,
   },
   {
     title: "Marketing Center",
-    url: "/marketing-center",
+    url: "/admin/marketing-center",
     icon: Zap,
     roles: ["admin"] as const,
     sidebarKey: "marketingCenter" as const,
   },
   {
     title: "Campaigns",
-    url: "/campaigns",
+    url: "/admin/campaigns",
     icon: Megaphone,
     permission: "canManageCampaigns" as const,
     sidebarKey: "campaigns" as const,
   },
   {
     title: "Website Projects",
-    url: "/website-projects",
+    url: "/admin/website-projects",
     icon: Globe,
     permission: "canManageClients" as const,
     sidebarKey: "websiteProjects" as const,
@@ -311,7 +311,7 @@ const growthTools: SidebarNavItem[] = [
 const contentCreatorsTools: SidebarNavItem[] = [
   {
     title: "Content Calendar",
-    url: "/content",
+    url: "/admin/content",
     icon: Calendar,
     permission: "canManageContent" as const,
     sidebarKey: "content" as const,
@@ -326,7 +326,7 @@ const contentCreatorsTools: SidebarNavItem[] = [
   },
   {
     title: "Creators",
-    url: "/creators",
+    url: "/admin/creators",
     icon: UsersRound,
     permission: "canManageClients" as const,
     sidebarKey: "creators" as const,
@@ -334,7 +334,7 @@ const contentCreatorsTools: SidebarNavItem[] = [
   },
   {
     title: "Visits",
-    url: "/visits",
+    url: "/admin/visits",
     icon: Calendar,
     permission: "canManageClients" as const,
     sidebarKey: "visits" as const,
@@ -342,7 +342,7 @@ const contentCreatorsTools: SidebarNavItem[] = [
   },
   {
     title: "Payouts",
-    url: "/creators/payouts",
+    url: "/admin/creators/payouts",
     icon: DollarSign,
     permission: "canManageInvoices" as const,
     sidebarKey: "invoices" as const,
@@ -350,14 +350,14 @@ const contentCreatorsTools: SidebarNavItem[] = [
   },
   {
     title: "Manage Courses",
-    url: "/manage-courses",
+    url: "/admin/manage-courses",
     icon: BookOpen,
     roles: ["admin"] as const,
     sidebarKey: "training" as const,
   },
   {
     title: "AI Digital Twin",
-    url: "/admin-second-me",
+    url: "/admin/second-me",
     icon: Sparkles,
     permission: "canManageClients" as const,
     sidebarKey: "secondMe" as const,
@@ -368,14 +368,14 @@ const contentCreatorsTools: SidebarNavItem[] = [
 const managementTools: SidebarNavItem[] = [
   {
     title: "Clients",
-    url: "/clients",
+    url: "/admin/clients",
     icon: Users,
     permission: "canManageClients" as const,
     sidebarKey: "clients" as const,
   },
   {
     title: "Tasks",
-    url: "/tasks",
+    url: "/admin/tasks",
     icon: ListTodo,
     permission: null,
     sidebarKey: "tasks" as const,
@@ -389,7 +389,7 @@ const managementTools: SidebarNavItem[] = [
   },
   {
     title: "Onboarding",
-    url: "/onboarding",
+    url: "/admin/onboarding",
     icon: ClipboardCheck,
     permission: "canManageClients" as const,
     sidebarKey: "onboarding" as const,
@@ -400,7 +400,7 @@ const managementTools: SidebarNavItem[] = [
 const intelligenceFinanceTools: SidebarNavItem[] = [
   {
     title: "Analytics",
-    url: "/analytics",
+    url: "/admin/analytics",
     icon: BarChart3,
     permission: "canManageClients" as const,
     sidebarKey: "analytics" as const,
@@ -423,56 +423,56 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
   },
   {
     title: "Invoices & Billing",
-    url: "/invoices",
+    url: "/admin/invoices",
     icon: DollarSign,
     permission: "canManageInvoices" as const,
     sidebarKey: "invoices" as const,
   },
   {
     title: "Commissions",
-    url: "/commissions",
+    url: "/admin/commissions",
     icon: TrendingUp,
     roles: ["admin", "manager"] as const,
     sidebarKey: "commissions" as const,
   },
   {
     title: "Subscription Packages",
-    url: "/subscription-packages",
+    url: "/admin/subscription-packages",
     icon: Package,
     permission: "canManageUsers" as const,
     sidebarKey: "packages" as const,
   },
   {
     title: "Discount Codes",
-    url: "/discount-codes",
+    url: "/admin/discount-codes",
     icon: Percent,
     roles: ["admin"] as const,
     sidebarKey: "discountCodes" as const,
   },
   {
     title: "AI Business Manager",
-    url: "/ai-manager",
+    url: "/admin/ai-manager",
     icon: Sparkles,
     roles: ["admin"] as const,
     sidebarKey: "aiManager" as const,
   },
   {
     title: "AI Content Generator",
-    url: "/ai-content-generator",
+    url: "/admin/ai-content-generator",
     icon: Bot,
     roles: ["admin"] as const,
     sidebarKey: "aiContentGenerator" as const,
   },
   {
     title: "Training",
-    url: "/training",
+    url: "/admin/training",
     icon: BookOpen,
     permission: "canManageUsers" as const,
     sidebarKey: "training" as const,
   },
   {
     title: "Push Notifications",
-    url: "/push-notifications",
+    url: "/admin/push-notifications",
     icon: Bell,
     roles: ["admin", "manager", "staff"] as const,
     sidebarKey: "pushNotifications" as const,

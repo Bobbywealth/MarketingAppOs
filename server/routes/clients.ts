@@ -25,16 +25,8 @@ const internalRoles = [UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRol
 
 router.get("/", isAuthenticated, requirePermission("canManageClients"), async (_req: Request, res: Response) => {
   try {
-    const { userId, role } = getCurrentUserContext(_req);
-    if (role === UserRole.SALES_AGENT && userId) {
-      const scoped = await db
-        .select()
-        .from(clients)
-        .where(or(eq(clients.salesAgentId, userId), eq(clients.assignedToId, userId)))
-        .orderBy(sql`${clients.createdAt} DESC`);
-      return res.json(scoped);
-    }
-    const all = await storage.getClients();
+    const user = _req.user as any;
+    const all = await storage.getClients(user);
     res.json(all);
   } catch (error) {
     console.error(error);

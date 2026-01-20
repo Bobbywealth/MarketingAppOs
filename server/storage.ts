@@ -51,6 +51,7 @@ import {
   discountRedemptions,
   smsMessages,
   scheduledAiCommands,
+  UserRole,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -775,15 +776,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Client operations
-  async getClients(): Promise<Client[]> {
-    const clientList = await db.select().from(clients).orderBy(desc(clients.createdAt));
+  async getClients(user?: any): Promise<Client[]> {
+    let clientList;
+    if (user?.role === UserRole.CLIENT && user.clientId) {
+      clientList = await db.select().from(clients).where(eq(clients.id, user.clientId)).orderBy(desc(clients.createdAt));
+    } else if (user?.role === UserRole.SALES_AGENT) {
+      clientList = await db.select().from(clients).where(or(eq(clients.salesAgentId, user.id), eq(clients.assignedToId, user.id))).orderBy(desc(clients.createdAt));
+    } else {
+      clientList = await db.select().from(clients).orderBy(desc(clients.createdAt));
+    }
     console.log("🔍 getClients() called - Found", clientList.length, "clients");
-    console.log("   Client IDs:", clientList.map(c => c.id).join(", "));
     return clientList;
   }
 
   async getClient(id: string): Promise<Client | undefined> {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client;
+  }
+
+  async getClientForUser(id: string, user: any): Promise<Client | undefined> {
+    const client = await this.getClient(id);
+    if (!client) return undefined;
+
+    if (user.role === UserRole.CLIENT) {
+      if (user.clientId !== id) return undefined;
+    }
+
+    if (user.role === UserRole.SALES_AGENT) {
+      const allowed = client.salesAgentId === user.id || client.assignedToId === user.id;
+      if (!allowed) return undefined;
+    }
+
     return client;
   }
 
@@ -979,12 +1002,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Campaign operations
-  async getCampaigns(): Promise<Campaign[]> {
+  async getCampaigns(user?: any): Promise<Campaign[]> {
+    if (user?.role === UserRole.CLIENT && user.clientId) {
+      return await db.select().from(campaigns).where(eq(campaigns.clientId, user.clientId)).orderBy(desc(campaigns.createdAt));
+    }
+    if (user?.role === UserRole.SALES_AGENT) {
+      const clientIds = await db.select({ id: clients.id }).from(clients).where(or(eq(clients.salesAgentId, user.id), eq(clients.assignedToId, user.id)));
+      const ids = clientIds.map(c => c.id);
+      if (ids.length === 0) {
+        return await db.select().from(campaigns).where(eq(campaigns.createdBy, user.id)).orderBy(desc(campaigns.createdAt));
+      }
+      return await db.select().from(campaigns).where(or(eq(campaigns.createdBy, user.id), inArray(campaigns.clientId, ids))).orderBy(desc(campaigns.createdAt));
+    }
     return await db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
   }
 
   async getCampaign(id: string): Promise<Campaign | undefined> {
     const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
+    return campaign;
+  }
+
+  async getCampaignForUser(id: string, user: any): Promise<Campaign | undefined> {
+    const campaign = await this.getCampaign(id);
+    if (!campaign) return undefined;
+
+    if (user.role === UserRole.CLIENT) {
+      if (campaign.clientId !== user.clientId) return undefined;
+    }
+
+    if (user.role === UserRole.SALES_AGENT) {
+      if (campaign.createdBy !== user.id) {
+        const client = await this.getClient(campaign.clientId || "");
+        if (!client || (client.salesAgentId !== user.id && client.assignedToId !== user.id)) {
+          return undefined;
+        }
+      }
+    }
+
     return campaign;
   }
 
@@ -1076,12 +1130,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Task operations
-  async getTasks(): Promise<Task[]> {
+  async getTasks(user?: any): Promise<Task[]> {
+    if (user?.role === UserRole.CLIENT && user.clientId) {
+      return await db.select().from(tasks).where(eq(tasks.clientId, user.clientId)).orderBy(desc(tasks.createdAt));
+    }
+    if (user?.role === UserRole.SALES_AGENT) {
+      return await db.select().from(tasks).where(or(eq(tasks.assignedToId, user.id), eq(tasks.createdBy, user.id))).orderBy(desc(tasks.createdAt));
+    }
     return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
   }
 
   async getTask(id: string): Promise<Task | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task;
+  }
+
+  async getTaskForUser(id: string, user: any): Promise<Task | undefined> {
+    const task = await this.getTask(id);
+    if (!task) return undefined;
+
+    if (user.role === UserRole.CLIENT) {
+      if (task.clientId !== user.clientId) return undefined;
+    }
+
+    if (user.role === UserRole.SALES_AGENT) {
+      if (task.assignedToId !== user.id && task.createdBy !== user.id) {
+        return undefined;
+      }
+    }
+
     return task;
   }
 
@@ -1216,14 +1293,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Lead operations
-  async getLeads(): Promise<Lead[]> {
-    const leadsList = await db.select().from(leads).orderBy(desc(leads.createdAt));
+  async getLeads(user?: any): Promise<Lead[]> {
+    let leadsList;
+    if (user?.role === UserRole.SALES_AGENT) {
+      leadsList = await db.select().from(leads).where(eq(leads.assignedToId, user.id)).orderBy(desc(leads.createdAt));
+    } else if (user?.role === UserRole.CLIENT && user.clientId) {
+      leadsList = await db.select().from(leads).where(eq(leads.clientId, user.clientId)).orderBy(desc(leads.createdAt));
+    } else {
+      leadsList = await db.select().from(leads).orderBy(desc(leads.createdAt));
+    }
     console.log("🔍 getLeads() called - Found", leadsList.length, "leads");
     return leadsList;
   }
 
   async getLead(id: string): Promise<Lead | undefined> {
     const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead;
+  }
+
+  async getLeadForUser(id: string, user: any): Promise<Lead | undefined> {
+    const lead = await this.getLead(id);
+    if (!lead) return undefined;
+
+    if (user.role === UserRole.SALES_AGENT) {
+      if (lead.assignedToId !== user.id) return undefined;
+    }
+
+    if (user.role === UserRole.CLIENT) {
+      if (lead.clientId !== user.clientId) return undefined;
+    }
+
     return lead;
   }
 
@@ -1351,8 +1450,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Content post operations
-  async getContentPosts(): Promise<ContentPost[]> {
+  async getContentPosts(user?: any): Promise<ContentPost[]> {
     try {
+      if (user?.role === UserRole.CLIENT && user.clientId) {
+        return await db.select().from(contentPosts).where(eq(contentPosts.clientId, user.clientId)).orderBy(desc(contentPosts.createdAt));
+      }
       return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
     } catch (error: any) {
       // If visit_id column doesn't exist, try to add it and retry
@@ -1361,6 +1463,9 @@ export class DatabaseStorage implements IStorage {
         try {
           await pool.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS visit_id VARCHAR;`).catch(() => {});
           // Retry the query
+          if (user?.role === UserRole.CLIENT && user.clientId) {
+            return await db.select().from(contentPosts).where(eq(contentPosts.clientId, user.clientId)).orderBy(desc(contentPosts.createdAt));
+          }
           return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
         } catch (retryError) {
           console.error('❌ Failed to add visit_id column:', retryError);
@@ -1369,6 +1474,22 @@ export class DatabaseStorage implements IStorage {
       }
       throw error;
     }
+  }
+
+  async getContentPost(id: string): Promise<ContentPost | undefined> {
+    const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, id));
+    return post;
+  }
+
+  async getContentPostForUser(id: string, user: any): Promise<ContentPost | undefined> {
+    const post = await this.getContentPost(id);
+    if (!post) return undefined;
+
+    if (user.role === UserRole.CLIENT) {
+      if (post.clientId !== user.clientId) return undefined;
+    }
+
+    return post;
   }
 
   async getContentPostsByClient(clientId: string): Promise<ContentPost[]> {
@@ -1421,8 +1542,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoice operations
-  async getInvoices(): Promise<Invoice[]> {
+  async getInvoices(user?: any): Promise<Invoice[]> {
+    if (user?.role === UserRole.CLIENT && user.clientId) {
+      return await db.select().from(invoices).where(eq(invoices.clientId, user.clientId)).orderBy(desc(invoices.createdAt));
+    }
     return await db.select().from(invoices).orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return invoice;
+  }
+
+  async getInvoiceForUser(id: string, user: any): Promise<Invoice | undefined> {
+    const invoice = await this.getInvoice(id);
+    if (!invoice) return undefined;
+
+    if (user.role === UserRole.CLIENT) {
+      if (invoice.clientId !== user.clientId) return undefined;
+    }
+
+    return invoice;
   }
 
   async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
@@ -1447,8 +1587,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Ticket operations
-  async getTickets(): Promise<Ticket[]> {
+  async getTickets(user?: any): Promise<Ticket[]> {
+    if (user?.role === UserRole.CLIENT && user.clientId) {
+      return await db.select().from(tickets).where(eq(tickets.clientId, user.clientId)).orderBy(desc(tickets.createdAt));
+    }
     return await db.select().from(tickets).orderBy(desc(tickets.createdAt));
+  }
+
+  async getTicket(id: string): Promise<Ticket | undefined> {
+    const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
+    return ticket;
+  }
+
+  async getTicketForUser(id: string, user: any): Promise<Ticket | undefined> {
+    const ticket = await this.getTicket(id);
+    if (!ticket) return undefined;
+
+    if (user.role === UserRole.CLIENT) {
+      if (ticket.clientId !== user.clientId) return undefined;
+    }
+
+    return ticket;
   }
 
   async createTicket(ticketData: InsertTicket): Promise<Ticket> {
@@ -1473,7 +1632,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Message operations
-  async getMessages(clientId?: string): Promise<Message[]> {
+  async getMessages(user?: any, clientId?: string): Promise<Message[]> {
+    if (user?.role === UserRole.CLIENT && user.clientId) {
+      return await db.select().from(messages).where(eq(messages.clientId, user.clientId)).orderBy(messages.createdAt);
+    }
     if (clientId) {
       return await db.select().from(messages).where(eq(messages.clientId, clientId)).orderBy(messages.createdAt);
     }

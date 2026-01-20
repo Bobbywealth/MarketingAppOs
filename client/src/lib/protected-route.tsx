@@ -2,15 +2,19 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 import type { ComponentType } from "react";
+import { getEffectiveRole, AppRole } from "./effective-role";
 
 export function ProtectedRoute({
   path,
   component: Component,
+  allowedRoles,
 }: {
   path: string;
   component: ComponentType<any>;
+  allowedRoles?: AppRole[];
 }) {
   const { user, isLoading } = useAuth();
+  const effectiveRole = getEffectiveRole(user?.role);
 
   if (isLoading) {
     return (
@@ -26,6 +30,14 @@ export function ProtectedRoute({
     return (
       <Route path={path}>
         <Redirect to="/auth" />
+      </Route>
+    );
+  }
+
+  if (allowedRoles && !allowedRoles.includes(effectiveRole)) {
+    return (
+      <Route path={path}>
+        <Redirect to="/" />
       </Route>
     );
   }

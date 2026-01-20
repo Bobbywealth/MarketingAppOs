@@ -292,44 +292,55 @@ export function setupAuth(app: Express) {
         
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
+
+      // Security: Rotate session on login to prevent session fixation
+      const oldSession = req.session;
       req.login(user, async (err) => {
         if (err) return next(err);
         
-        // Log the login activity
-        try {
-          await storage.createActivityLog({
-            userId: user.id,
-            activityType: "login",
-            description: `${user.username} logged in`,
-            metadata: {
-              ip: req.ip,
-              userAgent: req.get('user-agent'),
-            },
-          });
-        } catch (error) {
-          console.error("Failed to log activity:", error);
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'E',location:'server/auth.ts:/api/login',message:'Activity log write failed during login',data:{error:String((error as any)?.message||error)},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
-        }
+        // Regenerate session
+        req.session.regenerate(async (regenErr) => {
+          if (regenErr) return next(regenErr);
+          
+          // Re-copy session data if needed (passport handles re-serializing user)
+          // Passport user is already in req.user, and req.login will put it in the new session.
+          
+          // Log the login activity
+          try {
+            await storage.createActivityLog({
+              userId: user.id,
+              activityType: "login",
+              description: `${user.username} logged in`,
+              metadata: {
+                ip: req.ip,
+                userAgent: req.get('user-agent'),
+              },
+            });
+          } catch (error) {
+            console.error("Failed to log activity:", error);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'E',location:'server/auth.ts:/api/login',message:'Activity log write failed during login',data:{error:String((error as any)?.message||error)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+          }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'C',location:'server/auth.ts:/api/login',message:'Login success; session info',data:{sessionID:(req as any).sessionID||null,isAuthenticated:typeof (req as any).isAuthenticated==='function'?(req as any).isAuthenticated():null,cookieDomain:(req as any).session?.cookie?.domain||null,cookieSecure:(req as any).session?.cookie?.secure||null,cookieSameSite:(req as any).session?.cookie?.sameSite||null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-        res.status(200).json({
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          profileImageUrl: user.profileImageUrl,
-          role: user.role,
-          clientId: user.clientId,
-          creatorId: user.creatorId,
-          customPermissions: user.customPermissions,
-          emailVerified: user.emailVerified,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'C',location:'server/auth.ts:/api/login',message:'Login success; session info',data:{sessionID:(req as any).sessionID||null,isAuthenticated:typeof (req as any).isAuthenticated==='function'?(req as any).isAuthenticated():null,cookieDomain:(req as any).session?.cookie?.domain||null,cookieSecure:(req as any).session?.cookie?.secure||null,cookieSameSite:(req as any).session?.cookie?.sameSite||null},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          res.status(200).json({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            profileImageUrl: user.profileImageUrl,
+            role: user.role,
+            clientId: user.clientId,
+            creatorId: user.creatorId,
+            customPermissions: user.customPermissions,
+            emailVerified: user.emailVerified,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          });
         });
       });
     })(req, res, next);

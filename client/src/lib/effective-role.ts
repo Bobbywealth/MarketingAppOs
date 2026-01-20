@@ -53,12 +53,13 @@ export function getEffectiveRole(userRole: unknown): AppRole {
 }
 
 export function getDefaultDashboardPath(role: AppRole): string {
-  if (role === "admin") return "/dashboard/admin";
-  if (role === "manager" || role === "creator_manager") return "/dashboard/manager";
-  if (role === "staff") return "/dashboard/staff";
-  if (role === "staff_content_creator") return "/clients"; // Send to clients page to access documents
+  if (role === "admin" || role === "manager" || role === "staff" || role === "creator_manager" || role === "staff_content_creator") {
+    return "/admin";
+  }
+  if (role === "client") return "/client";
+  if (role === "creator") return "/creator";
+  if (role === "sales_agent") return "/sales";
   if (role === "prospective_client") return "/signup";
-  // Other roles still use existing dashboards (root route)
   return "/";
 }
 

@@ -179,39 +179,9 @@ router.get("/task-spaces/:id/tasks", isAuthenticated, async (req: Request, res: 
 // Task routes
 router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const currentUser = req.user as any;
-    const userId = currentUser?.id ? Number(currentUser.id) : null;
-    const rawRole = currentUser?.role;
-    const normalizedRole = String(rawRole ?? "").trim().toLowerCase();
-    
-    // DEBUG: Log task fetch with full user context
-    console.log(`📋 Tasks fetch for user: id=${userId}, username=${currentUser?.username}, role=${rawRole}, normalizedRole='${normalizedRole}'`);
-
-    // 1. Clients: Restricted to their own client ID
-    if (normalizedRole === "client") {
-      const clientId = currentUser?.clientId;
-      const tasksList = clientId ? await storage.getTasksByClient(clientId) : [];
-      return res.json(tasksList);
-    }
-
-    // 2. Admin / Manager: See EVERYTHING
-    const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
-    if (isAllAccess) {
-      const allTasks = await storage.getTasks();
-      console.log(`📋 All-access fetch (${normalizedRole}): returning ${allTasks.length} total tasks`);
-      return res.json(allTasks);
-    }
-
-    // 3. Staff / Others: See only assigned tasks
-    if (userId) {
-      const tasksList = await storage.getTasksAssignedToUser(userId);
-      console.log(`📋 Restricted fetch (${normalizedRole}): returning ${tasksList.length} assigned tasks for user ${userId}`);
-      return res.json(tasksList);
-    }
-
-    // 4. Fallback: No role or userId context
-    console.warn("⚠️ Task fetch fallback: No role or userId context found in session");
-    return res.json([]);
+    const user = req.user as any;
+    const tasksList = await storage.getTasks(user);
+    res.json(tasksList);
   } catch (error) {
     console.error("❌ Task fetch error:", error);
     res.status(500).json({ message: "Failed to fetch tasks" });

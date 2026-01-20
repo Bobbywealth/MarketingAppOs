@@ -29,16 +29,8 @@ const router = Router();
 
 router.get("/", isAuthenticated, requirePermission("canManageLeads"), async (_req: Request, res: Response) => {
   try {
-    const { userId, role } = getCurrentUserContext(_req);
-    if (role === UserRole.SALES_AGENT && userId) {
-      const scoped = await db
-        .select()
-        .from(leads)
-        .where(eq(leads.assignedToId, userId))
-        .orderBy(sql`${leads.createdAt} DESC`);
-      return res.json(scoped);
-    }
-    const all = await storage.getLeads();
+    const user = _req.user as any;
+    const all = await storage.getLeads(user);
     console.log("DEBUG: API /api/leads returning", all.length, "leads");
     res.json(all);
   } catch (error) {
