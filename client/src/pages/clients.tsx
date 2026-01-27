@@ -347,46 +347,48 @@ export default function Clients() {
   // Get all unique tags from clients
   const allTags = Array.from(new Set(clients?.flatMap(c => c.serviceTags || []) || []));
 
-  // Enhanced filtering and sorting
-  const filteredClients = clients
-    ?.filter((client) => {
-      // Search filter
-      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.company?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // Status filter
-      const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-      
-      // Tag filter
-      const matchesTag = tagFilter === "all" || 
-        client.serviceTags?.includes(tagFilter);
-      
-      // Billing filter
-      const matchesBilling = billingFilter === "all" || 
-        (billingFilter === "paid" && !!client.stripeSubscriptionId) ||
-        (billingFilter === "unpaid" && !client.stripeSubscriptionId) ||
-        (billingFilter === "overdue" && client.billingStatus === "overdue");
-      
-      return matchesSearch && matchesStatus && matchesTag && matchesBilling;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case "alphabetical":
-          return a.name.localeCompare(b.name);
-        case "active":
-          // Sort by subscription status
-          return (b.stripeSubscriptionId ? 1 : 0) - (a.stripeSubscriptionId ? 1 : 0);
-        case "displayOrder":
-          return (a.displayOrder || 0) - (b.displayOrder || 0);
-        default:
-          return 0;
-      }
-    });
+  // Enhanced filtering and sorting - memoized for performance
+  const filteredClients = useMemo(() => {
+    return clients
+      ?.filter((client) => {
+        // Search filter
+        const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          client.company?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Status filter
+        const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+
+        // Tag filter
+        const matchesTag = tagFilter === "all" ||
+          client.serviceTags?.includes(tagFilter);
+
+        // Billing filter
+        const matchesBilling = billingFilter === "all" ||
+          (billingFilter === "paid" && !!client.stripeSubscriptionId) ||
+          (billingFilter === "unpaid" && !client.stripeSubscriptionId) ||
+          (billingFilter === "overdue" && client.billingStatus === "overdue");
+
+        return matchesSearch && matchesStatus && matchesTag && matchesBilling;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "newest":
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          case "oldest":
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case "alphabetical":
+            return a.name.localeCompare(b.name);
+          case "active":
+            // Sort by subscription status
+            return (b.stripeSubscriptionId ? 1 : 0) - (a.stripeSubscriptionId ? 1 : 0);
+          case "displayOrder":
+            return (a.displayOrder || 0) - (b.displayOrder || 0);
+          default:
+            return 0;
+        }
+      }) || [];
+  }, [clients, searchTerm, statusFilter, tagFilter, billingFilter, sortBy]);
 
   if (isLoading) {
     return (
