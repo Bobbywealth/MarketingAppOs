@@ -93,6 +93,13 @@ type SidebarNavItem = {
   sidebarKey?: any;
   badgeKey?: any;
   roles?: readonly string[];
+  subItems?: SidebarNavItem[]; // Nested items for grouped navigation
+};
+
+type SubNavItem = {
+  title: string;
+  url: string;
+  icon: any;
 };
 
 
@@ -476,6 +483,98 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     icon: Bell,
     roles: ["admin", "manager", "staff"] as const,
     sidebarKey: "pushNotifications" as const,
+  },
+];
+
+// Merged tool groups for simplified navigation
+const aiSuiteTools: SidebarNavItem[] = [
+  {
+    title: "AI Suite",
+    icon: Sparkles,
+    subItems: [
+      {
+        title: "Digital Twin",
+        url: "/admin/second-me",
+        icon: Sparkles,
+      },
+      {
+        title: "Business Manager",
+        url: "/admin/ai-manager",
+        icon: Bot,
+      },
+      {
+        title: "Content Generator",
+        url: "/admin/ai-content-generator",
+        icon: Bot,
+      },
+    ],
+  },
+];
+
+const billingFinanceTools: SidebarNavItem[] = [
+  {
+    title: "Billing & Finance",
+    icon: DollarSign,
+    subItems: [
+      {
+        title: "Invoices & Billing",
+        url: "/admin/invoices",
+        icon: DollarSign,
+      },
+      {
+        title: "Commissions",
+        url: "/admin/commissions",
+        icon: TrendingUp,
+      },
+      {
+        title: "Subscription Packages",
+        url: "/admin/subscription-packages",
+        icon: Package,
+      },
+      {
+        title: "Discount Codes",
+        url: "/admin/discount-codes",
+        icon: Percent,
+      },
+    ],
+  },
+];
+
+const analyticsReportsTools: SidebarNavItem[] = [
+  {
+    title: "Analytics & Reports",
+    icon: BarChart3,
+    subItems: [
+      {
+        title: "Analytics Overview",
+        url: "/admin/analytics",
+        icon: BarChart3,
+      },
+      {
+        title: "Social Stats",
+        url: "/admin/social-stats",
+        icon: LineChart,
+      },
+    ],
+  },
+];
+
+const trainingCoursesTools: SidebarNavItem[] = [
+  {
+    title: "Training & Courses",
+    icon: BookOpen,
+    subItems: [
+      {
+        title: "Training Materials",
+        url: "/admin/training",
+        icon: BookOpen,
+      },
+      {
+        title: "Manage Courses",
+        url: "/admin/manage-courses",
+        icon: BookOpen,
+      },
+    ],
   },
 ];
 
