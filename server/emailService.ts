@@ -185,34 +185,6 @@ export const emailTemplates = {
     };
   },
 
-  // Email verification template
-  verifyEmail: (userName: string, verifyUrl: string) => {
-    const content = `
-      <h2 style="margin-top: 0;">Hi ${userName}! 👋</h2>
-      <p>Thank you for using the <strong>Marketing Team App</strong>. To ensure the security of your account and that you receive important updates, please verify your email address.</p>
-      
-      <div style="text-align: center;">
-        <a href="${verifyUrl}" class="button" style="background-color: #1a1a1a;">Verify Your Email Address →</a>
-      </div>
-      
-      <div class="card">
-        <p style="margin: 0; font-size: 14px; color: #6b7280;">
-          If the button doesn't work, copy and paste this link into your browser:
-          <br>
-          <span style="word-break: break-all;">${verifyUrl}</span>
-        </p>
-      </div>
-      
-      <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
-        Once verified, you'll have full access to your CRM dashboard and will receive all system notifications directly in your main inbox.
-      </p>
-    `;
-    return {
-      subject: '📧 Verify Your Email Address - Marketing Team App',
-      html: renderEmail('Email Verification', content, '#1a1a1a')
-    };
-  },
-
   // Enrollment invitation for new clients
   enrollmentInvitation: (clientName: string, packageName: string, checkoutUrl: string) => {
     const content = `
@@ -629,7 +601,7 @@ export const emailTemplates = {
   },
 
   // Creator application received
-  creatorApplicationReceived: (creatorName: string, verifyUrl?: string | null) => {
+  creatorApplicationReceived: (creatorName: string, _verifyUrl?: string | null) => {
     const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
     const content = `
       <h2 style="margin-top: 0;">Hi ${creatorName}! 👋</h2>
@@ -836,11 +808,6 @@ export const emailNotifications = {
 
   async sendPasswordResetEmail(toEmail: string, resetUrl: string) {
     const { subject, html } = emailTemplates.passwordReset(resetUrl);
-    return sendEmail(toEmail, subject, html);
-  },
-
-  async sendVerificationEmail(userName: string, toEmail: string, verifyUrl: string) {
-    const { subject, html } = emailTemplates.verifyEmail(userName, verifyUrl);
     return sendEmail(toEmail, subject, html);
   },
 

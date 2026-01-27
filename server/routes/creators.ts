@@ -250,7 +250,6 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
         }
         await tx.update(users).set({ creatorId: creator.id }).where(eq(users.id, existing.id));
       } else {
-        const verificationToken = randomBytes(20).toString("hex");
         // Create login user linked to creator
         await tx
           .insert(users)
@@ -262,8 +261,6 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
             lastName,
             role: UserRole.CREATOR,
             creatorId: creator.id,
-            emailVerified: false,
-            emailVerificationToken: verificationToken,
           } as any);
       }
 
@@ -289,20 +286,10 @@ router.post("/creators/signup", async (req: Request, res: Response, next: any) =
 
     // Send creator-facing "application received" email (best-effort)
     try {
-      const protocol = req.protocol;
-      const host = req.get("host");
-      const appUrl = process.env.APP_URL || `${protocol}://${host}`;
-
-      // Find the user token if we just created a user (or if it already existed)
-      const existingUser = await storage.getUserByUsername(normalizedEmail).catch(() => null);
-      const verifyUrl = existingUser?.emailVerificationToken
-        ? `${appUrl}/verify-email?token=${existingUser.emailVerificationToken}`
-        : null;
-
       const { emailNotifications } = await import("../emailService");
       if (normalizedEmail) {
         void emailNotifications
-          .sendCreatorApplicationReceivedEmail(normalizedEmail, data.fullName, verifyUrl)
+          .sendCreatorApplicationReceivedEmail(normalizedEmail, data.fullName)
           .catch((err) => console.error("Failed to send creator application received email:", err));
       }
     } catch (err) {

@@ -4686,8 +4686,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         }
       }
 
-      const verificationToken = email ? randomBytes(20).toString("hex") : null;
-
       const userData = {
         username,
         password: await hashPassword(data.password),
@@ -4695,7 +4693,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         ...(email ? { email } : {}),
         ...(firstName ? { firstName } : {}),
         ...(lastName ? { lastName } : {}),
-        ...(verificationToken ? { emailVerified: false, emailVerificationToken: verificationToken } : {}),
       } as any;
       
       console.log("Hashed password, calling storage.createUser...");
@@ -4705,18 +4702,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       // Email notifications
       if (user.email) {
         try {
-          const protocol = req.protocol;
-          const host = req.get("host");
-          const appUrl = process.env.APP_URL || `${protocol}://${host}`;
-          const verifyUrl = user.emailVerificationToken ? `${appUrl}/verify-email?token=${user.emailVerificationToken}` : null;
-
-          // Send verification email (best-effort)
-          if (verifyUrl) {
-            void emailNotifications
-              .sendVerificationEmail(user.firstName || user.username, user.email, verifyUrl)
-              .catch((err) => console.error("Failed to send verification email:", err));
-          }
-
           // Send welcome email to new user
           void emailNotifications.sendWelcomeEmail(
             user.firstName || user.username,

@@ -38,7 +38,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 // Lazy load all pages for better mobile performance
 const AuthPage = lazy(() => import("@/pages/auth-page"));
-const VerifyEmail = lazy(() => import("@/pages/verify-email"));
 const Landing = lazy(() => import("@/pages/landing"));
 const SignupPage = lazy(() => import("@/pages/signup"));
 const PostPaymentOnboarding = lazy(() => import("@/pages/post-payment-onboarding"));
@@ -139,7 +138,6 @@ function Router() {
         <Route path="/pwa-home" component={PWAHomePage} />
         <Route path="/login" component={AuthPage} />
         <Route path="/auth" component={AuthPage} />
-        <Route path="/verify-email" component={VerifyEmail} />
         <Route path="/signup" component={SignupPage} />
         <Route path="/onboarding/post-payment" component={PostPaymentOnboarding} />
         <Route path="/creator-signup" component={CreatorSignupRedirect} />
@@ -330,15 +328,6 @@ function AppContent() {
       sessionStorage.setItem("mta:lastUrl", routeLocation);
     } catch {}
   }, [routeLocation]);
-
-  // Force email verification if logged in but not verified
-  // Exempt admins and managers from being blocked by verification screen
-  useEffect(() => {
-    const isExempt = user?.role === 'admin' || user?.role === 'manager';
-    if (user && !user.emailVerified && !isExempt && routeLocation !== "/verify-email") {
-      setLocation("/verify-email");
-    }
-  }, [user, routeLocation, setLocation]);
 
   const sidebarStyle = {
     "--sidebar-width": "16.25rem", // 260px - wider for better readability

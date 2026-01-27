@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,8 +28,7 @@ import {
   Smartphone, 
   Pencil, 
   BarChart3,
-  Lock,
-  ShieldCheck
+  Lock
 } from "lucide-react";
 import { HeaderLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
@@ -39,7 +38,6 @@ import { Form } from "@/components/ui/form";
 import { SignupProgress } from "@/components/signup/SignupProgress";
 import { AccountStep } from "@/components/signup/AccountStep";
 import { ContactStep } from "@/components/signup/ContactStep";
-import { VerificationStep } from "@/components/signup/VerificationStep";
 import { ServicesStep } from "@/components/signup/ServicesStep";
 import { LoginsStep } from "@/components/signup/LoginsStep";
 import { BrandStep } from "@/components/signup/BrandStep";
@@ -126,11 +124,7 @@ export default function SignupPage() {
   // If user is already logged in as a prospective client, skip to appropriate step
   useEffect(() => {
     if (user && user.role === 'prospective_client' && step === 1) {
-      if (user.emailVerified) {
-        setStep(4);
-      } else {
-        setStep(3);
-      }
+      setStep(3); // Go directly to services step (was 4, but now 3 without verification)
     }
   }, [user, step]);
 
@@ -309,7 +303,7 @@ export default function SignupPage() {
         if (step === 1) {
           setStep(2);
         } else if (step === 2) {
-          // Register the user and move to verification step
+          // Register the user and move to services step
           const formData = form.getValues();
           try {
             await apiRequest("POST", "/api/register", {
@@ -330,7 +324,7 @@ export default function SignupPage() {
               website: formData.website || null,
             });
 
-            setStep(3);
+            setStep(3); // Go directly to services step (was 4, now 3)
           } catch (error: any) {
             toast({
               title: "Registration Failed",
@@ -338,7 +332,7 @@ export default function SignupPage() {
               variant: "destructive",
             });
           }
-        } else if (step === 4) {
+        } else if (step === 3) {
           // Save services selection to lead before showing packages
           const formData = form.getValues();
           // Omit sensitive/existing account info to avoid backend "already exists" errors
@@ -352,7 +346,7 @@ export default function SignupPage() {
   };
 
   const prevStep = () => {
-    if (step === 4) setStep(2); // Skip verification step if going back
+    if (step === 3) setStep(2); // Go back to contact from services
     else setStep(step - 1);
   };
 
@@ -372,9 +366,8 @@ export default function SignupPage() {
   const steps = [
     { num: 1, label: "Account", icon: Lock },
     { num: 2, label: "Contact", icon: User },
-    { num: 3, label: "Verify", icon: ShieldCheck },
-    { num: 4, label: "Services", icon: Target },
-    { num: 5, label: "Payment", icon: Zap },
+    { num: 3, label: "Services", icon: Target },
+    { num: 4, label: "Payment", icon: Zap },
   ];
 
   if (step === 5) {
@@ -488,17 +481,11 @@ export default function SignupPage() {
                   <AnimatePresence mode="wait">
                     {step === 1 && <AccountStep form={form} />}
                     {step === 2 && <ContactStep form={form} />}
-                    {step === 3 && (
-                      <VerificationStep 
-                        email={form.getValues("email")} 
-                        onVerified={() => setStep(4)} 
-                      />
-                    )}
-                    {step === 4 && <ServicesStep form={form} services={services} />}
+                    {step === 3 && <ServicesStep form={form} services={services} />}
                   </AnimatePresence>
 
                   {/* Navigation Buttons */}
-                  {step !== 3 && (
+                  {step !== 2 && (
                     <div className="flex flex-col sm:flex-row justify-between gap-4 pt-8 md:pt-12 border-t border-slate-100">
                       {step > 1 ? (
                         <Button
