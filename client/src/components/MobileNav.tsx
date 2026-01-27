@@ -77,10 +77,10 @@ export function MobileNav() {
     // Default for Internal (Admin/Manager/Staff)
     return [
       { title: "Home", url: "/admin", icon: LayoutDashboard },
-      { title: "Clients", url: "/admin/clients", icon: Users },
-      { title: "Leads", url: "/admin/leads", icon: UserPlus },
-      { title: "Messages", url: "/admin/messages", icon: MessageSquare, badge: totalUnreadMessages },
-      { title: "Tasks", url: "/admin/tasks", icon: ListTodo },
+      { title: "Clients", url: "/clients", icon: Users },
+      { title: "Leads", url: "/leads", icon: UserPlus },
+      { title: "Messages", url: "/messages", icon: MessageSquare, badge: totalUnreadMessages },
+      { title: "Tasks", url: "/tasks", icon: ListTodo },
     ];
   };
 
@@ -105,9 +105,9 @@ export function MobileNav() {
       ];
     }
     return [
-      { label: "Go to Tasks", url: "/admin/tasks" },
-      { label: "Go to Messages", url: "/admin/messages" },
-      { label: "Go to Leads", url: "/admin/leads" },
+      { label: "Go to Tasks", url: "/tasks" },
+      { label: "Go to Messages", url: "/messages" },
+      { label: "Go to Leads", url: "/leads" },
       { label: "Settings", url: "/settings" },
     ];
   }, [role]);

@@ -1,6 +1,6 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -43,6 +43,21 @@ import SubscriptionPackages from "@/pages/subscription-packages";
 import SecondMe from "@/pages/second-me";
 import AdminSecondMe from "@/pages/admin-second-me";
 import NotFound from "@/pages/not-found";
+import MarketingCenter from "@/pages/marketing-center";
+import AdminBlog from "@/pages/admin-blog";
+import Creators from "@/pages/creators";
+import Visits from "@/pages/visits";
+import AdminPayouts from "@/pages/admin-payouts";
+import AdminVault from "@/pages/admin-vault";
+import AdminSocialStats from "@/pages/admin-social-stats";
+import Commissions from "@/pages/commissions";
+import DiscountCodes from "@/pages/discount-codes";
+import AIBusinessManager from "@/pages/ai-business-manager";
+import AIContentGenerator from "@/pages/ai-content-generator";
+import Training from "@/pages/training";
+import PushNotifications from "@/pages/push-notifications";
+import DashboardStaff from "@/pages/dashboard-staff";
+import DashboardManager from "@/pages/dashboard-manager";
 
 function Router() {
   const { user } = useAuth();
@@ -86,6 +101,21 @@ function Router() {
       {!isClient && <ProtectedRoute path="/phone" component={Phone} />}
       {!isClient && <ProtectedRoute path="/company-calendar" component={CompanyCalendar} />}
       {!isClient && <ProtectedRoute path="/admin-second-me" component={AdminSecondMe} />}
+      {!isClient && <ProtectedRoute path="/marketing-center" component={MarketingCenter} />}
+      {!isClient && <ProtectedRoute path="/admin/blog" component={AdminBlog} />}
+      {!isClient && <ProtectedRoute path="/creators" component={Creators} />}
+      {!isClient && <ProtectedRoute path="/visits" component={Visits} />}
+      {!isClient && <ProtectedRoute path="/admin/creators/payouts" component={AdminPayouts} />}
+      {!isClient && <ProtectedRoute path="/admin/vault" component={AdminVault} />}
+      {!isClient && <ProtectedRoute path="/admin/social-stats" component={AdminSocialStats} />}
+      {!isClient && <ProtectedRoute path="/commissions" component={Commissions} />}
+      {!isClient && <ProtectedRoute path="/discount-codes" component={DiscountCodes} />}
+      {!isClient && <ProtectedRoute path="/admin/ai-manager" component={AIBusinessManager} />}
+      {!isClient && <ProtectedRoute path="/admin/ai-content-generator" component={AIContentGenerator} />}
+      {!isClient && <ProtectedRoute path="/training" component={Training} />}
+      {!isClient && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
+      {!isClient && <ProtectedRoute path="/dashboard-staff" component={DashboardStaff} />}
+      {!isClient && <ProtectedRoute path="/dashboard-manager" component={DashboardManager} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/settings" component={Settings} />
