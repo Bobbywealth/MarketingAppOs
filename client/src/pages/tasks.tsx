@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -532,13 +532,16 @@ export default function TasksPage() {
     ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
     : 0;
 
-  const filteredTasks = tasks.filter((task) => {
-    if (!matchesBaseFilters(task)) return false;
-    
-    // Hide all completed tasks if toggle is off
-    if (!showCompleted && task.status === "completed") return false;
-    return true;
-  });
+  // Memoized filtered tasks for performance
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      if (!matchesBaseFilters(task)) return false;
+
+      // Hide all completed tasks if toggle is off
+      if (!showCompleted && task.status === "completed") return false;
+      return true;
+    });
+  }, [tasks, filterStatus, filterPriority, selectedSpaceId, showCompleted]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
