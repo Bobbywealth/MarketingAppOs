@@ -86,11 +86,51 @@ export default {
           light: "hsl(25 95% 65% / <alpha-value>)",
           dark: "hsl(25 95% 45% / <alpha-value>)",
         },
+        // Semantic status colors
+        success: {
+          DEFAULT: "hsl(var(--success) / <alpha-value>)",
+          foreground: "hsl(0 0% 100% / <alpha-value>)",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning) / <alpha-value>)",
+          foreground: "hsl(0 0% 100% / <alpha-value>)",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info) / <alpha-value>)",
+          foreground: "hsl(0 0% 100% / <alpha-value>)",
+        },
+        error: {
+          DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
+          foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
+        },
+        // Border color tokens
+        border: {
+          light: "hsl(var(--border-light) / <alpha-value>)",
+          medium: "hsl(var(--border-medium) / <alpha-value>)",
+          dark: "hsl(var(--border-dark) / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+      },
+      fontSize: {
+        // Heading sizes for consistent typography
+        'heading-xl': ['2.25rem', { lineHeight: '1.1', letterSpacing: '-0.02em' }],
+        'heading-lg': ['1.875rem', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
+        'heading-md': ['1.5rem', { lineHeight: '1.3' }],
+        'heading-sm': ['1.25rem', { lineHeight: '1.4' }],
+        'body-lg': ['1.125rem', { lineHeight: '1.6' }],
+        'body': ['1rem', { lineHeight: '1.5' }],
+        'body-sm': ['0.875rem', { lineHeight: '1.5' }],
+        'body-xs': ['0.75rem', { lineHeight: '1.5' }],
+      },
+      spacing: {
+        // Standard layout spacing
+        'page': '1rem sm:1.5rem lg:2rem xl:3rem',
+        'card': '1.5rem',
+        'section': '1.5rem lg:2rem',
       },
       keyframes: {
         "accordion-down": {
@@ -101,6 +141,11 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        // Animation duration tokens
+        "fade-in": "fadeIn var(--animate-slow) ease-out",
+        "slide-up": "slideUp var(--animate-slow) ease-out",
+        "slide-in-left": "slideInFromLeft 0.8s ease-out forwards",
+        "slide-in-right": "slideInFromRight 0.8s ease-out forwards",
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",

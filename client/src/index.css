@@ -20,11 +20,22 @@
 
   --border: 220 13% 91%;
 
+  /* Semantic border colors */
+  --border-light: 220 13% 91%;
+  --border-medium: 220 13% 80%;
+  --border-dark: 220 13% 60%;
+
   --card: 0 0% 100%;
 
   --card-foreground: 220 13% 18%;
 
   --card-border: 220 13% 94%;
+
+  /* Semantic status colors */
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --info: 199 89% 48%;
+  --error: 0 84% 60%;
 
   --sidebar: 220 13% 96%;
 
@@ -205,11 +216,22 @@
 
   --border: 220 13% 15%;  /* Subtle, almost invisible borders */
 
+  /* Semantic border colors for dark mode */
+  --border-light: 220 13% 20%;
+  --border-medium: 220 13% 30%;
+  --border-dark: 220 13% 45%;
+
   --card: 217 33% 17%;  /* #1e293b - Cards stand out more from background */
 
   --card-foreground: 210 20% 92%;  /* #e5e7eb */
 
   --card-border: 220 10% 12%;  /* Very subtle card borders */
+
+  /* Semantic status colors for dark mode */
+  --success: 142 71% 58%;
+  --warning: 38 92% 65%;
+  --info: 199 89% 65%;
+  --error: 0 84% 60%;
 
   --sidebar: 220 26% 14%;  /* #111827 - Darker sidebar for depth */
 
@@ -295,6 +317,42 @@
   }
 }
 
+/* =====================================================
+   DESIGN SYSTEM TOKENS
+   ===================================================== */
+
+@layer tokens {
+  /* Animation Duration Tokens */
+  --animate-fast: 150ms;
+  --animate-default: 200ms;
+  --animate-slow: 300ms;
+  --animate-slower: 500ms;
+
+  /* Animation Easings */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Icon Sizes */
+  --icon-xs: 12px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+  --icon-2xl: 48px;
+
+  /* Spacing Tokens */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.75rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+  --spacing-2xl: 2rem;
+  --spacing-3xl: 3rem;
+  --spacing-4xl: 4rem;
+}
+
 /**
  * Using the elevate system.
  * Automatic contrast adjustment.
@@ -316,7 +374,6 @@
  * need to be distinguished from eachother visually.
  */
 @layer utilities {
-
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;
@@ -328,6 +385,165 @@
     color: hsl(var(--muted-foreground));
     pointer-events: none;
   }
+
+  /* =====================================================
+     SPACING UTILITIES
+     Standard spacing patterns for consistent layouts
+     ===================================================== */
+
+  /* Page container padding */
+  .page-container {
+    @apply max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 xl:p-12;
+  }
+
+  /* Section spacing */
+  .section-spacing {
+    @apply gap-6 lg:gap-8;
+  }
+
+  /* Card internal spacing (standardized) */
+  .card-padding {
+    @apply p-6;
+  }
+
+  .card-padding-sm {
+    @apply p-4;
+  }
+
+  .card-padding-lg {
+    @apply p-8;
+  }
+
+  /* Element spacing */
+  .element-spacing {
+    @apply gap-4;
+  }
+
+  .element-spacing-tight {
+    @apply gap-2;
+  }
+
+  .element-spacing-loose {
+    @apply gap-6;
+  }
+
+  /* =====================================================
+     GRID UTILITIES
+     Standard grid patterns
+     ===================================================== */
+
+  /* Cards grid */
+  .grid-cards {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6;
+  }
+
+  /* Stats grid */
+  .grid-stats {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4;
+  }
+
+  /* Dashboard grid */
+  .grid-dashboard {
+    @apply grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6;
+  }
+
+  /* Two column grid */
+  .grid-2-col {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+
+  /* Three column grid */
+  .grid-3-col {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-6;
+  }
+
+  /* =====================================================
+     TYPOGRAPHY UTILITIES
+     Standard text styles
+     ===================================================== */
+
+  .text-heading-xl {
+    @apply text-[2.25rem] font-bold tracking-tight leading-[1.1];
+  }
+
+  .text-heading-lg {
+    @apply text-[1.875rem] font-semibold tracking-tight leading-[1.2];
+  }
+
+  .text-heading-md {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  .text-heading-sm {
+    @apply text-lg font-semibold tracking-tight;
+  }
+
+  .text-body-lg {
+    @apply text-[1.125rem] leading-relaxed;
+  }
+
+  .text-body {
+    @apply text-base leading-relaxed;
+  }
+
+  .text-body-sm {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .text-body-xs {
+    @apply text-xs text-muted-foreground;
+  }
+
+  /* =====================================================
+     ANIMATION UTILITIES
+     Standard animation patterns
+     ===================================================== */
+
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-150 ease-in-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  .fade-in {
+    animation: fadeIn var(--animate-slow) ease-out;
+  }
+
+  .slide-up {
+    animation: slideUp var(--animate-slow) ease-out;
+  }
+
+  .slide-in-left {
+    animation: slideInFromLeft 0.8s ease-out forwards;
+  }
+
+  .slide-in-right {
+    animation: slideInFromRight 0.8s ease-out forwards;
+  }
+
+  /* =====================================================
+     ACCESSIBILITY UTILITIES
+     ===================================================== */
+
+  /* Minimum touch target size (44x44px) */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Focus ring utility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  /* =====================================================
+     ELEVATION SYSTEM ESCAPE HATCHES
+     ===================================================== */
 
   /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
    * buttons/badges can remove the automatic brightness adjustment on interactions
@@ -428,6 +644,23 @@
       background: hsl(var(--card));
       border: 1px solid hsl(var(--border));
     }
+  }
+
+  /* Enhanced glass effect for dark mode */
+  .dark .glass {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .glass-strong {
+    background: rgba(30, 41, 59, 0.85);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Dark mode glass-effect override */
+  .dark .glass-effect {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .gradient-mesh {
