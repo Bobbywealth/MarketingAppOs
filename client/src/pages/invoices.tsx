@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, DollarSign, Calendar, TrendingUp, TrendingDown, Users, CreditCard, ExternalLink, RefreshCcw, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, DollarSign, Calendar, TrendingUp, TrendingDown, Users, CreditCard, ExternalLink, RefreshCcw, ArrowUpRight, ArrowDownRight, Printer } from "lucide-react";
+import { PrintButton, AnalyticsPrintButton } from "@/components/PrintButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -274,6 +275,12 @@ export default function Invoices() {
             <RefreshCcw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
+          <AnalyticsPrintButton 
+            elementId="invoice-dashboard"
+            title="Invoice Dashboard Report"
+            variant="outline"
+            size="sm"
+          />
           <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -371,7 +378,7 @@ export default function Invoices() {
 
       {/* Key Metrics - Admin Only */}
       {isAdmin && (
-      <>
+      <div id="invoice-dashboard">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="hover-elevate">
           <CardContent className="pt-6">
@@ -671,7 +678,7 @@ export default function Invoices() {
           </div>
         </CardContent>
       </Card>
-      </>
+      </div>
       )}
     </div>
   );

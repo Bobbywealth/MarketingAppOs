@@ -5,6 +5,7 @@ import { useRoute, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ClientReportPrintButton } from "@/components/PrintButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -219,6 +220,18 @@ export default function ClientDetail() {
             <ArrowLeft className="w-4 h-4" />
             Back to Clients
           </Button>
+          <ClientReportPrintButton 
+            clientId={clientId!}
+            client={client}
+            analytics={{
+              totalRevenue,
+              activeTasks,
+              socialFollowers: primarySocial?.followers,
+              activeCampaigns: campaigns.length
+            }}
+            variant="outline"
+            size="sm"
+          />
         </div>
 
         {/* Client Header Card */}

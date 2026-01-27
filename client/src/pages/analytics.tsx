@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { AnalyticsPrintButton } from "@/components/PrintButton";
 import {
   TrendingUp,
   TrendingDown,
@@ -152,6 +153,12 @@ export default function Analytics() {
             <p className="text-sm md:text-base lg:text-lg text-muted-foreground">Track performance across all channels</p>
           </div>
           <div className="flex gap-3">
+            <AnalyticsPrintButton 
+              elementId="analytics-dashboard"
+              title="Analytics Dashboard Report"
+              variant="outline"
+              size="sm"
+            />
             <Select value={selectedClient} onValueChange={setSelectedClient}>
               <SelectTrigger className="w-48" data-testid="select-client">
                 <SelectValue placeholder="All Clients" />
@@ -180,6 +187,7 @@ export default function Analytics() {
           </div>
         </div>
 
+        <div id="analytics-dashboard">
         <Tabs defaultValue="social" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="social" data-testid="tab-social">Social Media</TabsTrigger>
@@ -499,6 +507,7 @@ export default function Analytics() {
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
     </div>
   );
