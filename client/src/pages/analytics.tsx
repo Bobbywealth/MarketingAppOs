@@ -4,7 +4,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { AnalyticsPrintButton } from "@/components/PrintButton";
 import {
   TrendingUp,
   TrendingDown,
@@ -144,21 +143,15 @@ export default function Analytics() {
 
   return (
     <div className="min-h-full gradient-mesh">
-      <div className="p-4 md:p-6 lg:p-8 xl:p-12 space-y-4 md:space-y-6 lg:space-y-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1 md:space-y-2">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
+      <div className="p-6 lg:p-8 xl:p-12 space-y-8">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">
               Analytics & Reports
             </h1>
-            <p className="text-sm md:text-base lg:text-lg text-muted-foreground">Track performance across all channels</p>
+            <p className="text-lg text-muted-foreground">Track performance across all channels</p>
           </div>
           <div className="flex gap-3">
-            <AnalyticsPrintButton 
-              elementId="analytics-dashboard"
-              title="Analytics Dashboard Report"
-              variant="outline"
-              size="sm"
-            />
             <Select value={selectedClient} onValueChange={setSelectedClient}>
               <SelectTrigger className="w-48" data-testid="select-client">
                 <SelectValue placeholder="All Clients" />
@@ -187,7 +180,6 @@ export default function Analytics() {
           </div>
         </div>
 
-        <div id="analytics-dashboard">
         <Tabs defaultValue="social" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="social" data-testid="tab-social">Social Media</TabsTrigger>
@@ -507,7 +499,6 @@ export default function Analytics() {
             </CardContent>
           </Card>
         )}
-        </div>
       </div>
     </div>
   );

@@ -5,7 +5,6 @@ import {
   tasks,
   taskSpaces,
   userViewPreferences,
-  userNotificationPreferences,
   taskComments,
   leads,
   leadActivities,
@@ -20,7 +19,6 @@ import {
   projectFeedback,
   analyticsMetrics,
   notifications,
-  pushNotificationHistory,
   activityLogs,
   emails,
   emailAccounts,
@@ -30,28 +28,6 @@ import {
   secondMe,
   secondMeContent,
   pageViews,
-  marketingBroadcasts,
-  marketingBroadcastRecipients,
-  marketingGroups,
-  marketingGroupMembers,
-  marketingSeries,
-  marketingSeriesSteps,
-  marketingSeriesEnrollments,
-  marketingTemplatesTable,
-  courses,
-  courseModules,
-  courseLessons,
-  courseEnrollments,
-  clientSocialStats,
-  socialAccounts,
-  socialAccountMetricsSnapshots,
-  clientCreators,
-  creatorVisits,
-  commissions,
-  discountRedemptions,
-  smsMessages,
-  scheduledAiCommands,
-  UserRole,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -65,8 +41,6 @@ import {
   type InsertTaskSpace,
   type UserViewPreferences,
   type InsertUserViewPreferences,
-  type UserNotificationPreferences,
-  type InsertUserNotificationPreferences,
   type TaskComment,
   type InsertTaskComment,
   type Lead,
@@ -97,8 +71,6 @@ import {
   type InsertAnalyticsMetric,
   type Notification,
   type InsertNotification,
-  type PushNotificationHistory,
-  type InsertPushNotificationHistory,
   type ActivityLog,
   type InsertActivityLog,
   type Email,
@@ -115,54 +87,14 @@ import {
   type InsertSecondMe,
   type SecondMeContent,
   type InsertSecondMeContent,
-  type Course,
-  type InsertCourse,
-  type CourseModule,
-  type InsertCourseModule,
-  type CourseLesson,
-  type InsertCourseLesson,
-  type CourseEnrollment,
-  type InsertCourseEnrollment,
-  groupConversations,
-  groupConversationMembers,
-  groupMessages,
-  type GroupConversation,
-  type GroupMessage,
-  type MarketingBroadcast,
-  type InsertMarketingBroadcast,
-  type MarketingBroadcastRecipient,
-  type InsertMarketingBroadcastRecipient,
-  type MarketingGroup,
-  type InsertMarketingGroup,
-  type MarketingGroupMember,
-  type InsertMarketingGroupMember,
-  type MarketingTemplate,
-  type InsertMarketingTemplate,
-  type ScheduledAiCommand,
-  type InsertScheduledAiCommand,
 } from "@shared/schema";
-import { db, pool } from "./db";
-import { eq, desc, asc, or, and, gte, lt, lte, count, inArray, sum, sql, isNotNull } from "drizzle-orm";
-
-export interface GroupConversationWithParticipants extends GroupConversation {
-  participants: Array<{ id: number; username: string; role: string }>;
-}
-
-export interface GroupMessageWithAuthor extends GroupMessage {
-  authorName: string;
-  authorRole: string;
-}
+import { db } from "./db";
+import { eq, desc, or, and, gte, count } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  getUserByResetToken(token: string): Promise<User | undefined>;
-  getUserByEmailVerificationToken(token: string): Promise<User | undefined>;
-  updateUserResetToken(userId: number, token: string | null, expires: Date | null): Promise<void>;
-  updateUserEmailVerification(userId: number, verified: boolean, token: string | null): Promise<void>;
-  updateUserPassword(userId: number, password: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<User>;
   createUser(user: InsertUser): Promise<User>;
@@ -184,7 +116,6 @@ export interface IStorage {
 
   // Task Spaces operations
   getTaskSpaces(): Promise<TaskSpace[]>;
-  getTaskSpacesForAssignee(userId: number): Promise<TaskSpace[]>;
   getTaskSpace(id: string): Promise<TaskSpace | undefined>;
   createTaskSpace(space: InsertTaskSpace): Promise<TaskSpace>;
   updateTaskSpace(id: string, data: Partial<InsertTaskSpace>): Promise<TaskSpace>;
@@ -193,16 +124,7 @@ export interface IStorage {
   // Task operations
   getTasks(): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
-  getTasksAssignedToUser(userId: number): Promise<Task[]>;
   getTasksBySpace(spaceId: string): Promise<Task[]>;
-  getTasksByClient(clientId: string): Promise<Task[]>;
-  getDueTasksForAssignee(
-    userId: number,
-    dueBy: Date
-  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>>;
-  getDueTasksForAllAssignees(
-    dueBy: Date
-  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
@@ -224,25 +146,19 @@ export interface IStorage {
 
   // Lead operations
   getLeads(): Promise<Lead[]>;
-  getLead(id: string): Promise<Lead | undefined>;
-  getLeadByEmail(email: string): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, data: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
 
   // Lead activity operations
   getLeadActivities(leadId: string): Promise<LeadActivity[]>;
-  getAllLeadActivities(): Promise<LeadActivity[]>;
   createLeadActivity(activity: InsertLeadActivity): Promise<LeadActivity>;
 
   // Lead automation operations
   getLeadAutomations(leadId: string): Promise<LeadAutomation[]>;
-  getDueLeadAutomations(): Promise<LeadAutomation[]>;
-  getLeadAutomationsByLeadIdAndType(leadId: string, type: string, status?: string): Promise<LeadAutomation[]>;
   createLeadAutomation(automation: InsertLeadAutomation): Promise<LeadAutomation>;
   updateLeadAutomation(id: string, data: Partial<InsertLeadAutomation>): Promise<LeadAutomation>;
   deleteLeadAutomation(id: string): Promise<void>;
-  cancelLeadAutomations(leadId: string, type: string): Promise<void>;
 
   // Content post operations
   getContentPosts(): Promise<ContentPost[]>;
@@ -268,13 +184,6 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   updateMessage(id: string, data: Partial<InsertMessage>): Promise<Message>;
   deleteMessage(id: string): Promise<void>;
-
-  // Group conversation operations
-  getGroupConversations(userId: number): Promise<GroupConversationWithParticipants[]>;
-  createGroupConversation(data: { name: string; createdBy: number; memberIds: number[] }): Promise<GroupConversationWithParticipants>;
-  isGroupConversationMember(conversationId: string, userId: number): Promise<boolean>;
-  getGroupMessages(conversationId: string): Promise<GroupMessageWithAuthor[]>;
-  createGroupMessage(data: { conversationId: string; userId: number; content: string; mediaUrl?: string | null; mediaType?: string | null; durationMs?: number | null }): Promise<GroupMessage>;
 
   // Onboarding task operations
   getOnboardingTasks(): Promise<OnboardingTask[]>;
@@ -302,19 +211,6 @@ export interface IStorage {
   createAnalyticsMetric(metric: InsertAnalyticsMetric): Promise<AnalyticsMetric>;
   deleteAnalyticsMetric(id: string): Promise<void>;
 
-  // Push notification history operations
-  getPushNotificationHistory(): Promise<PushNotificationHistory[]>;
-  createPushNotificationHistory(history: InsertPushNotificationHistory): Promise<PushNotificationHistory>;
-
-  // Notifications operations
-  getNotifications(userId: number): Promise<Notification[]>;
-  getNotificationsByActionUrls(userId: number, actionUrls: string[]): Promise<Notification[]>;
-  getUnreadNotificationsByActionUrls(userId: number, actionUrls: string[]): Promise<Notification[]>;
-  createNotification(notification: InsertNotification): Promise<Notification>;
-  markNotificationAsRead(notificationId: string): Promise<void>;
-  markAllNotificationsAsRead(userId: number): Promise<void>;
-  deleteNotification(notificationId: string): Promise<void>;
-
   // Global search
   globalSearch(query: string): Promise<{
     clients: Client[];
@@ -324,119 +220,17 @@ export interface IStorage {
     invoices: Invoice[];
     tickets: Ticket[];
   }>;
-
-  // Optimized dashboard stats
-  getDashboardStats(userId?: number, role?: string): Promise<any>;
-
-  // Marketing Broadcast operations
-  getMarketingBroadcasts(): Promise<MarketingBroadcast[]>;
-  getMarketingBroadcast(id: string): Promise<MarketingBroadcast | undefined>;
-  createMarketingBroadcast(data: InsertMarketingBroadcast): Promise<MarketingBroadcast>;
-  updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast>;
-  deleteMarketingBroadcast(id: string): Promise<void>;
-
-  // Marketing Series operations
-  getMarketingSeries(): Promise<MarketingSeries[]>;
-  getMarketingSeriesWithSteps(id: string): Promise<(MarketingSeries & { steps: MarketingSeriesStep[] }) | undefined>;
-  createMarketingSeries(data: InsertMarketingSeries): Promise<MarketingSeries>;
-  updateMarketingSeries(id: string, data: Partial<InsertMarketingSeries>): Promise<MarketingSeries>;
-  deleteMarketingSeries(id: string): Promise<void>;
-  
-  getMarketingSeriesSteps(seriesId: string): Promise<MarketingSeriesStep[]>;
-  createMarketingSeriesStep(data: InsertMarketingSeriesStep): Promise<MarketingSeriesStep>;
-  updateMarketingSeriesStep(id: string, data: Partial<InsertMarketingSeriesStep>): Promise<MarketingSeriesStep>;
-  deleteMarketingSeriesStep(id: string): Promise<void>;
-  
-  getMarketingSeriesEnrollments(seriesId?: string): Promise<MarketingSeriesEnrollment[]>;
-  getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]>;
-  createMarketingSeriesEnrollment(data: InsertMarketingSeriesEnrollment): Promise<MarketingSeriesEnrollment>;
-  updateMarketingSeriesEnrollment(id: string, data: Partial<InsertMarketingSeriesEnrollment>): Promise<MarketingSeriesEnrollment>;
-  deleteMarketingSeriesEnrollment(id: string): Promise<void>;
-  getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
-  createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
-  updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
-  getMarketingBroadcastRecipientByProviderCallId(callId: string): Promise<MarketingBroadcastRecipient | undefined>;
-
-  // Marketing Group operations
-  getMarketingGroups(): Promise<MarketingGroup[]>;
-  getMarketingGroup(id: string): Promise<MarketingGroup | undefined>;
-  createMarketingGroup(data: InsertMarketingGroup): Promise<MarketingGroup>;
-  updateMarketingGroup(id: string, data: Partial<InsertMarketingGroup>): Promise<MarketingGroup>;
-  deleteMarketingGroup(id: string): Promise<void>;
-  getMarketingGroupMembers(groupId: string): Promise<MarketingGroupMember[]>;
-  addMarketingGroupMember(data: InsertMarketingGroupMember): Promise<MarketingGroupMember>;
-  removeMarketingGroupMember(id: number): Promise<void>;
-
-  // Marketing Template operations
-  getMarketingTemplates(): Promise<MarketingTemplate[]>;
-  getMarketingTemplate(id: string): Promise<MarketingTemplate | undefined>;
-  createMarketingTemplate(data: InsertMarketingTemplate): Promise<MarketingTemplate>;
-  updateMarketingTemplate(id: string, data: Partial<InsertMarketingTemplate>): Promise<MarketingTemplate>;
-  deleteMarketingTemplate(id: string): Promise<void>;
-
-  // Course operations
-  getCourses(creatorId?: string): Promise<Course[]>;
-  getCourse(id: string): Promise<Course | undefined>;
-  getCourseWithContent(id: string): Promise<Course & { modules: (CourseModule & { lessons: CourseLesson[] })[] }>;
-  createCourse(course: InsertCourse): Promise<Course>;
-  updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course>;
-  deleteCourse(id: string): Promise<void>;
-
-  // Course Module operations
-  getCourseModules(courseId: string): Promise<CourseModule[]>;
-  createCourseModule(module: InsertCourseModule): Promise<CourseModule>;
-  updateCourseModule(id: string, data: Partial<InsertCourseModule>): Promise<CourseModule>;
-  deleteCourseModule(id: string): Promise<void>;
-
-  // Course Lesson operations
-  getCourseLessons(moduleId: string): Promise<CourseLesson[]>;
-  createCourseLesson(lesson: InsertCourseLesson): Promise<CourseLesson>;
-  updateCourseLesson(id: string, data: Partial<InsertCourseLesson>): Promise<CourseLesson>;
-  deleteCourseLesson(id: string): Promise<void>;
-
-  // Course Enrollment operations
-  getCourseEnrollment(courseId: string, userId: number): Promise<CourseEnrollment | undefined>;
-  getUserEnrollments(userId: number): Promise<(CourseEnrollment & { course: Course })[]>;
-  enrollInCourse(enrollment: InsertCourseEnrollment): Promise<CourseEnrollment>;
-  updateCourseEnrollment(id: string, data: Partial<InsertCourseEnrollment>): Promise<CourseEnrollment>;
-
-  // Creator operations
-  getCreators(): Promise<Creator[]>;
-  getCreator(id: string): Promise<Creator | undefined>;
-  getCreatorByEmail(email: string): Promise<Creator | undefined>;
-  getCreatorByUserId(userId: number): Promise<Creator | undefined>;
-  createCreator(creator: InsertCreator): Promise<Creator>;
-  updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator>;
-  deleteCreator(id: string): Promise<void>;
-
-  // Scheduled AI Command operations
-  getScheduledAiCommands(userId: number): Promise<ScheduledAiCommand[]>;
-  getScheduledAiCommand(id: string): Promise<ScheduledAiCommand | undefined>;
-  getDueScheduledAiCommands(): Promise<ScheduledAiCommand[]>;
-  createScheduledAiCommand(command: InsertScheduledAiCommand): Promise<ScheduledAiCommand>;
-  updateScheduledAiCommand(id: string, data: Partial<ScheduledAiCommand>): Promise<ScheduledAiCommand>;
-  deleteScheduledAiCommand(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
   // User operations
-  async getUser(id: string | number): Promise<User | undefined> {
-    const userId = typeof id === 'string' ? parseInt(id, 10) : id;
-    if (isNaN(userId)) return undefined;
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users).orderBy(desc(users.createdAt));
-  }
-
-  async getAdminUsers(): Promise<User[]> {
-    return await db.select().from(users).where(eq(users.role, "admin"));
-  }
-
-  async getUsersByClientId(clientId: string): Promise<User[]> {
-    return await db.select().from(users).where(eq(users.clientId, clientId));
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -471,46 +265,6 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
-  }
-
-  async getUserByResetToken(token: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.resetPasswordToken, token),
-          gte(users.resetPasswordExpires, new Date())
-        )
-      );
-    return user;
-  }
-
-  async updateUserResetToken(userId: number, token: string | null, expires: Date | null): Promise<void> {
-    await db
-      .update(users)
-      .set({
-        resetPasswordToken: token,
-        resetPasswordExpires: expires,
-      })
-      .where(eq(users.id, userId));
-  }
-
-  async updateUserPassword(userId: number, password: string): Promise<void> {
-    await db
-      .update(users)
-      .set({
-        password,
-        resetPasswordToken: null,
-        resetPasswordExpires: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-  }
-
   async createUser(userData: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -523,17 +277,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
-  async updateUser(
-    userId: number,
-    updates: Partial<InsertUser> & { customPermissions?: Record<string, boolean> | null }
-  ): Promise<User> {
-    const payload = {
-      ...updates,
-      updatedAt: new Date(),
-    };
+  async updateUser(userId: number, updates: Partial<InsertUser>): Promise<User> {
     const [user] = await db
       .update(users)
-      .set(payload)
+      .set(updates)
       .where(eq(users.id, userId))
       .returning();
     if (!user) {
@@ -543,251 +290,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: number): Promise<void> {
-    // Delete all related records first to avoid foreign key constraint violations
-    try {
-      console.log(`🗑️ Starting deletion process for user ${userId}`);
-      
-      // Delete push notification history (sentBy references users) - optional table
-      try {
-        await db.delete(pushNotificationHistory).where(eq(pushNotificationHistory.sentBy, userId));
-        console.log(`   ✓ Deleted push notification history records`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting push notification history:`, err.message);
-        }
-      }
-      
-      // Delete notifications
-      await db.delete(notifications).where(eq(notifications.userId, userId));
-      console.log(`   ✓ Deleted notifications`);
-      
-      // Delete messages (both as sender and recipient)
-      await db.delete(messages).where(or(eq(messages.userId, userId), eq(messages.recipientId, userId)));
-      console.log(`   ✓ Deleted messages`);
-
-      // Delete group chat data
-      await db.delete(groupMessages).where(eq(groupMessages.userId, userId));
-      await db.delete(groupConversationMembers).where(eq(groupConversationMembers.userId, userId));
-      await db.delete(groupConversations).where(eq(groupConversations.createdBy, userId));
-      console.log(`   ✓ Cleaned up group conversations`);
-      
-      // Delete task comments by this user
-      await db.delete(taskComments).where(eq(taskComments.userId, userId));
-      console.log(`   ✓ Deleted task comments`);
-      
-      // Update tasks - set assignedToId to null
-      await db.update(tasks).set({ assignedToId: null }).where(eq(tasks.assignedToId, userId));
-      console.log(`   ✓ Updated tasks (unassigned)`);
-      
-      // Update tickets - set assignedToId to null
-      await db.update(tickets).set({ assignedToId: null }).where(eq(tickets.assignedToId, userId));
-      console.log(`   ✓ Updated tickets (unassigned)`);
-      
-      // Update clients - set assignedToId to null
-      await db.update(clients).set({ assignedToId: null }).where(eq(clients.assignedToId, userId));
-      console.log(`   ✓ Updated clients (unassigned)`);
-      
-      // Update users - set clientId to null
-      await db.update(users).set({ clientId: null }).where(eq(users.clientId, String(userId)));
-      console.log(`   ✓ Updated users (unlinked from client)`);
-      
-      // Update leads - set assignedToId to null
-      await db.update(leads).set({ assignedToId: null }).where(eq(leads.assignedToId, userId));
-      console.log(`   ✓ Updated leads (unassigned)`);
-      
-      // Delete or update lead activities (userId column might not exist in older databases)
-      try {
-        await db.delete(leadActivities).where(eq(leadActivities.userId, userId));
-        console.log(`   ✓ Deleted lead activities`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting lead activities:`, err.message);
-        }
-      }
-      
-      // Delete campaigns created by this user (since createdBy might not allow null)
-      try {
-        await db.delete(campaigns).where(eq(campaigns.createdBy, userId));
-        console.log(`   ✓ Deleted campaigns`);
-      } catch (err: any) {
-        // If delete fails, try to set to null (in case createdBy allows null)
-        try {
-          await db.update(campaigns).set({ createdBy: null }).where(eq(campaigns.createdBy, userId));
-          console.log(`   ✓ Updated campaigns (set createdBy to null)`);
-        } catch (err2: any) {
-          console.warn(`   ⚠ Warning handling campaigns:`, err2.message);
-        }
-      }
-      
-      // Delete task spaces created by this user (since createdBy is notNull)
-      try {
-        await db.delete(taskSpaces).where(eq(taskSpaces.createdBy, userId));
-        console.log(`   ✓ Deleted task spaces`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting task spaces:`, err.message);
-      }
-      
-      // Delete or update project feedback (userId column might not exist in older databases)
-      try {
-        await db.delete(projectFeedback).where(eq(projectFeedback.userId, userId));
-        console.log(`   ✓ Deleted project feedback`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting project feedback:`, err.message);
-        }
-      }
-      
-      // Delete calendar events created by this user (optional table)
-      try {
-        await db.delete(calendarEvents).where(eq(calendarEvents.createdBy, userId));
-        console.log(`   ✓ Deleted calendar events`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting calendar events:`, err.message);
-        }
-      }
-      
-      // Delete emails (optional table)
-      try {
-        await db.delete(emails).where(eq(emails.userId, userId));
-        console.log(`   ✓ Deleted emails`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting emails:`, err.message);
-        }
-      }
-      
-      // Delete email accounts (optional table)
-      try {
-        await db.delete(emailAccounts).where(eq(emailAccounts.userId, userId));
-        console.log(`   ✓ Deleted email accounts`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting email accounts:`, err.message);
-        }
-      }
-      
-      // Delete activity logs (optional table)
-      try {
-        await db.delete(activityLogs).where(eq(activityLogs.userId, userId));
-        console.log(`   ✓ Deleted activity logs`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting activity logs:`, err.message);
-        }
-      }
-      
-      // Delete user view preferences (optional table)
-      try {
-        await db.delete(userViewPreferences).where(eq(userViewPreferences.userId, userId));
-        console.log(`   ✓ Deleted user view preferences`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting user view preferences:`, err.message);
-        }
-      }
-      
-      // Delete user notification preferences (optional table)
-      try {
-        await db.delete(userNotificationPreferences).where(eq(userNotificationPreferences.userId, userId));
-        console.log(`   ✓ Deleted user notification preferences`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting user notification preferences:`, err.message);
-        }
-      }
-      
-      // Update client documents - set uploadedBy to null (it's varchar, so we'll use SQL)
-      try {
-        await pool.query('UPDATE client_documents SET uploaded_by = NULL WHERE uploaded_by = $1', [String(userId)]);
-        console.log(`   ✓ Updated client documents`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning updating client documents:`, err.message);
-      }
-      
-      // Delete SMS messages associated with this user
-      try {
-        await pool.query('DELETE FROM sms_messages WHERE user_id = $1', [userId]);
-        console.log(`   ✓ Deleted SMS messages`);
-      } catch (err: any) {
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting SMS messages:`, err.message);
-        }
-      }
-
-      // Delete push subscriptions (if table exists)
-      try {
-        await pool.query('DELETE FROM push_subscriptions WHERE user_id = $1', [userId]);
-        console.log(`   ✓ Deleted push subscriptions`);
-      } catch (err: any) {
-        // Ignore if table doesn't exist or column doesn't exist
-        if (!err.message?.includes('does not exist')) {
-          console.warn(`   ⚠ Warning deleting push subscriptions:`, err.message);
-        }
-      }
-      
-      // Delete sessions that might reference this user (sessions store user ID in JSON)
-      try {
-        await pool.query(`DELETE FROM sessions WHERE sess->>'passport'->>'user' = $1`, [String(userId)]);
-        console.log(`   ✓ Deleted user sessions`);
-      } catch (err: any) {
-        // Ignore if this fails - sessions will expire anyway
-        console.warn(`   ⚠ Warning deleting sessions:`, err.message);
-      }
-      
-      // Finally, delete the user
-      await db.delete(users).where(eq(users.id, userId));
-      console.log(`✅ User ${userId} deleted successfully`);
-    } catch (error: any) {
-      console.error(`❌ Error deleting user ${userId}:`, error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        constraint: error.constraint,
-        table: error.table,
-        stack: error.stack?.split('\n').slice(0, 5).join('\n'),
-      });
-      // If it's a foreign key constraint error, provide more details
-      if (error.code === '23503' || error.message?.includes('foreign key') || error.message?.includes('violates foreign key')) {
-        throw new Error(`Cannot delete user: This user has related records that prevent deletion. Table: ${error.table || 'unknown'}, Constraint: ${error.constraint || 'unknown'}. Details: ${error.detail || error.message}`);
-      }
-      throw error;
-    }
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   // Client operations
-  async getClients(user?: any): Promise<Client[]> {
-    let clientList;
-    if (user?.role === UserRole.CLIENT && user.clientId) {
-      clientList = await db.select().from(clients).where(eq(clients.id, user.clientId)).orderBy(desc(clients.createdAt));
-    } else if (user?.role === UserRole.SALES_AGENT) {
-      clientList = await db.select().from(clients).where(or(eq(clients.salesAgentId, user.id), eq(clients.assignedToId, user.id))).orderBy(desc(clients.createdAt));
-    } else {
-      clientList = await db.select().from(clients).orderBy(desc(clients.createdAt));
-    }
+  async getClients(): Promise<Client[]> {
+    const clientList = await db.select().from(clients).orderBy(desc(clients.createdAt));
     console.log("🔍 getClients() called - Found", clientList.length, "clients");
+    console.log("   Client IDs:", clientList.map(c => c.id).join(", "));
     return clientList;
   }
 
   async getClient(id: string): Promise<Client | undefined> {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
-    return client;
-  }
-
-  async getClientForUser(id: string, user: any): Promise<Client | undefined> {
-    const client = await this.getClient(id);
-    if (!client) return undefined;
-
-    if (user.role === UserRole.CLIENT) {
-      if (user.clientId !== id) return undefined;
-    }
-
-    if (user.role === UserRole.SALES_AGENT) {
-      const allowed = client.salesAgentId === user.id || client.assignedToId === user.id;
-      if (!allowed) return undefined;
-    }
-
     return client;
   }
 
@@ -809,217 +324,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClient(id: string): Promise<void> {
-    try {
-      console.log(`🗑️ Starting deletion process for client ${id}`);
-
-      // 1. Social & Stats
-      try {
-        await db.delete(clientSocialStats).where(eq(clientSocialStats.clientId, id));
-        console.log(`   ✓ Deleted social stats`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting social stats:`, err.message);
-      }
-
-      try {
-        const accounts = await db.select().from(socialAccounts).where(eq(socialAccounts.clientId, id));
-        for (const acc of accounts) {
-          await db.delete(socialAccountMetricsSnapshots).where(eq(socialAccountMetricsSnapshots.socialAccountId, acc.id));
-        }
-        await db.delete(socialAccounts).where(eq(socialAccounts.clientId, id));
-        console.log(`   ✓ Deleted social accounts and snapshots`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting social accounts:`, err.message);
-      }
-
-      try {
-        await db.delete(analyticsMetrics).where(eq(analyticsMetrics.clientId, id));
-        console.log(`   ✓ Deleted analytics metrics`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting analytics metrics:`, err.message);
-      }
-
-      // 2. Campaigns & Tasks
-      try {
-        const clientTasks = await db.select().from(tasks).where(eq(tasks.clientId, id));
-        if (clientTasks.length > 0) {
-          await db.delete(taskComments).where(inArray(taskComments.taskId, clientTasks.map(t => t.id)));
-        }
-        await db.delete(tasks).where(eq(tasks.clientId, id));
-        console.log(`   ✓ Deleted tasks and comments`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting tasks:`, err.message);
-      }
-
-      try {
-        await db.delete(campaigns).where(eq(campaigns.clientId, id));
-        console.log(`   ✓ Deleted campaigns`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting campaigns:`, err.message);
-      }
-
-      // 3. Leads
-      try {
-        await db.update(leads).set({ clientId: null }).where(eq(leads.clientId, id));
-        await db.update(leads).set({ convertedToClientId: null }).where(eq(leads.convertedToClientId, id));
-        console.log(`   ✓ Updated leads (unlinked)`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning updating leads:`, err.message);
-      }
-
-      // 3.1 Users
-      try {
-        await db.update(users).set({ clientId: null }).where(eq(users.clientId, id));
-        console.log(`   ✓ Updated users (unlinked)`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning updating users:`, err.message);
-      }
-
-      // 4. Content & Marketing
-      try {
-        await db.delete(contentPosts).where(eq(contentPosts.clientId, id));
-        console.log(`   ✓ Deleted content posts`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting content posts:`, err.message);
-      }
-
-      try {
-        await db.delete(marketingBroadcastRecipients).where(eq(marketingBroadcastRecipients.clientId, id));
-        console.log(`   ✓ Deleted marketing broadcast recipients`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting marketing broadcast recipients:`, err.message);
-      }
-
-      // 5. Billing & Support
-      try {
-        await db.delete(invoices).where(eq(invoices.clientId, id));
-        console.log(`   ✓ Deleted invoices`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting invoices:`, err.message);
-      }
-
-      try {
-        await db.delete(tickets).where(eq(tickets.clientId, id));
-        console.log(`   ✓ Deleted tickets`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting tickets:`, err.message);
-      }
-
-      try {
-        await db.update(commissions).set({ clientId: null }).where(eq(commissions.clientId, id));
-        console.log(`   ✓ Updated commissions (unlinked)`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning updating commissions:`, err.message);
-      }
-
-      try {
-        await db.delete(discountRedemptions).where(eq(discountRedemptions.clientId, id));
-        console.log(`   ✓ Deleted discount redemptions`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting discount redemptions:`, err.message);
-      }
-
-      // 6. Operations
-      try {
-        await db.delete(messages).where(eq(messages.clientId, id));
-        console.log(`   ✓ Deleted messages`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting messages:`, err.message);
-      }
-
-      try {
-        await db.delete(onboardingTasks).where(eq(onboardingTasks.clientId, id));
-        console.log(`   ✓ Deleted onboarding tasks`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting onboarding tasks:`, err.message);
-      }
-
-      try {
-        await db.delete(clientDocuments).where(eq(clientDocuments.clientId, id));
-        console.log(`   ✓ Deleted client documents`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting client documents:`, err.message);
-      }
-
-      // 7. Projects
-      try {
-        const projects = await db.select().from(websiteProjects).where(eq(websiteProjects.clientId, id));
-        for (const p of projects) {
-          await db.delete(projectFeedback).where(eq(projectFeedback.projectId, p.id));
-        }
-        await db.delete(websiteProjects).where(eq(websiteProjects.clientId, id));
-        console.log(`   ✓ Deleted website projects and feedback`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting website projects:`, err.message);
-      }
-
-      // 8. AI / Second Me
-      try {
-        await db.delete(secondMeContent).where(eq(secondMeContent.clientId, id));
-        await db.delete(secondMe).where(eq(secondMe.clientId, id));
-        console.log(`   ✓ Deleted AI/Second Me data`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting AI/Second Me data:`, err.message);
-      }
-
-      // 9. Creators
-      try {
-        await db.delete(clientCreators).where(eq(clientCreators.clientId, id));
-        await db.delete(creatorVisits).where(eq(creatorVisits.clientId, id));
-        console.log(`   ✓ Deleted creator assignments and visits`);
-      } catch (err: any) {
-        console.warn(`   ⚠ Warning deleting creator data:`, err.message);
-      }
-
-      // 10. Finally delete the client
-      const [deletedClient] = await db.delete(clients).where(eq(clients.id, id)).returning();
-      if (!deletedClient) {
-        throw new Error(`Client ${id} not found`);
-      }
-      console.log(`✅ Client ${id} deleted successfully`);
-    } catch (error: any) {
-      console.error(`❌ Error deleting client ${id}:`, error);
-      throw error;
-    }
+    await db.delete(clients).where(eq(clients.id, id));
   }
 
   // Campaign operations
-  async getCampaigns(user?: any): Promise<Campaign[]> {
-    if (user?.role === UserRole.CLIENT && user.clientId) {
-      return await db.select().from(campaigns).where(eq(campaigns.clientId, user.clientId)).orderBy(desc(campaigns.createdAt));
-    }
-    if (user?.role === UserRole.SALES_AGENT) {
-      const clientIds = await db.select({ id: clients.id }).from(clients).where(or(eq(clients.salesAgentId, user.id), eq(clients.assignedToId, user.id)));
-      const ids = clientIds.map(c => c.id);
-      if (ids.length === 0) {
-        return await db.select().from(campaigns).where(eq(campaigns.createdBy, user.id)).orderBy(desc(campaigns.createdAt));
-      }
-      return await db.select().from(campaigns).where(or(eq(campaigns.createdBy, user.id), inArray(campaigns.clientId, ids))).orderBy(desc(campaigns.createdAt));
-    }
+  async getCampaigns(): Promise<Campaign[]> {
     return await db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
   }
 
   async getCampaign(id: string): Promise<Campaign | undefined> {
     const [campaign] = await db.select().from(campaigns).where(eq(campaigns.id, id));
-    return campaign;
-  }
-
-  async getCampaignForUser(id: string, user: any): Promise<Campaign | undefined> {
-    const campaign = await this.getCampaign(id);
-    if (!campaign) return undefined;
-
-    if (user.role === UserRole.CLIENT) {
-      if (campaign.clientId !== user.clientId) return undefined;
-    }
-
-    if (user.role === UserRole.SALES_AGENT) {
-      if (campaign.createdBy !== user.id) {
-        const client = await this.getClient(campaign.clientId || "");
-        if (!client || (client.salesAgentId !== user.id && client.assignedToId !== user.id)) {
-          return undefined;
-        }
-      }
-    }
-
     return campaign;
   }
 
@@ -1049,42 +363,6 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(taskSpaces).orderBy(taskSpaces.order, taskSpaces.name);
   }
 
-  async getTaskSpacesForAssignee(userId: number): Promise<TaskSpace[]> {
-    // Fetch all spaces once, then filter by spaces that have tasks assigned to this user.
-    // Also include parent spaces so nested sidebar groups still render.
-    const allSpaces = await this.getTaskSpaces();
-
-    const assignedSpaceRows = await db
-      .select({ spaceId: tasks.spaceId })
-      .from(tasks)
-      .where(and(eq(tasks.assignedToId, userId), isNotNull(tasks.spaceId)))
-      .groupBy(tasks.spaceId);
-
-    const assignedSpaceIds = new Set(
-      assignedSpaceRows.map((r) => r.spaceId).filter((id): id is string => Boolean(id))
-    );
-
-    if (assignedSpaceIds.size === 0) return [];
-
-    const byId = new Map(allSpaces.map((s) => [s.id, s] as const));
-    const includeIds = new Set<string>();
-
-    const includeWithParents = (spaceId: string) => {
-      let current: TaskSpace | undefined = byId.get(spaceId);
-      while (current) {
-        if (includeIds.has(current.id)) break;
-        includeIds.add(current.id);
-        const parentId = current.parentSpaceId ?? null;
-        if (!parentId) break;
-        current = byId.get(parentId);
-      }
-    };
-
-    for (const id of assignedSpaceIds) includeWithParents(id);
-
-    return allSpaces.filter((s) => includeIds.has(s.id));
-  }
-
   async getTaskSpace(id: string): Promise<TaskSpace | undefined> {
     const [space] = await db.select().from(taskSpaces).where(eq(taskSpaces.id, id));
     return space;
@@ -1111,13 +389,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Task operations
-  async getTasks(user?: any): Promise<Task[]> {
-    if (user?.role === UserRole.CLIENT && user.clientId) {
-      return await db.select().from(tasks).where(eq(tasks.clientId, user.clientId)).orderBy(desc(tasks.createdAt));
-    }
-    if (user?.role === UserRole.SALES_AGENT) {
-      return await db.select().from(tasks).where(or(eq(tasks.assignedToId, user.id), eq(tasks.createdBy, user.id))).orderBy(desc(tasks.createdAt));
-    }
+  async getTasks(): Promise<Task[]> {
     return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
   }
 
@@ -1126,84 +398,8 @@ export class DatabaseStorage implements IStorage {
     return task;
   }
 
-  async getTaskForUser(id: string, user: any): Promise<Task | undefined> {
-    const task = await this.getTask(id);
-    if (!task) return undefined;
-
-    if (user.role === UserRole.CLIENT) {
-      if (task.clientId !== user.clientId) return undefined;
-    }
-
-    if (user.role === UserRole.SALES_AGENT) {
-      if (task.assignedToId !== user.id && task.createdBy !== user.id) {
-        return undefined;
-      }
-    }
-
-    return task;
-  }
-
-  async getTasksAssignedToUser(userId: number): Promise<Task[]> {
-    return await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.assignedToId, userId))
-      .orderBy(desc(tasks.createdAt));
-  }
-
   async getTasksBySpace(spaceId: string): Promise<Task[]> {
     return await db.select().from(tasks).where(eq(tasks.spaceId, spaceId)).orderBy(desc(tasks.createdAt));
-  }
-
-  async getTasksByClient(clientId: string): Promise<Task[]> {
-    return await db.select().from(tasks).where(eq(tasks.clientId, clientId)).orderBy(desc(tasks.createdAt));
-  }
-
-  async getDueTasksForAssignee(
-    userId: number,
-    dueBy: Date
-  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>> {
-    return await db
-      .select({
-        id: tasks.id,
-        title: tasks.title,
-        dueDate: tasks.dueDate,
-        assignedToId: tasks.assignedToId,
-        status: tasks.status,
-      })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.assignedToId, userId),
-          isNotNull(tasks.dueDate),
-          lte(tasks.dueDate, dueBy),
-          sql`${tasks.status} != 'completed'`
-        )
-      )
-      .orderBy(tasks.dueDate);
-  }
-
-  async getDueTasksForAllAssignees(
-    dueBy: Date
-  ): Promise<Array<Pick<Task, "id" | "title" | "dueDate" | "assignedToId" | "status">>> {
-    return await db
-      .select({
-        id: tasks.id,
-        title: tasks.title,
-        dueDate: tasks.dueDate,
-        assignedToId: tasks.assignedToId,
-        status: tasks.status,
-      })
-      .from(tasks)
-      .where(
-        and(
-          isNotNull(tasks.assignedToId),
-          isNotNull(tasks.dueDate),
-          lte(tasks.dueDate, dueBy),
-          sql`${tasks.status} != 'completed'`
-        )
-      )
-      .orderBy(tasks.dueDate);
   }
 
   async createTask(taskData: InsertTask): Promise<Task> {
@@ -1274,48 +470,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Lead operations
-  async getLeads(user?: any): Promise<Lead[]> {
-    let leadsList;
-    if (user?.role === UserRole.SALES_AGENT) {
-      leadsList = await db.select().from(leads).where(eq(leads.assignedToId, user.id)).orderBy(desc(leads.createdAt));
-    } else if (user?.role === UserRole.CLIENT && user.clientId) {
-      leadsList = await db.select().from(leads).where(eq(leads.clientId, user.clientId)).orderBy(desc(leads.createdAt));
-    } else {
-      leadsList = await db.select().from(leads).orderBy(desc(leads.createdAt));
-    }
-    console.log("🔍 getLeads() called - Found", leadsList.length, "leads");
-    return leadsList;
-  }
-
-  async getLead(id: string): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
-    return lead;
-  }
-
-  async getLeadForUser(id: string, user: any): Promise<Lead | undefined> {
-    const lead = await this.getLead(id);
-    if (!lead) return undefined;
-
-    if (user.role === UserRole.SALES_AGENT) {
-      if (lead.assignedToId !== user.id) return undefined;
-    }
-
-    if (user.role === UserRole.CLIENT) {
-      if (lead.clientId !== user.clientId) return undefined;
-    }
-
-    return lead;
-  }
-
-  async getLeadByEmail(email: string): Promise<Lead | undefined> {
-    const normalized = email.trim().toLowerCase();
-    if (!normalized) return undefined;
-    const [lead] = await db
-      .select()
-      .from(leads)
-      .where(sql`LOWER(${leads.email}) = ${normalized}`)
-      .limit(1);
-    return lead;
+  async getLeads(): Promise<Lead[]> {
+    return await db.select().from(leads).orderBy(desc(leads.createdAt));
   }
 
   async createLead(leadData: InsertLead): Promise<Lead> {
@@ -1348,13 +504,6 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(leadActivities.createdAt));
   }
 
-  async getAllLeadActivities(): Promise<LeadActivity[]> {
-    return await db
-      .select()
-      .from(leadActivities)
-      .orderBy(desc(leadActivities.createdAt));
-  }
-
   async createLeadActivity(activityData: InsertLeadActivity): Promise<LeadActivity> {
     const [activity] = await db.insert(leadActivities).values(activityData).returning();
     return activity;
@@ -1367,33 +516,6 @@ export class DatabaseStorage implements IStorage {
       .from(leadAutomations)
       .where(eq(leadAutomations.leadId, leadId))
       .orderBy(desc(leadAutomations.createdAt));
-  }
-
-  async getDueLeadAutomations(): Promise<LeadAutomation[]> {
-    const now = new Date();
-    return await db
-      .select()
-      .from(leadAutomations)
-      .where(
-        and(
-          eq(leadAutomations.status, "pending"),
-          lte(leadAutomations.scheduledFor, now)
-        )
-      );
-  }
-
-  async getLeadAutomationsByLeadIdAndType(leadId: string, type: string, status?: string): Promise<LeadAutomation[]> {
-    const conditions = [
-      eq(leadAutomations.leadId, leadId),
-      eq(leadAutomations.type, type)
-    ];
-    if (status) {
-      conditions.push(eq(leadAutomations.status, status));
-    }
-    return await db
-      .select()
-      .from(leadAutomations)
-      .where(and(...conditions));
   }
 
   async createLeadAutomation(automationData: InsertLeadAutomation): Promise<LeadAutomation> {
@@ -1417,88 +539,17 @@ export class DatabaseStorage implements IStorage {
     await db.delete(leadAutomations).where(eq(leadAutomations.id, id));
   }
 
-  async cancelLeadAutomations(leadId: string, type: string): Promise<void> {
-    await db
-      .update(leadAutomations)
-      .set({ status: "cancelled" })
-      .where(
-        and(
-          eq(leadAutomations.leadId, leadId),
-          eq(leadAutomations.type, type),
-          eq(leadAutomations.status, "pending")
-        )
-      );
-  }
-
   // Content post operations
-  async getContentPosts(user?: any): Promise<ContentPost[]> {
-    try {
-      if (user?.role === UserRole.CLIENT && user.clientId) {
-        return await db.select().from(contentPosts).where(eq(contentPosts.clientId, user.clientId)).orderBy(desc(contentPosts.createdAt));
-      }
-      return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
-    } catch (error: any) {
-      // If visit_id column doesn't exist, try to add it and retry
-      if (error?.code === '42703' && error?.message?.includes('visit_id')) {
-        console.log('⚠️ visit_id column missing, attempting to add it...');
-        try {
-          await pool.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS visit_id VARCHAR;`).catch(() => {});
-          // Retry the query
-          if (user?.role === UserRole.CLIENT && user.clientId) {
-            return await db.select().from(contentPosts).where(eq(contentPosts.clientId, user.clientId)).orderBy(desc(contentPosts.createdAt));
-          }
-          return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
-        } catch (retryError) {
-          console.error('❌ Failed to add visit_id column:', retryError);
-          throw error; // Throw original error
-        }
-      }
-      throw error;
-    }
-  }
-
-  async getContentPost(id: string): Promise<ContentPost | undefined> {
-    const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, id));
-    return post;
-  }
-
-  async getContentPostForUser(id: string, user: any): Promise<ContentPost | undefined> {
-    const post = await this.getContentPost(id);
-    if (!post) return undefined;
-
-    if (user.role === UserRole.CLIENT) {
-      if (post.clientId !== user.clientId) return undefined;
-    }
-
-    return post;
+  async getContentPosts(): Promise<ContentPost[]> {
+    return await db.select().from(contentPosts).orderBy(desc(contentPosts.createdAt));
   }
 
   async getContentPostsByClient(clientId: string): Promise<ContentPost[]> {
-    try {
-      return await db
-        .select()
-        .from(contentPosts)
-        .where(eq(contentPosts.clientId, clientId))
-        .orderBy(desc(contentPosts.createdAt));
-    } catch (error: any) {
-      // If visit_id column doesn't exist, try to add it and retry
-      if (error?.code === '42703' && error?.message?.includes('visit_id')) {
-        console.log('⚠️ visit_id column missing, attempting to add it...');
-        try {
-          await pool.query(`ALTER TABLE content_posts ADD COLUMN IF NOT EXISTS visit_id VARCHAR;`).catch(() => {});
-          // Retry the query
-          return await db
-            .select()
-            .from(contentPosts)
-            .where(eq(contentPosts.clientId, clientId))
-            .orderBy(desc(contentPosts.createdAt));
-        } catch (retryError) {
-          console.error('❌ Failed to add visit_id column:', retryError);
-          throw error; // Throw original error
-        }
-      }
-      throw error;
-    }
+    return await db
+      .select()
+      .from(contentPosts)
+      .where(eq(contentPosts.clientId, clientId))
+      .orderBy(desc(contentPosts.createdAt));
   }
 
   async createContentPost(postData: InsertContentPost): Promise<ContentPost> {
@@ -1523,27 +574,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Invoice operations
-  async getInvoices(user?: any): Promise<Invoice[]> {
-    if (user?.role === UserRole.CLIENT && user.clientId) {
-      return await db.select().from(invoices).where(eq(invoices.clientId, user.clientId)).orderBy(desc(invoices.createdAt));
-    }
+  async getInvoices(): Promise<Invoice[]> {
     return await db.select().from(invoices).orderBy(desc(invoices.createdAt));
-  }
-
-  async getInvoice(id: string): Promise<Invoice | undefined> {
-    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
-    return invoice;
-  }
-
-  async getInvoiceForUser(id: string, user: any): Promise<Invoice | undefined> {
-    const invoice = await this.getInvoice(id);
-    if (!invoice) return undefined;
-
-    if (user.role === UserRole.CLIENT) {
-      if (invoice.clientId !== user.clientId) return undefined;
-    }
-
-    return invoice;
   }
 
   async createInvoice(invoiceData: InsertInvoice): Promise<Invoice> {
@@ -1568,27 +600,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Ticket operations
-  async getTickets(user?: any): Promise<Ticket[]> {
-    if (user?.role === UserRole.CLIENT && user.clientId) {
-      return await db.select().from(tickets).where(eq(tickets.clientId, user.clientId)).orderBy(desc(tickets.createdAt));
-    }
+  async getTickets(): Promise<Ticket[]> {
     return await db.select().from(tickets).orderBy(desc(tickets.createdAt));
-  }
-
-  async getTicket(id: string): Promise<Ticket | undefined> {
-    const [ticket] = await db.select().from(tickets).where(eq(tickets.id, id));
-    return ticket;
-  }
-
-  async getTicketForUser(id: string, user: any): Promise<Ticket | undefined> {
-    const ticket = await this.getTicket(id);
-    if (!ticket) return undefined;
-
-    if (user.role === UserRole.CLIENT) {
-      if (ticket.clientId !== user.clientId) return undefined;
-    }
-
-    return ticket;
   }
 
   async createTicket(ticketData: InsertTicket): Promise<Ticket> {
@@ -1613,10 +626,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Message operations
-  async getMessages(user?: any, clientId?: string): Promise<Message[]> {
-    if (user?.role === UserRole.CLIENT && user.clientId) {
-      return await db.select().from(messages).where(eq(messages.clientId, user.clientId)).orderBy(messages.createdAt);
-    }
+  async getMessages(clientId?: string): Promise<Message[]> {
     if (clientId) {
       return await db.select().from(messages).where(eq(messages.clientId, clientId)).orderBy(messages.createdAt);
     }
@@ -1657,132 +667,6 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMessage(id: string): Promise<void> {
     await db.delete(messages).where(eq(messages.id, id));
-  }
-
-  async getGroupConversations(userId: number): Promise<GroupConversationWithParticipants[]> {
-    const membershipRows = await db
-      .select({ conversationId: groupConversationMembers.conversationId })
-      .from(groupConversationMembers)
-      .where(eq(groupConversationMembers.userId, userId));
-
-    if (membershipRows.length === 0) {
-      return [];
-    }
-
-    const conversationIds = membershipRows.map((row) => row.conversationId);
-
-    const conversationList = await db
-      .select()
-      .from(groupConversations)
-      .where(inArray(groupConversations.id, conversationIds))
-      .orderBy(desc(groupConversations.createdAt));
-
-    const participantRows = await db
-      .select({
-        conversationId: groupConversationMembers.conversationId,
-        userId: users.id,
-        username: users.username,
-        role: users.role,
-      })
-      .from(groupConversationMembers)
-      .innerJoin(users, eq(groupConversationMembers.userId, users.id))
-      .where(inArray(groupConversationMembers.conversationId, conversationIds));
-
-    const participantMap = new Map<string, Array<{ id: number; username: string; role: string }>>();
-    participantRows.forEach((row) => {
-      const participants = participantMap.get(row.conversationId) || [];
-      participants.push({ id: row.userId, username: row.username, role: row.role });
-      participantMap.set(row.conversationId, participants);
-    });
-
-    return conversationList.map((conversation) => ({
-      ...conversation,
-      participants: participantMap.get(conversation.id) || [],
-    }));
-  }
-
-  async createGroupConversation(data: { name: string; createdBy: number; memberIds: number[] }): Promise<GroupConversationWithParticipants> {
-    const uniqueMemberIds = Array.from(new Set([data.createdBy, ...data.memberIds]));
-
-    const [conversation] = await db
-      .insert(groupConversations)
-      .values({
-        name: data.name,
-        createdBy: data.createdBy,
-      })
-      .returning();
-
-    await db
-      .insert(groupConversationMembers)
-      .values(
-        uniqueMemberIds.map((memberId) => ({
-          conversationId: conversation.id,
-          userId: memberId,
-          role: memberId === data.createdBy ? "owner" : "member",
-        }))
-      );
-
-    const participants = await db
-      .select({
-        userId: users.id,
-        username: users.username,
-        role: users.role,
-      })
-      .from(groupConversationMembers)
-      .innerJoin(users, eq(groupConversationMembers.userId, users.id))
-      .where(eq(groupConversationMembers.conversationId, conversation.id));
-
-    return {
-      ...conversation,
-      participants: participants.map((p) => ({
-        id: p.userId,
-        username: p.username,
-        role: p.role,
-      })),
-    };
-  }
-
-  async isGroupConversationMember(conversationId: string, userId: number): Promise<boolean> {
-    const [membership] = await db
-      .select({ id: groupConversationMembers.id })
-      .from(groupConversationMembers)
-      .where(and(eq(groupConversationMembers.conversationId, conversationId), eq(groupConversationMembers.userId, userId)))
-      .limit(1);
-    return Boolean(membership);
-  }
-
-  async getGroupMessages(conversationId: string): Promise<GroupMessageWithAuthor[]> {
-    return await db
-      .select({
-        id: groupMessages.id,
-        conversationId: groupMessages.conversationId,
-        userId: groupMessages.userId,
-        content: groupMessages.content,
-        mediaUrl: groupMessages.mediaUrl,
-        mediaType: groupMessages.mediaType,
-        createdAt: groupMessages.createdAt,
-        authorName: users.username,
-        authorRole: users.role,
-      })
-      .from(groupMessages)
-      .innerJoin(users, eq(groupMessages.userId, users.id))
-      .where(eq(groupMessages.conversationId, conversationId))
-      .orderBy(groupMessages.createdAt);
-  }
-
-  async createGroupMessage(data: { conversationId: string; userId: number; content: string; mediaUrl?: string | null; mediaType?: string | null; durationMs?: number | null }): Promise<GroupMessage> {
-    const [message] = await db
-      .insert(groupMessages)
-      .values({
-        conversationId: data.conversationId,
-        userId: data.userId,
-        content: data.content,
-        mediaUrl: data.mediaUrl ?? null,
-        mediaType: data.mediaType ?? null,
-        durationMs: data.durationMs ?? null,
-      })
-      .returning();
-    return message;
   }
 
   // Onboarding task operations
@@ -1878,16 +762,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(analyticsMetrics).where(eq(analyticsMetrics.id, id));
   }
 
-  // Push notification history operations
-  async getPushNotificationHistory(): Promise<PushNotificationHistory[]> {
-    return await db.select().from(pushNotificationHistory).orderBy(desc(pushNotificationHistory.createdAt)).limit(100);
-  }
-
-  async createPushNotificationHistory(historyData: InsertPushNotificationHistory): Promise<PushNotificationHistory> {
-    const [history] = await db.insert(pushNotificationHistory).values(historyData).returning();
-    return history;
-  }
-
   // Global search
   async globalSearch(query: string) {
     const searchTerm = `%${query.toLowerCase()}%`;
@@ -1933,37 +807,6 @@ export class DatabaseStorage implements IStorage {
       .limit(50);
   }
 
-  async getNotificationsByActionUrls(userId: number, actionUrls: string[]) {
-    if (!actionUrls.length) return [];
-    return await db
-      .select()
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, userId),
-          inArray(notifications.actionUrl, actionUrls)
-        )
-      )
-      .orderBy(desc(notifications.createdAt))
-      .limit(200);
-  }
-
-  async getUnreadNotificationsByActionUrls(userId: number, actionUrls: string[]) {
-    if (!actionUrls.length) return [];
-    return await db
-      .select()
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, userId),
-          eq(notifications.isRead, false),
-          inArray(notifications.actionUrl, actionUrls)
-        )
-      )
-      .orderBy(desc(notifications.createdAt))
-      .limit(200);
-  }
-
   async createNotification(notificationData: InsertNotification) {
     const [notification] = await db
       .insert(notifications)
@@ -1988,287 +831,6 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNotification(notificationId: string) {
     await db.delete(notifications).where(eq(notifications.id, notificationId));
-  }
-
-  // Optimized dashboard stats
-  async getDashboardStats(userId?: number, role?: string) {
-    const normalizeRole = (value: unknown) =>
-      String(value ?? "")
-        .trim()
-        .toLowerCase();
-
-    const normalizedRole = normalizeRole(role);
-    const isStaff = normalizedRole === "staff";
-    const isSalesAgent = normalizedRole === "sales_agent";
-    const restrictToAssignee = (isStaff || isSalesAgent) && Boolean(userId);
-
-    const now = new Date();
-    const firstDayOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const firstDayOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastDayOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-
-    // Filter for tasks based on role
-    const taskCondition = (restrictToAssignee && userId) 
-      ? eq(tasks.assignedToId, userId) 
-      : undefined;
-
-    // Filter for leads based on role
-    const leadCondition = (restrictToAssignee && userId)
-      ? eq(leads.assignedToId, userId)
-      : undefined;
-
-    const [
-      clientsRes,
-      clientsLastMonthRes,
-      activeCampaignsRes,
-      campaignsLastMonthRes,
-      leadsRes,
-      leadsLastMonthRes,
-      taskMetricsRes,
-      tasksTodayRes,
-      unreadMessagesRes,
-      upcomingDeadlinesRes,
-      recentActivityClients,
-      recentActivityCampaigns,
-      recentActivityTasks,
-    ] = await Promise.all([
-      // Total Clients
-      db.select({ count: count() }).from(clients),
-      db.select({ count: count() }).from(clients).where(lt(clients.createdAt, firstDayOfThisMonth)),
-      
-      // Active Campaigns
-      db.select({ count: count() }).from(campaigns).where(eq(campaigns.status, "active")),
-      db.select({ count: count() }).from(campaigns).where(
-        and(
-          eq(campaigns.status, "active"),
-          gte(campaigns.createdAt, firstDayOfLastMonth),
-          lt(campaigns.createdAt, firstDayOfThisMonth)
-        )
-      ),
-
-      // Leads and Pipeline
-      db.select({ 
-        count: count(),
-        pipelineValue: sum(leads.value)
-      }).from(leads).where(leadCondition),
-      db.select({ 
-        count: count(),
-        pipelineValue: sum(leads.value)
-      }).from(leads).where(
-        and(
-          leadCondition || sql`TRUE`,
-          lt(leads.createdAt, firstDayOfThisMonth)
-        )
-      ),
-
-      // Task Metrics
-      db.select({
-        total: count(),
-        completed: sql`count(*) FILTER (WHERE ${tasks.status} = 'completed')`,
-        pending: sql`count(*) FILTER (WHERE ${tasks.status} = 'todo')`,
-        inProgress: sql`count(*) FILTER (WHERE ${tasks.status} = 'in_progress')`,
-        review: sql`count(*) FILTER (WHERE ${tasks.status} = 'review')`
-      }).from(tasks).where(taskCondition),
-
-      // Tasks Today
-      db.select({
-        total: count(),
-        completed: sql`count(*) FILTER (WHERE ${tasks.status} = 'completed')`,
-        todo: sql`count(*) FILTER (WHERE ${tasks.status} = 'todo')`,
-        inProgress: sql`count(*) FILTER (WHERE ${tasks.status} = 'in_progress')`,
-        review: sql`count(*) FILTER (WHERE ${tasks.status} = 'review')`
-      }).from(tasks).where(
-        and(
-          taskCondition || sql`TRUE`,
-          sql`CAST(${tasks.dueDate} AS DATE) = CURRENT_DATE`
-        )
-      ),
-
-      // Unread Messages
-      userId ? db.select({ count: count() }).from(messages).where(
-        and(
-          eq(messages.recipientId, userId),
-          eq(messages.isRead, false)
-        )
-      ) : Promise.resolve([{ count: 0 }]),
-
-      // Upcoming Deadlines (for the specific user if staff)
-      db.select({
-        id: tasks.id,
-        title: tasks.title,
-        dueDate: tasks.dueDate
-      }).from(tasks).where(
-        and(
-          taskCondition || sql`TRUE`,
-          gte(tasks.dueDate, now),
-          sql`${tasks.status} != 'completed'`
-        )
-      ).orderBy(tasks.dueDate).limit(5),
-
-      // Recent Activity - Clients
-      db.select({
-        id: clients.id,
-        name: clients.name,
-        createdAt: clients.createdAt
-      }).from(clients).orderBy(desc(clients.createdAt)).limit(3),
-
-      // Recent Activity - Campaigns
-      db.select({
-        id: campaigns.id,
-        name: campaigns.name,
-        createdAt: campaigns.createdAt
-      }).from(campaigns).orderBy(desc(campaigns.createdAt)).limit(3),
-
-      // Recent Activity - Completed Tasks
-      db.select({
-        id: tasks.id,
-        title: tasks.title,
-        updatedAt: tasks.updatedAt
-      }).from(tasks).where(
-        and(taskCondition || sql`TRUE`, eq(tasks.status, "completed"))
-      ).orderBy(desc(tasks.updatedAt)).limit(3),
-    ]);
-
-    // Aggregate values
-    const totalClients = Number(clientsRes[0]?.count || 0);
-    const clientsLastMonth = Number(clientsLastMonthRes[0]?.count || 0);
-    const activeCampaigns = Number(activeCampaignsRes[0]?.count || 0);
-    const campaignsLastMonth = Number(campaignsLastMonthRes[0]?.count || 0);
-    const totalLeads = Number(leadsRes[0]?.count || 0);
-    const pipelineValue = Number(leadsRes[0]?.pipelineValue || 0);
-    const leadsLastMonth = Number(leadsLastMonthRes[0]?.count || 0);
-    const pipelineValueLastMonth = Number(leadsLastMonthRes[0]?.pipelineValue || 0);
-
-    const taskMetrics = {
-      total: Number(taskMetricsRes[0]?.total || 0),
-      completed: Number(taskMetricsRes[0]?.completed || 0),
-      pending: Number(taskMetricsRes[0]?.pending || 0),
-      inProgress: Number(taskMetricsRes[0]?.inProgress || 0),
-      review: Number(taskMetricsRes[0]?.review || 0),
-      completionPercentage: taskMetricsRes[0]?.total ? Math.round((Number(taskMetricsRes[0]?.completed) / Number(taskMetricsRes[0]?.total)) * 100) : 0
-    };
-
-    const todayTaskMetrics = {
-      total: Number(tasksTodayRes[0]?.total || 0),
-      completed: Number(tasksTodayRes[0]?.completed || 0),
-      todo: Number(tasksTodayRes[0]?.todo || 0),
-      inProgress: Number(tasksTodayRes[0]?.inProgress || 0),
-      review: Number(tasksTodayRes[0]?.review || 0)
-    };
-
-    // Calculate percentage changes
-    const calculateChange = (current: number, previous: number): string => {
-      if (previous === 0) return current > 0 ? "+100" : "0";
-      const change = ((current - previous) / previous) * 100;
-      const rounded = Math.round(change);
-      return rounded > 0 ? `+${rounded}` : `${rounded}`;
-    };
-
-    // Format recent activity
-    const formatActivityTime = (date: Date | null) => {
-      if (!date) return 'Recently';
-      const now = new Date();
-      const diffMs = now.getTime() - new Date(date).getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMins / 60);
-      const diffDays = Math.floor(diffHours / 24);
-
-      if (diffMins < 60) return `${diffMins}m ago`;
-      if (diffHours < 24) return `${diffHours}h ago`;
-      return `${diffDays}d ago`;
-    };
-
-    const recentActivity: any[] = [];
-    
-    recentActivityClients.forEach(c => {
-      recentActivity.push({
-        type: 'success',
-        title: `Client: ${c.name}`,
-        time: formatActivityTime(c.createdAt),
-        timestamp: c.createdAt
-      });
-    });
-
-    recentActivityCampaigns.forEach(c => {
-      recentActivity.push({
-        type: 'info',
-        title: `Campaign: ${c.name}`,
-        time: formatActivityTime(c.createdAt),
-        timestamp: c.createdAt
-      });
-    });
-
-    recentActivityTasks.forEach(t => {
-      recentActivity.push({
-        type: 'success',
-        title: `Task completed: ${t.title}`,
-        time: formatActivityTime(t.updatedAt),
-        timestamp: t.updatedAt
-      });
-    });
-
-    const sortedActivity = recentActivity
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 10);
-
-    // Format deadlines
-    const upcomingDeadlines = upcomingDeadlinesRes.map(t => {
-      const daysUntil = t.dueDate ? Math.floor((new Date(t.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 999;
-      return {
-        title: t.title,
-        date: t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No date',
-        urgent: daysUntil <= 3,
-        timestamp: t.dueDate
-      };
-    });
-
-    const unreadMessagesCount = Number(unreadMessagesRes[0]?.count || 0);
-    const deadLinesThisWeek = upcomingDeadlines.filter(d => {
-      if (!d.timestamp) return false;
-      const dueDate = new Date(d.timestamp);
-      const oneWeekFromNow = new Date();
-      oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-      return dueDate <= oneWeekFromNow;
-    }).length;
-
-    // Staff should never receive company-wide / financial metrics (even if UI bugs).
-    if (isStaff) {
-      return {
-        totalClients: 0,
-        activeCampaigns: 0,
-        totalLeads,
-        pipelineValue: 0,
-        monthlyRevenue: 0,
-        clientsChange: "0",
-        campaignsChange: "0",
-        pipelineChange: "0",
-        revenueChange: "0",
-        recentActivity: [], // avoid leaking client/campaign activity
-        upcomingDeadlines,
-        taskMetrics,
-        todayTaskMetrics,
-        unreadMessagesCount,
-        deadLinesThisWeek,
-      };
-    }
-
-    return {
-      totalClients,
-      activeCampaigns,
-      totalLeads,
-      pipelineValue,
-      monthlyRevenue: 0, // Filled by Stripe on frontend
-      clientsChange: calculateChange(totalClients, clientsLastMonth),
-      campaignsChange: calculateChange(activeCampaigns, campaignsLastMonth),
-      pipelineChange: calculateChange(pipelineValue, pipelineValueLastMonth),
-      revenueChange: "0",
-      recentActivity: sortedActivity,
-      upcomingDeadlines,
-      taskMetrics,
-      todayTaskMetrics,
-      unreadMessagesCount,
-      deadLinesThisWeek,
-    };
   }
 
   // Activity logs operations
@@ -2410,37 +972,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // User Notification Preferences operations
-  async getUserNotificationPreferences(userId: number): Promise<UserNotificationPreferences | undefined> {
-    const [preferences] = await db
-      .select()
-      .from(userNotificationPreferences)
-      .where(eq(userNotificationPreferences.userId, userId));
-    return preferences;
-  }
-
-  async upsertUserNotificationPreferences(userId: number, prefsData: Partial<InsertUserNotificationPreferences>): Promise<UserNotificationPreferences> {
-    // Check if preferences exist
-    const existing = await this.getUserNotificationPreferences(userId);
-    
-    if (existing) {
-      // Update existing
-      const [updated] = await db
-        .update(userNotificationPreferences)
-        .set({ ...prefsData, updatedAt: new Date() })
-        .where(eq(userNotificationPreferences.userId, userId))
-        .returning();
-      return updated;
-    } else {
-      // Create new
-      const [created] = await db
-        .insert(userNotificationPreferences)
-        .values({ userId, ...prefsData } as InsertUserNotificationPreferences)
-        .returning();
-      return created;
-    }
-  }
-
   // Role Permissions operations
   async getAllRolePermissions(): Promise<RolePermissions[]> {
     return await db.select().from(rolePermissions);
@@ -2533,15 +1064,6 @@ export class DatabaseStorage implements IStorage {
     return record;
   }
 
-  async getSecondMeById(id: string): Promise<SecondMe | undefined> {
-    const [record] = await db
-      .select()
-      .from(secondMe)
-      .where(eq(secondMe.id, id))
-      .limit(1);
-    return record;
-  }
-
   async getAllSecondMeRequests(): Promise<SecondMe[]> {
     return await db
       .select()
@@ -2571,14 +1093,6 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(secondMeContent)
       .where(eq(secondMeContent.secondMeId, secondMeId))
-      .orderBy(desc(secondMeContent.createdAt));
-  }
-
-  async getSecondMeContentByClientId(clientId: string): Promise<SecondMeContent[]> {
-    return await db
-      .select()
-      .from(secondMeContent)
-      .where(eq(secondMeContent.clientId, clientId))
       .orderBy(desc(secondMeContent.createdAt));
   }
 
@@ -2657,449 +1171,6 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
     
     return result;
-  }
-
-  // Marketing Broadcast operations
-  async getMarketingBroadcasts(): Promise<MarketingBroadcast[]> {
-    return await db.select().from(marketingBroadcasts).orderBy(desc(marketingBroadcasts.createdAt));
-  }
-
-  async getMarketingBroadcast(id: string): Promise<MarketingBroadcast | undefined> {
-    const [broadcast] = await db.select().from(marketingBroadcasts).where(eq(marketingBroadcasts.id, id));
-    return broadcast;
-  }
-
-  async createMarketingBroadcast(data: InsertMarketingBroadcast): Promise<MarketingBroadcast> {
-    const [broadcast] = await db.insert(marketingBroadcasts).values(data).returning();
-    return broadcast;
-  }
-
-  async updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast> {
-    const [broadcast] = await db
-      .update(marketingBroadcasts)
-      .set(data)
-      .where(eq(marketingBroadcasts.id, id))
-      .returning();
-    if (!broadcast) throw new Error("Marketing broadcast not found");
-    return broadcast;
-  }
-
-  async deleteMarketingBroadcast(id: string): Promise<void> {
-    await db.delete(marketingBroadcasts).where(eq(marketingBroadcasts.id, id));
-  }
-
-  async getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]> {
-    return await db.select().from(marketingBroadcastRecipients).where(eq(marketingBroadcastRecipients.broadcastId, broadcastId));
-  }
-
-  async createMarketingBroadcastRecipient(data: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient> {
-    const [recipient] = await db.insert(marketingBroadcastRecipients).values(data).returning();
-    return recipient;
-  }
-
-  async updateMarketingBroadcastRecipient(id: number, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient> {
-    const [recipient] = await db
-      .update(marketingBroadcastRecipients)
-      .set(data)
-      .where(eq(marketingBroadcastRecipients.id, id))
-      .returning();
-    if (!recipient) throw new Error("Marketing broadcast recipient not found");
-    return recipient;
-  }
-
-  async getMarketingBroadcastRecipientByProviderCallId(callId: string): Promise<MarketingBroadcastRecipient | undefined> {
-    const [recipient] = await db
-      .select()
-      .from(marketingBroadcastRecipients)
-      .where(eq(marketingBroadcastRecipients.providerCallId, callId))
-      .limit(1);
-    return recipient;
-  }
-
-  // Marketing Group operations
-  async getMarketingGroups(): Promise<MarketingGroup[]> {
-    return await db.select().from(marketingGroups).orderBy(desc(marketingGroups.createdAt));
-  }
-
-  async getMarketingGroup(id: string): Promise<MarketingGroup | undefined> {
-    const [group] = await db.select().from(marketingGroups).where(eq(marketingGroups.id, id));
-    return group;
-  }
-
-  async createMarketingGroup(data: InsertMarketingGroup): Promise<MarketingGroup> {
-    const [group] = await db.insert(marketingGroups).values(data).returning();
-    return group;
-  }
-
-  async updateMarketingGroup(id: string, data: Partial<InsertMarketingGroup>): Promise<MarketingGroup> {
-    const [group] = await db
-      .update(marketingGroups)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(marketingGroups.id, id))
-      .returning();
-    if (!group) throw new Error("Marketing group not found");
-    return group;
-  }
-
-  async deleteMarketingGroup(id: string): Promise<void> {
-    await db.delete(marketingGroups).where(eq(marketingGroups.id, id));
-  }
-
-  async getMarketingGroupMembers(groupId: string): Promise<MarketingGroupMember[]> {
-    return await db.select().from(marketingGroupMembers).where(eq(marketingGroupMembers.groupId, groupId));
-  }
-
-  async addMarketingGroupMember(data: InsertMarketingGroupMember): Promise<MarketingGroupMember> {
-    const [member] = await db.insert(marketingGroupMembers).values(data).returning();
-    return member;
-  }
-
-  async removeMarketingGroupMember(id: number): Promise<void> {
-    await db.delete(marketingGroupMembers).where(eq(marketingGroupMembers.id, id));
-  }
-
-  // Marketing Series operations
-  async getMarketingSeries(): Promise<MarketingSeries[]> {
-    return await db.select().from(marketingSeries).orderBy(desc(marketingSeries.createdAt));
-  }
-
-  async getMarketingSeriesWithSteps(id: string): Promise<(MarketingSeries & { steps: MarketingSeriesStep[] }) | undefined> {
-    const [series] = await db.select().from(marketingSeries).where(eq(marketingSeries.id, id));
-    if (!series) return undefined;
-    
-    const steps = await db.select().from(marketingSeriesSteps)
-      .where(eq(marketingSeriesSteps.seriesId, id))
-      .orderBy(asc(marketingSeriesSteps.stepOrder));
-      
-    return { ...series, steps };
-  }
-
-  async createMarketingSeries(data: InsertMarketingSeries): Promise<MarketingSeries> {
-    const [series] = await db.insert(marketingSeries).values(data).returning();
-    return series;
-  }
-
-  async updateMarketingSeries(id: string, data: Partial<InsertMarketingSeries>): Promise<MarketingSeries> {
-    const [series] = await db
-      .update(marketingSeries)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(marketingSeries.id, id))
-      .returning();
-    if (!series) throw new Error("Marketing series not found");
-    return series;
-  }
-
-  async deleteMarketingSeries(id: string): Promise<void> {
-    await db.delete(marketingSeries).where(eq(marketingSeries.id, id));
-  }
-
-  async getMarketingSeriesSteps(seriesId: string): Promise<MarketingSeriesStep[]> {
-    return await db.select().from(marketingSeriesSteps)
-      .where(eq(marketingSeriesSteps.seriesId, seriesId))
-      .orderBy(asc(marketingSeriesSteps.stepOrder));
-  }
-
-  async createMarketingSeriesStep(data: InsertMarketingSeriesStep): Promise<MarketingSeriesStep> {
-    const [step] = await db.insert(marketingSeriesSteps).values(data).returning();
-    return step;
-  }
-
-  async updateMarketingSeriesStep(id: string, data: Partial<InsertMarketingSeriesStep>): Promise<MarketingSeriesStep> {
-    const [step] = await db
-      .update(marketingSeriesSteps)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(marketingSeriesSteps.id, id))
-      .returning();
-    if (!step) throw new Error("Marketing series step not found");
-    return step;
-  }
-
-  async deleteMarketingSeriesStep(id: string): Promise<void> {
-    await db.delete(marketingSeriesSteps).where(eq(marketingSeriesSteps.id, id));
-  }
-
-  async getMarketingSeriesEnrollments(seriesId?: string): Promise<MarketingSeriesEnrollment[]> {
-    if (seriesId) {
-      return await db.select().from(marketingSeriesEnrollments).where(eq(marketingSeriesEnrollments.seriesId, seriesId));
-    }
-    return await db.select().from(marketingSeriesEnrollments);
-  }
-
-  async getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]> {
-    const now = new Date();
-    return await db.select().from(marketingSeriesEnrollments)
-      .where(and(
-        eq(marketingSeriesEnrollments.status, "active"),
-        lte(marketingSeriesEnrollments.nextStepDueAt, now)
-      ));
-  }
-
-  async createMarketingSeriesEnrollment(data: InsertMarketingSeriesEnrollment): Promise<MarketingSeriesEnrollment> {
-    const [enrollment] = await db.insert(marketingSeriesEnrollments).values(data).returning();
-    return enrollment;
-  }
-
-  async updateMarketingSeriesEnrollment(id: string, data: Partial<InsertMarketingSeriesEnrollment>): Promise<MarketingSeriesEnrollment> {
-    const [enrollment] = await db
-      .update(marketingSeriesEnrollments)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(marketingSeriesEnrollments.id, id))
-      .returning();
-    if (!enrollment) throw new Error("Marketing series enrollment not found");
-    return enrollment;
-  }
-
-  async deleteMarketingSeriesEnrollment(id: string): Promise<void> {
-    await db.delete(marketingSeriesEnrollments).where(eq(marketingSeriesEnrollments.id, id));
-  }
-
-  // Marketing Template operations
-  async getMarketingTemplates(): Promise<MarketingTemplate[]> {
-    return await db.select().from(marketingTemplatesTable).orderBy(desc(marketingTemplatesTable.createdAt));
-  }
-
-  async getMarketingTemplate(id: string): Promise<MarketingTemplate | undefined> {
-    const [template] = await db.select().from(marketingTemplatesTable).where(eq(marketingTemplatesTable.id, id));
-    return template;
-  }
-
-  async createMarketingTemplate(data: InsertMarketingTemplate): Promise<MarketingTemplate> {
-    const [template] = await db.insert(marketingTemplatesTable).values(data).returning();
-    return template;
-  }
-
-  async updateMarketingTemplate(id: string, data: Partial<InsertMarketingTemplate>): Promise<MarketingTemplate> {
-    const [template] = await db
-      .update(marketingTemplatesTable)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(marketingTemplatesTable.id, id))
-      .returning();
-    return template;
-  }
-
-  async deleteMarketingTemplate(id: string): Promise<void> {
-    await db.delete(marketingTemplatesTable).where(eq(marketingTemplatesTable.id, id));
-  }
-
-  // Course operations
-  async getCourses(creatorId?: string): Promise<Course[]> {
-    if (creatorId) {
-      return await db.select().from(courses).where(eq(courses.creatorId, creatorId)).orderBy(desc(courses.createdAt));
-    }
-    return await db.select().from(courses).orderBy(desc(courses.createdAt));
-  }
-
-  async getCourse(id: string): Promise<Course | undefined> {
-    const [course] = await db.select().from(courses).where(eq(courses.id, id));
-    return course;
-  }
-
-  async getCourseWithContent(id: string): Promise<Course & { modules: (CourseModule & { lessons: CourseLesson[] })[] }> {
-    const [course] = await db.select().from(courses).where(eq(courses.id, id));
-    if (!course) throw new Error("Course not found");
-
-    const [modules, lessons] = await Promise.all([
-      db.select().from(courseModules).where(eq(courseModules.courseId, id)).orderBy(courseModules.order),
-      db.select()
-        .from(courseLessons)
-        .innerJoin(courseModules, eq(courseLessons.moduleId, courseModules.id))
-        .where(eq(courseModules.courseId, id))
-        .orderBy(courseLessons.order)
-    ]);
-    
-    const modulesWithLessons = modules.map(module => ({
-      ...module,
-      lessons: lessons
-        .filter(l => l.course_lessons.moduleId === module.id)
-        .map(l => l.course_lessons)
-    }));
-
-    return { ...course, modules: modulesWithLessons };
-  }
-
-  async createCourse(courseData: InsertCourse): Promise<Course> {
-    const [course] = await db.insert(courses).values(courseData).returning();
-    return course;
-  }
-
-  async updateCourse(id: string, data: Partial<InsertCourse>): Promise<Course> {
-    const [course] = await db
-      .update(courses)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(courses.id, id))
-      .returning();
-    if (!course) throw new Error("Course not found");
-    return course;
-  }
-
-  async deleteCourse(id: string): Promise<void> {
-    await db.delete(courses).where(eq(courses.id, id));
-  }
-
-  // Course Module operations
-  async getCourseModules(courseId: string): Promise<CourseModule[]> {
-    return await db.select().from(courseModules).where(eq(courseModules.courseId, courseId)).orderBy(courseModules.order);
-  }
-
-  async createCourseModule(moduleData: InsertCourseModule): Promise<CourseModule> {
-    const [module] = await db.insert(courseModules).values(moduleData).returning();
-    return module;
-  }
-
-  async updateCourseModule(id: string, data: Partial<InsertCourseModule>): Promise<CourseModule> {
-    const [module] = await db
-      .update(courseModules)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(courseModules.id, id))
-      .returning();
-    if (!module) throw new Error("Course module not found");
-    return module;
-  }
-
-  async deleteCourseModule(id: string): Promise<void> {
-    await db.delete(courseModules).where(eq(courseModules.id, id));
-  }
-
-  // Course Lesson operations
-  async getCourseLessons(moduleId: string): Promise<CourseLesson[]> {
-    return await db.select().from(courseLessons).where(eq(courseLessons.moduleId, moduleId)).orderBy(courseLessons.order);
-  }
-
-  async createCourseLesson(lessonData: InsertCourseLesson): Promise<CourseLesson> {
-    const [lesson] = await db.insert(courseLessons).values(lessonData).returning();
-    return lesson;
-  }
-
-  async updateCourseLesson(id: string, data: Partial<InsertCourseLesson>): Promise<CourseLesson> {
-    const [lesson] = await db
-      .update(courseLessons)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(courseLessons.id, id))
-      .returning();
-    if (!lesson) throw new Error("Course lesson not found");
-    return lesson;
-  }
-
-  async deleteCourseLesson(id: string): Promise<void> {
-    await db.delete(courseLessons).where(eq(courseLessons.id, id));
-  }
-
-  // Course Enrollment operations
-  async getCourseEnrollment(courseId: string, userId: number): Promise<CourseEnrollment | undefined> {
-    const [enrollment] = await db
-      .select()
-      .from(courseEnrollments)
-      .where(and(eq(courseEnrollments.courseId, courseId), eq(courseEnrollments.userId, userId)));
-    return enrollment;
-  }
-
-  async getUserEnrollments(userId: number): Promise<(CourseEnrollment & { course: Course })[]> {
-    const enrollmentsList = await db
-      .select({
-        enrollment: courseEnrollments,
-        course: courses
-      })
-      .from(courseEnrollments)
-      .innerJoin(courses, eq(courseEnrollments.courseId, courses.id))
-      .where(eq(courseEnrollments.userId, userId));
-    
-    return enrollmentsList.map(item => ({
-      ...item.enrollment,
-      course: item.course
-    }));
-  }
-
-  async enrollInCourse(enrollmentData: InsertCourseEnrollment): Promise<CourseEnrollment> {
-    const [enrollment] = await db.insert(courseEnrollments).values(enrollmentData).returning();
-    return enrollment;
-  }
-
-  async updateCourseEnrollment(id: string, data: Partial<InsertCourseEnrollment>): Promise<CourseEnrollment> {
-    const [enrollment] = await db
-      .update(courseEnrollments)
-      .set(data)
-      .where(eq(courseEnrollments.id, id))
-      .returning();
-    if (!enrollment) throw new Error("Enrollment not found");
-    return enrollment;
-  }
-
-  // Creator operations
-  async getCreators(): Promise<Creator[]> {
-    return await db.select().from(creators).orderBy(desc(creators.createdAt));
-  }
-
-  async getCreator(id: string): Promise<Creator | undefined> {
-    const [row] = await db.select().from(creators).where(eq(creators.id, id));
-    return row;
-  }
-
-  async getCreatorByEmail(email: string): Promise<Creator | undefined> {
-    const [row] = await db.select().from(creators).where(eq(creators.email, email.toLowerCase().trim()));
-    return row;
-  }
-
-  async getCreatorByUserId(userId: number): Promise<Creator | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || !user.creatorId) return undefined;
-    return this.getCreator(user.creatorId);
-  }
-
-  async createCreator(creatorData: InsertCreator): Promise<Creator> {
-    const [row] = await db.insert(creators).values(creatorData).returning();
-    return row;
-  }
-
-  async updateCreator(id: string, data: Partial<InsertCreator>): Promise<Creator> {
-    const [row] = await db.update(creators).set(data).where(eq(creators.id, id)).returning();
-    if (!row) throw new Error("Creator not found");
-    return row;
-  }
-
-  async deleteCreator(id: string): Promise<void> {
-    await db.delete(creators).where(eq(creators.id, id));
-  }
-
-  // Scheduled AI Command operations
-  async getScheduledAiCommands(userId: number): Promise<ScheduledAiCommand[]> {
-    return await db.select().from(scheduledAiCommands).where(eq(scheduledAiCommands.userId, userId)).orderBy(desc(scheduledAiCommands.createdAt));
-  }
-
-  async getScheduledAiCommand(id: string): Promise<ScheduledAiCommand | undefined> {
-    const [row] = await db.select().from(scheduledAiCommands).where(eq(scheduledAiCommands.id, id));
-    return row;
-  }
-
-  async getDueScheduledAiCommands(): Promise<ScheduledAiCommand[]> {
-    const now = new Date();
-    return await db.select().from(scheduledAiCommands).where(
-      and(
-        or(
-          eq(scheduledAiCommands.status, "pending"),
-          eq(scheduledAiCommands.status, "completed") // For recurring
-        ),
-        isNotNull(scheduledAiCommands.nextRunAt),
-        lte(scheduledAiCommands.nextRunAt, now)
-      )
-    );
-  }
-
-  async createScheduledAiCommand(commandData: InsertScheduledAiCommand): Promise<ScheduledAiCommand> {
-    const [row] = await db.insert(scheduledAiCommands).values({
-      ...commandData,
-      nextRunAt: commandData.nextRunAt || commandData.scheduledAt
-    }).returning();
-    return row;
-  }
-
-  async updateScheduledAiCommand(id: string, data: Partial<ScheduledAiCommand>): Promise<ScheduledAiCommand> {
-    const [row] = await db.update(scheduledAiCommands).set({ ...data, updatedAt: new Date() }).where(eq(scheduledAiCommands.id, id)).returning();
-    if (!row) throw new Error("Scheduled AI command not found");
-    return row;
-  }
-
-  async deleteScheduledAiCommand(id: string): Promise<void> {
-    await db.delete(scheduledAiCommands).where(eq(scheduledAiCommands.id, id));
   }
 }
 

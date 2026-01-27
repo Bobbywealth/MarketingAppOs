@@ -1,21 +1,14 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { pool, db } from "./db";
-import { sql, eq, and, or } from "drizzle-orm";
-import { isAuthenticated, hashPassword } from "./auth";
+import { isAuthenticated } from "./auth";
 import { ObjectStorageService } from "./objectStorage";
-import { requireRole, requirePermission, rolePermissions } from "./rbac";
-import { UserRole } from "@shared/roles";
+import { requireRole, requirePermission, UserRole, rolePermissions } from "./rbac";
 import { AuditService } from "./auditService";
 import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
-import { emailNotifications } from "./emailService";
 import { dialpadService } from "./dialpadService";
-import { processAIChat } from "./aiManager";
-import { sendSms } from "./twilioService";
 import {
   insertClientSchema,
-  insertClientSocialStatsSchema,
   insertCampaignSchema,
   insertTaskSchema,
   insertTaskCommentSchema,
@@ -30,162 +23,157 @@ import {
   insertAnalyticsMetricSchema,
   insertLeadActivitySchema,
   insertLeadAutomationSchema,
-  clientSocialStats,
-  clients,
-  leads,
-  onboardingTasks,
-  contentPosts,
-  creators,
-  clientCreators,
-  creatorVisits,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
-import { earlyLeadSchema, requiredWebsiteSchema, signupAuditSchema, signupSimpleSchema } from "./validators/publicSignup";
 import Stripe from "stripe";
 import * as microsoftAuth from "./microsoftAuth";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
-import { randomBytes } from "crypto";
-import leadsRouter from "./routes/leads";
-import { notifyAboutLeadAction } from "./leadNotifications";
-import clientsRouter from "./routes/clients";
-import marketingRouter from "./routes/marketing";
-import creatorsRouter from "./routes/creators";
-import coursesRouter from "./routes/courses";
-import tasksRouter from "./routes/tasks";
-import marketingCenterRouter from "./routes/marketing-center";
-import socialRouter from "./routes/social";
-import aiRouter from "./routes/ai";
-import blogRouter from "./routes/blog";
-import { vaultRouter } from "./routes/vault";
-import { 
-  getCurrentUserContext, 
-  getAccessibleClientOr404, 
-  getAccessibleLeadOr404 
-} from "./routes/utils";
-import { 
-  handleValidationError, 
-  notifyAdminsAboutAction, 
-  notifyAdminsAboutSecurityEvent,
-  autoConvertLeadToClient, 
-  getMissingFieldsForStage,
-  upload,
-  UPLOAD_DIR
-} from "./routes/common";
-import twilio from "twilio";
 
 const objectStorageService = new ObjectStorageService();
-
-/**
- * Ensures an email account has a valid access token, refreshing if necessary.
- * Returns null if the account is inactive or refresh fails.
- */
-async function ensureValidAccessToken(accountId: string): Promise<string | null> {
-  const account = await storage.getEmailAccount(accountId);
-  if (!account || !account.isActive) return null;
-
-  let accessToken = account.accessToken;
-  const expiresAt = account.tokenExpiresAt ? new Date(account.tokenExpiresAt) : null;
-  const now = new Date();
-  const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-
-  if (!accessToken || (expiresAt && expiresAt < fiveMinutesFromNow)) {
-    if (!account.refreshToken) {
-      console.warn(`[Auth] No refresh token for account ${account.id}, marking inactive`);
-      await storage.updateEmailAccount(account.id, { isActive: false });
-      return null;
-    }
-
-    try {
-      const { refreshAccessToken } = await import("./microsoftAuth");
-      const refreshed = await refreshAccessToken(account.refreshToken);
-      await storage.updateEmailAccount(account.id, {
-        accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken,
-        tokenExpiresAt: refreshed.expiresOn,
-      });
-      accessToken = refreshed.accessToken;
-    } catch (error) {
-      console.error(`[Auth] Failed to refresh token for account ${account.id}:`, error);
-      // Mark as inactive if it's a permanent error (like invalid grant)
-      if (error instanceof Error && error.message.includes('invalid_grant')) {
-        await storage.updateEmailAccount(account.id, { isActive: false });
-      }
-      return null;
-    }
-  }
-
-  return accessToken;
-}
-
-// Ensure new message columns exist (safe to run multiple times)
-async function ensureMessageColumns() {
-  try {
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;`);
-  } catch {}
-  try {
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;`);
-  } catch {}
-  try {
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url VARCHAR;`);
-  } catch {}
-  try {
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_type VARCHAR;`);
-  } catch {}
-  try {
-    await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
-  } catch {}
-}
-
-// Modularized helper functions are imported from ./routes/utils and ./routes/common
 
 // Initialize Stripe if keys are present
 let stripe: Stripe | null = null;
 if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2024-11-20.acacia" as any,
+    apiVersion: "2024-11-20.acacia",
   });
 }
 
+function handleValidationError(error: unknown, res: Response) {
+  if (error instanceof ZodError) {
+    return res.status(400).json({ message: "Validation error", errors: error.errors });
+  }
+  console.error(error);
+  return res.status(500).json({ message: "Internal server error" });
+}
 
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), 'uploads');
 
+// Ensure upload directory exists
+if (!existsSync(uploadDir)) {
+  fs.mkdir(uploadDir, { recursive: true }).catch(console.error);
+}
 
-// Initialize Stripe if keys are present
+const storage_multer = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const nameWithoutExt = path.basename(file.originalname, ext);
+    cb(null, nameWithoutExt + '-' + uniqueSuffix + ext);
+  }
+});
 
-// Modularized helper functions are imported from ./routes/utils and ./routes/common
+const upload = multer({
+  storage: storage_multer,
+  limits: {
+    fileSize: 200 * 1024 * 1024, // 200MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images and videos
+    const allowedMimes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images and videos are allowed.'));
+    }
+  }
+});
 
 export function registerRoutes(app: Express) {
-  // #region agent log (debug mode helper)
-  // Debug-mode log proxy: lets the browser POST to same-origin (works on https),
-  // and the server forwards to the local ingest server.
-  // Guarded by auth + admin role so it can't be abused.
-  app.post("/api/__debug/log", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  // File upload endpoint
+  app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
     try {
-      const payload = req.body;
-      // Minimal validation + size guard (express.json is already capped at 10kb)
-      if (!payload || typeof payload !== "object") {
-        return res.status(400).json({ message: "Invalid payload" });
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
       }
-      // Forward to local ingest server (no secrets/PII expected in payload)
-      await fetch("http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }).catch(() => {});
-      return res.json({ ok: true });
-    } catch {
-      return res.json({ ok: false });
+
+      // Generate URL for the uploaded file
+      const fileUrl = `/uploads/${req.file.filename}`;
+      
+      res.json({
+        success: true,
+        url: fileUrl,
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      res.status(500).json({ 
+        message: "Upload failed", 
+        error: error.message 
+      });
     }
   });
-  // #endregion agent log
+
+  // Create Stripe Checkout Session for package purchase
+  app.post("/api/create-checkout-session", async (req: Request, res: Response) => {
+    try {
+      const { packageId, leadId, email, name } = req.body;
+
+      if (!packageId || !email || !name) {
+        return res.status(400).json({ message: "Missing required fields: packageId, email, name" });
+      }
+
+      // Get the package details
+      const pkg = await storage.getSubscriptionPackage(packageId);
+      if (!pkg) {
+        return res.status(404).json({ message: "Package not found" });
+      }
+
+      // Get the app's base URL
+      const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+
+      // Create Stripe checkout session
+      const session = await createCheckoutSession({
+        packageId: pkg.id,
+        packageName: pkg.name,
+        packagePrice: pkg.price,
+        clientEmail: email,
+        clientName: name,
+        leadId,
+        successUrl: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${baseUrl}/signup?canceled=true`,
+      });
+
+      res.json({
+        success: true,
+        checkoutUrl: session.checkoutUrl,
+        sessionId: session.sessionId,
+      });
+    } catch (error: any) {
+      console.error('Checkout session creation error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to create checkout session",
+      });
+    }
+  });
 
   // File download/serve endpoint
-  app.get("/uploads/:filename", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/uploads/:filename", async (req: Request, res: Response) => {
     try {
       const filename = req.params.filename;
-      const filePath = path.join(UPLOAD_DIR, filename);
+      const filePath = path.join(uploadDir, filename);
 
       // Check if file exists
       if (!existsSync(filePath)) {
@@ -231,908 +219,33 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Mount modularized routers
-  app.use("/api/leads", isAuthenticated, leadsRouter);
-  app.use("/api/marketing-center", isAuthenticated, requireRole(UserRole.ADMIN), marketingCenterRouter);
-  app.use("/api/clients", isAuthenticated, clientsRouter);
-  app.use("/api/vault", isAuthenticated, requireRole(UserRole.ADMIN), vaultRouter);
-  
-  // Feature routers mounted at /api (mostly private, some public mixed in)
-  app.use("/api", marketingRouter);
-  app.use("/api", creatorsRouter);
-  app.use("/api/courses", coursesRouter);
-  app.use("/api/social", isAuthenticated, socialRouter);
-  app.use("/api", tasksRouter);
-  app.use("/api/ai-business-manager", isAuthenticated, aiRouter);
-  app.use("/api", blogRouter);
-
-  // File upload endpoint
-  app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      // Generate URL for the uploaded file
-      const fileUrl = `/uploads/${req.file.filename}`;
-      
-      // Notify user about successful file upload
-      try {
-        const currentUser = req.user as any;
-        const currentUserId = currentUser?.id || currentUser?.claims?.sub;
-        
-        await storage.createNotification({
-          userId: currentUserId,
-          type: 'success',
-          title: '📁 File Uploaded',
-          message: `File "${req.file.originalname}" has been uploaded successfully`,
-          category: 'file_management',
-          actionUrl: '/content',
-          isRead: false,
-        });
-        
-        // Notify admins about file upload
-        const users = await storage.getUsers();
-        const admins = users.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push');
-        
-        for (const admin of admins) {
-          if (admin.id !== currentUserId) {
-            await storage.createNotification({
-              userId: admin.id,
-              type: 'info',
-              title: '📁 File Uploaded',
-              message: `User uploaded file: "${req.file.originalname}"`,
-              category: 'file_management',
-              actionUrl: '/content',
-              isRead: false,
-            });
-            
-            await sendPushToUser(admin.id, {
-              title: '📁 File Uploaded',
-              body: `User uploaded file: "${req.file.originalname}"`,
-              url: '/content',
-            }).catch(err => console.error('Failed to send push notification:', err));
-
-            // Email notification to admin
-            if (admin.email) {
-              try {
-                const { emailNotifications } = await import('./emailService');
-                const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
-                const prefs = await storage.getUserNotificationPreferences(admin.id).catch(() => null);
-                if (prefs?.emailNotifications !== false) {
-                  void emailNotifications.sendActionAlertEmail(
-                    admin.email,
-                    '📁 File Uploaded',
-                    `User uploaded a new file: "${req.file.originalname}"`,
-                    `${appUrl}/content`,
-                    'info'
-                  ).catch(err => console.error(`Failed to send file upload email to ${admin.username}:`, err));
-                }
-              } catch (e) {
-                console.error(`Email error for file upload to ${admin.username}:`, e);
-              }
-            }
-          }
-        }
-        
-        console.log(`✅ File upload notifications sent for: ${req.file.originalname}`);
-      } catch (notifError) {
-        console.error('Failed to send file upload notifications:', notifError);
-      }
-      
-      res.json({
-        success: true,
-        url: fileUrl,
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size
-      });
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      res.status(500).json({ 
-        message: "Upload failed", 
-        error: error.message 
-      });
-    }
-  });
-
-  // Email config test endpoint
-  app.get("/api/email/test", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
-    try {
-      const ok = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-      const allUsers = await storage.getUsers();
-      const admins = allUsers.filter(u => u.role === UserRole.ADMIN);
-      const adminsWithEmails = admins.filter(u => u.email).map(u => u.username);
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run2',hypothesisId:'A',location:'server/routes.ts:/api/email/test',message:'Email test endpoint called',data:{configured:ok,secure:process.env.SMTP_SECURE==='true',hasHost:!!process.env.SMTP_HOST,hasUser:!!process.env.SMTP_USER,hasPass:!!process.env.SMTP_PASS,adminsFound:admins.length,adminsWithEmailsCount:adminsWithEmails.length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-
-      res.json({ 
-        configured: ok, 
-        host: process.env.SMTP_HOST || null, 
-        user: process.env.SMTP_USER || null, 
-        secure: process.env.SMTP_SECURE === 'true',
-        adminsFound: admins.length,
-        adminsWithEmails: adminsWithEmails
-      });
-    } catch (e: any) {
-      res.status(500).json({ configured: false, error: e?.message || 'Unknown error' });
-    }
-  });
-
-  // Send a test email (admin-only) to validate SMTP end-to-end
-  app.post("/api/email/send-test", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const { to, subject } = req.body as { to?: string; subject?: string };
-      if (!to) return res.status(400).json({ message: "Missing 'to' email address" });
-
-      const { sendEmail, emailTemplates } = await import("./emailService");
-      const user = req.user as any;
-      const userName = user?.firstName || user?.username || 'Admin';
-      
-      // Use the welcome template as the test email content to show off the new design
-      const template = emailTemplates.welcomeUser(userName, user?.email || 'test@example.com');
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run2',hypothesisId:'B',location:'server/routes.ts:/api/email/send-test:before',message:'send-test called; invoking sendEmail',data:{toDomain:(String(to).includes('@')?String(to).split('@').pop()?.toLowerCase():'invalid'),hasSubjectOverride:!!subject,templateSubjectLen:template?.subject?.length??null},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-
-      const result = await sendEmail(to, subject || template.subject, template.html);
-
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'run2',hypothesisId:'C',location:'server/routes.ts:/api/email/send-test:after',message:'send-test completed',data:{success:!!(result as any)?.success,hasMessageId:!!(result as any)?.messageId,hasError:!!(result as any)?.error,hasMessage:!!(result as any)?.message},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-
-      if (!result.success) return res.status(500).json(result);
-      res.json(result);
-    } catch (e: any) {
-      console.error("SMTP test send error:", e);
-      res.status(500).json({ success: false, error: e?.message || "Unknown error" });
-    }
-  });
-
-  // Announcements (admin-only): send company-wide announcement
-  app.post("/api/announcements", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const { title, message } = req.body as { title: string; message: string };
-      if (!title || !message) {
-        return res.status(400).json({ message: 'Title and message are required' });
-      }
-      const users = await storage.getUsers();
-      const { sendPushToUser } = await import('./push');
-      const { emailNotifications } = await import('./emailService');
-      let count = 0;
-      for (const user of users) {
-        await storage.createNotification({
-          userId: user.id,
-          type: 'info',
-          title: `📣 ${title}`,
-          message,
-          category: 'announcement',
-          actionUrl: '/dashboard',
-          isRead: false,
-        });
-        await sendPushToUser(user.id, {
-          title: `📣 ${title}`,
-          body: message.substring(0, 120),
-          url: '/dashboard',
-        }).catch(err => console.error('Failed to send push notification:', err));
-
-        // Send email for announcement
-        if (user.email) {
-          try {
-            const prefs = await storage.getUserNotificationPreferences(user.id).catch(() => null);
-            if (prefs?.emailNotifications !== false) {
-              void emailNotifications.sendAnnouncementEmail(user.email, title, message, '/dashboard')
-                .catch(err => console.error(`Failed to send announcement email to ${user.username}:`, err));
-            }
-          } catch (e) {
-            console.error(`Email error for announcement to ${user.username}:`, e);
-          }
-        }
-        count++;
-      }
-      res.status(201).json({ message: 'Announcement sent', recipients: count });
-    } catch (error) {
-      console.error('Failed to send announcement:', error);
-      res.status(500).json({ message: 'Failed to send announcement' });
-    }
-  });
-
-  // Booking meeting reminders: notify admins for meetings in next 60 minutes
-  app.post("/api/system/run-meeting-reminders", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
-    try {
-      // Optional manual trigger
-      const reminders = await runMeetingReminders();
-      res.json({ message: 'Meeting reminders processed', reminders });
-    } catch (error) {
-      console.error('Failed to run meeting reminders:', error);
-      res.status(500).json({ message: 'Failed to run meeting reminders' });
-    }
-  });
-
-  // Create Stripe Checkout Session for package purchase
-  app.post("/api/create-checkout-session", async (req: Request, res: Response) => {
-    try {
-      const { packageId, leadId, email, name, discountCode } = req.body;
-
-      if (!packageId || !email || !name) {
-        return res.status(400).json({ message: "Missing required fields: packageId, email, name" });
-      }
-
-      // Get the package details
-      const pkg = await storage.getSubscriptionPackage(packageId);
-      if (!pkg) {
-        return res.status(404).json({ message: "Package not found" });
-      }
-
-      // Validate discount code if provided
-      let stripeCouponId = undefined;
-      if (discountCode) {
-        const discountResult = await pool.query(
-          `SELECT stripe_coupon_id FROM discount_codes 
-           WHERE UPPER(code) = UPPER($1) 
-           AND is_active = true 
-           AND (expires_at IS NULL OR expires_at > NOW())
-           AND (max_uses IS NULL OR uses_count < max_uses)`,
-          [discountCode]
-        );
-        
-        if (discountResult.rows.length > 0 && discountResult.rows[0].stripe_coupon_id) {
-          stripeCouponId = discountResult.rows[0].stripe_coupon_id;
-        }
-      }
-
-      // Get the app's base URL
-      const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-
-      // Create Stripe checkout session
-      const session = await createCheckoutSession({
-        packageId: pkg.id,
-        packageName: pkg.name,
-        packagePrice: pkg.price,
-        clientEmail: email,
-        clientName: name,
-        leadId,
-        discountCode: discountCode || undefined,
-        stripeCouponId,
-        successUrl: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${baseUrl}/signup?canceled=true`,
-      });
-
-      res.json({
-        success: true,
-        checkoutUrl: session.checkoutUrl,
-        sessionId: session.sessionId,
-      });
-
-      // Schedule abandoned cart reminder
-      try {
-        let effectiveLeadId = leadId;
-        if (!effectiveLeadId && email) {
-          const matchedLead = await storage.getLeadByEmail(email);
-          if (matchedLead) {
-            effectiveLeadId = matchedLead.id;
-          }
-        }
-
-        if (effectiveLeadId) {
-          // Cancel any existing pending reminders first
-          await storage.cancelLeadAutomations(effectiveLeadId, "abandoned_cart_reminder");
-          
-          // Schedule new one for 24h from now
-          const scheduledFor = new Date();
-          scheduledFor.setHours(scheduledFor.getHours() + 24);
-          
-          await storage.createLeadAutomation({
-            leadId: effectiveLeadId,
-            type: "abandoned_cart_reminder",
-            trigger: "time_delay",
-            triggerConditions: { delayHours: 24 },
-            actionType: "email",
-            actionData: { 
-              checkoutUrl: session.checkoutUrl, 
-              packageName: pkg.name,
-              clientName: name
-            },
-            status: "pending",
-            scheduledFor
-          });
-        }
-      } catch (automationError) {
-        console.warn("⚠️ Failed to schedule abandoned cart reminder:", automationError);
-      }
-    } catch (error: any) {
-      console.error('Checkout session creation error:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || "Failed to create checkout session",
-      });
-    }
-  });
-
-  // Create Stripe Checkout Session and send email to client
-  app.post("/api/send-enrollment-email", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
-    try {
-      const { packageId, clientId, email, name } = req.body;
-
-      if (!packageId || !email || !name) {
-        return res.status(400).json({ message: "Missing required fields: packageId, email, name" });
-      }
-
-      // Get the package details
-      const pkg = await storage.getSubscriptionPackage(packageId);
-      if (!pkg) {
-        return res.status(404).json({ message: "Package not found" });
-      }
-
-      // Get the app's base URL
-      const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-
-      // Create Stripe checkout session
-      const session = await createCheckoutSession({
-        packageId: pkg.id,
-        packageName: pkg.name,
-        packagePrice: pkg.price,
-        clientEmail: email,
-        clientName: name,
-        successUrl: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${baseUrl}/signup?canceled=true`,
-      });
-
-      // Send the enrollment invitation email
-      const emailResult = await emailNotifications.sendEnrollmentInvitation(
-        email,
-        name,
-        pkg.name,
-        session.checkoutUrl!
-      );
-
-      if (!emailResult.success) {
-        throw new Error(emailResult.message || "Failed to send email");
-      }
-
-      res.json({
-        success: true,
-        message: "Enrollment email sent successfully",
-      });
-
-      // Schedule abandoned cart reminder
-      try {
-        let effectiveLeadId = null;
-        if (email) {
-          const matchedLead = await storage.getLeadByEmail(email);
-          if (matchedLead) {
-            effectiveLeadId = matchedLead.id;
-          }
-        }
-
-        if (effectiveLeadId) {
-          // Cancel any existing pending reminders first
-          await storage.cancelLeadAutomations(effectiveLeadId, "abandoned_cart_reminder");
-          
-          // Schedule new one for 24h from now
-          const scheduledFor = new Date();
-          scheduledFor.setHours(scheduledFor.getHours() + 24);
-          
-          await storage.createLeadAutomation({
-            leadId: effectiveLeadId,
-            type: "abandoned_cart_reminder",
-            trigger: "time_delay",
-            triggerConditions: { delayHours: 24 },
-            actionType: "email",
-            actionData: { 
-              checkoutUrl: session.checkoutUrl, 
-              packageName: pkg.name,
-              clientName: name
-            },
-            status: "pending",
-            scheduledFor
-          });
-        }
-      } catch (automationError) {
-        console.warn("⚠️ Failed to schedule abandoned cart reminder for enrollment email:", automationError);
-      }
-    } catch (error: any) {
-      console.error('Send enrollment email error:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || "Failed to send enrollment email",
-      });
-    }
-  });
-
-  // Confirm Stripe payment and convert lead to client
-  app.post("/api/stripe/confirm", async (req: Request, res: Response) => {
-    try {
-      const { sessionId } = req.body as { sessionId?: string };
-      if (!sessionId) {
-        return res.status(400).json({ success: false, message: "Missing sessionId" });
-      }
-
-      const { getStripeInstance } = await import("./stripeService");
-      const stripe = getStripeInstance();
-      if (!stripe) {
-        return res.status(500).json({ success: false, message: "Stripe not configured" });
-      }
-
-      // Retrieve the checkout session
-      const session = await stripe.checkout.sessions.retrieve(sessionId, {
-        expand: ["subscription", "customer"],
-      });
-
-      if (!session || (session.status !== "complete" && session.payment_status !== "paid")) {
-        return res.status(400).json({ success: false, message: "Payment not completed" });
-      }
-
-      // Pull metadata
-      const leadId = (session.metadata?.leadId || session.client_reference_id || "").toString() || null;
-      const packageId = session.metadata?.packageId || null;
-      const email = (session.customer_details?.email || (typeof session.customer === 'object' ? session.customer?.email : undefined) || "").toString();
-      const name = (session.metadata?.clientName || (typeof session.customer === 'object' ? session.customer?.name : undefined) || "New Client").toString();
-
-      // Attempt to find existing lead by id or email
-      let matchedLead: any = null;
-      try {
-        if (leadId) {
-          matchedLead = (await db.select().from(leads).where(eq(leads.id, leadId)).limit(1))[0] ?? null;
-        }
-        if (!matchedLead && email) {
-          matchedLead = (await db.select().from(leads).where(eq(leads.email, email)).limit(1))[0] ?? null;
-        }
-      } catch (e) {
-        console.warn("⚠️ Unable to fetch lead while confirming Stripe payment:", e);
-      }
-
-      // Create client if one with same email doesn't already exist
-      let createdClient = null as any;
-      try {
-        const allClients = await storage.getClients();
-        const existing = allClients.find((c: any) => email && c.email === email);
-        if (existing) {
-          createdClient = existing;
-        } else {
-          const selectedServices = (matchedLead?.sourceMetadata as any)?.services || [];
-          const requiresBrandInfo = selectedServices.some((s: string) => 
-            ["Content Creation", "Social Media Management", "Content Marketing"].includes(s)
-          );
-
-          createdClient = await storage.createClient({
-            name,
-            email: email || undefined,
-            status: "onboarding",
-            packageId: packageId || undefined,
-            startDate: new Date(),
-            salesAgentId: matchedLead?.assignedToId ?? undefined,
-            assignedToId: matchedLead?.assignedToId ?? undefined,
-            serviceTags: selectedServices,
-            requiresBrandInfo,
-            notes: `Created from Stripe session ${sessionId}${packageId ? ` for package ${packageId}` : ""}`,
-          } as any);
-        }
-      } catch (e) {
-        console.error("❌ Failed creating client from Stripe confirm:", e);
-        return res.status(500).json({ success: false, message: "Failed to create client" });
-      }
-
-      // Update lead as converted
-      if (matchedLead) {
-        try {
-          const now = new Date();
-          await storage.updateLead(matchedLead.id, {
-            stage: "closed_won",
-            packageId: packageId || (matchedLead as any).packageId || null,
-            expectedStartDate: (matchedLead as any).expectedStartDate || now,
-            convertedToClientId: createdClient?.id || null,
-            convertedAt: now,
-            clientId: createdClient?.id || null,
-            notes: `${matchedLead.notes || ""}\nConverted via Stripe payment on ${now.toISOString()} (session ${sessionId})`,
-          } as any);
-
-          // Cancel any pending abandoned cart reminders
-          try {
-            await storage.cancelLeadAutomations(matchedLead.id, "abandoned_cart_reminder");
-          } catch (automationError) {
-            console.warn("⚠️ Failed to cancel abandoned cart reminders:", automationError);
-          }
-
-          // Link user account if created during signup
-          const sourceMetadata = matchedLead.sourceMetadata as any;
-          if (sourceMetadata?.userId && createdClient?.id) {
-            await storage.updateUser(sourceMetadata.userId, {
-              clientId: createdClient.id,
-              role: "client"
-            });
-            console.log(`✅ Linked user ${sourceMetadata.userId} to client ${createdClient.id}`);
-          }
-
-          // Ensure onboarding tasks + commission exist
-          if (createdClient?.id) {
-            await ensureOnboardingTasksForClient(createdClient.id);
-            await ensureCommissionForLead({ lead: matchedLead, clientId: createdClient.id });
-          }
-        } catch (e) {
-          console.warn("⚠️ Failed to update lead as converted:", e);
-        }
-      }
-
-      // Notify admins/managers
-      try {
-        const users = await storage.getUsers();
-        const notifyUsers = users.filter((u: any) => u.role === UserRole.ADMIN || u.role === UserRole.MANAGER);
-        const { sendPushToUser } = await import('./push');
-        for (const u of notifyUsers) {
-          await storage.createNotification({
-            userId: u.id,
-            type: 'success',
-            title: '🧾 Payment Successful - New Client',
-            message: `${name} just subscribed${packageId ? ` to package ${packageId}` : ""}.`,
-            category: 'general',
-            actionUrl: `/clients?search=${encodeURIComponent(name)}`,
-            isRead: false,
-          });
-          await sendPushToUser(u.id, {
-            title: '🧾 New Paying Client',
-            body: `${name} completed checkout${packageId ? ` (${packageId})` : ''}`,
-            url: '/clients',
-          }).catch(() => {});
-
-          // Email notification to admin/manager
-          if (u.email) {
-            try {
-              const { emailNotifications } = await import('./emailService');
-              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
-              const prefs = await storage.getUserNotificationPreferences(u.id).catch(() => null);
-              if (prefs?.emailNotifications !== false) {
-                void emailNotifications.sendActionAlertEmail(
-                  u.email,
-                  '🧾 New Paying Client',
-                  `${name} just subscribed${packageId ? ` to package ${packageId}` : ""}.`,
-                  `${appUrl}/clients?search=${encodeURIComponent(name)}`,
-                  'success'
-                ).catch(err => console.error(`Failed to send payment email to ${u.username}:`, err));
-              }
-            } catch (e) {
-              console.error(`Email error for payment to ${u.username}:`, e);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("⚠️ Failed sending notifications for Stripe confirm:", e);
-      }
-
-      return res.json({ success: true, clientId: createdClient?.id || null });
-    } catch (error: any) {
-      console.error('Stripe confirm error:', error);
-      return res.status(500).json({ success: false, message: error?.message || 'Stripe confirm failed' });
-    }
-  });
-
-  // ============ Discount Codes API ============
-  
-  // Validate discount code (public endpoint for signup page)
-  app.post("/api/discounts/validate", async (req: Request, res: Response) => {
-    try {
-      const { code, packageId } = req.body;
-      
-      if (!code) {
-        return res.status(400).json({ valid: false, message: "Code required" });
-      }
-
-      const result = await pool.query(
-        `SELECT * FROM discount_codes 
-         WHERE UPPER(code) = UPPER($1) 
-         AND is_active = true 
-         AND (expires_at IS NULL OR expires_at > NOW())
-         AND (max_uses IS NULL OR uses_count < max_uses)`,
-        [code]
-      );
-
-      if (result.rows.length === 0) {
-        return res.json({ 
-          valid: false, 
-          message: "Invalid or expired discount code" 
-        });
-      }
-
-      const discount = result.rows[0];
-
-      // Check if code applies to this package
-      if (discount.applies_to_packages && packageId) {
-        const packageIds = discount.applies_to_packages;
-        if (Array.isArray(packageIds) && !packageIds.includes(packageId)) {
-          return res.json({
-            valid: false,
-            message: "This code doesn't apply to the selected package"
-          });
-        }
-      }
-
-      res.json({
-        valid: true,
-        code: discount.code,
-        discountPercentage: parseFloat(discount.discount_percentage),
-        durationMonths: discount.duration_months,
-        description: discount.description,
-        stripeCouponId: discount.stripe_coupon_id,
-      });
-
-    } catch (error: any) {
-      console.error("Discount validation error:", error);
-      res.status(500).json({ valid: false, message: "Error validating code" });
-    }
-  });
-
-  // Create discount code (admin only)
-  app.post("/api/discounts", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const { 
-        code, 
-        description, 
-        discountPercentage, 
-        durationMonths, 
-        maxUses, 
-        expiresAt,
-        appliesToPackages 
-      } = req.body;
-
-      if (!code || !discountPercentage) {
-        return res.status(400).json({ message: "Code and discount percentage are required" });
-      }
-
-      // Check if code already exists in database first
-      const existingDbResult = await pool.query(
-        "SELECT id FROM discount_codes WHERE code = $1",
-        [code.toUpperCase()]
-      );
-      if (existingDbResult.rows.length > 0) {
-        return res.status(400).json({ message: "Discount code already exists in database" });
-      }
-
-      // Create Stripe coupon first
-      let stripeCouponId = null;
-      if (stripe) {
-        try {
-          const couponId = code.toLowerCase().replace(/[^a-z0-9]/g, '_');
-          
-          // Try to retrieve existing coupon first to avoid "already exists" error
-          try {
-            const existingCoupon = await stripe.coupons.retrieve(couponId);
-            stripeCouponId = existingCoupon.id;
-            console.log(`Using existing Stripe coupon: ${stripeCouponId}`);
-          } catch (e: any) {
-            // If not found (404), create it
-            if (e.status === 404 || e.code === 'resource_missing') {
-              const couponData: any = {
-                percent_off: parseFloat(discountPercentage),
-                name: code,
-                id: couponId,
-              };
-
-              if (durationMonths) {
-                couponData.duration = 'repeating';
-                couponData.duration_in_months = parseInt(durationMonths);
-              } else {
-                couponData.duration = 'once';
-              }
-
-              const coupon = await stripe.coupons.create(couponData);
-              stripeCouponId = coupon.id;
-              console.log(`Created new Stripe coupon: ${stripeCouponId}`);
-            } else {
-              // Some other Stripe error
-              throw e;
-            }
-          }
-        } catch (stripeError: any) {
-          console.error("Stripe coupon error:", stripeError);
-          return res.status(400).json({ message: `Stripe error: ${stripeError.message}` });
-        }
-      }
-
-      // Save to database
-      const result = await pool.query(
-        `INSERT INTO discount_codes 
-         (code, description, discount_percentage, duration_months, stripe_coupon_id, 
-          max_uses, expires_at, applies_to_packages, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING *`,
-        [
-          code.toUpperCase(),
-          description || null,
-          discountPercentage,
-          durationMonths || null,
-          stripeCouponId,
-          maxUses || null,
-          expiresAt || null,
-          appliesToPackages ? JSON.stringify(appliesToPackages) : null,
-          user.id
-        ]
-      );
-
-      res.json({ success: true, discount: result.rows[0] });
-
-    } catch (error: any) {
-      console.error("Error creating discount code:", error);
-      if (error.code === '23505') { // Unique violation
-        return res.status(400).json({ message: "Code already exists" });
-      }
-      res.status(500).json({ message: error.message || "Failed to create discount code" });
-    }
-  });
-
-  // List all discount codes (authenticated users)
-  app.get("/api/discounts", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const result = await pool.query(
-        `SELECT 
-          dc.*,
-          u.username as creator_name,
-          COUNT(dr.id) as total_redemptions,
-          COALESCE(SUM(dr.discount_amount), 0) as total_discounted
-         FROM discount_codes dc
-         LEFT JOIN users u ON dc.created_by = u.id
-         LEFT JOIN discount_redemptions dr ON dc.id = dr.code_id
-         GROUP BY dc.id, u.username
-         ORDER BY dc.created_at DESC`
-      );
-
-      res.json(result.rows);
-    } catch (error: any) {
-      console.error("Error fetching discount codes:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Update discount code (admin only)
-  app.patch("/api/discounts/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { isActive, maxUses, expiresAt, description } = req.body;
-
-      const updates: string[] = [];
-      const values: any[] = [];
-      let paramCount = 1;
-
-      if (typeof isActive !== 'undefined') {
-        updates.push(`is_active = $${paramCount++}`);
-        values.push(isActive);
-      }
-      if (typeof maxUses !== 'undefined') {
-        updates.push(`max_uses = $${paramCount++}`);
-        values.push(maxUses);
-      }
-      if (typeof expiresAt !== 'undefined') {
-        updates.push(`expires_at = $${paramCount++}`);
-        values.push(expiresAt);
-      }
-      if (typeof description !== 'undefined') {
-        updates.push(`description = $${paramCount++}`);
-        values.push(description);
-      }
-
-      if (updates.length === 0) {
-        return res.status(400).json({ message: "No fields to update" });
-      }
-
-      updates.push(`updated_at = NOW()`);
-      values.push(id);
-
-      const result = await pool.query(
-        `UPDATE discount_codes SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-        values
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Discount code not found" });
-      }
-
-      res.json({ success: true, discount: result.rows[0] });
-    } catch (error: any) {
-      console.error("Error updating discount code:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Delete discount code (admin only)
-  app.delete("/api/discounts/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-
-      const result = await pool.query(
-        `DELETE FROM discount_codes WHERE id = $1 RETURNING *`,
-        [id]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Discount code not found" });
-      }
-
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("Error deleting discount code:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Track redemption when checkout succeeds (called after payment confirmation)
-  app.post("/api/discounts/redeem", async (req: Request, res: Response) => {
-    try {
-      const { code, email, packageId, originalPrice, discountAmount, finalPrice, stripeSessionId } = req.body;
-
-      if (!code) {
-        return res.status(400).json({ message: "Code is required" });
-      }
-
-      // Increment usage count
-      await pool.query(
-        `UPDATE discount_codes SET uses_count = uses_count + 1, updated_at = NOW() WHERE UPPER(code) = UPPER($1)`,
-        [code]
-      );
-
-      // Record redemption
-      await pool.query(
-        `INSERT INTO discount_redemptions 
-         (code_id, discount_code, user_email, package_id, original_price, 
-          discount_amount, final_price, stripe_session_id)
-         SELECT id, $1, $2, $3, $4, $5, $6, $7
-         FROM discount_codes WHERE UPPER(code) = UPPER($1)`,
-        [code, email, packageId, originalPrice, discountAmount, finalPrice, stripeSessionId]
-      );
-
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("Redemption tracking error:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get discount redemption analytics (admin only)
-  app.get("/api/discounts/analytics", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const result = await pool.query(`
-        SELECT 
-          dc.code,
-          dc.discount_percentage,
-          dc.uses_count,
-          dc.max_uses,
-          COUNT(dr.id) as redemptions,
-          COALESCE(SUM(dr.discount_amount), 0) as total_discount_given,
-          COALESCE(SUM(dr.final_price), 0) as total_revenue,
-          ARRAY_AGG(DISTINCT dr.user_email) FILTER (WHERE dr.user_email IS NOT NULL) as redeemed_by
-        FROM discount_codes dc
-        LEFT JOIN discount_redemptions dr ON dc.id = dr.code_id
-        WHERE dc.is_active = true
-        GROUP BY dc.id, dc.code, dc.discount_percentage, dc.uses_count, dc.max_uses
-        ORDER BY redemptions DESC
-      `);
-
-      res.json(result.rows);
-    } catch (error: any) {
-      console.error("Error fetching discount analytics:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   // Early lead capture endpoint (captures lead after step 2)
   app.post("/api/early-lead", async (req: Request, res: Response) => {
     try {
+      const earlyLeadSchema = z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        company: z.string().min(1),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+      });
+
       const data = earlyLeadSchema.parse(req.body);
 
       // Check if lead with this email already exists
+      let existingLead = null;
       try {
-        const existingLead = await storage.getLeadByEmail(data.email);
-        if (existingLead) {
-          // Lead already exists, don't create duplicate
-          return res.json({ success: true, leadId: existingLead.id, duplicate: true });
-        }
+        const existingLeads = await storage.getLeads();
+        existingLead = existingLeads.find(l => l.email === data.email);
       } catch (getLeadsError) {
         console.error('⚠️ Error fetching existing leads, continuing with creation:', getLeadsError);
         // Continue anyway - we'll handle duplicates if they occur
+      }
+
+      if (existingLead) {
+        // Lead already exists, don't create duplicate
+        return res.json({ success: true, leadId: existingLead.id, duplicate: true });
       }
 
       // Create early lead capture
@@ -1141,7 +254,7 @@ export function registerRoutes(app: Express) {
         email: data.email,
         phone: data.phone,
         company: data.company,
-        website: data.website ?? null,
+        website: data.website || null,
         source: "website",
         stage: "prospect",
         score: "warm", // warm lead since they started signup
@@ -1177,26 +290,13 @@ This lead will be updated if they complete the full signup process.`,
       const lead = await storage.createLead(leadData);
       console.log('✅ Early lead created successfully:', lead.id);
       
-      // Notify all admins and managers about new early lead
-      notifyAboutLeadAction({
-        lead,
-        action: 'created'
-      }).catch(err => console.error('Failed to notify about early lead creation:', err));
-      
       res.json({ success: true, leadId: lead.id });
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Early lead capture error:', error);
       console.error('Error details:', {
         message: error?.message,
         stack: error?.stack,
       });
-      if (error instanceof ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid input data",
-          errors: error.errors,
-        });
-      }
       return res.status(500).json({ 
         success: false, 
         message: "Failed to create lead. Please try again." 
@@ -1208,7 +308,7 @@ This lead will be updated if they complete the full signup process.`,
   app.post("/api/social-audit", async (req: Request, res: Response) => {
     try {
       const auditSchema = z.object({
-        website: requiredWebsiteSchema,
+        website: z.string().url("Must be a valid URL"),
         instagramUrl: z.string().optional(),
         tiktokUrl: z.string().optional(),
         facebookUrl: z.string().optional(),
@@ -1253,61 +353,41 @@ This lead will be updated if they complete the full signup process.`,
   // Simplified signup endpoint (no audit, direct to package selection)
   app.post("/api/signup-simple", async (req: Request, res: Response) => {
     try {
-      const data = signupSimpleSchema.parse(req.body);
+      const signupSchema = z.object({
+        company: z.string().min(1),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+        companySize: z.string().optional(),
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        services: z.array(z.string()).min(1),
+        budget: z.string().optional(),
+        webDevType: z.string().optional(),
+        webDevFeatures: z.array(z.string()).optional(),
+        webDevTimeline: z.string().optional(),
+        webDevBudget: z.string().optional(),
+        appPlatforms: z.array(z.string()).optional(),
+        appType: z.string().optional(),
+        appFeatures: z.array(z.string()).optional(),
+        appTimeline: z.string().optional(),
+        appBudget: z.string().optional(),
+        notes: z.string().optional(),
+      });
+
+      const data = signupSchema.parse(req.body);
       console.log('📝 Processing simplified signup for:', data.email);
 
-      // Check for existing user by username if provided
-      if (data.username) {
-        const existingUser = await storage.getUserByUsername(data.username);
-        if (existingUser) {
-          return res.status(400).json({ success: false, message: "Username already exists" });
-        }
-      }
-
-      // Check for existing user by email
-      const existingEmailUser = await storage.getUserByEmail(data.email);
-      if (existingEmailUser) {
-        return res.status(400).json({ success: false, message: "Email already exists" });
-      }
-
-      // Create the user account first if username and password are provided
-      let userId: number | undefined = undefined;
-      if (data.username && data.password) {
-        const hashedPassword = await hashPassword(data.password);
-        const newUser = await storage.createUser({
-          username: data.username,
-          password: hashedPassword,
-          email: data.email,
-          firstName: data.name.split(' ')[0],
-          lastName: data.name.split(' ').slice(1).join(' '),
-          role: "prospective_client", // Force payment before becoming full client
-        });
-        userId = newUser.id;
-        console.log('✅ Created user account:', data.username);
-
-        // Send welcome email (best-effort)
-        if (newUser.email) {
-          try {
-            void emailNotifications
-              .sendWelcomeEmail(newUser.firstName || newUser.username, newUser.email)
-              .catch((err) => console.error("Failed to send welcome email (signup-simple):", err));
-          } catch (emailErr) {
-            console.error("Error sending signup-simple emails:", emailErr);
-          }
-        }
-      }
-
       // Check for existing lead and update it
-      const existingLead = await storage.getLeadByEmail(data.email);
+      const existingLeads = await storage.getLeads();
+      const existingLead = existingLeads.find(l => l.email === data.email);
 
       if (existingLead) {
-        // ... (rest of the lead update logic)
         // Update existing lead with complete information
         const updatedNotes = `${existingLead.notes || ''}
 
 🎯 COMPLETED SIGNUP PROCESS
 Services Interested: ${data.services.join(', ')}
-${data.selectedPlatforms && data.selectedPlatforms.length > 0 ? `Selected Platforms: ${data.selectedPlatforms.join(', ')}` : ''}
 Budget: ${data.budget || 'Not specified'}
 
 ${data.webDevType ? `
@@ -1339,14 +419,10 @@ Lead completed signup process and is ready for package selection.`;
           stage: "qualified",
           score: "hot",
           notes: updatedNotes,
-          socialCredentials: data.socialCredentials,
-          brandAssets: data.brandAssets,
           sourceMetadata: { 
-            ...(existingLead.sourceMetadata as object || {}),
+            ...existingLead.sourceMetadata,
             completedSignup: true,
-            userId,
             services: data.services,
-            selectedPlatforms: data.selectedPlatforms,
             webDev: data.webDevType ? {
               type: data.webDevType,
               features: data.webDevFeatures,
@@ -1372,13 +448,13 @@ Lead completed signup process and is ready for package selection.`;
         email: data.email,
         phone: data.phone,
         company: data.company,
-        website: data.website ?? null,
+        website: data.website || null,
           source: "website",
           stage: "qualified",
           score: "hot",
           value: null,
           notes: `🎯 NEW SIGNUP - QUALIFIED LEAD
-  
+
 📋 COMPANY INFO:
 • Website: ${data.website || 'Not provided'}
 • Industry: ${data.industry || 'Not specified'}
@@ -1386,7 +462,6 @@ Lead completed signup process and is ready for package selection.`;
 
 🎯 SERVICES INTERESTED:
 ${data.services.join(', ')}
-${data.selectedPlatforms && data.selectedPlatforms.length > 0 ? `• Platforms: ${data.selectedPlatforms.join(', ')}` : ''}
 Budget: ${data.budget || 'Not specified'}
 
 ${data.webDevType ? `
@@ -1414,12 +489,9 @@ ${data.notes}
 ---
 This lead completed the full signup process and is ready for package selection.`,
           clientId: null,
-          assignedToId: null,
-          socialCredentials: data.socialCredentials,
-          brandAssets: data.brandAssets,
+        assignedToId: null,
           sourceMetadata: { 
             type: "signup_complete",
-            userId,
             services: data.services,
             webDev: data.webDevType ? {
               type: data.webDevType,
@@ -1442,7 +514,7 @@ This lead completed the full signup process and is ready for package selection.`
         console.log('✅ Created new qualified lead from complete signup');
         res.json({ success: true, leadId: lead.id, message: "Account created successfully!" });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Simplified signup error:', error);
       if (error instanceof ZodError) {
         return res.status(400).json({
@@ -1453,7 +525,7 @@ This lead completed the full signup process and is ready for package selection.`
       }
       return res.status(500).json({
         success: false,
-        message: error.message || "Failed to create account. Please try again.",
+        message: "Failed to create account. Please try again.",
       });
     }
   });
@@ -1461,7 +533,27 @@ This lead completed the full signup process and is ready for package selection.`
   // Public signup endpoint (no authentication required)
   app.post("/api/signup", async (req: Request, res: Response) => {
     try {
-      const data = signupAuditSchema.parse(req.body);
+      const signupSchema = z.object({
+        company: z.string().min(1),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+        companySize: z.string().optional(),
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(1),
+        services: z.array(z.string()),
+        budget: z.string().optional(),
+        socialPlatforms: z.array(z.string()).optional(),
+        instagramUrl: z.string().optional(),
+        facebookUrl: z.string().optional(),
+        tiktokUrl: z.string().optional(),
+        linkedinUrl: z.string().optional(),
+        twitterUrl: z.string().optional(),
+        youtubeUrl: z.string().optional(),
+        notes: z.string().optional(),
+      });
+
+      const data = signupSchema.parse(req.body);
 
       // Generate automated audit report in background
       let auditReport: any = null;
@@ -1504,15 +596,16 @@ ${data.youtubeUrl ? `• YouTube: ${data.youtubeUrl}` : ''}
 📊 AUDIT RESULTS ($2,500 VALUE):
 • Total Issues Found: ${auditReport?.summary.totalIssues || 0}
 • Critical Issues: ${auditReport?.summary.criticalIssues || 0}
-${auditReport?.website ? '\n🌐 WEBSITE ISSUES:\n' + auditReport.website.recommendations.slice(0, 5).map((r: any) => `  ${r}`).join('\n') : ''}
-${auditReport?.socialMedia && auditReport.socialMedia.length > 0 ? '\n\n📱 SOCIAL MEDIA AUDIT:\n' + auditReport.socialMedia.map((s: any) => `  ${s.platform}: ${s.isValid ? '✅ Valid' : '❌ Invalid'} ${s.stats?.followers ? `(${s.stats.followers.toLocaleString()} followers)` : ''}`).join('\n') : ''}
+${auditReport?.website ? '\n🌐 WEBSITE ISSUES:\n' + auditReport.website.recommendations.slice(0, 5).map(r => `  ${r}`).join('\n') : ''}
+${auditReport?.socialMedia && auditReport.socialMedia.length > 0 ? '\n\n📱 SOCIAL MEDIA AUDIT:\n' + auditReport.socialMedia.map(s => `  ${s.platform}: ${s.isValid ? '✅ Valid' : '❌ Invalid'} ${s.stats?.followers ? `(${s.stats.followers.toLocaleString()} followers)` : ''}`).join('\n') : ''}
 
 🔥 This lead is HOT - they completed the full audit process!
 
 ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
 
         // Check if early lead capture exists
-        const existingLead = await storage.getLeadByEmail(data.email);
+        const existingLeads = await storage.getLeads();
+        const existingLead = existingLeads.find(l => l.email === data.email);
 
         let leadId: string;
         
@@ -1541,7 +634,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
             email: data.email,
             phone: data.phone,
             company: data.company,
-            website: data.website ?? null,
+            website: data.website || null,
             source: "website",
             stage: "qualified",
             score: leadScore,
@@ -1584,13 +677,9 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
     try {
       const user = req.user as any;
       const userId = user?.id || user?.claims?.sub;
-      const redirectTo =
-        typeof req.query.redirect === "string" && req.query.redirect.trim()
-          ? req.query.redirect.trim()
-          : "/emails";
       
       // Generate auth URL with state containing user ID
-      const state = Buffer.from(JSON.stringify({ userId, redirectTo })).toString('base64');
+      const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
       const authUrl = await microsoftAuth.getAuthUrl(state);
       
       res.redirect(authUrl);
@@ -1617,7 +706,6 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       // Decode state to get user ID
       const stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
       const userId = stateData.userId;
-      const redirectTo = stateData.redirectTo || "/emails";
 
       // Save or update email account in database
       const existingAccount = await storage.getEmailAccountByUserId(userId);
@@ -1644,7 +732,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       }
 
       // Redirect back to emails page with success message
-      res.redirect(`${redirectTo}?connected=true`);
+      res.redirect('/emails?connected=true');
     } catch (error) {
       console.error('Error in Microsoft callback:', error);
       res.redirect('/emails?error=auth_failed');
@@ -1684,30 +772,6 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
     }
   });
 
-  // Validate and refresh token if needed (prevents timeout issues)
-  app.post("/api/emails/validate-token", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      
-      const account = await storage.getEmailAccountByUserId(userId);
-      
-      if (!account || !account.isActive) {
-        return res.status(404).json({ valid: false, message: "No active email account found" });
-      }
-
-      const accessToken = await ensureValidAccessToken(account.id);
-      if (!accessToken) {
-        return res.status(401).json({ valid: false, message: "Token refresh failed, please reconnect" });
-      }
-
-      res.json({ valid: true, refreshed: true });
-    } catch (error: any) {
-      console.error('Error validating token:', error);
-      res.status(500).json({ valid: false, message: "Failed to validate token" });
-    }
-  });
-
   // Sync emails from Microsoft
   app.post("/api/emails/sync", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1726,9 +790,18 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       console.log(`✓ Found email account: ${account.email}`);
 
       // Check if token is expired and refresh if needed
-      const accessToken = await ensureValidAccessToken(account.id);
-      if (!accessToken) {
-        return res.status(401).json({ message: "Authentication failed with email provider" });
+      let accessToken = account.accessToken;
+      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+        console.log(`🔄 Token expired, refreshing...`);
+        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+        accessToken = refreshed.accessToken;
+        
+        await storage.updateEmailAccount(account.id, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          tokenExpiresAt: refreshed.expiresOn,
+        });
+        console.log(`✓ Token refreshed successfully`);
       }
 
       // Fetch emails from Microsoft
@@ -1737,7 +810,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
 
       for (const folder of folders) {
         console.log(`📥 Fetching emails from ${folder}...`);
-        const messages = await microsoftAuth.getEmails(accessToken, folder, 50);
+        const messages = await microsoftAuth.getEmails(accessToken!, folder, 50);
         console.log(`✓ Fetched ${messages.length} emails from ${folder}`);
         
         for (const msg of messages) {
@@ -1788,22 +861,6 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
   });
 
   // Get emails from database
-  // Get unread email count
-  app.get("/api/emails/unread-count", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      
-      const allEmails = await storage.getEmails(userId);
-      const unreadCount = allEmails.filter(email => !email.isRead).length;
-      
-      res.json(unreadCount);
-    } catch (error: any) {
-      console.error("Error fetching unread email count:", error);
-      res.json(0); // Return 0 on error to prevent UI issues
-    }
-  });
-
   app.get("/api/emails", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
@@ -1847,11 +904,17 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       if (!emailBody || emailBody.length === 0) {
         const account = await storage.getEmailAccountByUserId(userId);
         if (account && account.isActive && email.messageId) {
-          const accessToken = await ensureValidAccessToken(account.id);
-          if (!accessToken) {
-            return res.status(401).json({ message: "Authentication failed with email provider" });
+          let accessToken = account.accessToken;
+          if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+            const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+            accessToken = refreshed.accessToken;
+            await storage.updateEmailAccount(account.id, {
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              tokenExpiresAt: refreshed.expiresOn,
+            });
           }
-          const fullEmail = await microsoftAuth.getEmailById(accessToken, email.messageId);
+          const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
           emailBody = fullEmail.body?.content || email.bodyPreview || '';
         } else {
           emailBody = email.bodyPreview || '';
@@ -1890,11 +953,17 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       if (!emailBody || emailBody.length === 0) {
         const account = await storage.getEmailAccountByUserId(userId);
         if (account && account.isActive && email.messageId) {
-          const accessToken = await ensureValidAccessToken(account.id);
-          if (!accessToken) {
-            return res.status(401).json({ message: "Authentication failed with email provider" });
+          let accessToken = account.accessToken;
+          if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+            const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+            accessToken = refreshed.accessToken;
+            await storage.updateEmailAccount(account.id, {
+              accessToken: refreshed.accessToken,
+              refreshToken: refreshed.refreshToken,
+              tokenExpiresAt: refreshed.expiresOn,
+            });
           }
-          const fullEmail = await microsoftAuth.getEmailById(accessToken, email.messageId);
+          const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
           emailBody = fullEmail.body?.content || email.bodyPreview || '';
         } else {
           emailBody = email.bodyPreview || '';
@@ -1905,9 +974,6 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       if (!process.env.OPENAI_API_KEY) {
         return res.status(503).json({ message: "AI analysis not configured" });
       }
-
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
       const systemPrompt = `You are an email analysis assistant. Analyze the email and provide:
 1. A brief summary (2-3 sentences)
@@ -1988,13 +1054,20 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
       
       // Check token expiry
-      const accessToken = await ensureValidAccessToken(account.id);
-      if (!accessToken) {
-        return res.status(401).json({ message: "Authentication failed with email provider" });
+      let accessToken = account.accessToken;
+      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+        accessToken = refreshed.accessToken;
+        
+        await storage.updateEmailAccount(account.id, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          tokenExpiresAt: refreshed.expiresOn,
+        });
       }
       
       // Fetch full email from Microsoft
-      const fullEmail = await microsoftAuth.getEmailById(accessToken, email.messageId);
+      const fullEmail = await microsoftAuth.getEmailById(accessToken!, email.messageId);
       const bodyContent = fullEmail.body?.content || email.bodyPreview || '';
       
       // Store the body in database
@@ -2022,16 +1095,22 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
 
       // Check token expiry
-      const accessToken = await ensureValidAccessToken(account.id);
-      if (!accessToken) {
-        return res.status(401).json({ message: "Authentication failed with email provider" });
+      let accessToken = account.accessToken;
+      if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
+        const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
+        accessToken = refreshed.accessToken;
+        
+        await storage.updateEmailAccount(account.id, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          tokenExpiresAt: refreshed.expiresOn,
+        });
       }
 
       const emailData = req.body;
-      await microsoftAuth.sendEmail(accessToken, emailData);
+      await microsoftAuth.sendEmail(accessToken!, emailData);
 
       // Store sent email in database
-      const now = new Date();
       await storage.createEmail({
         from: account.email,
         fromName: account.email,
@@ -2044,8 +1123,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         folder: 'sent',
         isRead: true,
         hasAttachments: false,
-        receivedAt: now, // For sent emails, use send time
-        sentAt: now,
+        sentAt: new Date(),
         userId,
       });
 
@@ -2057,71 +1135,173 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Dashboard stats - OPTIMIZED
-  // NOTE: /api/dashboard/stats is legacy and now admin-only (use /api/dashboard/*-stats).
-  app.get("/api/dashboard/stats", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+  app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
     try {
-      const currentUser = req.user as any;
-      const stats = await storage.getDashboardStats(currentUser.id, currentUser.role);
-      res.json(stats);
+      console.log("🔍 Dashboard API called - fetching data...");
+      
+      // Only fetch lightweight data and minimal records for activity feed
+      const [clients, campaigns, leads, tasks] = await Promise.all([
+        storage.getClients(), // Small dataset, usually < 100 records
+        storage.getCampaigns(), // Small dataset
+        storage.getLeads(), // Could be large, but we need value calc
+        storage.getTasks(), // Could be large
+        // storage.getActivityLogs(15), // DISABLED - causing database errors
+      ]);
+      
+      // Create empty activity logs to prevent errors
+      const activityLogs: any[] = [];
+
+      console.log("📊 Dashboard Stats (Optimized):");
+      console.log("  - Total Clients:", clients.length);
+      console.log("  - Total Campaigns:", campaigns.length);
+      console.log("  - Total Leads:", leads.length);
+      console.log("  - Total Tasks:", tasks.length);
+
+      // Quick counts and aggregates
+      const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
+      const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
+      
+      // Skip invoices for now - not critical for dashboard load
+      const monthlyRevenue = 0; // Will be replaced by Stripe data if available
+
+      // Task metrics
+      const totalTasks = tasks.length;
+      const completedTasks = tasks.filter((t) => t.status === "completed").length;
+      const pendingTasks = tasks.filter((t) => t.status === "todo").length;
+      const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length;
+      const reviewTasks = tasks.filter((t) => t.status === "review").length;
+      const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      // Today's task metrics
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const tasksToday = tasks.filter((t) => {
+        if (!t.dueDate) return false;
+        const dueDate = new Date(t.dueDate);
+        // Set to start of day for comparison
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate.getTime() === today.getTime();
+      });
+
+      const totalTasksToday = tasksToday.length;
+      const completedTasksToday = tasksToday.filter((t) => t.status === "completed").length;
+      const todoTasksToday = tasksToday.filter((t) => t.status === "todo").length;
+      const inProgressTasksToday = tasksToday.filter((t) => t.status === "in_progress").length;
+      const reviewTasksToday = tasksToday.filter((t) => t.status === "review").length;
+
+      // Recent Activity Feed - OPTIMIZED: Only use most recent data to avoid slow sorting
+      const recentActivity: any[] = [];
+      
+      // Quick recent items only (first 3 of each)
+
+      // Simplified activity feed - only most recent items (reduced from sorting everything)
+      clients.slice(0, 2).forEach(client => {
+        recentActivity.push({
+          type: 'success',
+          title: `Client: ${client.name}`,
+          time: formatActivityTime(client.createdAt),
+          timestamp: client.createdAt,
+        });
+      });
+
+      campaigns.slice(0, 2).forEach(campaign => {
+        recentActivity.push({
+          type: 'info',
+          title: `Campaign: ${campaign.name}`,
+          time: formatActivityTime(campaign.createdAt),
+          timestamp: campaign.createdAt,
+        });
+      });
+
+      tasks.filter(t => t.status === 'completed').slice(0, 2).forEach(task => {
+        recentActivity.push({
+          type: 'success',
+          title: `Task completed: ${task.title}`,
+          time: formatActivityTime(task.updatedAt),
+          timestamp: task.updatedAt,
+        });
+      });
+
+      // Activity logs (logins, payments, etc.)
+      activityLogs.forEach(log => {
+        const typeMap: any = {
+          'login': 'success',
+          'logout': 'info',
+          'payment': 'success',
+          'client_added': 'success',
+          'task_completed': 'success',
+        };
+        recentActivity.push({
+          type: typeMap[log.activityType] || 'info',
+          title: log.description,
+          time: formatActivityTime(log.createdAt),
+          timestamp: log.createdAt,
+        });
+      });
+
+      // Sort by timestamp (most recent first) and limit to 10
+      const sortedActivity = recentActivity
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 10);
+
+      // Upcoming Deadlines
+      const upcomingDeadlines: any[] = [];
+      
+      // Tasks with due dates
+      tasks
+        .filter(t => t.dueDate && t.status !== 'completed')
+        .forEach(task => {
+          const daysUntil = Math.floor((new Date(task.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          upcomingDeadlines.push({
+            title: task.title,
+            date: formatDeadlineDate(task.dueDate),
+            urgent: daysUntil <= 3,
+            timestamp: task.dueDate,
+          });
+        });
+
+      // Sort deadlines by date and limit to 5
+      const sortedDeadlines = upcomingDeadlines
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .slice(0, 5);
+
+      const responseData = {
+        totalClients: clients.length,
+        activeCampaigns,
+        pipelineValue,
+        monthlyRevenue,
+        recentActivity: sortedActivity,
+        upcomingDeadlines: sortedDeadlines,
+        taskMetrics: {
+          total: totalTasks,
+          completed: completedTasks,
+          pending: pendingTasks,
+          inProgress: inProgressTasks,
+          review: reviewTasks,
+          completionPercentage,
+        },
+        // Today's task metrics
+        totalTasksToday,
+        completedTasksToday,
+        todoTasksToday,
+        inProgressTasksToday,
+        reviewTasksToday,
+      };
+
+      console.log("✅ Sending dashboard response with:", {
+        totalClients: responseData.totalClients,
+        activeCampaigns: responseData.activeCampaigns,
+        pipelineValue: responseData.pipelineValue,
+      });
+
+      res.json(responseData);
     } catch (error: any) {
       console.error("❌ Dashboard API error:", error);
+      console.error("Error details:", error.message, error.stack);
       res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
-    }
-  });
-
-  // Role-specific dashboard stats (least privilege)
-  app.get("/api/dashboard/admin-stats", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const currentUser = req.user as any;
-      const stats = await storage.getDashboardStats(currentUser.id, UserRole.ADMIN);
-      res.json(stats);
-    } catch (error: any) {
-      console.error("❌ Admin dashboard stats error:", error);
-      res.status(500).json({ message: "Failed to fetch admin dashboard stats", error: error.message });
-    }
-  });
-
-  app.get("/api/dashboard/manager-stats", isAuthenticated, requireRole(UserRole.MANAGER, UserRole.CREATOR_MANAGER), async (req: Request, res: Response) => {
-    try {
-      const currentUser = req.user as any;
-      const stats = await storage.getDashboardStats(currentUser.id, UserRole.MANAGER);
-
-      // Pipeline counts by stage (no $)
-      const stageRows = await pool.query(
-        `SELECT stage, COUNT(*)::int AS count FROM leads GROUP BY stage`
-      );
-      const pipelineByStage: Record<string, number> = {};
-      for (const row of stageRows.rows) {
-        if (row?.stage) pipelineByStage[String(row.stage)] = Number(row.count || 0);
-      }
-
-      // Remove financial/value fields for manager dashboard payload
-      const {
-        pipelineValue: _pipelineValue,
-        pipelineChange: _pipelineChange,
-        monthlyRevenue: _monthlyRevenue,
-        revenueChange: _revenueChange,
-        ...rest
-      } = stats || {};
-
-      res.json({
-        ...rest,
-        pipelineByStage,
-      });
-    } catch (error: any) {
-      console.error("❌ Manager dashboard stats error:", error);
-      res.status(500).json({ message: "Failed to fetch manager dashboard stats", error: error.message });
-    }
-  });
-
-  app.get("/api/dashboard/staff-stats", isAuthenticated, requireRole(UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const currentUser = req.user as any;
-      const stats = await storage.getDashboardStats(currentUser.id, UserRole.STAFF);
-      res.json(stats);
-    } catch (error: any) {
-      console.error("❌ Staff dashboard stats error:", error);
-      res.status(500).json({ message: "Failed to fetch staff dashboard stats", error: error.message });
     }
   });
 
@@ -2203,7 +1383,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
             status: sub.status,
             amount: (firstItem?.price?.unit_amount || 0) / 100,
             interval: firstItem?.price?.recurring?.interval,
-            currentPeriodEnd: (sub as any).current_period_end,
+            currentPeriodEnd: sub.current_period_end,
             cancelAtPeriodEnd: sub.cancel_at_period_end,
           };
         }),
@@ -2221,8 +1401,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         return res.status(503).json({ message: "Stripe is not configured" });
       }
 
-      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
-      if (!client) return;
+      const client = await storage.getClient(req.params.clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
 
       if (!client.stripeSubscriptionId) {
         return res.json({ subscription: null });
@@ -2238,7 +1420,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           status: subscription.status,
           amount: (subscription.items.data[0]?.price?.unit_amount || 0) / 100,
           interval: subscription.items.data[0]?.price?.recurring?.interval,
-          currentPeriodEnd: (subscription as any).current_period_end,
+          currentPeriodEnd: subscription.current_period_end,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           customer: subscription.customer,
         },
@@ -2249,33 +1431,74 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Modularized routes are handled via app.use statements at the start of registerRoutes
+  // Client routes
+  app.get("/api/clients", isAuthenticated, requirePermission("canManageClients"), async (_req: Request, res: Response) => {
+    try {
+      const clients = await storage.getClients();
+      res.json(clients);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
+  app.get("/api/clients/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const client = await storage.getClient(req.params.id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      res.json(client);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch client" });
+    }
+  });
+
+  app.post("/api/clients", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      console.log("Received client data:", JSON.stringify(req.body, null, 2));
+      const validatedData = insertClientSchema.parse(req.body);
+      console.log("Validated client data:", JSON.stringify(validatedData, null, 2));
+      const client = await storage.createClient(validatedData);
+      res.status(201).json(client);
+    } catch (error) {
+      console.error("Error creating client:", error);
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/clients/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertClientSchema.partial().strip().parse(req.body);
+      const client = await storage.updateClient(req.params.id, validatedData);
+      res.json(client);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      if (error.message?.includes("not found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      console.error(error);
+      res.status(500).json({ message: "Failed to update client" });
+    }
+  });
+
+  app.delete("/api/clients/:id", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteClient(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
 
   // Campaign routes
-  app.get("/api/campaigns", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (_req: Request, res: Response) => {
     try {
-      const currentUser = req.user;
-      const allCampaigns = await storage.getCampaigns();
-      
-      // Filter campaigns based on user role
-      let campaigns = allCampaigns;
-      
-      if (currentUser?.role === UserRole.CLIENT) {
-        // For clients: only show campaigns assigned to their client record
-        const clientId = currentUser?.clientId;
-        if (clientId) {
-          campaigns = allCampaigns.filter((c) => c.clientId === clientId);
-          console.log(`🔒 Campaigns filtered for client: ${campaigns.length} for clientId ${clientId} (out of ${allCampaigns.length} total)`);
-        } else {
-          campaigns = []; // No clientId means no campaigns
-          console.log(`🔒 Client has no clientId, showing 0 campaigns`);
-        }
-      } else if (currentUser?.role !== UserRole.ADMIN) {
-        // For managers and staff: only show campaigns they created
-        campaigns = allCampaigns.filter((c) => c.createdBy === currentUser?.id);
-        console.log(`🔒 Campaigns filtered for ${currentUser?.role}: ${campaigns.length} created by user (out of ${allCampaigns.length} total)`);
-      }
-      
+      const campaigns = await storage.getCampaigns();
       res.json(campaigns);
     } catch (error) {
       console.error(error);
@@ -2285,65 +1508,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (req: Request, res: Response) => {
     try {
-      const currentUser = req.user;
       const validatedData = insertCampaignSchema.parse(req.body);
-      
-      // Automatically set createdBy to current user
-      const campaignData = {
-        ...validatedData,
-        createdBy: currentUser?.id,
-      };
-      
-      const campaign = await storage.createCampaign(campaignData);
-      console.log(`📣 Campaign created by ${currentUser?.username} (${currentUser?.role}):`, campaign.name);
-      
-      // Notify admins if staff/manager created the campaign
-      const actorName = currentUser?.firstName || currentUser?.username || 'A team member';
-      const actorRole = currentUser?.role || 'staff';
-      if (actorRole !== 'admin') {
-        await notifyAdminsAboutAction(
-          currentUser?.id,
-          actorName,
-          '📣 New Campaign Created',
-          `${actorName} created campaign: ${campaign.name}`,
-          'campaign',
-          `/campaigns?campaignId=${campaign.id}`,
-          'success'
-        );
-      }
-      
-      // Notify client users if campaign is assigned to a client
-      if (campaign.clientId) {
-        try {
-          const clientUsers = await storage.getUsersByClientId(campaign.clientId);
-          const { sendPushToUser } = await import('./push');
-          
-          for (const clientUser of clientUsers) {
-            // In-app notification
-            await storage.createNotification({
-              userId: clientUser.id,
-              type: 'success',
-              title: '🎯 New Campaign Created',
-              message: `A new campaign "${campaign.name}" has been created for you`,
-              category: 'general',
-              actionUrl: `/client-campaigns?campaignId=${campaign.id}`,
-              isRead: false,
-            });
-            
-            // Push notification
-            await sendPushToUser(clientUser.id, {
-              title: '🎯 New Campaign Created',
-              body: `"${campaign.name}" has been created for you`,
-              url: '/client-campaigns',
-            }).catch(err => console.error('Failed to send push notification:', err));
-          }
-          console.log(`📬 Notified ${clientUsers.length} client user(s) about new campaign`);
-        } catch (notifError) {
-          console.error('Failed to notify client about campaign:', notifError);
-          // Don't fail campaign creation if notification fails
-        }
-      }
-      
+      const campaign = await storage.createCampaign(validatedData);
       res.status(201).json(campaign);
     } catch (error) {
       handleValidationError(error, res);
@@ -2354,25 +1520,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     try {
       const validatedData = insertCampaignSchema.partial().strip().parse(req.body);
       const campaign = await storage.updateCampaign(req.params.id, validatedData);
-      
-      // Get actor information
-      const user = req.user as any;
-      const actorName = user?.firstName || user?.username || 'A team member';
-      const actorRole = user?.role || 'staff';
-      
-      // Notify admins if staff/manager updated the campaign
-      if (actorRole !== 'admin') {
-        await notifyAdminsAboutAction(
-          user?.id,
-          actorName,
-          '📝 Campaign Updated',
-          `${actorName} updated campaign: ${campaign.name}`,
-          'campaign',
-          `/campaigns?campaignId=${campaign.id}`,
-          'info'
-        );
-      }
-      
       res.json(campaign);
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -2393,6 +1540,69 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete campaign" });
+    }
+  });
+
+  // Task Spaces routes
+  app.get("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+    try {
+      const spaces = await storage.getTaskSpaces();
+      res.json(spaces);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch task spaces" });
+    }
+  });
+
+  app.post("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const userId = user?.id || user?.claims?.sub;
+      
+      // Ensure userId is a valid integer
+      const parsedUserId = typeof userId === 'number' ? userId : parseInt(userId);
+      if (isNaN(parsedUserId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const spaceData = { ...req.body, createdBy: parsedUserId };
+      console.log("Creating task space:", spaceData);
+      const space = await storage.createTaskSpace(spaceData);
+      res.status(201).json(space);
+    } catch (error) {
+      console.error("Task space creation error:", error);
+      res.status(500).json({ message: "Failed to create task space" });
+    }
+  });
+
+  app.patch("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const space = await storage.updateTaskSpace(req.params.id, req.body);
+      res.json(space);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update task space" });
+    }
+  });
+
+  app.delete("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteTaskSpace(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete task space" });
+    }
+  });
+
+  // Get tasks by space
+  app.get("/api/task-spaces/:id/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const tasks = await storage.getTasksBySpace(req.params.id);
+      res.json(tasks);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch tasks for space" });
     }
   });
 
@@ -2421,137 +1631,204 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // User notification preferences routes
-  app.get("/api/user/notification-preferences", isAuthenticated, async (req: Request, res: Response) => {
+  // Task routes (admin and staff only)
+  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
-
-      const preferences = await storage.getUserNotificationPreferences(userId);
-      
-      // Return default preferences if none exist
-      if (!preferences) {
-        return res.json({
-          emailNotifications: true,
-          taskUpdates: true,
-          clientMessages: true,
-          dueDateReminders: true,
-          projectUpdates: true,
-          systemAlerts: true,
-        });
-      }
-
-      res.json(preferences);
+      const tasks = await storage.getTasks();
+      res.json(tasks);
     } catch (error) {
-      console.error("Error fetching notification preferences:", error);
-      res.status(500).json({ error: "Failed to fetch notification preferences" });
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
     }
   });
 
-  app.put("/api/user/notification-preferences", isAuthenticated, async (req: Request, res: Response) => {
+  app.post("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "User not authenticated" });
+      console.log("📥 Backend received task data:", JSON.stringify(req.body, null, 2));
+      const validatedData = insertTaskSchema.parse(req.body);
+      console.log("✅ Validation passed, creating task:", validatedData);
+      const task = await storage.createTask(validatedData);
+      res.status(201).json(task);
+    } catch (error) {
+      console.error("❌ Task creation error:", error);
+      handleValidationError(error, res);
+    }
+  });
+
+  // AI-powered task parsing from natural language
+  app.post("/api/tasks/parse-ai", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { input } = req.body;
+      
+      if (!input || typeof input !== 'string') {
+        return res.status(400).json({ message: "Input text is required" });
       }
 
-      const {
-        emailNotifications,
-        taskUpdates,
-        clientMessages,
-        dueDateReminders,
-        projectUpdates,
-        systemAlerts,
-      } = req.body;
+      // Check if OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({ 
+          message: "AI assistant not configured. Please add OPENAI_API_KEY to environment variables." 
+        });
+      }
 
-      const preferences = await storage.upsertUserNotificationPreferences(userId, {
-        emailNotifications,
-        taskUpdates,
-        clientMessages,
-        dueDateReminders,
-        projectUpdates,
-        systemAlerts,
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      // Get clients and users for context
+      const [clients, users] = await Promise.all([
+        storage.getClients(),
+        storage.getUsers(),
+      ]);
+
+      const systemPrompt = `You are a task parsing assistant. Extract task details from natural language.
+
+Available clients: ${clients.map(c => `${c.name} (ID: ${c.id})`).join(', ')}
+Available users: ${users.map(u => `${u.username} (ID: ${u.id})`).join(', ')}
+
+Return JSON with:
+- title: string (required)
+- description: string (optional)
+- priority: "low" | "normal" | "high" | "urgent" (default: "normal")
+- status: "todo" | "in_progress" | "review" | "completed" (default: "todo")
+- dueDate: ISO date string (optional, parse relative dates like "tomorrow", "next Friday", etc.)
+- clientId: string (optional, match from available clients)
+- assignedToId: string (optional, match from available users)
+
+Examples:
+"Call Bobby tomorrow about website" -> {"title":"Call Bobby about website","dueDate":"2025-10-16","priority":"normal"}
+"High priority: Fix login bug ASAP" -> {"title":"Fix login bug","priority":"urgent","status":"todo"}
+`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: input }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
       });
 
-      res.json(preferences);
+      const parsed = JSON.parse(completion.choices[0].message.content || '{}');
+      
+      // Transform the parsed data - convert date string to Date object if present
+      const transformedData = {
+        ...parsed,
+        dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
+        assignedToId: parsed.assignedToId ? parseInt(parsed.assignedToId) : undefined,
+      };
+      
+      // Validate the transformed data
+      const taskData = insertTaskSchema.parse(transformedData);
+      
+      res.json({
+        success: true,
+        taskData,
+        originalInput: input,
+      });
+
+    } catch (error: any) {
+      console.error("AI parsing error:", error);
+      if (error.message?.includes('API key')) {
+        return res.status(503).json({ message: "OpenAI API configuration error" });
+      }
+      res.status(500).json({ 
+        message: "Failed to parse task with AI", 
+        error: error.message 
+      });
+    }
+  });
+
+  app.patch("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertTaskSchema.partial().strip().parse(req.body);
+      
+      // Check if task is being marked as completed and is recurring
+      const existingTask = await storage.getTask(req.params.id);
+      if (!existingTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+
+      const task = await storage.updateTask(req.params.id, validatedData);
+
+      // If task is recurring and was just completed, create next instance
+      if (
+        existingTask.isRecurring && 
+        validatedData.status === "completed" && 
+        existingTask.status !== "completed"
+      ) {
+        console.log("🔄 Creating recurring task instance for:", existingTask.title);
+        
+        // Calculate next due date based on recurrence pattern
+        let nextDueDate: Date | null = null;
+        if (existingTask.dueDate && existingTask.recurringPattern && existingTask.recurringInterval) {
+          const currentDueDate = new Date(existingTask.dueDate);
+          nextDueDate = new Date(currentDueDate);
+          
+          switch (existingTask.recurringPattern) {
+            case "daily":
+              nextDueDate.setDate(currentDueDate.getDate() + existingTask.recurringInterval);
+              break;
+            case "weekly":
+              nextDueDate.setDate(currentDueDate.getDate() + (existingTask.recurringInterval * 7));
+              break;
+            case "monthly":
+              nextDueDate.setMonth(currentDueDate.getMonth() + existingTask.recurringInterval);
+              break;
+            case "yearly":
+              nextDueDate.setFullYear(currentDueDate.getFullYear() + existingTask.recurringInterval);
+              break;
+          }
+
+          // Check if we've exceeded the recurring end date
+          if (existingTask.recurringEndDate && nextDueDate > new Date(existingTask.recurringEndDate)) {
+            console.log("⏸️ Recurring task has reached end date, not creating new instance");
+          } else {
+            // Create new task instance
+            await storage.createTask({
+              title: existingTask.title,
+              description: existingTask.description,
+              status: "todo",
+              priority: existingTask.priority,
+              dueDate: nextDueDate,
+              clientId: existingTask.clientId,
+              assignedToId: existingTask.assignedToId,
+              isRecurring: true,
+              recurringPattern: existingTask.recurringPattern,
+              recurringInterval: existingTask.recurringInterval,
+              recurringEndDate: existingTask.recurringEndDate,
+            });
+            console.log("✅ New recurring task instance created for:", nextDueDate.toDateString());
+          }
+        }
+      }
+
+      res.json(task);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      if (error.message?.includes("not found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      console.error(error);
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteTask(req.params.id);
+      res.status(204).send();
     } catch (error) {
-      console.error("Error updating notification preferences:", error);
-      res.status(500).json({ error: "Failed to update notification preferences" });
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete task" });
     }
   });
 
   // Calendar Events routes
-  app.get("/api/calendar/connection", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id;
-      if (!userId) return res.status(401).json({ connected: false, provider: null });
-
-      const account = await storage.getEmailAccountByUserId(Number(userId));
-      if (account?.isActive && account.provider === "microsoft") {
-        return res.json({
-          connected: true,
-          provider: "microsoft",
-          email: account.email,
-        });
-      }
-
-      return res.json({ connected: false, provider: null });
-    } catch (e) {
-      console.error("Error checking calendar connection:", e);
-      res.status(500).json({ connected: false, provider: null });
-    }
-  });
-
   app.get("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user?.id;
-      if (!userId) return res.status(401).json({ message: "User not authenticated" });
-
-      // If user has an active Microsoft account connected, pull from Outlook Calendar.
-      // Otherwise, fall back to local DB events.
-      const account = await storage.getEmailAccountByUserId(Number(userId));
-      const start =
-        typeof req.query.start === "string" && req.query.start ? req.query.start : null;
-      const end =
-        typeof req.query.end === "string" && req.query.end ? req.query.end : null;
-
-      if (account?.isActive && account.provider === "microsoft") {
-        // Default to "this month" if no range provided
-        const now = new Date();
-        const startIso = start ? new Date(start).toISOString() : new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const endIso = end ? new Date(end).toISOString() : new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-
-        // Refresh token if needed
-        const accessToken = await ensureValidAccessToken(account.id);
-        if (!accessToken) {
-          return res.status(401).json({ message: "Authentication failed with email provider" });
-        }
-
-        const graphEvents = await microsoftAuth.listCalendarView(accessToken, startIso, endIso);
-        const mapped = (graphEvents || []).map((e: any) => ({
-          id: e.id,
-          title: e.subject || "(No title)",
-          description: e.bodyPreview || null,
-          start: e.start?.dateTime ? new Date(e.start.dateTime).toISOString() : null,
-          end: e.end?.dateTime ? new Date(e.end.dateTime).toISOString() : null,
-          location: e.location?.displayName || null,
-          attendees: Array.isArray(e.attendees)
-            ? e.attendees
-                .map((a: any) => a?.emailAddress?.address)
-                .filter(Boolean)
-            : [],
-          type: "meeting",
-          googleEventId: null,
-          meetLink: e.onlineMeeting?.joinUrl || e.webLink || null,
-        }));
-
-        return res.json(mapped.filter((x: any) => x.start && x.end));
-      }
-
       const events = await storage.getCalendarEvents();
       res.json(events);
     } catch (error) {
@@ -2563,44 +1840,11 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.post("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
-      const userId = user?.id;
-      if (!userId) return res.status(401).json({ message: "User not authenticated" });
-
-      const account = await storage.getEmailAccountByUserId(Number(userId));
-      const wantsExternal = Boolean(req.body?.syncWithGoogle); // UI field; treat as "sync with external calendar"
-
-      if (wantsExternal && account?.isActive && account.provider === "microsoft") {
-        // Refresh token if needed
-        const accessToken = await ensureValidAccessToken(account.id);
-        if (!accessToken) {
-          return res.status(401).json({ message: "Authentication failed with email provider" });
-        }
-
-        const created = await microsoftAuth.createCalendarEvent(accessToken, {
-          subject: req.body.title,
-          bodyPreview: req.body.description || undefined,
-          start: { dateTime: new Date(req.body.start).toISOString(), timeZone: "America/New_York" },
-          end: { dateTime: new Date(req.body.end).toISOString(), timeZone: "America/New_York" },
-          location: req.body.location ? { displayName: req.body.location } : undefined,
-        });
-
-        return res.status(201).json({
-          id: created.id,
-          title: created.subject || req.body.title,
-          description: created.bodyPreview || req.body.description || null,
-          start: created.start?.dateTime ? new Date(created.start.dateTime).toISOString() : new Date(req.body.start).toISOString(),
-          end: created.end?.dateTime ? new Date(created.end.dateTime).toISOString() : new Date(req.body.end).toISOString(),
-          location: created.location?.displayName || req.body.location || null,
-          attendees: [],
-          type: req.body.type || "meeting",
-          googleEventId: null,
-          meetLink: created.onlineMeeting?.joinUrl || created.webLink || null,
-        });
-      }
+      const userId = user?.id || user?.claims?.sub;
 
       const eventData = {
         ...req.body,
-        createdBy: Number(userId),
+        createdBy: userId,
         start: new Date(req.body.start),
         end: new Date(req.body.end),
       };
@@ -2615,29 +1859,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.patch("/api/calendar/events/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user?.id;
-      if (!userId) return res.status(401).json({ message: "User not authenticated" });
-
-      const account = await storage.getEmailAccountByUserId(Number(userId));
-
-      if (account?.isActive && account.provider === "microsoft") {
-        const accessToken = await ensureValidAccessToken(account.id);
-        if (!accessToken) {
-          return res.status(401).json({ message: "Authentication failed with email provider" });
-        }
-
-        await microsoftAuth.updateCalendarEvent(accessToken, req.params.id, {
-          subject: req.body.title,
-          bodyPreview: req.body.description || undefined,
-          start: req.body.start ? { dateTime: new Date(req.body.start).toISOString(), timeZone: "America/New_York" } : undefined,
-          end: req.body.end ? { dateTime: new Date(req.body.end).toISOString(), timeZone: "America/New_York" } : undefined,
-          location: req.body.location ? { displayName: req.body.location } : undefined,
-        });
-
-        return res.json({ success: true });
-      }
-
       const event = await storage.updateCalendarEvent(req.params.id, req.body);
       res.json(event);
     } catch (error) {
@@ -2648,20 +1869,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.delete("/api/calendar/events/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user?.id;
-      if (!userId) return res.status(401).json({ message: "User not authenticated" });
-
-      const account = await storage.getEmailAccountByUserId(Number(userId));
-      if (account?.isActive && account.provider === "microsoft") {
-        const accessToken = await ensureValidAccessToken(account.id);
-        if (!accessToken) {
-          return res.status(401).json({ message: "Authentication failed with email provider" });
-        }
-        await microsoftAuth.deleteCalendarEvent(accessToken, req.params.id);
-        return res.status(204).send();
-      }
-
       await storage.deleteCalendarEvent(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -2670,578 +1877,159 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Sales Agent Metrics endpoint
-  app.get("/api/sales/metrics", isAuthenticated, async (req: Request, res: Response) => {
+  // Task comment routes
+  app.get("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      const userRole = user?.role;
-
-      // Only sales agents and admins can access this
-      if (userRole !== "sales_agent" && userRole !== "admin") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Get leads assigned to this sales agent
-      const allLeads = await storage.getLeads();
-      const assignedLeads = allLeads.filter(lead => 
-        lead.assignedToId === Number(userId) || userRole === "admin"
-      );
-
-      // Calculate metrics
-      const leadsAssigned = assignedLeads.length;
-      const leadsContacted = assignedLeads.filter(lead => 
-        lead.status !== "new" && lead.status !== "unqualified"
-      ).length;
-      const leadsConverted = assignedLeads.filter(lead => 
-        lead.status === "converted" || lead.status === "customer"
-      ).length;
-      const conversionRate = leadsAssigned > 0 
-        ? Math.round((leadsConverted / leadsAssigned) * 100) 
-        : 0;
-
-      // Calculate revenue from closed won leads
-      const revenueGenerated = assignedLeads
-        .filter(lead => lead.stage === "closed_won")
-        .reduce((sum, lead) => {
-          // Use dealValue (decimal) if available, otherwise value (cents)
-          if (lead.dealValue) return sum + Number(lead.dealValue);
-          if (lead.value) return sum + (lead.value / 100);
-          return sum;
-        }, 0);
-
-      // Get activities for this week
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-      const allLeadActivities = await storage.getAllLeadActivities();
-      const userActivities = allLeadActivities.filter(activity => 
-        String(activity.userId) === String(userId) && new Date(activity.createdAt) >= oneWeekAgo
-      );
-
-      const activitiesThisWeek = {
-        calls: userActivities.filter(a => a.activityType === "call").length,
-        emails: userActivities.filter(a => a.activityType === "email").length,
-        meetings: userActivities.filter(a => a.activityType === "meeting").length,
-      };
-
-      // Quota tracking (using a default target of $50k monthly)
-      const monthlyTarget = 50000;
-      const quota = {
-        target: monthlyTarget,
-        achieved: revenueGenerated,
-        percentage: Math.min(Math.round((revenueGenerated / monthlyTarget) * 100), 100),
-      };
-
-      // Top leads (sorted by value)
-      const topLeads = assignedLeads
-        .filter(lead => lead.stage !== "closed_lost")
-        .sort((a, b) => {
-          const valA = a.dealValue ? Number(a.dealValue) : (a.value ? a.value / 100 : 0);
-          const valB = b.dealValue ? Number(b.dealValue) : (b.value ? b.value / 100 : 0);
-          return valB - valA;
-        })
-        .slice(0, 5)
-        .map(lead => ({
-          id: lead.id,
-          name: lead.name || lead.company,
-          company: lead.company,
-          status: lead.stage,
-          value: lead.dealValue ? Number(lead.dealValue) : (lead.value ? lead.value / 100 : 0),
-          lastContact: lead.lastContactDate || lead.createdAt,
-        }));
-
-      // Recent activity
-      const recentActivity = userActivities
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 10)
-        .map(activity => ({
-          id: activity.id,
-          type: activity.activityType,
-          description: activity.notes || `${activity.activityType} activity`,
-          timestamp: activity.createdAt,
-        }));
-
-      res.json({
-        leadsAssigned,
-        leadsContacted,
-        leadsConverted,
-        conversionRate,
-        revenueGenerated,
-        activitiesThisWeek,
-        quota,
-        topLeads,
-        recentActivity,
-      });
-
-    } catch (error: any) {
-      console.error("Sales metrics error:", error);
-      res.status(500).json({ message: error.message || "Failed to fetch sales metrics" });
-    }
-  });
-
-  // Get sales agents (users with sales_agent role)
-  app.get("/api/users/sales-agents", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const allUsers = await storage.getAllUsers();
-      const salesAgents = allUsers.filter(u => u.role === "sales_agent");
-      res.json(salesAgents);
-    } catch (error: any) {
-      console.error("Error fetching sales agents:", error);
-      res.status(500).json({ message: error.message || "Failed to fetch sales agents" });
-    }
-  });
-
-  // Lead Assignment endpoints
-  app.post("/api/leads/assign", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const { leadId, agentId, reason } = req.body;
-
-      if (!leadId || !agentId) {
-        return res.status(400).json({ message: "Lead ID and Agent ID are required" });
-      }
-
-      // Sales agents may only (re)assign leads to themselves
-      if (user?.role === UserRole.SALES_AGENT && Number(agentId) !== Number(user.id)) {
-        return res.status(403).json({ message: "Forbidden: sales agents can only assign leads to themselves" });
-      }
-
-      // Update lead's assignedTo field
-      await pool.query(
-        `UPDATE leads SET assigned_to_id = $1, updated_at = NOW() WHERE id = $2`,
-        [agentId, leadId]
-      );
-
-      // Create assignment record
-      await pool.query(
-        `INSERT INTO lead_assignments (lead_id, agent_id, assigned_by, reason, is_active) 
-         VALUES ($1, $2, $3, $4, true)`,
-        [leadId, agentId, user.id, reason || null]
-      );
-
-      // Deactivate previous assignments
-      await pool.query(
-        `UPDATE lead_assignments 
-         SET is_active = false, unassigned_at = NOW() 
-         WHERE lead_id = $1 AND agent_id != $2 AND is_active = true`,
-        [leadId, agentId]
-      );
-
-      res.json({ success: true, message: "Lead assigned successfully" });
-    } catch (error: any) {
-      console.error("Lead assignment error:", error);
-      res.status(500).json({ message: error.message || "Failed to assign lead" });
-    }
-  });
-
-  // Commission endpoints
-  app.get("/api/commissions", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const { status } = req.query;
-
-      let query = `
-        SELECT 
-          c.*,
-          u.username as agent_name,
-          u.first_name || ' ' || u.last_name as agent_full_name,
-          l.name as lead_name,
-          l.company as lead_company,
-          cl.name as client_name
-        FROM commissions c
-        LEFT JOIN users u ON c.agent_id = u.id
-        LEFT JOIN leads l ON c.lead_id = l.id
-        LEFT JOIN clients cl ON c.client_id = cl.id
-      `;
-
-      const params: any[] = [];
-
-      // Filter by status if provided
-      if (status && status !== "all") {
-        query += ` WHERE c.status = $1`;
-        params.push(status);
-      }
-
-      // Sales agents can only see their own commissions
-      if (user.role === "sales_agent") {
-        query += params.length > 0 ? ` AND c.agent_id = $${params.length + 1}` : ` WHERE c.agent_id = $1`;
-        params.push(user.id);
-      }
-
-      query += ` ORDER BY c.created_at DESC`;
-
-      const result = await pool.query(query, params);
-
-      const commissions = result.rows.map(row => ({
-        id: row.id,
-        agentId: row.agent_id,
-        agentName: row.agent_full_name || row.agent_name,
-        leadId: row.lead_id,
-        leadName: row.lead_name || row.lead_company,
-        clientId: row.client_id,
-        clientName: row.client_name,
-        dealValue: parseFloat(row.deal_value),
-        commissionRate: parseFloat(row.commission_rate),
-        commissionAmount: parseFloat(row.commission_amount),
-        status: row.status,
-        notes: row.notes,
-        approvedBy: row.approved_by,
-        approvedAt: row.approved_at,
-        paidAt: row.paid_at,
-        createdAt: row.created_at,
-      }));
-
-      res.json(commissions);
-    } catch (error: any) {
-      console.error("Error fetching commissions:", error);
-      res.status(500).json({ message: error.message || "Failed to fetch commissions" });
-    }
-  });
-
-  app.post("/api/commissions", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
-    try {
-      const { agentId, leadId, clientId, dealValue, commissionRate, commissionAmount, notes } = req.body;
-
-      if (!agentId || !dealValue || !commissionRate || !commissionAmount) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
-      const result = await pool.query(
-        `INSERT INTO commissions (agent_id, lead_id, client_id, deal_value, commission_rate, commission_amount, notes, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
-         RETURNING *`,
-        [agentId, leadId || null, clientId || null, dealValue, commissionRate, commissionAmount, notes || null]
-      );
-
-      res.json({ success: true, commission: result.rows[0] });
-    } catch (error: any) {
-      console.error("Error creating commission:", error);
-      res.status(500).json({ message: error.message || "Failed to create commission" });
-    }
-  });
-
-  app.patch("/api/commissions/:id/status", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER), async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const { id } = req.params;
-      const { status } = req.body;
-
-      if (!["pending", "approved", "paid"].includes(status)) {
-        return res.status(400).json({ message: "Invalid status" });
-      }
-
-      let updateFields = "status = $1, updated_at = NOW()";
-      const params: any[] = [status];
-
-      if (status === "approved") {
-        updateFields += ", approved_by = $2, approved_at = NOW()";
-        params.push(user.id);
-      } else if (status === "paid") {
-        updateFields += ", paid_at = NOW()";
-      }
-
-      params.push(id);
-
-      await pool.query(
-        `UPDATE commissions SET ${updateFields} WHERE id = $${params.length}`,
-        params
-      );
-
-      res.json({ success: true, message: "Commission status updated" });
-    } catch (error: any) {
-      console.error("Error updating commission status:", error);
-      res.status(500).json({ message: error.message || "Failed to update commission status" });
-    }
-  });
-
-  // Public booking endpoint (no authentication required)
-  app.post("/api/bookings", async (req: Request, res: Response) => {
-    try {
-      console.log("📅 Booking request received:", req.body);
-      const { name, email, phone, company, message, datetime, date, time } = req.body;
-
-      if (!name || !email || !phone || !datetime) {
-        console.error("❌ Missing required fields:", { name: !!name, email: !!email, phone: !!phone, datetime: !!datetime });
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-
-      // Get admin users first
-      const adminUsers = await storage.getAdminUsers();
-      console.log(`📋 Found ${adminUsers.length} admin users`);
-      
-      if (adminUsers.length === 0) {
-        console.error("❌ No admin users found!");
-        return res.status(500).json({ message: "System configuration error: No admin users found" });
-      }
-
-      // Use first admin's ID for createdBy
-      const firstAdminId = adminUsers[0].id;
-      console.log(`✅ Using admin ID ${firstAdminId} for createdBy`);
-
-      // Create calendar event for admin
-      console.log("📅 Creating calendar event...");
-      const event = await storage.createCalendarEvent({
-        title: `📞 Strategy Call: ${name}${company ? ` (${company})` : ''}`,
-        description: `Strategy call booking from website\n\n` +
-          `Contact: ${name}\n` +
-          `Email: ${email}\n` +
-          `Phone: ${phone}\n` +
-          `${company ? `Company: ${company}\n` : ''}` +
-          `\nMessage:\n${message || 'No additional message'}`,
-        start: new Date(datetime),
-        end: new Date(new Date(datetime).getTime() + 30 * 60000), // 30 minutes
-        type: "booking",
-        location: phone,
-        createdBy: firstAdminId,
-      });
-      console.log("✅ Calendar event created:", event.id);
-
-      // Send email confirmation to booker + alert admins (best-effort)
-      try {
-        const emailEnabled =
-          process.env.BOOKING_EMAIL_ENABLED === undefined ||
-          process.env.BOOKING_EMAIL_ENABLED === "true" ||
-          process.env.BOOKING_EMAIL_ENABLED === "1";
-
-        if (emailEnabled) {
-          const whenEt = new Date(datetime).toLocaleString("en-US", {
-            dateStyle: "full",
-            timeStyle: "short",
-            timeZone: "America/New_York",
-          });
-
-          const { emailNotifications } = await import("./emailService");
-
-          // Booker confirmation
-          if (email) {
-            const r = await emailNotifications.sendBookingConfirmationEmail(String(email), String(name), whenEt, String(phone));
-            if (!r?.success) console.warn("⚠️ Booking confirmation email failed:", r);
-          }
-
-          // Admin alert email (respects admin notification prefs if present)
-          try {
-            const adminsWithEmail = adminUsers.filter((a: any) => Boolean(a.email));
-            const adminEmails: string[] = [];
-            for (const admin of adminsWithEmail) {
-              const prefs = await storage.getUserNotificationPreferences(admin.id).catch(() => null);
-              if (prefs?.emailNotifications === false) continue;
-              adminEmails.push(String(admin.email));
-            }
-
-            if (adminEmails.length > 0) {
-              const appUrl = process.env.APP_URL || "https://www.marketingteam.app";
-              await emailNotifications.sendActionAlertEmail(
-                adminEmails,
-                "📞 New Strategy Call Booked",
-                `${name}${company ? ` (${company})` : ""} booked a strategy call for ${whenEt}.`,
-                `${appUrl}/company-calendar`,
-                "info"
-              );
-            }
-          } catch (adminEmailErr) {
-            console.error("⚠️ Booking admin alert email failed:", adminEmailErr);
-          }
-        }
-      } catch (emailErr) {
-        console.error("⚠️ Booking email block failed:", emailErr);
-      }
-
-      // Send SMS confirmation to booker (transactional)
-      try {
-        const smsEnabled =
-          process.env.BOOKING_SMS_ENABLED === "true" ||
-          process.env.BOOKING_SMS_ENABLED === "1";
-
-        if (smsEnabled) {
-          const whenEt = new Date(datetime).toLocaleString("en-US", {
-            dateStyle: "full",
-            timeStyle: "short",
-            timeZone: "America/New_York",
-          });
-
-          const defaultTemplate =
-            "Hi {name}! Your Marketing Team strategy session is booked for {whenEt}. We'll call you at {phone}. Reply STOP to opt out.";
-
-          const template = (process.env.BOOKING_SMS_TEMPLATE || defaultTemplate).trim();
-
-          const smsBody = template
-            .replaceAll("{name}", String(name))
-            .replaceAll("{whenEt}", String(whenEt))
-            .replaceAll("{phone}", String(phone))
-            .replaceAll("{email}", String(email))
-            .replaceAll("{company}", String(company || ""))
-            .replaceAll("{eventId}", String(event.id));
-
-          const smsResult = await sendSms(String(phone), smsBody);
-          if (!smsResult.success) {
-            console.warn("⚠️ Booking SMS failed:", smsResult);
-          } else {
-            console.log("✅ Booking SMS sent:", smsResult.sid);
-          }
-        }
-      } catch (smsErr) {
-        console.error("⚠️ Booking SMS threw error:", smsErr);
-        // Do not fail booking if SMS fails
-      }
-
-      // Create a notification for all admins
-      try {
-        console.log("📬 Creating notifications for admins...");
-        const { sendPushToUser } = await import('./push');
-        
-        for (const admin of adminUsers) {
-          // In-app notification
-          await storage.createNotification({
-            userId: admin.id,
-            title: "📞 New Strategy Call Booked",
-            message: `${name} booked a strategy call for ${new Date(datetime).toLocaleString('en-US', { 
-              dateStyle: 'long', 
-              timeStyle: 'short',
-              timeZone: 'America/New_York'
-            })}`,
-            type: "info",
-            category: "general",
-            actionUrl: `/company-calendar?date=${new Date(datetime).toISOString().split('T')[0]}`,
-            isRead: false,
-          });
-          
-          // Push notification
-          await sendPushToUser(admin.id, {
-            title: "📞 New Strategy Call Booked",
-            body: `${name} booked a strategy call for ${new Date(datetime).toLocaleString('en-US', { 
-              dateStyle: 'long', 
-              timeStyle: 'short',
-              timeZone: 'America/New_York'
-            })}`,
-            url: "/company-calendar",
-          }).catch(err => console.error('Failed to send push notification to admin:', err));
-        }
-        console.log(`✅ Notifications sent to ${adminUsers.length} admins`);
-      } catch (notifError) {
-        console.error("⚠️ Failed to create notification:", notifError);
-        // Don't fail the whole request if notification fails
-      }
-
-      console.log("🎉 Booking completed successfully!");
-      res.status(201).json({
-        success: true,
-        eventId: event.id,
-        message: "Booking confirmed!",
-      });
-    } catch (error: any) {
-      console.error("❌ Booking error:");
-      console.error("Error type:", error?.constructor?.name);
-      console.error("Error message:", error?.message);
-      console.error("Error stack:", error?.stack);
-      res.status(500).json({ 
-        message: "Failed to create booking",
-        error: process.env.NODE_ENV === 'development' ? error?.message : undefined
-      });
-    }
-  });
-
-  // Public contact form endpoint (no authentication required)
-  app.post("/api/contact", async (req: Request, res: Response) => {
-    try {
-      const { name, email, phone, company, message, smsOptIn } = req.body;
-      const normalizedSmsOptIn =
-        smsOptIn === true || smsOptIn === "true" || smsOptIn === 1 || smsOptIn === "1";
-
-      // Create a notification for all admins
-      try {
-        const adminUsers = await storage.getAdminUsers();
-        for (const admin of adminUsers) {
-          await storage.createNotification({
-            userId: admin.id,
-            title: "📧 New Contact Form Submission",
-            message: `${name}${company ? ` from ${company}` : ""} sent a message${normalizedSmsOptIn ? " (SMS opt-in: YES)" : " (SMS opt-in: NO)"}`,
-            type: "info",
-            category: "general",
-            actionUrl: "/messages",
-            isRead: false,
-          });
-        }
-      } catch (notifError) {
-        console.error("Failed to create notification:", notifError);
-      }
-
-      // Persist submission for audit/proof-of-consent (best-effort)
-      try {
-        const ip =
-          (typeof req.headers["x-forwarded-for"] === "string"
-            ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
-            : Array.isArray(req.headers["x-forwarded-for"])
-              ? req.headers["x-forwarded-for"][0]
-              : undefined) || req.ip;
-        const userAgent = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined;
-
-        await pool.query(
-          `
-          INSERT INTO contact_submissions (name, email, phone, company, message, sms_opt_in, ip, user_agent)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          `,
-          [
-            name ?? null,
-            email ?? null,
-            phone ?? null,
-            company ?? null,
-            message ?? null,
-            normalizedSmsOptIn,
-            ip ?? null,
-            userAgent ?? null,
-          ]
-        );
-      } catch (dbError) {
-        console.error("Failed to persist contact submission:", dbError);
-      }
-
-      // TODO: Send email notification to admin
-      // TODO: Send confirmation email to customer
-      // TODO: Store contact form submission in database
-
-      res.json({ 
-        success: true, 
-        message: "Thank you for your message. We'll get back to you soon!" 
-      });
+      const comments = await storage.getTaskComments(req.params.taskId);
+      res.json(comments);
     } catch (error) {
-      console.error("Contact form error:", error);
-      res.status(500).json({ message: "Failed to send message" });
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch task comments" });
     }
   });
 
+  app.post("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const validatedData = insertTaskCommentSchema.parse({
+        ...req.body,
+        taskId: req.params.taskId,
+        userId: user.claims.sub,
+      });
+      const comment = await storage.createTaskComment(validatedData);
+      res.status(201).json(comment);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
 
-  // Modularized routes are handled via app.use statements at the start of registerRoutes
+  // Lead routes
+  app.get("/api/leads", isAuthenticated, requirePermission("canManageLeads"), async (_req: Request, res: Response) => {
+    try {
+      const leads = await storage.getLeads();
+      res.json(leads);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  app.post("/api/leads", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertLeadSchema.parse(req.body);
+      const lead = await storage.createLead(validatedData);
+      res.status(201).json(lead);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/leads/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertLeadSchema.partial().strip().parse(req.body);
+      const lead = await storage.updateLead(req.params.id, validatedData);
+      res.json(lead);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      if (error.message?.includes("not found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      console.error(error);
+      res.status(500).json({ message: "Failed to update lead" });
+    }
+  });
+
+  app.delete("/api/leads/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteLead(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete lead" });
+    }
+  });
+
+  // Lead activity routes
+  app.get("/api/leads/:leadId/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const activities = await storage.getLeadActivities(req.params.leadId);
+      res.json(activities);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch lead activities" });
+    }
+  });
+
+  app.post("/api/leads/:leadId/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const { insertLeadActivitySchema } = await import("@shared/schema");
+      const validatedData = insertLeadActivitySchema.parse({
+        ...req.body,
+        leadId: req.params.leadId,
+      });
+      const activity = await storage.createLeadActivity(validatedData);
+      res.status(201).json(activity);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  // Lead automation routes
+  app.get("/api/leads/:leadId/automations", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const automations = await storage.getLeadAutomations(req.params.leadId);
+      res.json(automations);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch lead automations" });
+    }
+  });
+
+  app.post("/api/leads/:leadId/automations", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const { insertLeadAutomationSchema } = await import("@shared/schema");
+      const validatedData = insertLeadAutomationSchema.parse({
+        ...req.body,
+        leadId: req.params.leadId,
+      });
+      const automation = await storage.createLeadAutomation(validatedData);
+      res.status(201).json(automation);
+    } catch (error) {
+      handleValidationError(error, res);
+    }
+  });
+
+  app.patch("/api/automations/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      const { insertLeadAutomationSchema } = await import("@shared/schema");
+      const validatedData = insertLeadAutomationSchema.partial().strip().parse(req.body);
+      const automation = await storage.updateLeadAutomation(req.params.id, validatedData);
+      res.json(automation);
+    } catch (error: any) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      if (error.message?.includes("not found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      console.error(error);
+      res.status(500).json({ message: "Failed to update automation" });
+    }
+  });
+
+  app.delete("/api/automations/:id", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
+    try {
+      await storage.deleteLeadAutomation(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete automation" });
+    }
+  });
 
   // Content post routes
-  // Debug endpoint to check content_posts table structure
-  app.get("/api/debug/content-posts-table", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
-    try {
-      console.log("🔍 Checking content_posts table structure...");
-      
-      const tableCheck = await pool.query(`
-        SELECT column_name, data_type, is_nullable
-        FROM information_schema.columns
-        WHERE table_name = 'content_posts'
-        ORDER BY ordinal_position;
-      `);
-      
-      console.log("📊 Table structure:", tableCheck.rows);
-      
-      const hasmediaUrls = tableCheck.rows.some(r => r.column_name === 'media_urls');
-      
-      res.json({
-        exists: tableCheck.rows.length > 0,
-        columns: tableCheck.rows,
-        hasmediaUrls,
-        message: hasmediaUrls ? "✅ media_urls column exists!" : "❌ media_urls column is missing!"
-      });
-    } catch (error: any) {
-      console.error("❌ Debug check failed:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   app.get("/api/content-posts", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
@@ -3255,7 +2043,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
       
       // For non-clients, require permission and show all posts
-      if (!user || !rolePermissions[userRole as UserRole]?.canManageContent) {
+      if (!user || !rolePermissions[userRole as UserRole]?.permissions?.canManageContent) {
         return res.status(403).json({ message: "Permission denied" });
       }
       
@@ -3267,135 +2055,21 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.post("/api/content-posts", isAuthenticated, async (req: Request, res: Response) => {
-    console.log("=" .repeat(80));
-    console.log("🎨 POST /api/content-posts REQUEST RECEIVED");
-    console.log("=" .repeat(80));
+  app.post("/api/content-posts", isAuthenticated, requirePermission("canManageContent"), async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      console.log("👤 User:", user?.username, "Role:", user?.role, "ID:", user?.id);
-      console.log("📦 Request body:");
-      console.log(JSON.stringify(req.body, null, 2));
-      console.log("-".repeat(80));
-      
-      // If user is a client, they can only create content for themselves (pending approval)
-      if (user.role === 'client') {
-        const validatedData = insertContentPostSchema.parse({
-          ...req.body,
-          clientId: String(user.clientId || user.id), // Client can only create content for themselves
-          approvalStatus: 'pending', // Client uploads always start as pending
-        });
-        console.log("✅ Client validated data:", validatedData);
-        const post = await storage.createContentPost(validatedData);
-        return res.status(201).json(post);
-      }
-      
-      // Admin/manager/staff can create content for any client
-      // Get user role to check permissions
-      const userRecord = await storage.getUser(String(user.id));
-      if (!userRecord) {
-        console.log("❌ User not found:", user.id);
-        return res.status(401).json({ message: "User not found" });
-      }
-      
-      // Check if user has permission to manage content
-      const { hasPermission } = await import('./rbac');
-      if (!hasPermission(userRecord.role as any, "canManageContent")) {
-        console.log("❌ Permission denied for user:", user.id, "role:", userRecord.role);
-        return res.status(403).json({ message: "You don't have permission to manage content" });
-      }
-      
-      // Ensure clientId is present
-      if (!req.body.clientId) {
-        console.log("❌ Missing clientId in request");
-        return res.status(400).json({ message: "clientId is required" });
-      }
-
-      // If linking to a visit, ensure visit belongs to same client
-      if (req.body.visitId) {
-        const [visit] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, String(req.body.visitId))).limit(1);
-        if (!visit) return res.status(400).json({ message: "Invalid visitId" });
-        if (String(visit.clientId) !== String(req.body.clientId)) {
-          return res.status(400).json({ message: "visitId does not belong to selected client" });
-        }
-      }
-      
+      console.log("Creating content post with data:", req.body);
       const validatedData = insertContentPostSchema.parse(req.body);
-      console.log("✅ Validated data:", JSON.stringify(validatedData, null, 2));
+      console.log("Validated data:", validatedData);
       const post = await storage.createContentPost(validatedData);
-      console.log("✅ Content post created:", post.id);
-      
-      // Notify client users about new content post
-      if (post.clientId) {
-        try {
-          const clientUsers = await storage.getUsersByClientId(post.clientId);
-          const { sendPushToUser } = await import('./push');
-          
-          for (const clientUser of clientUsers) {
-            // In-app notification
-            await storage.createNotification({
-              userId: clientUser.id,
-              type: 'success',
-              title: '📝 New Content Posted',
-              message: `New content has been scheduled${post.scheduledFor ? ` for ${new Date(post.scheduledFor).toLocaleDateString()}` : ''}`,
-              category: 'general',
-              actionUrl: `/client-content?postId=${post.id}`,
-              isRead: false,
-            });
-            
-            // Push notification
-            await sendPushToUser(clientUser.id, {
-              title: '📝 New Content Posted',
-              body: 'New content has been scheduled for you',
-              url: '/client-content',
-            }).catch(err => console.error('Failed to send push notification:', err));
-          }
-          console.log(`📬 Notified ${clientUsers.length} client user(s) about new content`);
-        } catch (notifError) {
-          console.error('Failed to notify client about content:', notifError);
-        }
-      }
-      
       res.status(201).json(post);
-    } catch (error: any) {
-      console.error("=" .repeat(80));
-      console.error("❌ CONTENT POST CREATION ERROR");
-      console.error("=" .repeat(80));
-      console.error("Error type:", error?.constructor?.name || typeof error);
-      console.error("Error message:", error?.message || String(error));
-      console.error("Error stack:", error?.stack);
-      console.error("Full error object:", error);
-      console.error("=" .repeat(80));
-      
-      if (error instanceof ZodError) {
-        console.error("📋 Validation errors:", JSON.stringify(error.errors, null, 2));
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: error.errors 
-        });
-      }
-      
-      return res.status(500).json({ 
-        message: error?.message || "Internal server error",
-        error: error?.message || "Unknown error"
-      });
+    } catch (error) {
+      console.error("Content post creation error:", error);
+      return handleValidationError(error, res);
     }
   });
 
   app.patch("/api/content-posts/:id", isAuthenticated, requirePermission("canManageContent"), async (req: Request, res: Response) => {
     try {
-      if (req.body.visitId || req.body.clientId) {
-        // If visitId is being set/changed, validate it matches the post's client (or new clientId)
-        const [existing] = await db.select().from(contentPosts).where(eq(contentPosts.id, req.params.id)).limit(1) as any;
-        const nextClientId = String(req.body.clientId ?? existing?.clientId ?? "");
-        if (req.body.visitId) {
-          const [visit] = await db.select().from(creatorVisits).where(eq(creatorVisits.id, String(req.body.visitId))).limit(1);
-          if (!visit) return res.status(400).json({ message: "Invalid visitId" });
-          if (String(visit.clientId) !== nextClientId) {
-            return res.status(400).json({ message: "visitId does not belong to selected client" });
-          }
-        }
-      }
       const validatedData = insertContentPostSchema.partial().strip().parse(req.body);
       const post = await storage.updateContentPost(req.params.id, validatedData);
       res.json(post);
@@ -3418,85 +2092,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       });
       const validatedData = approvalSchema.parse(req.body);
       const post = await storage.updateContentPost(req.params.id, validatedData);
-      
-      // Enhanced content approval notifications
-      try {
-        const { sendPushToUser } = await import('./push');
-        const users = await storage.getUsers();
-        const currentUser = req.user as any;
-        const currentUserId = currentUser?.id || currentUser?.claims?.sub;
-        
-        // Notify content creator about approval status change
-        if (post.createdBy && post.createdBy !== currentUserId) {
-          const creator = users.find(u => u.id === post.createdBy);
-          if (creator) {
-            const statusMessages = {
-              'approved': '✅ Content Approved',
-              'rejected': '❌ Content Rejected',
-              'pending': '⏳ Content Pending Review'
-            };
-            
-            const statusMessage = statusMessages[validatedData.approvalStatus as keyof typeof statusMessages];
-            
-            await storage.createNotification({
-              userId: creator.id,
-              type: validatedData.approvalStatus === 'approved' ? 'success' : 
-                    validatedData.approvalStatus === 'rejected' ? 'error' : 'warning',
-              title: statusMessage,
-              message: `Your content "${post.title}" has been ${validatedData.approvalStatus}`,
-              category: 'content_approval',
-              actionUrl: '/client-content',
-              isRead: false,
-            });
-            
-            await sendPushToUser(creator.id, {
-              title: statusMessage,
-              body: `Your content "${post.title}" has been ${validatedData.approvalStatus}`,
-              url: '/client-content',
-            }).catch(err => console.error('Failed to send push notification:', err));
-          }
-        }
-        
-        // Notify client users if content is related to their client
-        if (post.clientId) {
-          const clientUsers = await storage.getUsersByClientId(post.clientId);
-          
-          for (const clientUser of clientUsers) {
-            // Skip if client user is the creator
-            if (clientUser.id === post.createdBy) continue;
-            
-            const statusMessages = {
-              'approved': '✅ Content Approved',
-              'rejected': '❌ Content Rejected',
-              'pending': '⏳ Content Pending Review'
-            };
-            
-            const statusMessage = statusMessages[validatedData.approvalStatus as keyof typeof statusMessages];
-            
-            await storage.createNotification({
-              userId: clientUser.id,
-              type: validatedData.approvalStatus === 'approved' ? 'success' : 
-                    validatedData.approvalStatus === 'rejected' ? 'error' : 'warning',
-              title: statusMessage,
-              message: `Content "${post.title}" for your project has been ${validatedData.approvalStatus}`,
-              category: 'content_approval',
-              actionUrl: '/client-content',
-              isRead: false,
-            });
-            
-            await sendPushToUser(clientUser.id, {
-              title: statusMessage,
-              body: `Content "${post.title}" for your project has been ${validatedData.approvalStatus}`,
-              url: '/client-content',
-            }).catch(err => console.error('Failed to send push notification:', err));
-          }
-        }
-        
-        console.log(`✅ Content approval notifications sent for: ${post.title}`);
-      } catch (notifError) {
-        console.error('Failed to send content approval notifications:', notifError);
-      }
-      
       res.json(post);
     } catch (error: any) {
       if (error instanceof ZodError) {
@@ -3521,10 +2116,9 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Invoice routes
-  app.get("/api/invoices", isAuthenticated, requirePermission("canManageInvoices"), async (req: Request, res: Response) => {
+  app.get("/api/invoices", isAuthenticated, requirePermission("canManageInvoices"), async (_req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const invoices = await storage.getInvoices(user);
+      const invoices = await storage.getInvoices();
       res.json(invoices);
     } catch (error) {
       console.error(error);
@@ -3536,38 +2130,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     try {
       const validatedData = insertInvoiceSchema.parse(req.body);
       const invoice = await storage.createInvoice(validatedData);
-      
-      // Notify client users about new invoice
-      if (invoice.clientId) {
-        try {
-          const clientUsers = await storage.getUsersByClientId(invoice.clientId);
-          const { sendPushToUser } = await import('./push');
-          
-          for (const clientUser of clientUsers) {
-            // In-app notification
-            await storage.createNotification({
-              userId: clientUser.id,
-              type: 'info',
-              title: '💰 New Invoice',
-              message: `Invoice #${invoice.invoiceNumber} for $${invoice.amount} is now available`,
-              category: 'general',
-              actionUrl: '/client-billing',
-              isRead: false,
-            });
-            
-            // Push notification
-            await sendPushToUser(clientUser.id, {
-              title: '💰 New Invoice',
-              body: `Invoice #${invoice.invoiceNumber} for $${invoice.amount}`,
-              url: '/client-billing',
-            }).catch(err => console.error('Failed to send push notification:', err));
-          }
-          console.log(`📬 Notified ${clientUsers.length} client user(s) about new invoice`);
-        } catch (notifError) {
-          console.error('Failed to notify client about invoice:', notifError);
-        }
-      }
-      
       res.status(201).json(invoice);
     } catch (error) {
       handleValidationError(error, res);
@@ -3604,23 +2166,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Ticket routes
   app.get("/api/tickets", isAuthenticated, requirePermission("canManageTickets"), async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const tickets = await storage.getTickets(user);
-      const userRole = user?.role;
+      const tickets = await storage.getTickets();
+      const userRole = (req as any).userRole;
+      const userId = (req as any).userId;
       
-      // Additional complex logic for creators if needed (already handled by storage.getTickets pattern usually, but let's keep it consistent)
-      if (userRole === "creator") {
-        const creatorId = user?.creatorId;
-        if (!creatorId) return res.json([]);
-
-        // Get all clients this creator has visits for
-        const creatorVisitsData = await db
-          .select({ clientId: creatorVisits.clientId })
-          .from(creatorVisits)
-          .where(eq(creatorVisits.creatorId, creatorId));
-        
-        const visitedClientIds = new Set(creatorVisitsData.map(v => v.clientId));
-        const filteredTickets = tickets.filter(t => visitedClientIds.has(t.clientId));
+      // Clients can only see their own tickets
+      if (userRole === "client") {
+        const filteredTickets = tickets.filter(t => t.createdBy === userId);
         return res.json(filteredTickets);
       }
       
@@ -3634,46 +2186,21 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.post("/api/tickets", isAuthenticated, requirePermission("canManageTickets"), async (req: Request, res: Response) => {
     try {
       const validatedData = insertTicketSchema.parse(req.body);
+      const userId = (req as any).userId;
       const userRole = (req as any).userRole;
-      const user = req.user as any;
       
-      let ticketData: any = { ...validatedData };
+      // For clients: ensure they can only create tickets with their own clientId
+      let ticketData = { ...validatedData, createdBy: userId };
       
       if (userRole === "client") {
-        delete ticketData.assignedToId;
-        if (!user?.clientId) {
-          return res.status(400).json({ 
-            message: "Your account is not linked to a client record. Please contact support." 
-          });
-        }
-        ticketData.clientId = user.clientId;
-      }
-
-      // Creators: ensure they can only create tickets for clients they have visited
-      if (userRole === "creator") {
-        const creatorId = user?.creatorId;
-        if (!creatorId) {
-          return res.status(403).json({ message: "No creator profile found" });
-        }
-
-        const [visit] = await db
-          .select()
-          .from(creatorVisits)
-          .where(and(
-            eq(creatorVisits.creatorId, creatorId),
-            eq(creatorVisits.clientId, ticketData.clientId)
-          ))
-          .limit(1);
-        
-        if (!visit) {
-          return res.status(403).json({ message: "You can only create tickets for clients you have visited" });
-        }
+        // Clients cannot set arbitrary clientId or assignedTo
+        delete (ticketData as any).assignedTo;
+        // Note: In production, you'd link user to their client record to set clientId correctly
       }
       
       const ticket = await storage.createTicket(ticketData);
       res.status(201).json(ticket);
     } catch (error) {
-      console.error("Error creating ticket:", error);
       handleValidationError(error, res);
     }
   });
@@ -3686,12 +2213,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       // Clients can only update their own tickets
       if (userRole === "client") {
-        const user = req.user as any;
-        const clientId = user?.clientId;
         const tickets = await storage.getTickets();
         const ticket = tickets.find(t => t.id === req.params.id);
-        if (!ticket || ticket.clientId !== clientId) {
-          return res.status(403).json({ message: "Cannot update tickets from other clients" });
+        if (!ticket || ticket.createdBy !== userId) {
+          return res.status(403).json({ message: "Cannot update tickets created by others" });
         }
       }
       
@@ -3716,12 +2241,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       // Clients can only delete their own tickets
       if (userRole === "client") {
-        const user = req.user as any;
-        const clientId = user?.clientId;
         const tickets = await storage.getTickets();
         const ticket = tickets.find(t => t.id === req.params.id);
-        if (!ticket || ticket.clientId !== clientId) {
-          return res.status(403).json({ message: "Cannot delete tickets from other clients" });
+        if (!ticket || ticket.createdBy !== userId) {
+          return res.status(403).json({ message: "Cannot delete tickets created by others" });
         }
       }
       
@@ -3734,47 +2257,14 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Message routes (all authenticated users)
-  app.get("/api/messages", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/api/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
       const clientId = req.query.clientId as string | undefined;
-      
-      // Restrict access to /api/messages for non-staff if they try to access other clients
-      if (!["admin", "manager", "staff"].includes(user.role)) {
-        const messages = await storage.getMessages(user);
-        return res.json(messages);
-      }
-
-      const messages = await storage.getMessages(user, clientId);
+      const messages = await storage.getMessages(clientId);
       res.json(messages);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch messages" });
-    }
-  });
-
-  // Get unread message counts per user (for badges)
-  app.get("/api/messages/unread-counts", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const currentUserId = (req.user as any).id;
-      const result = await pool.query(
-        `SELECT user_id, COUNT(*) as count 
-         FROM messages 
-         WHERE recipient_id = $1 AND is_read = false 
-         GROUP BY user_id`,
-        [currentUserId]
-      );
-      
-      // Convert to object { userId: count }
-      const counts: Record<number, number> = {};
-      result.rows.forEach((row: any) => {
-        counts[row.user_id] = parseInt(row.count);
-      });
-      
-      res.json(counts);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch unread counts" });
     }
   });
 
@@ -3789,47 +2279,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
 
       const messages = await storage.getConversation(currentUserId, otherUserId);
-      
-      // Mark messages delivered when fetched
-      try {
-        await pool.query(
-          `UPDATE messages 
-           SET delivered_at = NOW() 
-           WHERE recipient_id = $1 AND user_id = $2 AND delivered_at IS NULL`,
-          [currentUserId, otherUserId]
-        );
-      } catch (e: any) {
-        if (String(e?.message || '').includes('delivered_at')) {
-          await ensureMessageColumns();
-          await pool.query(
-            `UPDATE messages SET delivered_at = NOW() WHERE recipient_id = $1 AND user_id = $2 AND delivered_at IS NULL`,
-            [currentUserId, otherUserId]
-          );
-        } else {
-          throw e;
-        }
-      }
-      
-      // Mark all messages from this user as read
-      try {
-        await pool.query(
-          `UPDATE messages 
-           SET is_read = true, read_at = NOW() 
-           WHERE recipient_id = $1 AND user_id = $2 AND is_read = false`,
-          [currentUserId, otherUserId]
-        );
-      } catch (e: any) {
-        if (String(e?.message || '').includes('read_at')) {
-          await ensureMessageColumns();
-          await pool.query(
-            `UPDATE messages SET is_read = true, read_at = NOW() WHERE recipient_id = $1 AND user_id = $2 AND is_read = false`,
-            [currentUserId, otherUserId]
-          );
-        } else {
-          throw e;
-        }
-      }
-      
       res.json(messages);
     } catch (error) {
       console.error(error);
@@ -3852,148 +2301,18 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         userId: currentUserId, // Set sender as current user
       });
       
-      let message;
-      try {
-        message = await storage.createMessage(validatedData);
-      } catch (e: any) {
-        if (String(e?.message || '').includes('column') && String(e?.message || '').includes('does not exist')) {
-          await ensureMessageColumns();
-          message = await storage.createMessage(validatedData);
-        } else {
-          throw e;
-        }
-      }
+      const message = await storage.createMessage(validatedData);
       console.log("✅ Message created successfully:", message.id);
-      
-      // Detect @mentions in message content and notify mentioned users and admins
-      try {
-        const content = String(validatedData.content || "");
-        const mentionUsernames = Array.from(new Set((content.match(/@([a-zA-Z0-9_\.\-]+)/g) || []).map(m => m.slice(1))))
-          .filter(Boolean);
-        if (mentionUsernames.length > 0) {
-          const users = await storage.getUsers();
-          const mentionedUsers = users.filter(u => mentionUsernames.includes(u.username));
-          const { sendPushToUser } = await import('./push');
-          const sender = await storage.getUser(String(currentUserId));
-          const senderName = sender?.firstName || sender?.username || 'Someone';
-
-          for (const mentioned of mentionedUsers) {
-            // In-app notification for mentioned user
-            await storage.createNotification({
-              userId: mentioned.id,
-              type: 'info',
-              title: '🔔 You were mentioned',
-              message: `${senderName} mentioned you in a message`,
-              category: 'communication',
-              actionUrl: `/messages?userId=${currentUserId}`,
-              isRead: false,
-            });
-
-            await sendPushToUser(mentioned.id, {
-              title: '🔔 You were mentioned',
-              body: `${senderName}: ${content.substring(0, 100)}`,
-              url: `/messages?userId=${currentUserId}`,
-            }).catch(err => console.error('Failed to send push notification:', err));
-          }
-
-          // Also notify admins about mentions (admin-only visibility)
-          const admins = users.filter(u => u.role === UserRole.ADMIN);
-          for (const admin of admins) {
-            if (!mentionedUsers.some(mu => mu.id === admin.id)) {
-              await storage.createNotification({
-                userId: admin.id,
-                type: 'info',
-                title: '💬 Team Mention',
-                message: `${senderName} mentioned ${mentionUsernames.join(', ')} in messages`,
-                category: 'communication',
-                actionUrl: '/messages',
-                isRead: false,
-              });
-
-              await sendPushToUser(admin.id, {
-                title: '💬 Team Mention',
-                body: `${senderName} mentioned ${mentionUsernames.join(', ')}`,
-                url: '/messages',
-              }).catch(err => console.error('Failed to send push notification:', err));
-            }
-          }
-
-          console.log(`✅ Mention notifications sent for usernames: ${mentionUsernames.join(', ')}`);
-        }
-      } catch (mentionError) {
-        console.error('Failed to process mentions:', mentionError);
-      }
-
-      // Create notification for recipient (don't let this fail the message creation)
-      if (validatedData.recipientId) {
-        try {
-          console.log("🔍 Creating notification for recipient:", validatedData.recipientId);
-          
-          const sender = await storage.getUser(String(currentUserId));
-          const senderName = sender?.firstName || sender?.username || 'Someone';
-          console.log("👤 Sender info:", { id: currentUserId, name: senderName, role: sender?.role });
-          
-          // Check if recipient exists
-          const recipient = await storage.getUser(String(validatedData.recipientId));
-          console.log("👤 Recipient info:", { id: validatedData.recipientId, name: recipient?.firstName || recipient?.username, role: recipient?.role });
-          
-          if (!recipient) {
-            console.error("❌ Recipient user not found:", validatedData.recipientId);
-            return res.status(201).json(message); // Still return success for message
-          }
-          
-          // In-app notification
-          const notification = await storage.createNotification({
-            userId: validatedData.recipientId,
-            type: 'info',
-            title: '💬 New Message',
-            message: `${senderName} sent you a message`,
-            category: 'general',
-            actionUrl: `/messages?userId=${currentUserId}`,
-            isRead: false,
-          });
-          console.log("📬 In-app notification created:", notification.id);
-          
-          // Push notification
-          const { sendPushToUser } = await import('./push');
-          await sendPushToUser(validatedData.recipientId, {
-            title: '💬 New Message',
-            body: `${senderName}: ${validatedData.content?.substring(0, 100) || 'Sent you a message'}`,
-            url: `/messages?userId=${currentUserId}`,
-          }).catch(err => console.error('Failed to send push notification:', err));
-          console.log("📱 Push notification sent to:", validatedData.recipientId);
-        } catch (notifError) {
-          console.error("⚠️ Failed to create notification (non-critical):", notifError);
-          console.error("Notification error details:", {
-            message: notifError?.message,
-            stack: notifError?.stack,
-            recipientId: validatedData.recipientId
-          });
-          // Don't fail the message creation if notification fails
-        }
-      } else {
-        console.log("⚠️ No recipientId provided, skipping notification");
-      }
-      
       res.status(201).json(message);
     } catch (error: any) {
       console.error("❌ Failed to create message:", error);
-      console.error("Error name:", error?.name);
-      console.error("Error message:", error?.message);
-      console.error("Error stack:", error?.stack);
       console.error("Request body:", req.body);
       console.error("User ID:", (req.user as any)?.id);
-      
-      if (error instanceof ZodError) {
-        console.error("Validation errors:", JSON.stringify(error.errors, null, 2));
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
-      
-      res.status(500).json({ message: error?.message || "Internal server error" });
+      handleValidationError(error, res);
     }
   });
 
-  app.patch("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.patch("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       const validatedData = insertMessageSchema.partial().strip().parse(req.body);
       const message = await storage.updateMessage(req.params.id, validatedData);
@@ -4010,172 +2329,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  app.delete("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  app.delete("/api/messages/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
       await storage.deleteMessage(req.params.id);
       res.status(204).send();
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete message" });
-    }
-  });
-
-  // Mark a single message as read (sets is_read and read_at)
-  app.post("/api/messages/:id/read", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const currentUserId = (req.user as any).id;
-      const messageId = req.params.id;
-      await pool.query(
-        `UPDATE messages SET is_read = true, read_at = NOW() WHERE id = $1 AND recipient_id = $2`,
-        [messageId, currentUserId]
-      );
-      res.json({ success: true });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Failed to mark as read' });
-    }
-  });
-
-  // Group conversation routes
-  app.get("/api/group-conversations", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const currentUser = req.user as any;
-      const conversations = await storage.getGroupConversations(currentUser.id);
-      res.json(conversations);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch group conversations" });
-    }
-  });
-
-  app.post("/api/group-conversations", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const schema = z.object({
-        name: z.string().min(1, "Group name is required"),
-        memberIds: z.array(z.number()).min(1, "Select at least one team member"),
-      });
-      const { name, memberIds } = schema.parse(req.body);
-      const currentUser = req.user as any;
-
-      const conversation = await storage.createGroupConversation({
-        name,
-        createdBy: currentUser.id,
-        memberIds,
-      });
-
-      res.status(201).json(conversation);
-    } catch (error) {
-      console.error(error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation failed", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create group conversation" });
-    }
-  });
-
-  app.get("/api/group-conversations/:conversationId/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const { conversationId } = req.params;
-      const currentUser = req.user as any;
-
-      const isMember = await storage.isGroupConversationMember(conversationId, currentUser.id);
-      if (!isMember) {
-        return res.status(403).json({ message: "You are not part of this conversation" });
-      }
-
-      const messages = await storage.getGroupMessages(conversationId);
-      res.json(messages);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch group messages" });
-    }
-  });
-
-  app.post("/api/group-conversations/:conversationId/messages", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const { conversationId } = req.params;
-      const currentUser = req.user as any;
-
-      const schema = z.object({
-        content: z.string().optional(),
-        mediaUrl: z.string().url().optional(),
-        mediaType: z.string().optional(),
-        durationMs: z.number().int().min(0).optional(),
-      });
-      const { content, mediaUrl, mediaType, durationMs } = schema.parse(req.body);
-
-      if (!content && !mediaUrl) {
-        return res.status(400).json({ message: "Message content or media is required" });
-      }
-
-      const isMember = await storage.isGroupConversationMember(conversationId, currentUser.id);
-      if (!isMember) {
-        return res.status(403).json({ message: "You are not part of this conversation" });
-      }
-
-      const message = await storage.createGroupMessage({
-        conversationId,
-        userId: currentUser.id,
-        content: content && content.trim().length > 0 ? content : "(media)",
-        mediaUrl: mediaUrl ?? null,
-        mediaType: mediaType ?? null,
-        durationMs: durationMs ?? null,
-      });
-
-      res.status(201).json(message);
-    } catch (error) {
-      console.error(error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation failed", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to send group message" });
-    }
-  });
-
-  // Presence: heartbeat updates last_seen
-  app.post("/api/presence/heartbeat", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const currentUserId = (req.user as any).id;
-      try {
-        await pool.query(`UPDATE users SET last_seen = NOW() WHERE id = $1`, [currentUserId]);
-      } catch (e: any) {
-        // Tolerate missing column on older DB, will be added by migration/bootstrapping
-        if (String(e?.message || '').includes('last_seen')) {
-          await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`).catch(() => {});
-          await pool.query(`UPDATE users SET last_seen = NOW() WHERE id = $1`, [currentUserId]).catch(() => {});
-        } else {
-          throw e;
-        }
-      }
-      res.json({ success: true, lastSeen: new Date().toISOString() });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Failed to update presence' });
-    }
-  });
-
-  // Presence: get online/offline for a user
-  app.get("/api/presence/:userId", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const userId = parseInt(req.params.userId);
-      let result;
-      try {
-        result = await pool.query(`SELECT last_seen FROM users WHERE id = $1`, [userId]);
-      } catch (e: any) {
-        if (String(e?.message || '').includes('last_seen')) {
-          await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;`).catch(() => {});
-          result = await pool.query(`SELECT last_seen FROM users WHERE id = $1`, [userId]);
-        } else {
-          throw e;
-        }
-      }
-      const lastSeen: Date | null = result.rows[0]?.last_seen ? new Date(result.rows[0].last_seen) : null;
-      const now = new Date();
-      const online = lastSeen ? (now.getTime() - lastSeen.getTime()) <= 2 * 60 * 1000 : false; // 2 minutes
-      res.json({ online, lastSeen });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Failed to fetch presence' });
     }
   });
 
@@ -4190,11 +2350,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // User management routes (admin, manager, and staff)
-  app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (_req: Request, res: Response) => {
+  // User management routes (staff and admin only)
+  app.get("/api/users", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
     try {
       const users = await storage.getAllUsers();
-      res.json(users);
+      // Filter out clients - they should only appear in /clients page, not team management
+      const teamMembers = users.filter(user => user.role !== 'client');
+      res.json(teamMembers);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch users" });
@@ -4204,7 +2366,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.patch("/api/users/:id/role", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
       const roleSchema = z.object({
-        role: z.enum(["admin", "manager", "staff", "sales_agent", "creator_manager", "client"])
+        role: z.enum(["admin", "staff", "client"])
       });
       const { role } = roleSchema.parse(req.body);
       const user = await storage.updateUserRole(req.params.id, role);
@@ -4224,9 +2386,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Global search route
   app.get("/api/search", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const currentUser = req.user;
       const query = req.query.q as string;
-      
       if (!query || query.trim().length < 2) {
         return res.json({
           clients: [],
@@ -4237,22 +2397,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           tickets: [],
         });
       }
-      
       const results = await storage.globalSearch(query.trim());
-      
-      // Filter results based on user role
-      if (currentUser?.role !== UserRole.ADMIN) {
-        // For managers and staff: only show campaigns they created
-        results.campaigns = results.campaigns.filter((c: any) => c.createdBy === currentUser?.id);
-        // Tasks are already filtered by the tasks endpoint
-      }
-
-      // Sales agents: only see assigned clients/leads in global search
-      if (currentUser?.role === UserRole.SALES_AGENT) {
-        results.clients = results.clients.filter((c: any) => c.salesAgentId === currentUser.id || c.assignedToId === currentUser.id);
-        results.leads = results.leads.filter((l: any) => l.assignedToId === currentUser.id);
-      }
-      
       res.json(results);
     } catch (error) {
       console.error(error);
@@ -4263,8 +2408,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Client Document routes
   app.get("/api/clients/:clientId/documents", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
-      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
-      if (!client) return;
       const documents = await storage.getClientDocuments(req.params.clientId);
       res.json(documents);
     } catch (error) {
@@ -4273,53 +2416,29 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // File upload endpoint for client documents
-  app.post("/api/clients/:clientId/documents/upload", isAuthenticated, requirePermission("canManageClients"), upload.array("files", 10), async (req: Request, res: Response) => {
-    try {
-      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
-      if (!client) return;
-      
-      const files = req.files as Express.Multer.File[];
-      if (!files || files.length === 0) {
-        return res.status(400).json({ message: "No files uploaded" });
-      }
-
-      const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
-      const uploadedFiles = files.map((file) => ({
-        originalName: file.originalname,
-        filename: file.filename,
-        fileUrl: `${appUrl}/uploads/${file.filename}`,
-        mimeType: file.mimetype,
-        fileSize: file.size,
-      }));
-
-      res.json({ uploadedFiles });
-    } catch (error: any) {
-      console.error("Client document upload error:", error);
-      res.status(500).json({ message: error.message || "Failed to upload files" });
-    }
-  });
-
   app.post("/api/clients/:clientId/documents", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
-      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
-      if (!client) return;
-      const userId = (req.user as any)?.id;
+      const userId = (req as any).userId;
       
-      const requestSchema = z.object({
-        name: z.string(),
-        description: z.string().optional(),
-        fileType: z.string().optional(),
-        fileSize: z.number().optional(),
-        fileUrl: z.string(),
-        originalName: z.string(),
-        mimeType: z.string().optional(),
+      const requestSchema = insertClientDocumentSchema.omit({ 
+        id: true, 
+        createdAt: true, 
+        objectPath: true, 
+        uploadedBy: true,
+        clientId: true,
+      }).extend({
+        uploadUrl: z.string(),
       });
       
       const validatedData = requestSchema.parse(req.body);
       
-      // Extract filename from fileUrl for objectPath (to maintain compatibility)
-      const objectPath = validatedData.fileUrl.split('/').pop() || validatedData.fileUrl;
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        validatedData.uploadUrl,
+        {
+          owner: userId,
+          visibility: "private",
+        }
+      );
 
       const documentData = insertClientDocumentSchema.parse({
         clientId: req.params.clientId,
@@ -4340,8 +2459,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.delete("/api/clients/:clientId/documents/:documentId", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
-      const client = await getAccessibleClientOr404(req, res, req.params.clientId);
-      if (!client) return;
       await storage.deleteClientDocument(req.params.documentId);
       res.status(204).send();
     } catch (error) {
@@ -4579,8 +2696,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Lead activity routes
   app.get("/api/leads/:leadId/activities", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
-      if (!lead) return;
       const activities = await storage.getLeadActivities(req.params.leadId);
       res.json(activities);
     } catch (error) {
@@ -4591,9 +2706,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/leads/:leadId/activities", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
-      if (!lead) return;
-      const userId = (req.user as any)?.id ?? null;
+      const userId = (req as any).userId;
       const validatedData = insertLeadActivitySchema.parse({
         ...req.body,
         leadId: req.params.leadId,
@@ -4609,8 +2722,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Lead automation routes
   app.get("/api/leads/:leadId/automations", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
-      if (!lead) return;
       const automations = await storage.getLeadAutomations(req.params.leadId);
       res.json(automations);
     } catch (error) {
@@ -4621,8 +2732,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.post("/api/leads/:leadId/automations", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
-      const lead = await getAccessibleLeadOr404(req, res, req.params.leadId);
-      if (!lead) return;
       const validatedData = insertLeadAutomationSchema.parse({
         ...req.body,
         leadId: req.params.leadId,
@@ -4654,120 +2763,43 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Duplicate /api/users route removed - already defined at line 2550
+  // User management routes (Admin only)
+  app.get("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (_req: Request, res: Response) => {
+    try {
+      const users = await storage.getUsers();
+      // Don't send password hashes to frontend
+      const sanitizedUsers = users.map(({ id, username, role, createdAt }) => ({
+        id,
+        username,
+        role,
+        createdAt,
+      }));
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
 
   app.post("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
-      const schema = z.object({
-        username: z.string().min(3),
-        password: z.string().min(6),
-        role: z.string().optional(),
-        email: z.string().email().optional().nullable(),
-        firstName: z.string().optional().nullable(),
-        lastName: z.string().optional().nullable(),
-      });
-
-      const data = schema.parse(req.body);
-      console.log("Creating user with data:", { username: data.username, role: data.role });
-
-      const username = data.username.trim();
-      const email = typeof data.email === "string" ? (data.email.trim() ? data.email.trim().toLowerCase() : null) : null;
-      const firstName = typeof data.firstName === "string" ? (data.firstName.trim() || null) : null;
-      const lastName = typeof data.lastName === "string" ? (data.lastName.trim() || null) : null;
-
-      const existingUser = await storage.getUserByUsername(username).catch(() => null);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-      if (email) {
-        const existingEmailUser = await storage.getUserByEmail(email).catch(() => null);
-        if (existingEmailUser) {
-          return res.status(400).json({ message: "Email already exists" });
-        }
-      }
-
+      console.log("Creating user with data:", { username: req.body.username, role: req.body.role });
+      
+      const { hashPassword } = await import("./auth.js");
       const userData = {
-        username,
-        password: await hashPassword(data.password),
-        role: data.role || "staff",
-        ...(email ? { email } : {}),
-        ...(firstName ? { firstName } : {}),
-        ...(lastName ? { lastName } : {}),
-      } as any;
+        username: req.body.username,
+        password: await hashPassword(req.body.password),
+        role: req.body.role || "staff",
+      };
       
       console.log("Hashed password, calling storage.createUser...");
       const user = await storage.createUser(userData);
       console.log("User created successfully:", user.id);
       
-      // Email notifications
-      if (user.email) {
-        try {
-          // Send welcome email to new user
-          void emailNotifications.sendWelcomeEmail(
-            user.firstName || user.username,
-            user.email
-          ).catch(err => console.error("Failed to send welcome email:", err));
-        } catch (emailErr) {
-          console.error("Error sending welcome email:", emailErr);
-        }
-      }
-
-      // Notify all admins about new user registration
-      try {
-        const allUsers = await storage.getUsers();
-        const admins = allUsers.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push');
-        const { emailNotifications } = await import('./emailService');
-        
-        const adminEmailsToNotify = [];
-        
-        for (const admin of admins) {
-          // In-app notification
-          await storage.createNotification({
-            userId: admin.id,
-            type: 'info',
-            title: '👤 New User Registered',
-            message: `New user "${user.username}" (${user.role}) has been created`,
-            category: 'user_management',
-            actionUrl: '/team',
-            isRead: false,
-          });
-          
-          // Push notification
-          await sendPushToUser(admin.id, {
-            title: '👤 New User Registered',
-            body: `New user "${user.username}" (${user.role}) has been created`,
-            url: '/team',
-          }).catch(err => console.error('Failed to send push notification:', err));
-
-          // Collect admin emails for those with notification enabled
-          const prefs = await storage.getUserNotificationPreferences(admin.id);
-          if (admin.email && prefs?.emailNotifications !== false) {
-            adminEmailsToNotify.push(admin.email);
-          }
-        }
-
-        if (adminEmailsToNotify.length > 0 && user.email) {
-          void emailNotifications.sendNewUserAlertToAdmins(
-            adminEmailsToNotify,
-            user.username,
-            user.email,
-            user.role
-          ).catch(err => console.error("Failed to send new user admin email alert:", err));
-        }
-        
-        console.log(`✅ Notified ${admins.length} admin(s) about new user registration`);
-      } catch (notifError) {
-        console.error('Failed to send user registration notifications:', notifError);
-      }
-      
       // Don't send password hash
       const { password, ...sanitizedUser } = user;
       res.status(201).json(sanitizedUser);
     } catch (error: any) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
       console.error("User creation error:", error);
       console.error("Error details:", error?.message, error?.code);
       res.status(500).json({ message: error?.message || "Failed to create user" });
@@ -4776,18 +2808,14 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.patch("/api/users/:id", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
-      const { role, clientId } = req.body;
+      const { role } = req.body;
       const userId = parseInt(req.params.id);
       
-      const updates: any = {};
-      if (role) updates.role = role;
-      if (clientId !== undefined) updates.clientId = clientId; // Allow null to unlink
-      
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ message: "No fields to update" });
+      if (!role) {
+        return res.status(400).json({ message: "Role is required" });
       }
 
-      await storage.updateUser(userId, updates);
+      await storage.updateUser(userId, { role });
       res.json({ message: "User updated successfully" });
     } catch (error) {
       console.error(error);
@@ -4795,48 +2823,14 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Update user sidebar permissions 
-  app.patch("/api/users/:id/permissions", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
-    try {
-      const permissionsSchema = z.object({
-        customPermissions: z.record(z.boolean()),
-      });
-      const { customPermissions } = permissionsSchema.parse(req.body);
-      const userId = parseInt(req.params.id);
-
-      await storage.updateUser(userId, { customPermissions });
-      res.json({ message: "User permissions updated successfully" });
-    } catch (error) {
-      console.error(error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation failed", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update user permissions" });
-    }
-  });
-
   app.delete("/api/users/:id", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const currentUserId = (req.user as any).id;
-      
-      // Prevent deleting yourself
-      if (userId === currentUserId) {
-        return res.status(400).json({ message: "You cannot delete your own account" });
-      }
-      
-      console.log(`🗑️ Attempting to delete user ${userId}`);
       await storage.deleteUser(userId);
-      console.log(`✅ User ${userId} deleted successfully`);
       res.status(204).send();
-    } catch (error: any) {
-      console.error('❌ Error deleting user:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        userId: req.params.id
-      });
-      res.status(500).json({ message: error.message || "Failed to delete user" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
@@ -4844,68 +2838,18 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.patch("/api/user/profile", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const currentUserId = (req.user as any).id;
-      const { firstName, lastName, email, username, profileImageUrl } = req.body;
-      
-      // Check if username is being changed and if it's already taken
-      if (username !== undefined) {
-        const existingUser = await storage.getUserByUsername(username);
-        if (existingUser && existingUser.id !== currentUserId) {
-          return res.status(400).json({ message: "Username already taken" });
-        }
-      }
+      const { firstName, lastName, email } = req.body;
       
       const updateData: any = {};
       if (firstName !== undefined) updateData.firstName = firstName;
       if (lastName !== undefined) updateData.lastName = lastName;
       if (email !== undefined) updateData.email = email;
-      if (username !== undefined) updateData.username = username;
-      if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
 
       await storage.updateUser(currentUserId, updateData);
       
       // Fetch updated user
       const updatedUser = await storage.getUsers();
       const user = updatedUser.find(u => u.id === currentUserId);
-      
-      // Notify user about profile update
-      try {
-        await storage.createNotification({
-          userId: currentUserId,
-          type: 'success',
-          title: '👤 Profile Updated',
-          message: 'Your profile information has been successfully updated',
-          category: 'user_management',
-          actionUrl: '/settings',
-          isRead: false,
-        });
-        
-        // Notify all admins about profile update
-        const users = await storage.getUsers();
-        const admins = users.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push');
-        
-        for (const admin of admins) {
-          await storage.createNotification({
-            userId: admin.id,
-            type: 'info',
-            title: '👤 Profile Updated',
-            message: `User "${user?.username}" updated their profile information`,
-            category: 'user_management',
-            actionUrl: '/team',
-            isRead: false,
-          });
-          
-          await sendPushToUser(admin.id, {
-            title: '👤 Profile Updated',
-            body: `User "${user?.username}" updated their profile information`,
-            url: '/team',
-          }).catch(err => console.error('Failed to send push notification:', err));
-        }
-        
-        console.log(`✅ Notified user and ${admins.length} admin(s) about profile update`);
-      } catch (notifError) {
-        console.error('Failed to send profile update notifications:', notifError);
-      }
       
       res.json({ message: "Profile updated successfully", user });
     } catch (error) {
@@ -4914,199 +2858,27 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Change password endpoint
-  app.post("/api/user/change-password", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const { comparePasswords } = await import('./auth');
-      const { hashPassword } = await import('./auth');
-      const currentUserId = (req.user as any).id;
-      const { currentPassword, newPassword, confirmPassword } = req.body;
-
-      // Validation
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        return res.status(400).json({ message: "All fields are required" });
-      }
-
-      if (newPassword !== confirmPassword) {
-        return res.status(400).json({ message: "New passwords do not match" });
-      }
-
-      if (newPassword.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters long" });
-      }
-
-      if (currentPassword === newPassword) {
-        return res.status(400).json({ message: "New password must be different from current password" });
-      }
-
-      // Get current user
-      const users = await storage.getUsers();
-      const user = users.find(u => u.id === currentUserId);
-
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Verify current password
-      const isValid = await comparePasswords(currentPassword, user.password);
-      if (!isValid) {
-        return res.status(401).json({ message: "Current password is incorrect" });
-      }
-
-      // Hash new password
-      const hashedPassword = await hashPassword(newPassword);
-
-      // Update password
-      await storage.updateUser(currentUserId, { password: hashedPassword });
-
-      console.log(`✅ Password changed successfully for user: ${user.username}`);
-
-      // Notify user about password change
-      try {
-        await storage.createNotification({
-          userId: currentUserId,
-          type: 'success',
-          title: '🔐 Password Changed',
-          message: 'Your password has been successfully changed',
-          category: 'user_management',
-          actionUrl: '/settings',
-          isRead: false,
-        });
-        
-        // Notify all admins about password change
-        const users = await storage.getUsers();
-        const admins = users.filter(u => u.role === UserRole.ADMIN);
-        const { sendPushToUser } = await import('./push');
-        
-        for (const admin of admins) {
-          await storage.createNotification({
-            userId: admin.id,
-            type: 'info',
-            title: '🔐 Password Changed',
-            message: `User "${user.username}" changed their password`,
-            category: 'user_management',
-            actionUrl: '/team',
-            isRead: false,
-          });
-          
-          await sendPushToUser(admin.id, {
-            title: '🔐 Password Changed',
-            body: `User "${user.username}" changed their password`,
-            url: '/team',
-          }).catch(err => console.error('Failed to send push notification:', err));
-        }
-        
-        console.log(`✅ Notified user and ${admins.length} admin(s) about password change`);
-      } catch (notifError) {
-        console.error('Failed to send password change notifications:', notifError);
-      }
-
-      res.json({ message: "Password changed successfully" });
-    } catch (error) {
-      console.error("Password change error:", error);
-      res.status(500).json({ message: "Failed to change password" });
-    }
-  });
-
-  // Hybrid accounts: switch between client and creator view (role toggling)
-  app.post("/api/user/switch-role", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const currentUser = req.user as any;
-      const currentUserId = currentUser?.id;
-      if (!currentUserId) return res.status(401).json({ message: "Unauthorized" });
-
-      // Only allow toggling between client and creator for hybrid accounts
-      const hasClient = Boolean(currentUser?.clientId);
-      const hasCreator = Boolean(currentUser?.creatorId);
-      if (!hasClient || !hasCreator) {
-        return res.status(400).json({ message: "Role switching requires a hybrid account (both clientId and creatorId)." });
-      }
-
-      const currentRole = String(currentUser?.role || "");
-      if (currentRole !== UserRole.CLIENT && currentRole !== UserRole.CREATOR) {
-        return res.status(400).json({ message: "Role switching is only supported for client/creator accounts." });
-      }
-
-      const nextRole = currentRole === UserRole.CLIENT ? UserRole.CREATOR : UserRole.CLIENT;
-
-      // If switching into creator role, ensure creator application has been accepted
-      if (nextRole === UserRole.CREATOR) {
-        const creator = await storage.getCreator(String(currentUser.creatorId));
-        if (!creator) return res.status(400).json({ message: "Creator profile not found for this account." });
-        if ((creator as any).applicationStatus !== "accepted") {
-          return res.status(403).json({ message: "Your creator account is not approved yet." });
-        }
-      }
-
-      const [updated] = await db
-        .update(users)
-        .set({ role: nextRole })
-        .where(eq(users.id, Number(currentUserId)))
-        .returning();
-
-      // Security: Rotate session on role change to ensure permissions are refreshed correctly
-      req.session.regenerate((regenErr) => {
-        if (regenErr) {
-          console.error("Error regenerating session during role switch:", regenErr);
-          // Still return success since DB was updated, but user might need to relogin if session was lost
-        }
-        
-        // Re-login the user into the new session
-        req.login(updated, (err) => {
-          if (err) {
-            console.error("Error logging in after session regeneration:", err);
-            return res.status(500).json({ message: "Role switched but session update failed. Please re-login." });
-          }
-          return res.json(updated);
-        });
-      });
-    } catch (error) {
-      console.error("Error switching roles:", error);
-      return res.status(500).json({ message: "Failed to switch roles" });
-    }
-  });
-
   // Notifications routes
-  app.get("/api/notifications", async (req: Request, res: Response) => {
+  app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      if (!req.isAuthenticated()) {
-        return res.json([]);
-      }
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      
-      console.log("🔔 Fetching notifications for user:", userId);
-      
-      const notifications = await storage.getNotifications(userId);
-      console.log(`   Found ${notifications.length} notifications`);
-      
-      res.json(notifications);
-    } catch (error: any) {
-      console.error("❌ Error fetching notifications:", error);
+      // Return empty array instead of querying broken notifications table
+      res.json([]);
+    } catch (error) {
+      console.error(error);
       res.status(500).json({ message: "Failed to fetch notifications" });
     }
   });
 
-  // Check and create notifications for due/overdue tasks
-  app.post("/api/notifications/check-tasks", async (req: Request, res: Response) => {
+  // Check and create notifications for due/overdue tasks - DISABLED DUE TO DATABASE ISSUES
+  app.post("/api/notifications/check-tasks", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      if (!req.isAuthenticated()) {
-        return res.status(200).json({ message: "Task notifications check skipped: user not authenticated", notificationsCreated: 0 });
-      }
-      const { userId } = getCurrentUserContext(req);
-      if (userId === null) {
-        return res.status(400).json({ message: "Invalid user context" });
-      }
-
-      const { checkAndNotifyTaskDeadlines } = await import("./notificationService");
-      const notificationsCreated = await checkAndNotifyTaskDeadlines(userId);
-      
+      // Skip notification creation due to database issues
       res.json({ 
         message: "Task notifications checked", 
-        notificationsCreated
+        notificationsCreated: 0
       });
     } catch (error) {
-      console.error('Error checking task notifications:', error);
+      console.error(error);
       res.status(500).json({ message: "Failed to check task notifications" });
     }
   });
@@ -5163,382 +2935,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Push Subscription routes
-  app.get("/api/push/vapid-public-key", (_req: Request, res: Response) => {
-    const publicKey = process.env.VAPID_PUBLIC_KEY;
-    console.log('🔑 VAPID Public Key requested:', publicKey ? 'Present' : 'Missing');
-    res.json({ publicKey: publicKey || '' });
-  });
-
-  // Debug endpoint for checking user's push notification status
-  app.get("/api/push/debug-status", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const rawUserId = (req.user as any)?.id ?? (req.user as any)?.claims?.sub;
-      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
-      if (!Number.isFinite(userId)) {
-        return res.status(400).json({ error: "Invalid user context" });
-      }
-      const user = await storage.getUser(String(userId));
-      
-      // Get push subscriptions
-      const subscriptions = await pool.query(
-        'SELECT id, endpoint, created_at FROM push_subscriptions WHERE user_id = $1',
-        [userId]
-      );
-      
-      // Get notification preferences
-      const preferences = await pool.query(
-        'SELECT * FROM user_notification_preferences WHERE user_id = $1',
-        [userId]
-      );
-      
-      // Get recent notifications
-      const recentNotifications = await pool.query(
-        `SELECT title, message, type, category, created_at, is_read 
-         FROM notifications 
-         WHERE user_id = $1 
-         ORDER BY created_at DESC 
-         LIMIT 5`,
-        [userId]
-      );
-      
-      res.json({
-        user: {
-          id: user?.id,
-          username: user?.username,
-          role: user?.role,
-          name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
-        },
-        pushSubscriptions: {
-          count: subscriptions.rows.length,
-          subscriptions: subscriptions.rows.map(sub => ({
-            id: sub.id,
-            endpoint: sub.endpoint.substring(0, 50) + '...',
-            created: sub.created_at
-          }))
-        },
-        notificationPreferences: preferences.rows[0] || 'using_defaults',
-        recentNotifications: recentNotifications.rows,
-        vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error in debug-status:', error);
-      res.status(500).json({ error: 'Failed to get debug status' });
-    }
-  });
-
-  // Emergency push subscription cleanup endpoint
-  app.post("/api/push/emergency-cleanup", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const rawUserId = (req.user as any)?.id ?? (req.user as any)?.claims?.sub;
-      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
-      if (!Number.isFinite(userId)) {
-        return res.status(400).json({ message: "Invalid user context" });
-      }
-      const user = await storage.getUser(String(userId));
-
-      console.log(`🚨 Emergency cleanup for user ${userId} (${user?.username})`);
-
-      // Delete ALL push subscriptions for this user
-      const deleteResult = await pool.query(
-        'DELETE FROM push_subscriptions WHERE user_id = $1',
-        [userId]
-      );
-
-      console.log(`🗑️ Deleted ${deleteResult.rowCount} subscriptions for user ${userId}`);
-
-      // Also clean up any orphaned subscriptions (optional - be careful)
-      const orphanedResult = await pool.query(
-        'DELETE FROM push_subscriptions WHERE user_id NOT IN (SELECT id FROM users)'
-      );
-
-      console.log(`🧹 Cleaned up ${orphanedResult.rowCount} orphaned subscriptions`);
-
-      res.json({
-        success: true,
-        deletedSubscriptions: deleteResult.rowCount,
-        cleanedOrphaned: orphanedResult.rowCount,
-        message: "All push subscriptions cleared. Please re-subscribe."
-      });
-    } catch (error) {
-      console.error('Emergency cleanup error:', error);
-      res.status(500).json({ message: "Failed to cleanup subscriptions", error: error.message });
-    }
-  });
-
-  app.post("/api/push/subscribe", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const rawUserId = user?.id ?? user?.claims?.sub;
-      const userId = typeof rawUserId === "number" ? rawUserId : parseInt(String(rawUserId), 10);
-      if (!Number.isFinite(userId)) {
-        return res.status(400).json({ message: "Invalid user context" });
-      }
-      const { subscription } = req.body;
-
-      if (!subscription || !subscription.endpoint) {
-        return res.status(400).json({ message: "Invalid subscription" });
-      }
-
-      // Check if this endpoint is already registered to a DIFFERENT user
-      const existingSubscription = await pool.query(
-        'SELECT user_id FROM push_subscriptions WHERE endpoint = $1',
-        [subscription.endpoint]
-      );
-
-      if (existingSubscription.rows.length > 0) {
-        const existingUserId = existingSubscription.rows[0].user_id;
-        
-        if (existingUserId !== userId) {
-          // Account switch detected! Delete the old subscription first
-          console.log(`⚠️ Account switch detected: endpoint was for user ${existingUserId}, now subscribing for user ${userId}`);
-          await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [subscription.endpoint]);
-        }
-      }
-
-      // Store subscription in database
-      await pool.query(
-        `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (endpoint) DO UPDATE
-         SET user_id = $1, p256dh = $3, auth = $4, updated_at = NOW()`,
-        [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
-      );
-
-      console.log(`✅ Push subscription saved for user ${userId}`);
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error saving push subscription:', error);
-      res.status(500).json({ message: "Failed to save subscription" });
-    }
-  });
-
-  app.post("/api/push/unsubscribe", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const { endpoint } = req.body;
-
-      if (!endpoint) {
-        return res.status(400).json({ message: "Endpoint required" });
-      }
-
-      await pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error removing push subscription:', error);
-      res.status(500).json({ message: "Failed to remove subscription" });
-    }
-  });
-
-  // Send push notification (Admin only)
-  app.post("/api/push/send", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      const { sendPushToUser, sendPushToRole, broadcastPush } = await import('./push');
-      const { userId, role, title, body, url, broadcast } = req.body;
-      const user = req.user as any;
-
-      if (!title || !body) {
-        return res.status(400).json({ message: "Title and body required" });
-      }
-
-      let targetType: string;
-      let targetValue: string | null = null;
-      let recipientCount = 0;
-
-      // Determine target type and count recipients
-      if (broadcast) {
-        targetType = "broadcast";
-        // Get all users
-        const allUsers = await storage.getUsers();
-        recipientCount = allUsers.length;
-        
-        // Send push notifications
-        await broadcastPush({ title, body, url });
-        
-        // Create in-app notifications for all users
-        for (const targetUser of allUsers) {
-          await storage.createNotification({
-            userId: targetUser.id,
-            type: 'info',
-            title: title,
-            message: body,
-            category: 'general',
-            actionUrl: url || '/',
-            isRead: false,
-          });
-        }
-      } else if (userId) {
-        targetType = "user";
-        targetValue = String(userId);
-        recipientCount = 1;
-        
-        // Send push notification
-        await sendPushToUser(userId, { title, body, url });
-        
-        // Create in-app notification
-        await storage.createNotification({
-          userId: userId,
-          type: 'info',
-          title: title,
-          message: body,
-          category: 'general',
-          actionUrl: url || '/',
-          isRead: false,
-        });
-      } else if (role) {
-        targetType = "role";
-        targetValue = role;
-        
-        // Get users with this role
-        const allUsers = await storage.getUsers();
-        const roleUsers = allUsers.filter(u => u.role === role);
-        recipientCount = roleUsers.length;
-        
-        // Send push notifications
-        await sendPushToRole(role, { title, body, url });
-        
-        // Create in-app notifications for all users with this role
-        for (const targetUser of roleUsers) {
-          await storage.createNotification({
-            userId: targetUser.id,
-            type: 'info',
-            title: title,
-            message: body,
-            category: 'general',
-            actionUrl: url || '/',
-            isRead: false,
-          });
-        }
-      } else {
-        return res.status(400).json({ message: "Must specify userId, role, or broadcast" });
-      }
-
-      // Save to push notification history
-      try {
-        console.log('💾 Saving push notification history:', {
-          title,
-          body,
-          url: url || null,
-          targetType,
-          targetValue,
-          sentBy: user?.id || user?.claims?.sub || null,
-          recipientCount,
-          successful: true,
-        });
-        
-        const historyRecord = await storage.createPushNotificationHistory({
-          title,
-          body,
-          url: url || null,
-          targetType,
-          targetValue,
-          sentBy: user?.id || user?.claims?.sub || null,
-          recipientCount,
-          successful: true,
-        });
-        
-        console.log('✅ Push notification history saved:', historyRecord);
-      } catch (historyError) {
-        console.error('❌ Failed to save push notification history:', historyError);
-        console.error('History error details:', {
-          message: historyError?.message,
-          stack: historyError?.stack,
-        });
-        // Don't fail the request if history saving fails
-      }
-
-      res.json({ success: true, recipientCount });
-    } catch (error: any) {
-      console.error('❌ Error sending push notification:', error);
-      console.error('Error details:', {
-        message: error?.message,
-        stack: error?.stack,
-      });
-      
-      // Try to save failed notification to history
-      try {
-        const { userId, role, title, body, url, broadcast } = req.body;
-        const user = req.user as any;
-        
-        let targetType: string = broadcast ? "broadcast" : (userId ? "user" : "role");
-        let targetValue: string | null = userId ? String(userId) : (role || null);
-        
-        await storage.createPushNotificationHistory({
-          title: title || "Unknown",
-          body: body || "Unknown",
-          url: url || null,
-          targetType,
-          targetValue,
-          sentBy: user?.id || user?.claims?.sub || null,
-          recipientCount: 0,
-          successful: false,
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
-        });
-      } catch (historyError) {
-        console.error('Failed to save push notification history:', historyError);
-      }
-      
-      const errorMessage = error?.message || "Failed to send push notification";
-      res.status(500).json({ 
-        message: errorMessage,
-        error: process.env.NODE_ENV === 'development' ? error?.stack : undefined
-      });
-    }
-  });
-
-  // Get push notification history (Admin only)
-  app.get("/api/push/history", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (_req: Request, res: Response) => {
-    try {
-      console.log('📋 Fetching push notification history...');
-      const history = await storage.getPushNotificationHistory();
-      console.log('📋 History fetched:', history.length, 'records');
-      res.json(history);
-    } catch (error) {
-      console.error('❌ Error fetching push notification history:', error);
-      res.status(500).json({ message: "Failed to fetch push notification history" });
-    }
-  });
-
-  // Test push notification history table
-  app.get("/api/push/test-history", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
-    try {
-      console.log('🧪 Testing push notification history table...');
-      
-      // Try to create a test record
-      const testRecord = await storage.createPushNotificationHistory({
-        title: "Test Notification",
-        body: "This is a test to verify the history table works",
-        url: "/test",
-        targetType: "broadcast",
-        targetValue: null,
-        sentBy: (req.user as any)?.id || 1,
-        recipientCount: 1,
-        successful: true,
-      });
-      
-      console.log('✅ Test record created:', testRecord);
-      
-      // Try to fetch all records
-      const allRecords = await storage.getPushNotificationHistory();
-      console.log('✅ All records fetched:', allRecords.length);
-      
-      res.json({ 
-        success: true, 
-        testRecord, 
-        totalRecords: allRecords.length,
-        message: "Push notification history table is working correctly"
-      });
-    } catch (error) {
-      console.error('❌ Error testing push notification history:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: error.message,
-        message: "Push notification history table test failed"
-      });
-    }
-  });
-
   // Activity logs routes (Admin only) - DISABLED DUE TO DATABASE ISSUES
   app.get("/api/activity-logs", isAuthenticated, requirePermission("canViewReports"), async (req: Request, res: Response) => {
     try {
@@ -5554,6 +2950,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // One-time database migration endpoint (Admin only)
   app.post("/api/admin/run-migration", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
+      const { db } = await import("./db.js");
+      
       // Add missing columns
       await db.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`);
       await db.execute(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT`);
@@ -5612,7 +3010,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const start = startDate ? new Date(startDate as string) : undefined;
       const end = endDate ? new Date(endDate as string) : undefined;
       
-      const { getStripeDashboardMetrics } = await import("./stripeService");
+      const { getStripeDashboardMetrics } = await import("./stripeService.js");
       const metrics = await getStripeDashboardMetrics(start, end);
       res.json(metrics);
     } catch (error: any) {
@@ -5623,7 +3021,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.get("/api/stripe/customers", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
-      const { getStripeCustomers } = await import("./stripeService");
+      const { getStripeCustomers } = await import("./stripeService.js");
       const customers = await getStripeCustomers();
       res.json(customers);
     } catch (error: any) {
@@ -5635,7 +3033,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.post("/api/stripe/invoices", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
     try {
       const { customerId, items } = req.body;
-      const { createStripeInvoice } = await import("./stripeService");
+      const { createStripeInvoice } = await import("./stripeService.js");
       const invoice = await createStripeInvoice(customerId, items);
       res.json(invoice);
     } catch (error: any) {
@@ -5646,7 +3044,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
 
   app.get("/api/stripe/balance", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
-      const { getStripeBalance } = await import("./stripeService");
+      const { getStripeBalance } = await import("./stripeService.js");
       const balance = await getStripeBalance();
       res.json(balance);
     } catch (error: any) {
@@ -5659,8 +3057,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.get("/api/subscription-packages", async (_req: Request, res: Response) => {
     try {
       const packages = await storage.getActiveSubscriptionPackages();
-      // Public marketing page uses this; allow short-lived caching to improve perceived speed.
-      res.setHeader("Cache-Control", "public, max-age=300");
       res.json(packages);
     } catch (error) {
       console.error("Error fetching packages:", error);
@@ -5687,15 +3083,28 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       let instagramData = null;
 
       // Try to get data from connected Instagram account first
-      // Note: Instagram OAuth integration would require additional schema fields:
-      // instagramAccessToken, instagramUserId, instagramConnectedAt
-      // For now, we'll use public scraping only
+      if (client.socialLinks?.instagram && client.instagramAccessToken) {
+        try {
+          console.log(`📊 Fetching connected Instagram data for client ${clientId}`);
+          instagramData = await InstagramService.getAccountMetrics(
+            client.instagramAccessToken,
+            client.instagramUserId || ''
+          );
+        } catch (error) {
+          console.error('Failed to fetch connected Instagram data:', error);
+          // Clear invalid token
+          await storage.updateClient(clientId, {
+            instagramAccessToken: null,
+            instagramUserId: null,
+            instagramConnectedAt: null,
+          });
+        }
+      }
 
       // Fallback to scraping public data
-      const socialLinks = client.socialLinks as any;
-      if (socialLinks?.instagram) {
+      if (!instagramData && client.socialLinks?.instagram) {
         try {
-          const username = socialLinks.instagram.split('/').pop()?.replace('@', '');
+          const username = client.socialLinks.instagram.split('/').pop()?.replace('@', '');
           if (username) {
             console.log(`🔍 Scraping public Instagram data for @${username}`);
             instagramData = await InstagramService.scrapePublicData(username);
@@ -5723,11 +3132,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         };
       }
 
-      const clientSocialLinks = client.socialLinks as any;
       res.json({
         platform: 'instagram',
-        connected: false, // OAuth not implemented
-        username: clientSocialLinks?.instagram?.split('/').pop()?.replace('@', '') || null,
+        connected: !!client.instagramAccessToken,
+        username: client.socialLinks?.instagram?.split('/').pop()?.replace('@', '') || null,
         metrics: instagramData,
         lastUpdated: new Date().toISOString(),
       });
@@ -5752,20 +3160,24 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         return res.status(404).json({ message: "Client not found" });
       }
 
-      let posts: any[] = [];
+      let posts = [];
 
       // Try to get posts from connected Instagram account
-      // Note: Instagram OAuth integration not yet implemented
-      // Would require instagramAccessToken and instagramUserId fields in schema
-      const postsSocialLinks = client.socialLinks as any;
-      if (postsSocialLinks?.instagram) {
-        // Future: Implement OAuth flow to get posts
-        // For now, return empty posts array
+      if (client.socialLinks?.instagram && client.instagramAccessToken) {
+        try {
+          posts = await InstagramService.getRecentPosts(
+            client.instagramAccessToken,
+            client.instagramUserId || '',
+            limit
+          );
+        } catch (error) {
+          console.error('Failed to fetch Instagram posts:', error);
+        }
       }
 
       res.json({
         platform: 'instagram',
-        connected: false, // OAuth not yet implemented
+        connected: !!client.instagramAccessToken,
         posts,
         total: posts.length,
       });
@@ -5834,17 +3246,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       );
 
       // Update client with Instagram connection
-      // Note: Instagram OAuth fields not yet in schema (instagramAccessToken, instagramUserId, instagramConnectedAt)
-      // For now, just log the successful connection
-      // TODO: Add these fields to the clients table schema if needed:
-      // - instagramAccessToken (text)
-      // - instagramUserId (text)
-      // - instagramConnectedAt (timestamp)
-
-      console.log(`✅ Instagram connected successfully for client ${clientId}`, {
-        userId: tokenData.user_id,
-        // Token stored in memory only for now
+      await storage.updateClient(clientId, {
+        instagramAccessToken: tokenData.access_token,
+        instagramUserId: tokenData.user_id,
+        instagramConnectedAt: new Date(),
       });
+
+      console.log(`✅ Instagram connected successfully for client ${clientId}`);
       // Redirect back to analytics page with success message
       res.redirect('/client-analytics?instagram=connected');
     } catch (error) {
@@ -5953,7 +3361,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Client: Create Second Me request (onboarding with character data)
+  // Client: Create Second Me request (upload photos)
   app.post("/api/second-me", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
@@ -5965,115 +3373,24 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         return res.status(400).json({ message: "No client record found" });
       }
 
-      const { 
-        photos, 
-        characterName, 
-        vibe, 
-        mission, 
-        storyWords, 
-        topics, 
-        personalityType,
-        dreamCollab,
-        catchphrase,
-        targetAudience,
-        contentStyle,
-        bio
-      } = req.body;
+      const { photoUrls } = req.body;
 
-      // Allow test data for quick onboarding
-      if (!characterName) {
-        return res.status(400).json({ message: "Character name is required" });
+      if (!photoUrls || !Array.isArray(photoUrls) || photoUrls.length < 15) {
+        return res.status(400).json({ message: "Minimum 15 photos required" });
       }
 
       const secondMeRecord = await storage.createSecondMe({
         clientId: userRecord.clientId,
-        photoUrls: photos, // Use photos from form
-        characterName,
-        vibe,
-        mission,
-        storyWords,
-        topics: JSON.stringify(topics || []),
-        personalityType,
-        dreamCollab,
-        catchphrase,
-        targetAudience,
-        contentStyle,
-        bio,
+        photoUrls,
         status: "pending",
-        setupPaid: true, // FREE FOR TESTING
-        weeklySubscriptionActive: true, // FREE FOR TESTING
+        setupPaid: false,
+        weeklySubscriptionActive: false,
       });
 
       res.status(201).json(secondMeRecord);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to create Second Me request" });
-    }
-  });
-
-  // Client: Get character profile
-  app.get("/api/second-me/character", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-
-      // Get user to find clientId
-      const userRecord = await storage.getUser(userId.toString());
-      if (!userRecord || !userRecord.clientId) {
-        return res.status(404).json({ message: "No client record found" });
-      }
-
-      const secondMeRecord = await storage.getSecondMe(userRecord.clientId);
-      
-      if (!secondMeRecord) {
-        return res.json(null);
-      }
-
-      // Parse topics if stored as JSON string
-      const character = {
-        ...secondMeRecord,
-        topics: typeof secondMeRecord.topics === 'string' 
-          ? JSON.parse(secondMeRecord.topics) 
-          : secondMeRecord.topics || [],
-        photos: secondMeRecord.photoUrls || [],
-      };
-
-      res.json(character);
-    } catch (error) {
-      console.error('Character fetch error:', error);
-      res.json(null);
-    }
-  });
-
-  // Client: Get AI-generated content
-  app.get("/api/second-me/content", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-
-      // Get user to find clientId
-      const userRecord = await storage.getUser(userId.toString());
-      if (!userRecord || !userRecord.clientId) {
-        return res.status(404).json({ message: "No client record found" });
-      }
-
-      const content = await storage.getSecondMeContentByClientId(userRecord.clientId.toString());
-      
-      // Transform to match frontend interface
-      const transformedContent = content.map(item => ({
-        id: item.id,
-        title: item.caption || `AI Content ${item.id}`,
-        type: item.contentType as "image" | "video",
-        url: item.mediaUrl,
-        thumbnail: item.mediaUrl, // Use same URL for thumbnail for now
-        createdAt: item.createdAt,
-        description: item.caption,
-      }));
-      
-      res.json(transformedContent);
-    } catch (error) {
-      console.error('Content fetch error:', error);
-      res.json([]);
     }
   });
 
@@ -6131,7 +3448,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
 
       // Get the Second Me record to find clientId
-      const secondMeRecord = await storage.getSecondMeById(secondMeId);
+      const secondMeRecord = await storage.getSecondMe(secondMeId);
       if (!secondMeRecord) {
         return res.status(404).json({ message: "Second Me record not found" });
       }
@@ -6216,31 +3533,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         await client.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url VARCHAR`);
         console.log('✅ Added action_url column');
         
-        // Add social media columns to leads
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS instagram VARCHAR`);
-        console.log('✅ Added instagram column to leads');
-        
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS tiktok VARCHAR`);
-        console.log('✅ Added tiktok column to leads');
-        
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS facebook VARCHAR`);
-        console.log('✅ Added facebook column to leads');
-        
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS google_business_profile VARCHAR`);
-        console.log('✅ Added google_business_profile column to leads');
-        
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS rating INTEGER`);
-        console.log('✅ Added rating column to leads');
-        
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS youtube VARCHAR`);
-        console.log('✅ Added youtube column to leads');
-        
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS needs JSONB DEFAULT '[]'::jsonb`);
-        console.log('✅ Added needs column to leads');
-        
-        await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'research_completed'`);
-        console.log('✅ Added status column to leads');
-        
         client.release();
         await pool.end();
         
@@ -6268,61 +3560,36 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   app.get("/api/test-dialpad", async (req: Request, res: Response) => {
     try {
       if (!process.env.DIALPAD_API_KEY) {
-        console.log("❌ DIALPAD_API_KEY not found in environment");
         return res.status(503).json({ 
-          success: false,
-          connected: false,
+          success: false, 
           message: "Dialpad API is not configured. Please add DIALPAD_API_KEY to your environment variables." 
         });
       }
 
-      console.log("🔍 Testing Dialpad connection...");
-      console.log("🔑 API Key present: Yes (length:", process.env.DIALPAD_API_KEY.length, ")");
-      console.log("🔑 API Key starts with:", process.env.DIALPAD_API_KEY.substring(0, 10) + "...");
-
       // Test with a simple calls endpoint (we know this exists)
-      const response = await fetch("https://dialpad.com/api/v2/call?limit=1", {
+      const response = await fetch("https://dialpad.com/api/v2/calls?limit=1", {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.DIALPAD_API_KEY}`,
         },
       });
 
-      const responseText = await response.text();
-      console.log("📡 Dialpad API Response Status:", response.status);
-      console.log("📡 Dialpad API Response Headers:", Object.fromEntries(response.headers.entries()));
-      console.log("📡 Dialpad API Response Body:", responseText.substring(0, 500));
-
       if (!response.ok) {
-        console.error("❌ Dialpad connection failed:", response.status);
-        
-        // Notify admins about Dialpad connection failure
-        try {
-          await notifyAdminsAboutIntegration(
-            '📞 Dialpad Connection Failed',
-            `Dialpad API connection failed with status ${response.status}. ${response.status === 401 ? 'API Key may be invalid or expired.' : 'Unknown error occurred.'}`,
-            'integration'
-          );
-        } catch (notifError) {
-          console.error('Failed to send integration notification:', notifError);
-        }
-        
+        const errorText = await response.text();
+        console.error("❌ Dialpad connection failed:", response.status, errorText);
         return res.status(response.status).json({ 
-          success: false,
-          connected: false,
+          success: false, 
           message: "Dialpad connection failed", 
-          error: responseText,
-          status: response.status,
-          hint: response.status === 401 ? "API Key is invalid or expired. Please check your Dialpad API key." : "Unknown error",
+          error: errorText,
+          status: response.status 
         });
       }
 
-      const data = JSON.parse(responseText);
+      const data = await response.json();
       console.log("✅ Connected to Dialpad! Retrieved", data.items?.length || 0, "call records");
 
       res.json({
         success: true,
-        connected: true,
         message: "✅ Connected to Dialpad successfully!",
         endpoint: "/api/v2/calls",
         recordsRetrieved: data.items?.length || 0,
@@ -6331,13 +3598,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       });
     } catch (error: any) {
       console.error("❌ Dialpad connection error:", error.message);
-      console.error("❌ Full error:", error);
-      res.status(500).json({ 
-        success: false, 
-        connected: false,
-        error: error.message,
-        details: error.toString(),
-      });
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
@@ -6356,20 +3617,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         offset: offset ? parseInt(offset as string) : undefined,
       });
 
-      // Transform Dialpad format to our CallLog format
-      const transformedCalls = callLogs.map((call: any) => ({
-        id: call.call_id || call.id,
-        type: call.direction === 'inbound' ? 'incoming' : 'outgoing',
-        contact: call.contact?.phone || call.contact?.name || 'Unknown',
-        contactName: call.contact?.name,
-        phoneNumber: call.contact?.phone || '',
-        duration: call.duration || 0,
-        timestamp: new Date(parseInt(call.date_start || call.date_connected || '0')).toISOString(),
-        notes: call.notes,
-        recordingUrl: call.recording_url
-      }));
-
-      res.json(transformedCalls);
+      res.json(callLogs);
     } catch (error: any) {
       console.error('Error fetching Dialpad calls:', error);
       res.status(500).json({ message: error.message || "Failed to fetch call logs" });
@@ -6404,20 +3652,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         return res.status(400).json({ message: "to_number is required" });
       }
 
-      // Get current Dialpad user ID (required for making calls)
-      let user_id: string | undefined;
-      try {
-        const userInfo = await dialpadService.getCurrentUser();
-        user_id = userInfo.id || userInfo.user_id;
-        console.log('📞 Making call from user_id:', user_id);
-      } catch (err) {
-        return res.status(500).json({ message: "Could not get Dialpad user ID. Make sure your API key has user permissions." });
-      }
-
-      // Dialpad expects 'phone_number' and 'user_id'
       const result = await dialpadService.makeCall({
-        phone_number: to_number,
-        user_id,
+        to_number,
         from_number,
         from_extension_id,
       });
@@ -6429,22 +3665,20 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Get SMS messages from database
+  // Get SMS messages
   app.get("/api/dialpad/sms", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      
-      // Fetch SMS messages from database
-      const { smsMessages: smsMessagesTable } = await import("@shared/schema");
-      const { desc } = await import("drizzle-orm");
-      
-      const messages = await db
-        .select()
-        .from(smsMessagesTable)
-        .where(sql`user_id = ${userId}`)
-        .orderBy(desc(smsMessagesTable.timestamp))
-        .limit(100);
+      if (!dialpadService) {
+        return res.status(503).json({ message: "Dialpad API is not configured" });
+      }
+
+      const { start_time, end_time, limit, offset } = req.query;
+      const messages = await dialpadService.getSmsMessages({
+        start_time: start_time as string,
+        end_time: end_time as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
 
       res.json(messages);
     } catch (error: any) {
@@ -6470,307 +3704,16 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         return res.status(400).json({ message: "text message is required" });
       }
 
-      // Get current Dialpad user ID (required for sending SMS)
-      let user_id: string | undefined;
-      try {
-        const userInfo = await dialpadService.getCurrentUser();
-        user_id = userInfo.id || userInfo.user_id;
-        console.log('📤 Sending SMS from user_id:', user_id);
-      } catch (err) {
-        return res.status(500).json({ message: "Could not get Dialpad user ID. Make sure your API key has user permissions." });
-      }
-
       const result = await dialpadService.sendSms({
         to_numbers,
         text,
-        user_id, // Dialpad expects 'user_id' field for sender
         from_number,
       });
-
-      // Auto-log activity for leads (Phase 3 feature)
-      try {
-        const user = req.user as any;
-        const userId = user?.id || user?.claims?.sub;
-        
-        // Try to find leads with these phone numbers
-        for (const phoneNumber of to_numbers) {
-          const { leads } = await import("@shared/schema");
-          const { eq, or } = await import("drizzle-orm");
-          
-          const matchingLeads = await db
-            .select()
-            .from(leads)
-            .where(or(
-              eq(leads.phone, phoneNumber),
-              eq(leads.phone, phoneNumber.replace(/\D/g, '')), // Try without formatting
-            ))
-            .limit(1);
-          
-          if (matchingLeads.length > 0) {
-            const lead = matchingLeads[0];
-            
-            // Create activity
-            await storage.createLeadActivity({
-              leadId: lead.id,
-              userId,
-              type: 'sms',
-              subject: 'SMS Sent',
-              description: text,
-              outcome: 'positive',
-              metadata: { dialpad_id: result?.id },
-            });
-            
-            // Update last contact
-            await storage.updateLead(lead.id, {
-              lastContactMethod: 'sms',
-              lastContactDate: new Date() as any, // Type workaround for Date
-              lastContactNotes: text.substring(0, 500),
-            });
-            
-            console.log(`✅ Auto-logged SMS activity for lead: ${lead.company || lead.name}`);
-          }
-        }
-      } catch (activityError) {
-        // Don't fail the SMS send if activity logging fails
-        console.error('⚠️  Failed to auto-log SMS activity:', activityError);
-      }
 
       res.json(result);
     } catch (error: any) {
       console.error('Error sending SMS:', error);
       res.status(500).json({ message: error.message || "Failed to send SMS" });
-    }
-  });
-
-  // Dialpad SMS Webhook (NO authentication - Dialpad will call this)
-  app.post("/webhooks/dialpad/sms", async (req: Request, res: Response) => {
-    try {
-      console.log('📨 Dialpad SMS Webhook received:', JSON.stringify(req.body, null, 2));
-      
-      const event = req.body;
-      
-      // Dialpad sends different event types:
-      // - sms.sent: When SMS is sent successfully
-      // - sms.received: When SMS is received
-      // - sms.delivery_status: When delivery status updates
-      
-      if (!event || !event.type) {
-        console.warn('⚠️  Invalid webhook payload - no event type');
-        return res.status(400).json({ error: 'Invalid webhook payload' });
-      }
-
-      const { smsMessages: smsMessagesTable } = await import("@shared/schema");
-      
-      // Handle SMS received
-      if (event.type === 'sms.received' || event.type === 'sms.sent') {
-        const smsData = event.data || event;
-        
-        // Check if this message already exists
-        if (smsData.id) {
-          const existing = await db
-            .select()
-            .from(smsMessagesTable)
-            .where(sql`dialpad_id = ${smsData.id}`)
-            .limit(1);
-            
-          if (existing.length > 0) {
-            console.log('⏭️  SMS message already exists, skipping');
-            return res.status(200).json({ success: true, message: 'Already processed' });
-          }
-        }
-        
-        // Store the SMS message
-        await db.insert(smsMessagesTable).values({
-          dialpadId: smsData.id || smsData.message_id,
-          direction: event.type === 'sms.received' ? 'inbound' : 'outbound',
-          fromNumber: smsData.from_number || smsData.from,
-          toNumber: smsData.to_number || smsData.to || (smsData.to_numbers && smsData.to_numbers[0]),
-          text: smsData.text || smsData.body || '',
-          status: smsData.status || 'delivered',
-          timestamp: smsData.timestamp ? new Date(smsData.timestamp) : new Date(),
-          userId: null, // We don't know the user from webhook - could be enhanced later
-        });
-        
-        console.log('✅ SMS message stored successfully');
-      }
-      
-      // Handle delivery status updates
-      if (event.type === 'sms.delivery_status') {
-        const smsData = event.data || event;
-        
-        // Update existing message status
-        if (smsData.id || smsData.message_id) {
-          await db
-            .update(smsMessagesTable)
-            .set({ 
-              status: smsData.status || 'delivered' 
-            })
-            .where(sql`dialpad_id = ${smsData.id || smsData.message_id}`);
-            
-          console.log('✅ SMS status updated');
-        }
-      }
-      
-      // Always respond with 200 OK to Dialpad
-      res.status(200).json({ success: true });
-    } catch (error: any) {
-      console.error('❌ Error processing Dialpad SMS webhook:', error);
-      // Still return 200 to prevent Dialpad from retrying
-      res.status(200).json({ success: false, error: error.message });
-    }
-  });
-
-  // Twilio SMS/MMS Webhook (NO authentication - Twilio will call this)
-  // Configure in Twilio Console → Phone Numbers → Messaging → "A message comes in"
-  // Supported paths:
-  // - /webhooks/twilio/sms
-  // - /api/webhooks/twilio
-  // - /api/webhooks/twilio/sms
-  const handleTwilioIncomingMessage = async (req: Request, res: Response) => {
-    try {
-      // Twilio sends application/x-www-form-urlencoded payloads
-      const params = (req.body || {}) as Record<string, any>;
-
-      // Optional request signature validation (recommended)
-      // Requires TWILIO_AUTH_TOKEN and a correct public base URL (APP_URL or TWILIO_WEBHOOK_BASE_URL).
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      const signature = (req.header("X-Twilio-Signature") || "").trim();
-      const baseUrl = (process.env.TWILIO_WEBHOOK_BASE_URL || process.env.APP_URL || "").trim();
-      const requireSignatureValidation = String(process.env.TWILIO_SIGNATURE_VALIDATION || "").toLowerCase() === "true";
-
-      if (requireSignatureValidation) {
-        if (!authToken) {
-          console.error("❌ TWILIO_SIGNATURE_VALIDATION=true but TWILIO_AUTH_TOKEN is not set");
-          return res.status(500).send("Server misconfigured");
-        }
-        if (!baseUrl) {
-          console.error("❌ TWILIO_SIGNATURE_VALIDATION=true but TWILIO_WEBHOOK_BASE_URL / APP_URL is not set");
-          return res.status(500).send("Server misconfigured");
-        }
-        if (!signature) {
-          console.warn("⚠️  Twilio webhook missing X-Twilio-Signature");
-          return res.status(403).send("Forbidden");
-        }
-      }
-
-      // Best-effort validation when auth + signature are present (or required)
-      if (authToken && signature) {
-        const urlForValidation = baseUrl
-          ? new URL(req.originalUrl, baseUrl).toString()
-          : `${req.protocol}://${req.get("host")}${req.originalUrl}`;
-
-        const ok = twilio.validateRequest(authToken, signature, urlForValidation, params);
-        if (!ok) {
-          console.warn("⚠️  Twilio webhook signature validation failed");
-          return res.status(403).send("Forbidden");
-        }
-      }
-
-      console.log("📨 Twilio SMS/MMS Webhook received:", JSON.stringify(params, null, 2));
-
-      const {
-        smsMessages: smsMessagesTable,
-        leads,
-      } = await import("@shared/schema");
-
-      // Twilio fields (common):
-      // - MessageSid, SmsSid
-      // - From, To, Body
-      // - NumMedia, MediaUrl0.., MediaContentType0..
-      // - MessageStatus / SmsStatus (if status callback configured)
-      const messageSid = params.MessageSid || params.SmsSid;
-      const fromNumber = params.From;
-      const toNumber = params.To;
-      const bodyText = params.Body || "";
-      const messageStatus = params.MessageStatus || params.SmsStatus;
-
-      // Attempt to associate to a lead by phone number (best-effort)
-      let leadId: number | null = null;
-      try {
-        if (fromNumber) {
-          const matchingLeads = await db
-            .select()
-            .from(leads)
-            .where(or(
-              eq(leads.phone, fromNumber),
-              eq(leads.phone, String(fromNumber).replace(/\D/g, "")),
-            ))
-            .limit(1);
-
-          if (matchingLeads.length > 0) {
-            leadId = matchingLeads[0].id;
-          }
-        }
-      } catch (leadLookupErr) {
-        console.error("⚠️  Twilio lead lookup failed:", leadLookupErr);
-      }
-
-      // Store inbound messages and/or status updates in existing sms_messages table.
-      // NOTE: schema column is named dialpad_id historically; we store Twilio's MessageSid there for de-duplication.
-      if (messageSid) {
-        const existing = await db
-          .select()
-          .from(smsMessagesTable)
-          .where(sql`dialpad_id = ${messageSid}`)
-          .limit(1);
-
-        if (existing.length > 0) {
-          // Update status if we received a callback or any new info
-          if (messageStatus) {
-            await db
-              .update(smsMessagesTable)
-              .set({
-                status: messageStatus,
-              })
-              .where(sql`dialpad_id = ${messageSid}`);
-          }
-        } else if (fromNumber && toNumber) {
-          await db.insert(smsMessagesTable).values({
-            dialpadId: messageSid,
-            direction: "inbound",
-            fromNumber,
-            toNumber,
-            text: bodyText,
-            status: messageStatus || "received",
-            userId: null,
-            leadId,
-            timestamp: new Date(),
-          });
-        }
-      }
-
-      // Respond with TwiML (valid XML). You can customize the reply later if desired.
-      // Returning 200 + TwiML prevents Twilio from treating the webhook as failed.
-      const twiml = new twilio.twiml.MessagingResponse();
-      // If you want an auto-reply, uncomment:
-      // twiml.message("Thanks! We've received your message.");
-
-      // Twilio accepts empty TwiML too; keep it minimal to avoid unintended auto-replies.
-      res.type("text/xml").status(200).send(twiml.toString());
-    } catch (error: any) {
-      console.error("❌ Error processing Twilio webhook:", error);
-      // Return 200 with valid TwiML to avoid repeated retries if the issue is downstream (DB, etc.)
-      const twiml = new twilio.twiml.MessagingResponse();
-      res.type("text/xml").status(200).send(twiml.toString());
-    }
-  };
-
-  app.post("/webhooks/twilio/sms", handleTwilioIncomingMessage);
-  app.post("/api/webhooks/twilio", handleTwilioIncomingMessage);
-  app.post("/api/webhooks/twilio/sms", handleTwilioIncomingMessage);
-
-  // Get current Dialpad user info
-  app.get("/api/dialpad/user/me", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      if (!dialpadService) {
-        return res.status(503).json({ message: "Dialpad API is not configured" });
-      }
-
-      const userInfo = await dialpadService.getCurrentUser();
-      res.json(userInfo);
-    } catch (error: any) {
-      console.error('Error fetching Dialpad user info:', error);
-      res.status(500).json({ message: error.message || "Failed to fetch user info" });
     }
   });
 
@@ -6782,34 +3725,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       }
 
       const { limit, offset, search } = req.query;
-      
-      // Try to get current user ID to fetch user-specific contacts
-      let owner_id: string | undefined;
-      try {
-        const userInfo = await dialpadService.getCurrentUser();
-        owner_id = userInfo.id || userInfo.user_id;
-        console.log('📇 Fetching contacts for owner_id:', owner_id);
-      } catch (err) {
-        console.log('⚠️  Could not get user ID, fetching company contacts only');
-      }
-
-      const rawContacts = await dialpadService.getContacts({
+      const contacts = await dialpadService.getContacts({
         limit: limit ? parseInt(limit as string) : undefined,
         offset: offset ? parseInt(offset as string) : undefined,
         search: search as string,
-        owner_id,
       });
 
-      // Transform Dialpad contacts to match frontend interface
-      const contacts = (rawContacts || []).map((contact: any) => ({
-        id: contact.id || contact.contact_id || String(Math.random()),
-        name: contact.name || contact.full_name || contact.first_name || 'Unknown',
-        phones: contact.phones || contact.phone_numbers || [],
-        emails: contact.emails || contact.email_addresses || [],
-        company: contact.company || contact.organization || undefined,
-      }));
-
-      console.log('✅ Transformed contacts:', contacts.length);
       res.json(contacts);
     } catch (error: any) {
       console.error('Error fetching contacts:', error);
@@ -6915,10 +3836,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         return res.status(503).json({ message: "Dialpad API is not configured" });
       }
 
-      // Note: Dialpad API doesn't have a getCurrentUser endpoint
-      // Test the connection instead
-      const result = await dialpadService.testConnection();
-      res.json(result);
+      const userInfo = await dialpadService.getCurrentUser();
+      res.json(userInfo);
     } catch (error: any) {
       console.error('Error fetching Dialpad user info:', error);
       res.status(500).json({ message: error.message || "Failed to fetch user info" });

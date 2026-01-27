@@ -1,26 +1,11 @@
-import { CircuitBreaker } from './lib/circuit-breaker';
-import { log } from './vite';
-
 const DIALPAD_API_BASE = 'https://dialpad.com/api/v2';
 const REQUEST_TIMEOUT = 5000; // 5 second timeout
-
-// Dialpad circuit breaker: trip after 3 failures, reset after 60s
-const dialpadCircuit = new CircuitBreaker(3, 60000);
 
 export class DialpadService {
   private apiKey: string;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
-  }
-
-  private async executeWithCircuit<T>(fn: () => Promise<T>, operation: string): Promise<T> {
-    try {
-      return await dialpadCircuit.execute(fn);
-    } catch (error) {
-      log(`❌ Dialpad error (${operation}): ${error instanceof Error ? error.message : 'Unknown error'}`, "dialpad");
-      throw error;
-    }
   }
 
   private getHeaders() {
@@ -66,7 +51,7 @@ export class DialpadService {
     limit?: number;
     offset?: number;
   }) {
-    return this.executeWithCircuit(async () => {
+    try {
       // Cap limit at 50 (Dialpad API maximum)
       const safeParams = {
         ...params,
@@ -74,7 +59,7 @@ export class DialpadService {
       };
       
       const queryString = this.buildQueryString(safeParams);
-      const url = `${DIALPAD_API_BASE}/call${queryString}`;
+      const url = `${DIALPAD_API_BASE}/calls${queryString}`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -86,16 +71,19 @@ export class DialpadService {
       }
 
       const data = await response.json();
-      log(`✅ Calls fetched: ${data.items?.length || 0}`, "dialpad");
+      console.log('✅ Calls fetched:', data.items?.length || 0);
       // Dialpad returns data in {items: [...]} format
       return data.items || [];
-    }, "getCallLogs");
+    } catch (error: any) {
+      console.error('❌ Error fetching call logs:', error.message);
+      throw new Error(error.message || 'Failed to fetch call logs');
+    }
   }
 
   // Get specific call details
   async getCallDetails(callId: string) {
-    return this.executeWithCircuit(async () => {
-      const url = `${DIALPAD_API_BASE}/call/${callId}`;
+    try {
+      const url = `${DIALPAD_API_BASE}/calls/${callId}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -106,20 +94,21 @@ export class DialpadService {
       }
 
       return await response.json();
-    }, "getCallDetails");
+    } catch (error: any) {
+      console.error('❌ Error fetching call details:', error.message);
+      throw new Error(error.message || 'Failed to fetch call details');
+    }
   }
 
   // Make an outbound call
   async makeCall(data: {
-    phone_number: string;
-    user_id?: string; // Required by Dialpad API
+    to_number: string;
     from_number?: string;
     from_extension_id?: string;
+    from_user_id?: string;
   }) {
-    return this.executeWithCircuit(async () => {
-      const url = `${DIALPAD_API_BASE}/call`;
-      log(`📞 Making call to: ${data.phone_number}`, "dialpad");
-      
+    try {
+      const url = `${DIALPAD_API_BASE}/calls`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -127,14 +116,16 @@ export class DialpadService {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
-      log(`✅ Call started successfully: ${result.id}`, "dialpad");
+      console.log('✅ Call started successfully:', result);
       return result;
-    }, "makeCall");
+    } catch (error: any) {
+      console.error('❌ Error making call:', error.message);
+      throw new Error(error.message || 'Failed to make call');
+    }
   }
 
   // Get SMS messages
@@ -152,7 +143,7 @@ export class DialpadService {
       };
       
       const queryString = this.buildQueryString(safeParams);
-      const url = `${DIALPAD_API_BASE}/sms${queryString}`;
+      const url = `${DIALPAD_API_BASE}/messages${queryString}`;
       
       const response = await fetch(url, {
         method: 'GET',
@@ -179,12 +170,10 @@ export class DialpadService {
     to_number?: string;
     text: string;
     from_number?: string;
-    user_id?: string; // Dialpad expects 'user_id' not 'from_user_id'
+    from_user_id?: string;
   }) {
-    return this.executeWithCircuit(async () => {
-      const url = `${DIALPAD_API_BASE}/sms`;
-      log(`📤 Sending SMS to: ${data.to_number || data.to_numbers?.join(',')}`, "dialpad");
-      
+    try {
+      const url = `${DIALPAD_API_BASE}/messages`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -192,14 +181,16 @@ export class DialpadService {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
-      log(`✅ SMS sent successfully: ${result.id}`, "dialpad");
+      console.log('✅ SMS sent successfully:', result);
       return result;
-    }, "sendSms");
+    } catch (error: any) {
+      console.error('❌ Error sending SMS:', error.message);
+      throw new Error(error.message || 'Failed to send SMS');
+    }
   }
 
   // Get contacts
@@ -207,7 +198,6 @@ export class DialpadService {
     limit?: number;
     offset?: number;
     search?: string;
-    owner_id?: string;
   }) {
     try {
       // Cap limit at 50 (Dialpad API maximum)
@@ -219,16 +209,12 @@ export class DialpadService {
       const queryString = this.buildQueryString(safeParams);
       const url = `${DIALPAD_API_BASE}/contacts${queryString}`;
       
-      console.log('📇 Fetching contacts with params:', safeParams);
-      
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Dialpad Contacts API Error ${response.status}:`, errorText);
         throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
       }
 
@@ -350,47 +336,11 @@ export class DialpadService {
     }
   }
 
-  // Get current user info
-  async getCurrentUser() {
-    try {
-      // Try to get users list (API key owner should be first)
-      const url = `${DIALPAD_API_BASE}/users?limit=1`;
-      console.log('🔍 Fetching Dialpad user from:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Dialpad Users API Error ${response.status}:`, errorText);
-        throw new Error(`Dialpad API Error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Got Dialpad users response:', JSON.stringify(data, null, 2));
-      
-      // Dialpad returns users in {items: [...]} format
-      const user = data.items?.[0] || data[0] || data;
-      
-      if (!user || !user.id) {
-        throw new Error('No user ID found in Dialpad response');
-      }
-      
-      console.log('✅ Using Dialpad user ID:', user.id);
-      return user;
-    } catch (error: any) {
-      console.error('❌ Error fetching user info:', error.message);
-      throw error;
-    }
-  }
-
   // Test Dialpad API connection
   async testConnection() {
     try {
       // Test by fetching a single call record
-      const url = `${DIALPAD_API_BASE}/call?limit=1`;
+      const url = `${DIALPAD_API_BASE}/calls?limit=1`;
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
