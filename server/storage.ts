@@ -28,6 +28,13 @@ import {
   secondMe,
   secondMeContent,
   pageViews,
+  scheduledAiCommands,
+  marketingSeries,
+  marketingSeriesSteps,
+  marketingSeriesEnrollments,
+  commissions,
+  marketingBroadcasts,
+  marketingBroadcastRecipients,
   type User,
   type UpsertUser,
   type InsertUser,
@@ -87,6 +94,14 @@ import {
   type InsertSecondMe,
   type SecondMeContent,
   type InsertSecondMeContent,
+  type ScheduledAiCommand,
+  type InsertScheduledAiCommand,
+  type MarketingSeries,
+  type InsertMarketingSeries,
+  type MarketingSeriesStep,
+  type InsertMarketingSeriesStep,
+  type MarketingSeriesEnrollment,
+  type InsertMarketingSeriesEnrollment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and, gte, count } from "drizzle-orm";
@@ -220,6 +235,25 @@ export interface IStorage {
     invoices: Invoice[];
     tickets: Ticket[];
   }>;
+
+  // Scheduled AI Commands operations
+  getDueScheduledAiCommands(): Promise<ScheduledAiCommand[]>;
+  createScheduledAiCommand(command: InsertScheduledAiCommand): Promise<ScheduledAiCommand>;
+  updateScheduledAiCommand(id: string, data: Partial<InsertScheduledAiCommand>): Promise<ScheduledAiCommand>;
+
+  // Marketing Series operations
+  getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]>;
+  createMarketingSeries(series: InsertMarketingSeries): Promise<MarketingSeries>;
+  createMarketingSeriesStep(step: InsertMarketingSeriesStep): Promise<MarketingSeriesStep>;
+  createMarketingSeriesEnrollment(enrollment: InsertMarketingSeriesEnrollment): Promise<MarketingSeriesEnrollment>;
+  updateMarketingSeriesEnrollment(id: string, data: Partial<InsertMarketingSeriesEnrollment>): Promise<MarketingSeriesEnrollment>;
+
+  // Task automation operations
+  getDueTasksForAllAssignees(): Promise<Task[]>;
+  updateTaskAssignee(taskId: string, assigneeId: number | null): Promise<Task>;
+
+  // Lead automation operations
+  getDueLeadAutomations(): Promise<LeadAutomation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1171,6 +1205,105 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
     
     return result;
+  }
+
+  // Scheduled AI Commands operations
+  async getDueScheduledAiCommands(): Promise<ScheduledAiCommand[]> {
+    return await db
+      .select()
+      .from(scheduledAiCommands)
+      .where(and(
+        eq(scheduledAiCommands.status, "pending"),
+        sql`${scheduledAiCommands.nextRunAt} <= NOW()`
+      ))
+      .orderBy(scheduledAiCommands.nextRunAt)
+      .limit(10);
+  }
+
+  async createScheduledAiCommand(commandData: InsertScheduledAiCommand): Promise<ScheduledAiCommand> {
+    const [command] = await db.insert(scheduledAiCommands).values(commandData).returning();
+    return command;
+  }
+
+  async updateScheduledAiCommand(id: string, data: Partial<InsertScheduledAiCommand>): Promise<ScheduledAiCommand> {
+    const [command] = await db
+      .update(scheduledAiCommands)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(scheduledAiCommands.id, id))
+      .returning();
+    return command;
+  }
+
+  // Marketing Series operations
+  async getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]> {
+    return await db
+      .select()
+      .from(marketingSeriesEnrollments)
+      .where(and(
+        eq(marketingSeriesEnrollments.status, "active"),
+        sql`${marketingSeriesEnrollments.nextStepAt} <= NOW()`
+      ))
+      .orderBy(marketingSeriesEnrollments.nextStepAt)
+      .limit(20);
+  }
+
+  async createMarketingSeries(seriesData: InsertMarketingSeries): Promise<MarketingSeries> {
+    const [series] = await db.insert(marketingSeries).values(seriesData).returning();
+    return series;
+  }
+
+  async createMarketingSeriesStep(stepData: InsertMarketingSeriesStep): Promise<MarketingSeriesStep> {
+    const [step] = await db.insert(marketingSeriesSteps).values(stepData).returning();
+    return step;
+  }
+
+  async createMarketingSeriesEnrollment(enrollmentData: InsertMarketingSeriesEnrollment): Promise<MarketingSeriesEnrollment> {
+    const [enrollment] = await db.insert(marketingSeriesEnrollments).values(enrollmentData).returning();
+    return enrollment;
+  }
+
+  async updateMarketingSeriesEnrollment(id: string, data: Partial<InsertMarketingSeriesEnrollment>): Promise<MarketingSeriesEnrollment> {
+    const [enrollment] = await db
+      .update(marketingSeriesEnrollments)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketingSeriesEnrollments.id, id))
+      .returning();
+    return enrollment;
+  }
+
+  // Task automation operations
+  async getDueTasksForAllAssignees(): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(and(
+        eq(tasks.status, "pending"),
+        sql`${tasks.dueDate} <= NOW()`
+      ))
+      .orderBy(tasks.dueDate)
+      .limit(50);
+  }
+
+  async updateTaskAssignee(taskId: string, assigneeId: number | null): Promise<Task> {
+    const [task] = await db
+      .update(tasks)
+      .set({ assigneeId, updatedAt: new Date() })
+      .where(eq(tasks.id, taskId))
+      .returning();
+    return task;
+  }
+
+  // Lead automation operations
+  async getDueLeadAutomations(): Promise<LeadAutomation[]> {
+    return await db
+      .select()
+      .from(leadAutomations)
+      .where(and(
+        eq(leadAutomations.isActive, true),
+        sql`${leadAutomations.nextRunAt} <= NOW()`
+      ))
+      .orderBy(leadAutomations.nextRunAt)
+      .limit(20);
   }
 }
 
