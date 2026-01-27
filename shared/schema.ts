@@ -885,3 +885,68 @@ export const secondMeContent = pgTable("second_me_content", {
 export const insertSecondMeContentSchema = createInsertSchema(secondMeContent).omit({ id: true, createdAt: true });
 export type InsertSecondMeContent = z.infer<typeof insertSecondMeContentSchema>;
 export type SecondMeContent = typeof secondMeContent.$inferSelect;
+
+// Commissions table for tracking sales agent earnings
+export const commissions = pgTable("commissions", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  leadId: varchar("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
+  dealValue: numeric("deal_value", { precision: 10, scale: 2 }).notNull(),
+  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).notNull(),
+  commissionAmount: numeric("commission_amount", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status").notNull().default("pending"), // pending, approved, paid
+  notes: text("notes"),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCommissionSchema = createInsertSchema(commissions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCommission = z.infer<typeof insertCommissionSchema>;
+export type Commission = typeof commissions.$inferSelect;
+
+// Marketing Broadcasts table
+export const marketingBroadcasts = pgTable("marketing_broadcasts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: varchar("title").notNull(),
+  content: text("content").notNull(),
+  mediaUrl: varchar("media_url"), // Optional media attachment
+  mediaType: varchar("media_type"), // image, video
+  channel: varchar("channel").notNull(), // sms, email, whatsapp, telegram
+  status: varchar("status").notNull().default("pending"), // pending, scheduled, sending, sent, failed
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly
+  nextRunAt: timestamp("next_run_at"),
+  recurringEndDate: timestamp("recurring_end_date"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMarketingBroadcastSchema = createInsertSchema(marketingBroadcasts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMarketingBroadcast = z.infer<typeof insertMarketingBroadcastSchema>;
+export type MarketingBroadcast = typeof marketingBroadcasts.$inferSelect;
+
+// Marketing Broadcast Recipients table
+export const marketingBroadcastRecipients = pgTable("marketing_broadcast_recipients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  broadcastId: varchar("broadcast_id").notNull().references(() => marketingBroadcasts.id, { onDelete: "cascade" }),
+  recipientId: varchar("recipient_id").notNull(), // lead_id or client_id
+  recipientType: varchar("recipient_type").notNull(), // lead, client
+  status: varchar("status").notNull().default("pending"), // pending, sent, delivered, failed
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  errorMessage: text("error_message"),
+  leadId: varchar("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMarketingBroadcastRecipientSchema = createInsertSchema(marketingBroadcastRecipients).omit({ id: true, createdAt: true });
+export type InsertMarketingBroadcastRecipient = z.infer<typeof insertMarketingBroadcastRecipientSchema>;
+export type MarketingBroadcastRecipient = typeof marketingBroadcastRecipients.$inferSelect;

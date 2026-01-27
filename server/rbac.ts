@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { UserRole } from "@shared/roles";
 
+export { UserRole };
+
 export interface RolePermissions {
   canManageUsers: boolean;
   canManageClients: boolean;
