@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat, Eye, EyeOff } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -67,6 +67,7 @@ export default function TasksPage() {
   const [aiInput, setAiInput] = useState("");
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -396,6 +397,12 @@ export default function TasksPage() {
 
   const handleDragStart = (task: Task) => {
     setDraggedTask(task);
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+    setIsDragging(false);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -405,12 +412,13 @@ export default function TasksPage() {
   const handleDrop = (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
     if (draggedTask && draggedTask.status !== newStatus) {
-      updateTaskStatusMutation.mutate({ 
-        id: draggedTask.id, 
-        status: newStatus 
+      updateTaskStatusMutation.mutate({
+        id: draggedTask.id,
+        status: newStatus
       });
     }
     setDraggedTask(null);
+    setIsDragging(false);
   };
 
   const handleAiQuickAdd = async () => {
@@ -605,22 +613,36 @@ export default function TasksPage() {
                 }}
               >
                 {columnTasks.map((task) => (
-                  <Card 
-                    key={task.id} 
+                  <Card
+                    key={task.id}
                     draggable
                     onDragStart={() => handleDragStart(task)}
+                    onDragEnd={handleDragEnd}
                     className={`hover-elevate transition-all group cursor-grab active:cursor-grabbing border-none shadow-sm hover:shadow-md bg-card/80 backdrop-blur-md border border-white/10 dark:border-white/5 ${
                       draggedTask?.id === task.id ? 'opacity-50' : ''
                     }`}
                     data-testid={`task-card-${task.id}`}
                     onClick={() => {
-                      setSelectedTask(task);
-                      setIsDetailSidebarOpen(true);
+                      if (!isDragging) {
+                        setSelectedTask(task);
+                        setIsDetailSidebarOpen(true);
+                      }
                     }}
                   >
                     <CardHeader className="p-3 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-semibold text-sm leading-tight flex-1">{task.title}</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditTask(task);
+                          }}
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-2">
@@ -755,6 +777,17 @@ export default function TasksPage() {
                     {task.isRecurring && (
                       <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 opacity-70" title={`Recurring: ${task.recurringPattern}`} />
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditTask(task);
+                      }}
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                   
                   <div className="col-span-2">
@@ -843,7 +876,7 @@ export default function TasksPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-7 px-2"
                       onClick={() => handleEditTask(task)}
                     >
                       <Edit className="w-4 h-4 mr-1" />
@@ -1741,6 +1774,10 @@ export default function TasksPage() {
         onClose={() => {
           setIsDetailSidebarOpen(false);
           setSelectedTask(null);
+        }}
+        onEdit={(task) => {
+          handleEditTask(task);
+          setIsDetailSidebarOpen(false);
         }}
       />
 

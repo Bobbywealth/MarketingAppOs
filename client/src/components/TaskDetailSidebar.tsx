@@ -28,7 +28,8 @@ import {
   Circle,
   MoreVertical,
   Send,
-  History
+  History,
+  Edit
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -40,9 +41,10 @@ interface TaskDetailSidebarProps {
   task: Task | null;
   isOpen: boolean;
   onClose: () => void;
+  onEdit?: (task: Task) => void;
 }
 
-export function TaskDetailSidebar({ task, isOpen, onClose }: TaskDetailSidebarProps) {
+export function TaskDetailSidebar({ task, isOpen, onClose, onEdit }: TaskDetailSidebarProps) {
   const { toast } = useToast();
   const [comment, setComment] = useState("");
   const [checklist, setChecklist] = useState<Array<{ id: string; text: string; completed: boolean }>>(
@@ -154,6 +156,17 @@ export function TaskDetailSidebar({ task, isOpen, onClose }: TaskDetailSidebarPr
                   {task.priority.toUpperCase()}
                 </Badge>
               </div>
+              {onEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(task)}
+                  className="gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit
+                </Button>
+              )}
             </div>
             <SheetTitle className="text-2xl font-bold leading-tight">
               {task.title}
