@@ -1274,7 +1274,6 @@ This lead will be updated if they complete the full signup process.`,
       let userId: number | undefined = undefined;
       if (data.username && data.password) {
         const hashedPassword = await hashPassword(data.password);
-        const verificationToken = randomBytes(20).toString("hex");
         const newUser = await storage.createUser({
           username: data.username,
           password: hashedPassword,
@@ -1282,24 +1281,13 @@ This lead will be updated if they complete the full signup process.`,
           firstName: data.name.split(' ')[0],
           lastName: data.name.split(' ').slice(1).join(' '),
           role: "prospective_client", // Force payment before becoming full client
-          emailVerified: false,
-          emailVerificationToken: verificationToken,
         });
         userId = newUser.id;
         console.log('✅ Created user account:', data.username);
 
-        // Send welcome + verification emails (best-effort)
+        // Send welcome email (best-effort)
         if (newUser.email) {
           try {
-            const protocol = req.protocol;
-            const host = req.get("host");
-            const appUrl = process.env.APP_URL || `${protocol}://${host}`;
-            const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
-
-            void emailNotifications
-              .sendVerificationEmail(newUser.firstName || newUser.username, newUser.email, verifyUrl)
-              .catch((err) => console.error("Failed to send verification email (signup-simple):", err));
-
             void emailNotifications
               .sendWelcomeEmail(newUser.firstName || newUser.username, newUser.email)
               .catch((err) => console.error("Failed to send welcome email (signup-simple):", err));

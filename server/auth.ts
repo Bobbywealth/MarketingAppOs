@@ -63,10 +63,8 @@ export function setupAuth(app: Express) {
     .query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_expires TIMESTAMP;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_token TEXT;
     `)
-    .then(() => console.log('✅ ensured password reset and email verification columns exist'))
+    .then(() => console.log('✅ ensured password reset columns exist'))
     .catch((e) => console.error('⚠️ could not ensure password reset columns:', e.message));
 
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -186,7 +184,6 @@ export function setupAuth(app: Express) {
       }
 
       // Security: Force all self-registrations to "client" role to prevent privilege escalation
-      const verificationToken = randomBytes(20).toString("hex");
       // Only allow client role via standard self-signup. 
       // Staff, Managers, and Admins must be created by an Admin.
       // Creators have their own specific signup flow.
@@ -196,26 +193,12 @@ export function setupAuth(app: Express) {
         ...validatedData,
         password: await hashPassword(validatedData.password),
         role, 
-        emailVerified: false,
-        emailVerificationToken: verificationToken,
       });
 
-      // Send welcome and verification emails
+      // Send welcome email
       if (user.email) {
         try {
           const { emailNotifications } = await import("./emailService");
-          
-          // Send verification email
-          const protocol = req.protocol;
-          const host = req.get('host');
-          const appUrl = process.env.APP_URL || `${protocol}://${host}`;
-          const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
-          
-          void emailNotifications.sendVerificationEmail(
-            user.firstName || user.username,
-            user.email,
-            verifyUrl
-          ).catch(err => console.error("Failed to send verification email:", err));
 
           void emailNotifications.sendWelcomeEmail(
             user.firstName || user.username,
@@ -251,7 +234,6 @@ export function setupAuth(app: Express) {
           clientId: user.clientId,
           creatorId: user.creatorId,
           customPermissions: user.customPermissions,
-          emailVerified: user.emailVerified,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         });
@@ -337,7 +319,6 @@ export function setupAuth(app: Express) {
             clientId: user.clientId,
             creatorId: user.creatorId,
             customPermissions: user.customPermissions,
-            emailVerified: user.emailVerified,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
           });
@@ -492,107 +473,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Email verification route
-  app.post("/api/auth/verify-email", async (req, res) => {
-    try {
-      const { token } = req.body;
-      
-      if (!token) {
-        return res.status(400).json({ message: "Verification token is required" });
-      }
-
-      const user = await storage.getUserByEmailVerificationToken(token);
-      
-      if (!user) {
-        return res.status(400).json({ message: "Invalid or expired verification token." });
-      }
-
-      await storage.updateUserEmailVerification(user.id, true, null);
-
-      // If the user is currently logged in, update their session user object
-      if (req.isAuthenticated() && (req.user as SelectUser).id === user.id) {
-        (req.user as SelectUser).emailVerified = true;
-        // Re-save session to be absolutely sure
-        await new Promise<void>((resolve, reject) => {
-          req.session.save((err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      }
-
-      // Log the email verification activity
-      try {
-        await storage.createActivityLog({
-          userId: user.id,
-          activityType: "email_verified",
-          description: `${user.username} verified their email`,
-          metadata: {
-            ip: req.ip,
-          },
-        });
-      } catch (error) {
-        console.error("Failed to log email verification activity:", error);
-      }
-      
-      res.json({ message: "Email successfully verified! You now have full access." });
-    } catch (error) {
-      console.error("Email verification error:", error);
-      res.status(500).json({ message: "Failed to verify email" });
-    }
-  });
-
-  // Resend verification email
-  app.post("/api/auth/resend-verification", async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "You must be logged in to resend verification." });
-      }
-
-      const user = req.user as SelectUser;
-      
-      if (user.emailVerified) {
-        return res.status(400).json({ message: "Email is already verified." });
-      }
-
-      if (!user.email) {
-        return res.status(400).json({ message: "User does not have an email address." });
-      }
-
-      // Generate new token
-      const verificationToken = randomBytes(20).toString("hex");
-      await storage.updateUserEmailVerification(user.id, false, verificationToken);
-
-      // Send verification email
-      const protocol = req.protocol;
-      const host = req.get('host');
-      const appUrl = process.env.APP_URL || `${protocol}://${host}`;
-      const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
-      
-      try {
-        const { emailNotifications } = await import("./emailService");
-        const emailResult = await emailNotifications.sendVerificationEmail(
-          user.firstName || user.username,
-          user.email,
-          verifyUrl
-        );
-        
-        if (!emailResult.success) {
-          console.error("Failed to send verification email:", emailResult.error || emailResult.message);
-          return res.status(500).json({ message: emailResult.message || "Failed to send verification email. Please contact support." });
-        }
-      } catch (emailErr) {
-        console.error("Failed to send verification email:", emailErr);
-        return res.status(500).json({ message: "Failed to send verification email. Please try again later." });
-      }
-
-      res.json({ message: "Verification email has been resent." });
-    } catch (error) {
-      console.error("Resend verification error:", error);
-      res.status(500).json({ message: "Failed to resend verification email" });
-    }
-  });
-
   app.get("/api/user", (req, res) => {
     // Logged-out is not an error state for the SPA; return 200 + null to reduce noisy 401 logs.
     if (!req.isAuthenticated()) return res.status(200).json(null);
@@ -609,7 +489,6 @@ export function setupAuth(app: Express) {
       clientId: user.clientId,
       creatorId: user.creatorId,
       customPermissions: user.customPermissions,
-      emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       permissions,
@@ -622,37 +501,5 @@ export function isAuthenticated(req: any, res: any, next: any) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  // Optional enforcement: require email verification for non-exempt roles.
-  // This is helpful as a temporary safety switch while polishing auth/security flows.
-  const enforce = process.env.ENFORCE_EMAIL_VERIFICATION === "true";
-  if (enforce) {
-    const user = req.user as SelectUser;
-    const isExemptRole = user?.role === "admin" || user?.role === "manager";
-    if (!isExemptRole && !user?.emailVerified) {
-      return res.status(403).json({
-        message: "Email verification required",
-        emailVerified: false,
-        needsVerification: true,
-      });
-    }
-  }
-
   return next();
-}
-
-export function requireEmailVerified(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-  
-  const user = req.user as SelectUser;
-  if (!user.emailVerified) {
-    return res.status(403).json({ 
-      message: "Email verification required", 
-      emailVerified: false,
-      needsVerification: true 
-    });
-  }
-  
-  next();
 }
