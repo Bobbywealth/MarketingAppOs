@@ -59,9 +59,21 @@ export async function notifyAdminsAboutSecurityEvent(title: string, message: str
     const users = await storage.getUsers();
     const admins = users.filter(u => u.role === UserRole.ADMIN);
     const { sendPushToUser } = await import('../push');
-    
+    const { emailNotifications } = await import('../emailService');
+
+    // Batch fetch notification preferences for all admins
+    const adminIds = admins.map(a => a.id);
+    const allPrefs = await Promise.all(
+      adminIds.map(id => storage.getUserNotificationPreferences(id).catch(() => null))
+    );
+    const prefsMap = new Map(adminIds.map((id, i) => [id, allPrefs[i]]));
+
+    // Prepare all notifications and push notifications
+    const notifications = [];
+    const pushNotifications = [];
+
     for (const admin of admins) {
-      await storage.createNotification({
+      notifications.push({
         userId: admin.id,
         type: 'error',
         title,
@@ -70,20 +82,35 @@ export async function notifyAdminsAboutSecurityEvent(title: string, message: str
         actionUrl: '/settings',
         isRead: false,
       });
-      
-      await sendPushToUser(admin.id, {
+
+      pushNotifications.push({
+        userId: admin.id,
         title,
         body: message,
         url: '/settings',
-      }).catch(err => console.error(`Failed to send push to admin ${admin.id}:`, err));
+      });
+    }
 
-      // Send email alert to admins
+    // Batch create notifications
+    for (const notif of notifications) {
+      await storage.createNotification(notif);
+    }
+
+    // Send push notifications
+    for (const pushNotif of pushNotifications) {
+      await sendPushToUser(pushNotif.userId, pushNotif).catch(err =>
+        console.error(`Failed to send push to admin ${pushNotif.userId}:`, err)
+      );
+    }
+
+    // Send email alerts to admins
+    for (const admin of admins) {
       if (admin.email) {
-        try {
-          const { emailNotifications } = await import('../emailService');
-          await emailNotifications.sendSecurityAlertEmail(admin.email, title, message);
-        } catch (emailErr) {
-          console.error(`Failed to send security email to admin ${admin.id}:`, emailErr);
+        const prefs = prefsMap.get(admin.id);
+        if (prefs?.emailNotifications !== false) {
+          emailNotifications.sendSecurityAlertEmail(admin.email, title, message).catch(err =>
+            console.error(`Failed to send security email to admin ${admin.id}:`, err)
+          );
         }
       }
     }
@@ -118,13 +145,28 @@ export async function notifyAdminsAboutAction(
   try {
     const allUsers = await storage.getUsers();
     const admins = allUsers.filter(u => u.role === 'admin');
-    
+
+    // Batch fetch notification preferences for all admins
+    const adminIds = admins.map(a => a.id);
+    const allPrefs = await Promise.all(
+      adminIds.map(id => storage.getUserNotificationPreferences(id).catch(() => null))
+    );
+    const prefsMap = new Map(adminIds.map((id, i) => [id, allPrefs[i]]));
+
     const { sendPushToUser } = await import('../push');
-    
+    const { emailNotifications } = await import('../emailService');
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const fullActionUrl = actionUrl?.startsWith('http') ? actionUrl : `${appUrl}${actionUrl || '/dashboard'}`;
+
+    // Prepare all notifications and push notifications
+    const notifications = [];
+    const pushNotifications = [];
+    const emailSends = [];
+
     for (const admin of admins) {
       if (admin.id === actorId) continue;
-      
-      await storage.createNotification({
+
+      notifications.push({
         userId: admin.id,
         type,
         title,
@@ -133,36 +175,45 @@ export async function notifyAdminsAboutAction(
         actionUrl,
         isRead: false,
       });
-      
-      await sendPushToUser(admin.id, {
+
+      pushNotifications.push({
+        userId: admin.id,
         title,
         body: message,
         url: actionUrl,
-      }).catch(err => console.error(`Failed to send push to admin ${admin.id}:`, err));
+      });
 
-      // Send email alert to admins
+      // Email notification (respect preferences)
       if (admin.email) {
-        try {
-          const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
-          const fullActionUrl = actionUrl?.startsWith('http') ? actionUrl : `${appUrl}${actionUrl || '/dashboard'}`;
-          const { emailNotifications } = await import('../emailService');
-          
-          // Only send if admin has notifications enabled
-          const prefs = await storage.getUserNotificationPreferences(admin.id).catch(() => null);
-          if (prefs?.emailNotifications !== false) {
-            await emailNotifications.sendActionAlertEmail(
-              admin.email, 
-              title, 
-              message, 
+        const prefs = prefsMap.get(admin.id);
+        if (prefs?.emailNotifications !== false) {
+          emailSends.push(
+            emailNotifications.sendActionAlertEmail(
+              admin.email,
+              title,
+              message,
               fullActionUrl,
               type
-            );
-          }
-        } catch (emailErr) {
-          console.error(`Failed to send action email to admin ${admin.id}:`, emailErr);
+            ).catch(err => console.error(`Failed to send action email to admin ${admin.id}:`, err))
+          );
         }
       }
     }
+
+    // Batch create notifications
+    for (const notif of notifications) {
+      await storage.createNotification(notif);
+    }
+
+    // Send push notifications
+    for (const pushNotif of pushNotifications) {
+      await sendPushToUser(pushNotif.userId, pushNotif).catch(err =>
+        console.error(`Failed to send push to admin ${pushNotif.userId}:`, err)
+      );
+    }
+
+    // Send email notifications in parallel
+    await Promise.all(emailSends);
   } catch (error) {
     console.error('Failed to notify admins:', error);
   }

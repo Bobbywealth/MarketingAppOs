@@ -460,49 +460,76 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
     // Notify all team members (admin, manager, staff) about new task
     try {
       const allUsers = await storage.getUsers();
-      const teamMembers = allUsers.filter(u => 
+      const teamMembers = allUsers.filter(u =>
         u.role === 'admin' || u.role === 'manager' || u.role === 'staff'
       );
-      
+
+      // Batch fetch notification preferences for all team members at once
+      const teamMemberIds = teamMembers.map(tm => tm.id);
+      const allPrefs = await Promise.all(
+        teamMemberIds.map(id => storage.getUserNotificationPreferences(id).catch(() => null))
+      );
+      const prefsMap = new Map(teamMemberIds.map((id, i) => [id, allPrefs[i]]));
+
+      // Prepare all notifications and push notifications
+      const notifications = [];
+      const pushNotifications = [];
+
       for (const teamMember of teamMembers) {
         if (teamMember.id === user?.id || teamMember.id === task.assignedToId) {
           continue;
         }
-        
-        await storage.createNotification({
+
+        notifications.push({
           userId: teamMember.id,
-          type: 'info',
+          type: 'info' as const,
           title: '📋 New Task Created',
           message: `${creatorName} created: "${task.title}"`,
           category: 'task',
           actionUrl: `/tasks?taskId=${task.id}`,
           isRead: false,
         });
-        
-        void sendPushToUser(teamMember.id, {
+
+        pushNotifications.push({
+          userId: teamMember.id,
           title: '📋 New Task Created',
           body: `${creatorName} created: "${task.title}"`,
           url: `/tasks?taskId=${task.id}`,
-        }).catch(err => console.error('Failed to send push notification:', err));
+        });
+      }
 
-        // Email notification for team members
-        if (teamMember.email) {
-          try {
-            const { emailNotifications } = await import('../emailService');
-            const prefs = await storage.getUserNotificationPreferences(teamMember.id).catch(() => null);
-            if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
-              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
-              void emailNotifications.sendActionAlertEmail(
-                teamMember.email,
-                '📋 New Task Created',
-                `${creatorName} created a new task: "${task.title}"`,
-                `${appUrl}/tasks?taskId=${task.id}`,
-                'info'
-              ).catch(err => console.error(`Failed to send task creation email to ${teamMember.username}:`, err));
-            }
-          } catch (e) {
-            console.error('Email error in task creation:', e);
-          }
+      // Batch create all notifications
+      for (const notif of notifications) {
+        await storage.createNotification(notif);
+      }
+
+      // Send push notifications
+      for (const pushNotif of pushNotifications) {
+        void sendPushToUser(pushNotif.userId, pushNotif).catch(err =>
+          console.error('Failed to send push notification:', err)
+        );
+      }
+
+      // Email notifications for team members
+      const { emailNotifications } = await import('../emailService');
+      const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+
+      for (const teamMember of teamMembers) {
+        if (teamMember.id === user?.id || teamMember.id === task.assignedToId || !teamMember.email) {
+          continue;
+        }
+
+        const prefs = prefsMap.get(teamMember.id);
+        if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
+          void emailNotifications.sendActionAlertEmail(
+            teamMember.email,
+            '📋 New Task Created',
+            `${creatorName} created a new task: "${task.title}"`,
+            `${appUrl}/tasks?taskId=${task.id}`,
+            'info'
+          ).catch(err =>
+            console.error(`Failed to send task creation email to ${teamMember.username}:`, err)
+          );
         }
       }
     } catch (teamNotifError) {

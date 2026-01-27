@@ -395,9 +395,12 @@ router.post("/bulk-import", isAuthenticated, requirePermission("canManageLeads")
     let skipped = 0;
     const existingLeads = await storage.getLeads();
 
+    // Use a Set for O(1) lookups instead of O(n) .some() for each lead
+    const existingEmails = new Set(existingLeads.map(l => l.email).filter(Boolean));
+
     for (const leadData of leadsToImport) {
       try {
-        if (leadData.email && existingLeads.some(l => l.email === leadData.email)) {
+        if (leadData.email && existingEmails.has(leadData.email)) {
           skipped++;
           continue;
         }
@@ -409,8 +412,12 @@ router.post("/bulk-import", isAuthenticated, requirePermission("canManageLeads")
           source: leadData.source || 'import',
           createdAt: new Date(),
         });
-        
+
         await storage.createLead(validatedData);
+        // Add to set to avoid duplicates within the same import batch
+        if (validatedData.email) {
+          existingEmails.add(validatedData.email);
+        }
         imported++;
       } catch (error) {
         console.error("Failed to import lead:", leadData, error);

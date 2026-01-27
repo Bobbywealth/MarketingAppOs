@@ -67,7 +67,10 @@ export const clients = pgTable("clients", {
   displayOrder: integer("display_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_clients_assigned_to").on(table.assignedToId),
+  index("IDX_clients_status").on(table.status),
+]);
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
   assignedTo: one(users, {
@@ -96,7 +99,10 @@ export const campaigns = pgTable("campaigns", {
   goals: text("goals"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_campaigns_client_id").on(table.clientId),
+  index("IDX_campaigns_status").on(table.status),
+]);
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
   client: one(clients, {
@@ -152,7 +158,13 @@ export const tasks = pgTable("tasks", {
   recurringEndDate: timestamp("recurring_end_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_tasks_assigned_to").on(table.assignedToId),
+  index("IDX_tasks_client_id").on(table.clientId),
+  index("IDX_tasks_space_id").on(table.spaceId),
+  index("IDX_tasks_status").on(table.status),
+  index("IDX_tasks_due_date").on(table.dueDate),
+]);
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
   campaign: one(campaigns, {
@@ -236,7 +248,12 @@ export const leads = pgTable("leads", {
   nextFollowUp: timestamp("next_follow_up"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_leads_assigned_to").on(table.assignedToId),
+  index("IDX_leads_client_id").on(table.clientId),
+  index("IDX_leads_stage").on(table.stage),
+  index("IDX_leads_score").on(table.score),
+]);
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
   client: one(clients, {
@@ -309,7 +326,11 @@ export const contentPosts = pgTable("content_posts", {
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_content_posts_client_id").on(table.clientId),
+  index("IDX_content_posts_approval_status").on(table.approvalStatus),
+  index("IDX_content_posts_scheduled_for").on(table.scheduledFor),
+]);
 
 export const contentPostsRelations = relations(contentPosts, ({ one }) => ({
   client: one(clients, {
@@ -331,7 +352,10 @@ export const invoices = pgTable("invoices", {
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_invoices_client_id").on(table.clientId),
+  index("IDX_invoices_status").on(table.status),
+]);
 
 export const invoicesRelations = relations(invoices, ({ one }) => ({
   client: one(clients, {
@@ -352,7 +376,11 @@ export const tickets = pgTable("tickets", {
   createdAt: timestamp("created_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_tickets_client_id").on(table.clientId),
+  index("IDX_tickets_assigned_to").on(table.assignedToId),
+  index("IDX_tickets_status").on(table.status),
+]);
 
 export const ticketsRelations = relations(tickets, ({ one }) => ({
   client: one(clients, {
@@ -520,7 +548,11 @@ export const activityLogs = pgTable("activity_logs", {
   description: text("description").notNull(),
   metadata: jsonb("metadata"), // Additional data like IP address, payment amount, etc
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_activity_logs_user_id").on(table.userId),
+  index("IDX_activity_logs_activity_type").on(table.activityType),
+  index("IDX_activity_logs_created_at").on(table.createdAt),
+]);
 
 export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   user: one(users, {
@@ -540,7 +572,11 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").default(false),
   actionUrl: varchar("action_url"), // Optional link to relevant page
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_notifications_user_id").on(table.userId),
+  index("IDX_notifications_is_read").on(table.isRead),
+  index("IDX_notifications_user_read").on(table.userId, table.isRead),
+]);
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
@@ -574,7 +610,13 @@ export const emails = pgTable("emails", {
   userId: integer("user_id").references(() => users.id), // Which user this email belongs to
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("IDX_emails_user_id").on(table.userId),
+  index("IDX_emails_folder").on(table.folder),
+  index("IDX_emails_message_id").on(table.messageId),
+  index("IDX_emails_user_folder").on(table.userId, table.folder),
+  index("IDX_emails_received_at").on(table.receivedAt),
+]);
 
 export const emailsRelations = relations(emails, ({ one }) => ({
   user: one(users, {

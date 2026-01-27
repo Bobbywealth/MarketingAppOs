@@ -812,30 +812,44 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
         console.log(`📥 Fetching emails from ${folder}...`);
         const messages = await microsoftAuth.getEmails(accessToken!, folder, 50);
         console.log(`✓ Fetched ${messages.length} emails from ${folder}`);
-        
-        for (const msg of messages) {
-          // Check if email already exists
-          const existing = await storage.getEmailByMessageId(msg.id);
-          
-          if (!existing) {
-            await storage.createEmail({
-              messageId: msg.id,
-              from: msg.from?.emailAddress?.address || '',
-              fromName: msg.from?.emailAddress?.name || '',
-              to: msg.toRecipients?.map((r: any) => r.emailAddress.address) || [],
-              cc: msg.ccRecipients?.map((r: any) => r.emailAddress.address) || [],
-              subject: msg.subject || '(No Subject)',
-              body: '', // We don't store full body on initial sync
-              bodyPreview: msg.bodyPreview || '',
-              folder,
-              isRead: msg.isRead || false,
-              hasAttachments: msg.hasAttachments || false,
-              receivedAt: new Date(msg.receivedDateTime),
-              userId,
-            });
-            syncedCount++;
-          }
+
+        // Batch check existing emails by message IDs
+        const messageIds = messages.map(m => m.id);
+        const { emails } = await import("@shared/schema");
+        const { inArray } = await import("drizzle-orm");
+
+        const existingEmails = await db
+          .select({ messageId: emails.messageId })
+          .from(emails)
+          .where(inArray(emails.messageId, messageIds));
+
+        const existingMessageIds = new Set(existingEmails.map(e => e.messageId));
+
+        // Prepare bulk insert
+        const emailsToCreate = messages
+          .filter(msg => !existingMessageIds.has(msg.id))
+          .map(msg => ({
+            messageId: msg.id,
+            from: msg.from?.emailAddress?.address || '',
+            fromName: msg.from?.emailAddress?.name || '',
+            to: msg.toRecipients?.map((r: any) => r.emailAddress.address) || [],
+            cc: msg.ccRecipients?.map((r: any) => r.emailAddress.address) || [],
+            subject: msg.subject || '(No Subject)',
+            body: '',
+            bodyPreview: msg.bodyPreview || '',
+            folder,
+            isRead: msg.isRead || false,
+            hasAttachments: msg.hasAttachments || false,
+            receivedAt: new Date(msg.receivedDateTime),
+            userId,
+          }));
+
+        // Bulk insert all new emails
+        if (emailsToCreate.length > 0) {
+          await db.insert(emails).values(emailsToCreate);
         }
+
+        syncedCount += emailsToCreate.length;
       }
 
       await storage.updateEmailAccount(account.id, {

@@ -72,19 +72,22 @@ router.post("/", isAuthenticated, requirePermission("canManageClients"), async (
     try {
       const allUsers = await storage.getUsers();
       const admins = allUsers.filter(u => u.role === UserRole.ADMIN && u.email);
-      
+
       if (admins.length > 0) {
         const { emailNotifications } = await import('../emailService');
-        
+
+        // Batch fetch notification preferences for all admins
+        const adminIds = admins.map(a => a.id);
+        const allPrefs = await Promise.all(
+          adminIds.map(id => storage.getUserNotificationPreferences(id).catch(() => null))
+        );
+        const prefsMap = new Map(adminIds.map((id, i) => [id, allPrefs[i]]));
+
         // Filter admins who have email notifications enabled
-        const adminsToNotify = [];
-        for (const admin of admins) {
-          const prefs = await storage.getUserNotificationPreferences(admin.id);
-          if (prefs?.emailNotifications !== false) {
-            adminsToNotify.push(admin.email as string);
-          }
-        }
-        
+        const adminsToNotify = admins
+          .filter(admin => prefsMap.get(admin.id)?.emailNotifications !== false)
+          .map(admin => admin.email as string);
+
         if (adminsToNotify.length > 0) {
           void emailNotifications.sendNewClientAlert(
             adminsToNotify,
