@@ -951,3 +951,69 @@ export const marketingBroadcastRecipients = pgTable("marketing_broadcast_recipie
 export const insertMarketingBroadcastRecipientSchema = createInsertSchema(marketingBroadcastRecipients).omit({ id: true, createdAt: true });
 export type InsertMarketingBroadcastRecipient = z.infer<typeof insertMarketingBroadcastRecipientSchema>;
 export type MarketingBroadcastRecipient = typeof marketingBroadcastRecipients.$inferSelect;
+
+// Scheduled AI Commands table
+export const scheduledAiCommands = pgTable("scheduled_ai_commands", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").notNull().references(() => users.id),
+  command: text("command").notNull(),
+  parameters: jsonb("parameters"),
+  status: varchar("status").notNull().default("pending"),
+  nextRunAt: timestamp("next_run_at"),
+  lastRunAt: timestamp("last_run_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertScheduledAiCommandSchema = createInsertSchema(scheduledAiCommands).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertScheduledAiCommand = z.infer<typeof insertScheduledAiCommandSchema>;
+export type ScheduledAiCommand = typeof scheduledAiCommands.$inferSelect;
+
+// Marketing Series table
+export const marketingSeries = pgTable("marketing_series", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  channel: varchar("channel").notNull(),
+  status: varchar("status").notNull().default("draft"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMarketingSeriesSchema = createInsertSchema(marketingSeries).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMarketingSeries = z.infer<typeof insertMarketingSeriesSchema>;
+export type MarketingSeries = typeof marketingSeries.$inferSelect;
+
+// Marketing Series Steps table
+export const marketingSeriesSteps = pgTable("marketing_series_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  seriesId: varchar("series_id").notNull().references(() => marketingSeries.id, { onDelete: "cascade" }),
+  stepOrder: integer("step_order").notNull(),
+  name: varchar("name").notNull(),
+  content: text("content").notNull(),
+  delayHours: integer("delay_hours").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMarketingSeriesStepSchema = createInsertSchema(marketingSeriesSteps).omit({ id: true, createdAt: true });
+export type InsertMarketingSeriesStep = z.infer<typeof insertMarketingSeriesStepSchema>;
+export type MarketingSeriesStep = typeof marketingSeriesSteps.$inferSelect;
+
+// Marketing Series Enrollments table
+export const marketingSeriesEnrollments = pgTable("marketing_series_enrollments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  seriesId: varchar("series_id").notNull().references(() => marketingSeries.id, { onDelete: "cascade" }),
+  recipientId: varchar("recipient_id").notNull(),
+  recipientType: varchar("recipient_type").notNull(),
+  currentStep: integer("current_step").default(1),
+  status: varchar("status").notNull().default("active"),
+  nextStepAt: timestamp("next_step_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMarketingSeriesEnrollmentSchema = createInsertSchema(marketingSeriesEnrollments).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertMarketingSeriesEnrollment = z.infer<typeof insertMarketingSeriesEnrollmentSchema>;
+export type MarketingSeriesEnrollment = typeof marketingSeriesEnrollments.$inferSelect;
