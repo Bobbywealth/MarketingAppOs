@@ -22,9 +22,16 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, Mic, MicOff, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -58,9 +65,10 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 export default function TasksPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<"list" | "kanban" | "compact">("compact");
+  const [viewMode, setViewMode] = useState<"list" | "kanban" | "compact">("kanban");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -553,21 +561,21 @@ export default function TasksPage() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "urgent": return "bg-gradient-to-r from-red-500 to-red-600 text-white";
-      case "high": return "bg-gradient-to-r from-orange-500 to-orange-600 text-white";
-      case "normal": return "bg-gradient-to-r from-blue-500 to-blue-600 text-white";
-      case "low": return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
-      default: return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
+      case "urgent": return "bg-red-500";
+      case "high": return "bg-orange-500";
+      case "normal": return "bg-blue-500";
+      case "low": return "bg-gray-400";
+      default: return "bg-gray-400";
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "bg-gradient-to-r from-green-500 to-emerald-600 text-white";
-      case "in_progress": return "bg-gradient-to-r from-blue-500 to-blue-600 text-white";
-      case "review": return "bg-gradient-to-r from-purple-500 to-purple-600 text-white";
-      case "todo": return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
-      default: return "bg-gradient-to-r from-gray-500 to-gray-600 text-white";
+      case "completed": return "bg-green-500";
+      case "in_progress": return "bg-blue-500";
+      case "review": return "bg-purple-500";
+      case "todo": return "bg-gray-500";
+      default: return "bg-gray-500";
     }
   };
 
@@ -618,7 +626,7 @@ export default function TasksPage() {
                     draggable
                     onDragStart={() => handleDragStart(task)}
                     onDragEnd={handleDragEnd}
-                    className={`hover-elevate transition-all group cursor-grab active:cursor-grabbing border-none shadow-sm hover:shadow-md bg-card/80 backdrop-blur-md border border-white/10 dark:border-white/5 ${
+                    className={`hover-elevate transition-all group cursor-grab active:cursor-grabbing border border-muted shadow-sm hover:shadow-md bg-card ${
                       draggedTask?.id === task.id ? 'opacity-50' : ''
                     }`}
                     data-testid={`task-card-${task.id}`}
@@ -629,54 +637,43 @@ export default function TasksPage() {
                       }
                     }}
                   >
-                    <CardHeader className="p-3 space-y-3">
+                    <CardContent className="p-3 space-y-2">
+                      {/* Priority indicator */}
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-semibold text-sm leading-tight flex-1">{task.title}</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditTask(task);
-                          }}
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge className={`${getPriorityColor(task.priority)} text-[10px] px-1.5 h-5`} variant="outline">
-                          {task.priority.toUpperCase()}
-                        </Badge>
-                        {task.isRecurring && (
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-blue-600 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-900">
-                            <Repeat className="w-2.5 h-2.5" />
-                            {task.recurringPattern}
-                          </div>
-                        )}
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${
+                          task.priority === "urgent" ? "bg-red-500" :
+                          task.priority === "high" ? "bg-orange-500" :
+                          task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
+                        }`} />
+                        <h4 className="font-medium text-sm leading-tight flex-1">{task.title}</h4>
                       </div>
 
-                      <div className="flex items-center justify-between mt-1 pt-2 border-t border-muted/30">
-                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                      {/* Meta info row */}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
                           {task.dueDate && (
                             <div className="flex items-center gap-1">
-                              <Calendar className="w-2.5 h-2.5" />
+                              <Calendar className="w-3 h-3" />
                               {toLocaleDateStringEST(task.dueDate)}
                             </div>
                           )}
                           {task.checklist && task.checklist.length > 0 && (
                             <div className="flex items-center gap-1">
-                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              <CheckCircle2 className="w-3 h-3" />
                               {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
                             </div>
                           )}
+                          {task.isRecurring && (
+                            <Repeat className="w-3 h-3 text-blue-500" />
+                          )}
                         </div>
-                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                          {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
-                        </div>
+                        {task.assignedToId && (
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                            {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
+                          </div>
+                        )}
                       </div>
-                    </CardHeader>
+                    </CardContent>
                   </Card>
                 ))}
                 {columnTasks.length === 0 && (
@@ -695,30 +692,28 @@ export default function TasksPage() {
   const renderCompactView = () => {
     return (
       <div className="border rounded-lg overflow-hidden bg-card">
-        {/* Header - Hidden on mobile, shown on desktop */}
+        {/* Header */}
         <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground items-center">
           <div className="col-span-1 flex justify-center">
-            <Checkbox 
+            <Checkbox
               checked={selectedTaskIds.size === filteredTasks.length && filteredTasks.length > 0}
               onCheckedChange={selectAllTasks}
-              className="h-3 w-3 md:h-4 md:w-4"
+              className="h-4 w-4"
             />
           </div>
-          <div className="col-span-4">TASK NAME</div>
+          <div className="col-span-5">TASK</div>
           <div className="col-span-2">STATUS</div>
-          <div className="col-span-2">PRIORITY</div>
-          <div className="col-span-2">DUE DATE</div>
-          <div className="col-span-1 text-right pr-4">ASSIGNEE</div>
+          <div className="col-span-2">DUE</div>
+          <div className="col-span-2 text-right">ASSIGNEE</div>
         </div>
-        
+
         {/* Task Rows */}
         <div className="divide-y">
           {filteredTasks.map((task) => (
             <div key={task.id} className="group relative">
-              {/* Compact Row - Responsive layout */}
-              <div 
-                className={`px-3 md:px-4 py-3 md:py-2.5 cursor-pointer hover:bg-muted/30 transition-colors ${
-                  selectedTaskIds.has(task.id) ? "bg-primary/5 hover:bg-primary/10" : 
+              <div
+                className={`px-3 md:px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${
+                  selectedTaskIds.has(task.id) ? "bg-primary/5 hover:bg-primary/10" :
                   selectedTask?.id === task.id ? "bg-muted/50" : ""
                 }`}
                 onClick={() => {
@@ -727,93 +722,68 @@ export default function TasksPage() {
                 }}
                 data-testid={`task-row-${task.id}`}
               >
-                {/* Mobile Layout - Stacked */}
-                <div className="md:hidden space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      checked={selectedTaskIds.has(task.id)}
-                      onCheckedChange={() => toggleTaskSelection(task.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="mr-1 h-3 w-3 md:h-4 md:w-4"
-                    />
-                    <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
-                    <span className="font-medium text-sm flex-1">{task.title}</span>
-                    {task.isRecurring && (
-                      <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" title={`Recurring: ${task.recurringPattern}`} />
-                    )}
+                {/* Mobile Layout */}
+                <div className="md:hidden flex items-center gap-3">
+                  <Checkbox
+                    checked={selectedTaskIds.has(task.id)}
+                    onCheckedChange={() => toggleTaskSelection(task.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-4 w-4"
+                  />
+                  <div className={`w-2 h-8 rounded-full flex-shrink-0 ${
+                    task.priority === "urgent" ? "bg-red-500" :
+                    task.priority === "high" ? "bg-orange-500" :
+                    task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-sm truncate block">{task.title}</span>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <span className="capitalize">{task.status.replace("_", " ")}</span>
+                      {task.dueDate && <span>{toLocaleDateStringEST(task.dueDate)}</span>}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap pl-7">
-                    <Badge className={`${getStatusColor(task.status)} text-xs`} variant="secondary">
-                      {task.status.replace("_", " ")}
-                    </Badge>
-                    <Badge className={`${getPriorityColor(task.priority)} text-xs`} variant="secondary">
-                      {task.priority}
-                    </Badge>
-                    {task.dueDate && (
-                      <span className="text-xs text-muted-foreground">
-                        {toLocaleDateStringEST(task.dueDate)}
-                      </span>
-                    )}
-                  </div>
+                  {task.assignedToId && (
+                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                      {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
+                    </div>
+                  )}
                 </div>
 
-                {/* Desktop Layout - Grid */}
+                {/* Desktop Layout */}
                 <div className="hidden md:grid grid-cols-12 gap-4 items-center">
                   <div className="col-span-1 flex justify-center">
-                    <Checkbox 
+                    <Checkbox
                       checked={selectedTaskIds.has(task.id)}
                       onCheckedChange={() => toggleTaskSelection(task.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="h-3 w-3 md:h-4 md:w-4"
+                      className="h-4 w-4"
                     />
                   </div>
-                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                  <div className="col-span-5 flex items-center gap-3 min-w-0">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      task.status === "in_progress" ? "animate-pulse" : ""
-                    } ${getPriorityColor(task.priority)}`} />
-                    <span className="truncate text-sm font-semibold tracking-tight group-hover:text-primary transition-colors">
-                      {task.title}
-                    </span>
-                    {task.isRecurring && (
-                      <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 opacity-70" title={`Recurring: ${task.recurringPattern}`} />
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditTask(task);
-                      }}
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </Button>
+                      task.priority === "urgent" ? "bg-red-500" :
+                      task.priority === "high" ? "bg-orange-500" :
+                      task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
+                    }`} />
+                    <span className="truncate text-sm font-medium">{task.title}</span>
+                    {task.isRecurring && <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
                   </div>
-                  
+
                   <div className="col-span-2">
-                    <Badge className={`${getStatusColor(task.status)} text-[10px] uppercase tracking-wide px-1.5 h-5`} variant="outline">
-                      {task.status.replace("_", " ")}
-                    </Badge>
+                    <span className="text-xs capitalize bg-muted/50 px-2 py-1 rounded">{task.status.replace("_", " ")}</span>
                   </div>
-                  
-                  <div className="col-span-2">
-                    <Badge className={`${getPriorityColor(task.priority)} text-[10px] uppercase tracking-wide px-1.5 h-5`} variant="outline">
-                      {task.priority}
-                    </Badge>
-                  </div>
-                  
-                  <div className="col-span-2 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    {task.dueDate && <Calendar className="w-3 h-3 opacity-50" />}
+
+                  <div className="col-span-2 text-xs text-muted-foreground">
                     {task.dueDate ? toLocaleDateStringEST(task.dueDate) : "-"}
                   </div>
-                  
-                  <div className="col-span-1 flex items-center justify-end pr-2">
+
+                  <div className="col-span-2 flex items-center justify-end gap-2">
                     {task.assignedToId ? (
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/20">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
                         {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
                       </div>
                     ) : (
-                      <div className="w-6 h-6 rounded-full border border-dashed flex items-center justify-center text-muted-foreground/30">
+                      <div className="w-7 h-7 rounded-full border border-dashed flex items-center justify-center text-muted-foreground/30">
                         <User className="w-3 h-3" />
                       </div>
                     )}
@@ -823,7 +793,7 @@ export default function TasksPage() {
             </div>
           ))}
         </div>
-        
+
         {filteredTasks.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No tasks match the current filters</p>
@@ -835,87 +805,85 @@ export default function TasksPage() {
 
   const renderListView = () => {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredTasks.map((task) => (
-          <Card 
-            key={task.id} 
+          <Card
+            key={task.id}
             className={`hover-elevate transition-all group cursor-pointer ${
               selectedTaskIds.has(task.id) ? "border-primary bg-primary/5" : ""
-            }`} 
+            }`}
             data-testid={`task-card-${task.id}`}
             onClick={() => {
               setSelectedTask(task);
               setIsDetailSidebarOpen(true);
             }}
           >
-            <CardContent className="p-6 relative">
-              <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Checkbox 
+            <CardContent className="p-4 flex items-center gap-4">
+              {/* Checkbox */}
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Checkbox
                   checked={selectedTaskIds.has(task.id)}
                   onCheckedChange={() => toggleTaskSelection(task.id)}
                   onClick={(e) => e.stopPropagation()}
                   className="h-4 w-4"
                 />
               </div>
-              <div className={`flex items-start justify-between gap-4 transition-transform ${selectedTaskIds.has(task.id) ? "translate-x-6" : "group-hover:translate-x-6"}`}>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2 flex-wrap">
-                    <h3 className="font-semibold">{task.title}</h3>
-                    {task.isRecurring && (
-                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400">
-                        <Repeat className="w-3 h-3 mr-1" />
-                        {task.recurringPattern}
-                      </Badge>
-                    )}
-                    <Badge className={getStatusColor(task.status)} variant="secondary">
-                      {task.status.replace("_", " ")}
-                    </Badge>
-                    <Badge className={getPriorityColor(task.priority)} variant="secondary">
-                      {task.priority}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2"
-                      onClick={() => handleEditTask(task)}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
+
+              {/* Priority indicator */}
+              <div className={`w-2 h-8 rounded-full flex-shrink-0 ${
+                task.priority === "urgent" ? "bg-red-500" :
+                task.priority === "high" ? "bg-orange-500" :
+                task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
+              }`} />
+
+              {/* Task info */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium truncate">{task.title}</h3>
+                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                  {task.dueDate && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {toLocaleDateStringEST(task.dueDate)}
+                    </div>
                   )}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {task.dueDate && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        Due: {toLocaleDateStringEST(task.dueDate)}
-                      </div>
-                    )}
-                    {task.assignedToId && (
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        Assigned
-                      </div>
-                    )}
-                  </div>
+                  {task.checklist && task.checklist.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
+                    </div>
+                  )}
+                  {task.isRecurring && (
+                    <Repeat className="w-3 h-3 text-blue-500" />
+                  )}
                 </div>
-                <Select
-                  value={task.status}
-                  onValueChange={(status) => updateTaskStatusMutation.mutate({ id: task.id, status })}
-                >
-                  <SelectTrigger className="w-40" data-testid={`select-status-${task.id}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="review">Review</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
+
+              {/* Status dropdown */}
+              <Select
+                value={task.status}
+                onValueChange={(status) => updateTaskStatusMutation.mutate({ id: task.id, status })}
+              >
+                <SelectTrigger className="w-32" onClick={(e) => e.stopPropagation()} data-testid={`select-status-${task.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="review">Review</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Assignee */}
+              {task.assignedToId ? (
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                  {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full border border-dashed flex items-center justify-center text-muted-foreground/30">
+                  <User className="w-4 h-4" />
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -951,10 +919,12 @@ export default function TasksPage() {
         <div className="p-3 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                Task Management
-              </h1>
-              <p className="text-sm md:text-base text-muted-foreground mt-1">Organize and track your team's tasks</p>
+              <h1 className="text-xl md:text-2xl font-bold">Tasks</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
+                {filterStatus !== "all" && ` • ${filterStatus.replace("_", " ")}`}
+                {filterPriority !== "all" && ` • ${filterPriority}`}
+              </p>
             </div>
             {/* Mobile: open Spaces sidebar */}
             <div className="md:hidden">
@@ -1006,95 +976,159 @@ export default function TasksPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 rounded-lg border bg-card p-1">
-            <Button
-              variant={viewMode === "compact" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("compact")}
-              data-testid="button-view-compact"
-            >
-              <ListTodo className="w-4 h-4 mr-2" />
-              Compact
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              data-testid="button-view-list"
-            >
-              <ListTodo className="w-4 h-4 mr-2" />
-              List
-            </Button>
-            <Button
-              variant={viewMode === "kanban" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("kanban")}
-              data-testid="button-view-kanban"
-            >
-              <KanbanSquare className="w-4 h-4 mr-2" />
-              Kanban
-            </Button>
-          </div>
-
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-40" data-testid="select-filter-status">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="review">Review</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={filterPriority} onValueChange={setFilterPriority}>
-            <SelectTrigger className="w-40" data-testid="select-filter-priority">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
-
+          {/* Filter Button */}
           <Button
-            variant={showCompleted ? "outline" : "secondary"}
+            variant={isFilterPanelOpen ? "default" : "outline"}
             size="sm"
-            onClick={() => setShowCompleted(!showCompleted)}
-            data-testid="button-toggle-completed"
-            className="gap-2 whitespace-nowrap md:h-10 md:px-4"
+            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+            className="gap-2"
           >
-            {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            <span className="hidden sm:inline">{showCompleted ? "Hide Completed" : "Show Completed"}</span>
+            <Filter className="w-4 h-4" />
+            Filter
+            {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
+              </Badge>
+            )}
           </Button>
 
-          {isAdminOrManager && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => backfillRecurringMutation.mutate()}
-              disabled={backfillRecurringMutation.isPending}
-              className="gap-2 whitespace-nowrap"
-              data-testid="button-backfill-recurring"
-              title="Create one current To Do instance for each recurring series (EST)"
-            >
-              <Repeat className="w-4 h-4" />
-              <span className="hidden md:inline">
-                {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
-              </span>
-            </Button>
+          {/* Collapsible Filter Panel */}
+          {isFilterPanelOpen && (
+            <div className="w-full flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-36" data-testid="select-filter-status">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="review">Review</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterPriority} onValueChange={setFilterPriority}>
+                <SelectTrigger className="w-36" data-testid="select-filter-priority">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priority</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedSpaceId || ""}
+                onValueChange={(val) => setSelectedSpaceId(val || null)}
+              >
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Spaces" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Spaces</SelectItem>
+                  {buildSpaceOptions().map((space) => (
+                    <SelectItem key={space.id} value={space.id}>
+                      {space.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant={showCompleted ? "outline" : "secondary"}
+                size="sm"
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="gap-2"
+              >
+                {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showCompleted ? "Hide Completed" : "Show Completed"}
+              </Button>
+
+              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFilterStatus("all");
+                    setFilterPriority("all");
+                    setSelectedSpaceId(null);
+                    setShowCompleted(true);
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
           )}
 
+          {/* View Mode Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                {viewMode === "kanban" && <LayoutGrid className="w-4 h-4" />}
+                {viewMode === "list" && <List className="w-4 h-4" />}
+                {viewMode === "compact" && <AlignLeft className="w-4 h-4" />}
+                <span className="hidden sm:inline capitalize">{viewMode}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setViewMode("kanban")}>
+                <LayoutGrid className="w-4 h-4 mr-2" />
+                Kanban
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode("list")}>
+                <List className="w-4 h-4 mr-2" />
+                List
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode("compact")}>
+                <AlignLeft className="w-4 h-4 mr-2" />
+                Compact
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* More Options Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isAdminOrManager && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => backfillRecurringMutation.mutate()}
+                    disabled={backfillRecurringMutation.isPending}
+                  >
+                    <Repeat className="w-4 h-4 mr-2" />
+                    {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
+                <LayoutGrid className="w-4 h-4 mr-2" />
+                All Spaces
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
+                <ListTodo className="w-4 h-4 mr-2" />
+                Manage Spaces
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex-1" />
+
+          {/* New Task Button */}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-create-task">
+              <Button data-testid="button-create-task" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 New Task
               </Button>
@@ -1747,15 +1781,17 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Conversational AI Task Assistant - Positioned outside flex container */}
+      {/* AI Task Assistant - Compact button */}
       <>
         {!isChatOpen ? (
           <Button
-            size="lg"
+            size="sm"
+            variant="outline"
             onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-[80px] md:bottom-6 right-6 z-[9999] rounded-full w-14 h-14 md:w-16 md:h-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-primary to-purple-600"
+            className="fixed bottom-6 right-6 z-[9999] gap-2 shadow-lg"
           >
-            <Sparkles className="w-6 h-6 md:w-7 md:h-7" />
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">AI Assistant</span>
           </Button>
         ) : (
           <ConversationalTaskChat

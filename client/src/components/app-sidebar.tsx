@@ -87,7 +87,7 @@ import { motion } from "framer-motion";
 
 type SidebarNavItem = {
   title: string;
-  url: string;
+  url?: string; // Optional - if no URL, it's a group header with subItems
   icon: any;
   permission?: any;
   sidebarKey?: any;
@@ -679,6 +679,89 @@ function NavItem({
   return content;
 }
 
+// Helper function to render items, handling subItems recursively
+function renderNavItems(
+  items: SidebarNavItem[],
+  location: string,
+  onClick: (item: SidebarNavItem) => void,
+  getBadgeCount: (key?: string) => number | null,
+  depth: number = 0
+) {
+  return items.map((item) => {
+    // If item has subItems, render them as nested items
+    if (item.subItems && item.subItems.length > 0) {
+      const hasActiveSubItem = item.subItems.some((subItem) => location === subItem.url);
+      return (
+        <div key={item.title} className={depth > 0 ? "ml-4" : ""}>
+          <div className="px-3 py-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-widest mt-2 mb-1">
+            {item.title}
+          </div>
+          {item.subItems.map((subItem) => {
+            const isSubActive = location === subItem.url;
+            const SubIcon = subItem.icon;
+            return (
+              <SidebarMenuSubItem key={subItem.title}>
+                <SidebarMenuSubButton
+                  asChild
+                  isActive={isSubActive}
+                  className={`transition-all duration-200 rounded-md px-3 h-9 ${
+                    isSubActive
+                      ? 'bg-primary/5 text-primary font-semibold'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <Link
+                    href={subItem.url}
+                    onClick={() => onClick(subItem)}
+                    className="flex items-center gap-2 w-full"
+                  >
+                    <SubIcon className={`w-4 h-4 ${isSubActive ? 'text-primary' : 'opacity-70'}`} />
+                    <span className="text-sm">{subItem.title}</span>
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Regular item without subItems
+    const badge = getBadgeCount(item.badgeKey);
+    const isActive = location === item.url;
+    return (
+      <SidebarMenuSubItem key={item.title}>
+        <SidebarMenuSubButton
+          asChild
+          isActive={isActive}
+          className={`transition-all duration-200 rounded-md px-3 h-9 ${
+            isActive
+              ? 'bg-primary/5 text-primary font-semibold'
+              : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+          }`}
+        >
+          <Link
+            href={item.url}
+            onClick={() => onClick(item)}
+            className="flex items-center gap-2 w-full"
+          >
+            <item.icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'opacity-70'}`} />
+            <span className="text-sm">{item.title}</span>
+            {badge && (
+              <Badge
+                variant="destructive"
+                className="ml-auto text-[10px] h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full"
+              >
+                {badge}
+              </Badge>
+            )}
+          </Link>
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    );
+  });
+}
+
 // Collapsible Group Component for grouping multiple items
 function NavCollapsibleGroup({
   title,
@@ -700,7 +783,14 @@ function NavCollapsibleGroup({
   forceOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const hasActiveItem = items.some(item => location === item.url);
+
+  // Check if any item or subItem is active
+  const hasActiveItem = items.some((item) => {
+    if (item.subItems) {
+      return item.subItems.some((subItem) => location === subItem.url);
+    }
+    return location === item.url;
+  });
 
   // Auto-open if an item is active
   useEffect(() => {
@@ -719,11 +809,11 @@ function NavCollapsibleGroup({
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton 
+            <SidebarMenuButton
               isActive={hasActiveItem}
               className={`group transition-all duration-300 ease-in-out rounded-lg h-11 ${
-                hasActiveItem 
-                  ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20' 
+                hasActiveItem
+                  ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20'
                   : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
               }`}
             >
@@ -735,7 +825,30 @@ function NavCollapsibleGroup({
           <DropdownMenuContent side="right" align="start" className="w-56 p-2">
             <div className="px-2 py-1.5 text-xs font-bold text-zinc-400 uppercase tracking-widest">{title}</div>
             <DropdownMenuSeparator className="my-1" />
-            {items.map(item => {
+            {items.map((item) => {
+              // Check if item has subItems
+              if (item.subItems && item.subItems.length > 0) {
+                return (
+                  <div key={item.title}>
+                    <div className="px-2 py-1 text-xs font-semibold text-zinc-500 uppercase tracking-widest mt-2">
+                      {item.title}
+                    </div>
+                    {item.subItems.map((subItem) => (
+                      <DropdownMenuItem key={subItem.title} asChild className="rounded-md">
+                        <Link
+                          href={subItem.url}
+                          onClick={() => onClick(subItem)}
+                          className="flex items-center gap-2 w-full cursor-pointer pl-4"
+                        >
+                          <subItem.icon className={`w-4 h-4 ${location === subItem.url ? 'text-primary' : 'text-zinc-400'}`} />
+                          <span className={location === subItem.url ? 'font-semibold text-primary' : ''}>{subItem.title}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                );
+              }
+              // Regular item
               const badge = getBadgeCount(item.badgeKey);
               return (
                 <DropdownMenuItem key={item.title} asChild className="rounded-md">
@@ -765,11 +878,11 @@ function NavCollapsibleGroup({
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton 
+          <SidebarMenuButton
             isActive={hasActiveItem && !isOpen}
             className={`group transition-all duration-300 ease-in-out rounded-lg h-11 mb-1 ${
               hasActiveItem && !isOpen
-                ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20' 
+                ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20'
                 : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
             }`}
           >
@@ -788,40 +901,7 @@ function NavCollapsibleGroup({
         </CollapsibleTrigger>
         <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
           <SidebarMenuSub className="ml-8 border-l-2 border-zinc-100 dark:border-zinc-800 gap-1 mt-1 mb-2">
-            {items.map((item) => {
-              const badge = getBadgeCount(item.badgeKey);
-              const isSubActive = location === item.url;
-              return (
-                <SidebarMenuSubItem key={item.title}>
-                  <SidebarMenuSubButton 
-                    asChild 
-                    isActive={isSubActive}
-                    className={`transition-all duration-200 rounded-md px-3 h-9 ${
-                      isSubActive 
-                        ? 'bg-primary/5 text-primary font-semibold' 
-                        : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                    }`}
-                  >
-                    <Link
-                      href={item.url}
-                      onClick={() => onClick(item)}
-                      className="flex items-center gap-2 w-full"
-                    >
-                      <item.icon className={`w-4 h-4 ${isSubActive ? 'text-primary' : 'opacity-70'}`} />
-                      <span className="text-sm">{item.title}</span>
-                      {badge && (
-                        <Badge 
-                          variant="destructive" 
-                          className="ml-auto text-[10px] h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full"
-                        >
-                          {badge}
-                        </Badge>
-                      )}
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              );
-            })}
+            {renderNavItems(items, location, onClick, getBadgeCount)}
           </SidebarMenuSub>
         </CollapsibleContent>
       </SidebarMenuItem>
@@ -1222,9 +1302,24 @@ export function AppSidebar() {
     return canAccess(item.permission);
   });
 
+  // Filter merged groups (these don't need role/permission filtering as they're pre-configured)
+  const filteredAiSuite = aiSuiteTools;
+  const filteredBillingFinance = billingFinanceTools;
+  const filteredAnalyticsReports = analyticsReportsTools;
+  const filteredTrainingCourses = trainingCoursesTools;
+
   // Split communication for better organization
   const matchesFilter = (item: SidebarNavItem) =>
     item.title.toLowerCase().includes(normalizedFilter);
+
+  // Also check subItems for filter matching
+  const matchesFilterDeep = (item: SidebarNavItem) => {
+    if (matchesFilter(item)) return true;
+    if (item.subItems) {
+      return item.subItems.some(subItem => matchesFilter(subItem));
+    }
+    return false;
+  };
 
   const visibleCommunication = hasFilter
     ? filteredCommunication.filter(matchesFilter)
@@ -1240,13 +1335,23 @@ export function AppSidebar() {
     ? filteredIntelligenceFinance.filter(matchesFilter)
     : filteredIntelligenceFinance;
 
+  // Filter merged groups
+  const visibleAiSuite = hasFilter ? filteredAiSuite.filter(matchesFilterDeep) : filteredAiSuite;
+  const visibleBillingFinance = hasFilter ? filteredBillingFinance.filter(matchesFilterDeep) : filteredBillingFinance;
+  const visibleAnalyticsReports = hasFilter ? filteredAnalyticsReports.filter(matchesFilterDeep) : filteredAnalyticsReports;
+  const visibleTrainingCourses = hasFilter ? filteredTrainingCourses.filter(matchesFilterDeep) : filteredTrainingCourses;
 
+  // Calculate total visible items including merged groups
   const totalVisibleItems =
     visibleCommunication.length +
     visibleGrowth.length +
     visibleContentCreators.length +
     visibleManagement.length +
-    visibleIntelligenceFinance.length;
+    visibleIntelligenceFinance.length +
+    visibleAiSuite.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
+    visibleBillingFinance.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
+    visibleAnalyticsReports.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
+    visibleTrainingCourses.reduce((sum, item) => sum + (item.subItems?.length || 1), 0);
 
   const topLevelItems = visibleCommunication.filter(item => 
     ["dashboard", "team"].includes(item.sidebarKey)
@@ -1411,7 +1516,7 @@ export function AppSidebar() {
               />
 
               {/* Management Group */}
-              <NavCollapsibleGroup 
+              <NavCollapsibleGroup
                 title="Operations"
                 icon={ClipboardCheck}
                 items={visibleManagement}
@@ -1422,11 +1527,48 @@ export function AppSidebar() {
                 forceOpen={hasFilter}
               />
 
-              {/* Intelligence Group */}
-              <NavCollapsibleGroup 
-                title="Business Intelligence"
+              {/* Merged Groups for Simplified Navigation */}
+              {/* AI Suite Group */}
+              <NavCollapsibleGroup
+                title="AI Suite"
+                icon={Sparkles}
+                items={visibleAiSuite}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleNavClick}
+                getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
+              />
+
+              {/* Analytics & Reports Group */}
+              <NavCollapsibleGroup
+                title="Analytics & Reports"
                 icon={BarChart3}
-                items={visibleIntelligenceFinance}
+                items={visibleAnalyticsReports}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleNavClick}
+                getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
+              />
+
+              {/* Billing & Finance Group */}
+              <NavCollapsibleGroup
+                title="Billing & Finance"
+                icon={DollarSign}
+                items={visibleBillingFinance}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleNavClick}
+                getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
+              />
+
+              {/* Training & Courses Group */}
+              <NavCollapsibleGroup
+                title="Training & Courses"
+                icon={BookOpen}
+                items={visibleTrainingCourses}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
