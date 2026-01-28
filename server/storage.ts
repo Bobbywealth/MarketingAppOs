@@ -104,7 +104,7 @@ import {
   type InsertMarketingSeriesEnrollment,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, and, gte, count } from "drizzle-orm";
+import { eq, desc, or, and, gte, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
