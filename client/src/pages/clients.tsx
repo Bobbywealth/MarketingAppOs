@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { logError } from "@/lib/errorHandler";
 import type { Client } from "@shared/schema";
 import {
   AlertDialog,
@@ -97,10 +98,11 @@ export default function Clients() {
             }
           } catch (error) {
             console.error("Checkout error:", error);
-            toast({ 
-              title: "Client created, but payment setup failed", 
+            logError(error, "Checkout processing");
+            toast({
+              title: "Client created, but payment setup failed",
               description: "You can set up payment later",
-              variant: "destructive" 
+              variant: "destructive"
             });
             setDialogOpen(false);
           }
@@ -131,10 +133,11 @@ export default function Clients() {
             }
           } catch (error) {
             console.error("Email error:", error);
-            toast({ 
-              title: "Client created, but email failed", 
+            logError(error, "Enrollment email");
+            toast({
+              title: "Client created, but email failed",
               description: "Failed to send enrollment email",
-              variant: "destructive" 
+              variant: "destructive"
             });
             setDialogOpen(false);
           }
@@ -873,6 +876,7 @@ export default function Clients() {
                             e.stopPropagation();
                             setLocation(`/phone?number=${encodeURIComponent(client.phone!)}&action=call`);
                           }}
+                          aria-label={`Call ${client.name}`}
                           title="Call this client"
                         >
                           <PhoneCall className="w-3 h-3" />
@@ -885,6 +889,7 @@ export default function Clients() {
                             e.stopPropagation();
                             setLocation(`/phone?number=${encodeURIComponent(client.phone!)}&action=sms`);
                           }}
+                          aria-label={`Send SMS to ${client.name}`}
                           title="Send SMS"
                         >
                           <MessageSquare className="w-3 h-3" />
@@ -1097,6 +1102,7 @@ export default function Clients() {
                                   setSelectedClient(null);
                                   setLocation(`/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=call`);
                                 }}
+                                aria-label={`Call ${selectedClient.name}`}
                               >
                                 <PhoneCall className="w-4 h-4 mr-1" />
                                 Call
@@ -1108,6 +1114,7 @@ export default function Clients() {
                                   setSelectedClient(null);
                                   setLocation(`/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=sms`);
                                 }}
+                                aria-label={`Send SMS to ${selectedClient.name}`}
                               >
                                 <MessageSquare className="w-4 h-4 mr-1" />
                                 SMS

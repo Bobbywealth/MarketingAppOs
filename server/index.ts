@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 import { appendFile, mkdir } from "node:fs/promises";
@@ -82,6 +83,20 @@ app.use(helmet({
 })); // Sets various HTTP headers for security
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
+
+// Response compression for better performance
+app.use(compression({
+  threshold: 1024, // Only compress responses larger than 1KB
+  level: 6, // Compression level (1-9, higher = better compression but more CPU)
+  filter: (req, res) => {
+    // Don't compress if client doesn't accept encoding
+    if (req.headers["accept-encoding"]?.includes("gzip") === false) {
+      return false;
+    }
+    // Use default filter otherwise
+    return compression.filter(req, res);
+  },
+}));
 
 // Rate Limiting
 const generalLimiter = rateLimit({

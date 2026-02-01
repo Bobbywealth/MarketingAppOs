@@ -53,6 +53,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { logError } from "@/lib/errorHandler";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, format } from "date-fns";
 import type { MarketingBroadcast, MarketingGroup, MarketingGroupMember } from "@shared/schema";
@@ -626,6 +627,7 @@ export default function MarketingCenter() {
       setMediaUrls((prev) => [...prev, ...data.mediaUrls]);
       toast({ title: "Media Uploaded", description: `Successfully uploaded ${data.mediaUrls.length} file(s).` });
     } catch (error: any) {
+      logError(error, "Media upload");
       toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsUploading(false);
@@ -660,6 +662,7 @@ export default function MarketingCenter() {
       setNewTemplateMediaUrls((prev) => [...prev, ...data.mediaUrls]);
       toast({ title: "Media Uploaded", description: `Successfully uploaded ${data.mediaUrls.length} file(s).` });
     } catch (error: any) {
+      logError(error, "Media upload");
       toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsUploading(false);

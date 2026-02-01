@@ -1073,6 +1073,7 @@ export function AppSidebar() {
           {!isCollapsed && (
             <a
               href={logoutUrl}
+              aria-label="Log out of your account"
               className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
               data-testid="button-logout"
             >
@@ -1161,6 +1162,7 @@ export function AppSidebar() {
           {!isCollapsed && (
             <a
               href={logoutUrl}
+              aria-label="Log out of your account"
               className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
               data-testid="button-logout"
             >
@@ -1237,6 +1239,7 @@ export function AppSidebar() {
           {!isCollapsed && (
             <a
               href={logoutUrl}
+              aria-label="Log out of your account"
               className="flex items-center gap-2 text-sm text-muted-foreground hover:bg-muted rounded-md px-3 py-2 transition-colors"
               data-testid="button-logout"
             >
@@ -1711,6 +1714,7 @@ export function AppSidebar() {
                 <TooltipTrigger asChild>
                   <a
                     href={logoutUrl}
+                    aria-label="Log out of your account"
                     className="p-2 rounded-md hover:bg-muted transition-colors"
                     data-testid="button-logout"
                   >

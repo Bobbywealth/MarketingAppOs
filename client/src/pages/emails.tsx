@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { logError } from "@/lib/errorHandler";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Mail, 
@@ -263,6 +264,7 @@ export default function EmailsPage() {
         console.log("Old email account deleted");
       } catch (error) {
         console.error("Failed to delete old account:", error);
+        logError(error, "Email account deletion");
       }
     }
     // Redirect to Microsoft OAuth
@@ -302,6 +304,7 @@ export default function EmailsPage() {
         queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
       } catch (error) {
         console.error('Failed to fetch email body:', error);
+        logError(error, "Email body fetch");
         toast({
           title: "Failed to load full email",
           description: "Showing preview only",
@@ -328,6 +331,7 @@ export default function EmailsPage() {
       }
     } catch (error: any) {
       console.error('Failed to analyze email:', error);
+      logError(error, "Email analysis");
       toast({
         title: "Failed to analyze email",
         description: error?.message || "Please try again",

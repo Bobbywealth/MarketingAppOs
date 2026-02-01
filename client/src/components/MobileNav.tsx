@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { logError } from "@/lib/errorHandler";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -36,7 +37,8 @@ export function MobileNav() {
       try {
         const response = await apiRequest("GET", "/api/messages/unread-counts", undefined);
         return response.json();
-      } catch (e) {
+      } catch (error) {
+        logError(error, "Unread message count fetch");
         return {};
       }
     },

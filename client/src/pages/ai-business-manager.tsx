@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Bot, Send, Loader2, AlertCircle, CheckCircle2, Sparkles, Zap, MessageSquare, Mic, MicOff, Calendar as CalendarIcon, Clock, Trash2, Plus, Repeat } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { logError } from "@/lib/errorHandler";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -196,6 +197,7 @@ export default function AIBusinessManager() {
     try {
       await streamChat(userText, assistantId);
     } catch (error: any) {
+      logError(error, "AI chat streaming");
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantId ? { ...m, role: "error", content: `❌ ${error?.message || "Unknown error"}` } : m
@@ -234,6 +236,7 @@ export default function AIBusinessManager() {
       setIsRecording(true);
     } catch (error) {
       console.error('Error accessing microphone:', error);
+      logError(error, "Microphone access");
       toast({
         title: "Microphone Access Denied",
         description: "Please allow microphone access to use voice input.",
@@ -270,6 +273,7 @@ export default function AIBusinessManager() {
       }
     } catch (error: any) {
       console.error('Transcription error:', error);
+      logError(error, "Audio transcription");
       toast({
         title: "Transcription Error",
         description: error?.message || "Failed to transcribe audio",

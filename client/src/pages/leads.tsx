@@ -316,7 +316,6 @@ export default function LeadsPage() {
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
-  console.log("DEBUG: leads received from API:", leads.length, leads);
 
   // Allow deep-linking from the global help/search bar:
   // /leads?leadId=<id> will auto-open that lead.

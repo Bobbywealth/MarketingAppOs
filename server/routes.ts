@@ -2875,21 +2875,81 @@ Examples:
   // Notifications routes
   app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Return empty array instead of querying broken notifications table
-      res.json([]);
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const notifications = await storage.getNotifications(userId);
+      res.json(notifications);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch notifications" });
     }
   });
 
-  // Check and create notifications for due/overdue tasks - DISABLED DUE TO DATABASE ISSUES
+  // Check and create notifications for due/overdue tasks
   app.post("/api/notifications/check-tasks", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      // Skip notification creation due to database issues
-      res.json({ 
-        message: "Task notifications checked", 
-        notificationsCreated: 0
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      // Get tasks due today or overdue for this user
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Import tasks from schema
+      const { tasks } = await import("@shared/schema");
+      const { eq, or, isNull } = await import("drizzle-orm");
+
+      const { db } = await import("./db.js");
+      const { default: storage } = await import("./storage.js");
+
+      const dueTasks = await db
+        .select()
+        .from(tasks)
+        .where(
+          or(
+            eq(tasks.assignedToId, userId),
+            isNull(tasks.assignedToId)
+          )
+        );
+
+      let notificationsCreated = 0;
+
+      for (const task of dueTasks) {
+        if (task.dueDate && task.status !== "completed") {
+          const dueDate = new Date(task.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          const todayDate = new Date();
+          todayDate.setHours(0, 0, 0, 0);
+
+          // Check if task is due today or overdue
+          if (dueDate <= todayDate) {
+            // Check if we already sent a notification for this task
+            const existingNotifications = await storage.getNotifications(userId);
+            const alreadyNotified = existingNotifications.some(
+              n => n.metadata?.taskId === task.id && n.type === "deadline"
+            );
+
+            if (!alreadyNotified) {
+              await storage.createNotification({
+                userId,
+                title: "Task Due",
+                message: `Task "${task.title}" is due${dueDate < todayDate ? " (overdue)" : ""}`,
+                type: "warning",
+                category: "deadline",
+                metadata: { taskId: task.id },
+              });
+              notificationsCreated++;
+            }
+          }
+        }
+      }
+
+      res.json({
+        message: "Task notifications checked",
+        notificationsCreated
       });
     } catch (error) {
       console.error(error);
