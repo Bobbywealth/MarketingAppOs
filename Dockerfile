@@ -10,9 +10,12 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-# Use npm install instead of npm ci to properly resolve platform-specific
-# native dependencies (like @rollup/rollup-linux-x64-gnu) for the Linux container
-RUN npm install --include=optional
+
+# Set npm config to always include optional dependencies
+ENV NPM_CONFIG_OPTIONAL=true
+
+# Install all dependencies including optional (for native modules like rollup)
+RUN npm install
 
 # Copy source code
 COPY . .
