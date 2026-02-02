@@ -10,7 +10,9 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci
+# Use npm install instead of npm ci to properly resolve platform-specific
+# native dependencies (like @rollup/rollup-linux-x64-gnu) for the Linux container
+RUN npm install --include=optional
 
 # Copy source code
 COPY . .
