@@ -302,6 +302,8 @@ export const leadAutomations = pgTable("lead_automations", {
   actionType: varchar("action_type").notNull(), // send_email, send_sms
   actionData: jsonb("action_data"), // {template_id, message, subject}
   status: varchar("status").notNull().default("pending"), // pending, sent, failed
+  isActive: boolean("is_active").notNull().default(true),
+  nextRunAt: timestamp("next_run_at"),
   scheduledFor: timestamp("scheduled_for"),
   executedAt: timestamp("executed_at"),
   createdAt: timestamp("created_at").defaultNow(),
