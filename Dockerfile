@@ -1,8 +1,10 @@
 # Use Node.js 20
-FROM node:20-alpine
+FROM node:20-bullseye-slim
 
 # Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -32,4 +34,3 @@ ENV NODE_ENV=production
 
 # Start the application
 CMD ["node", "dist/index.js"]
-
