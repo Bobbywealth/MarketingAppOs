@@ -17,7 +17,7 @@ const router = Router();
 // Ensure Marketing Center schema exists in production.
 // This guards against schema drift when startup migrations fail to run.
 let marketingSchemaEnsured: Promise<void> | null = null;
-async function ensureMarketingCenterSchema() {
+export async function ensureMarketingCenterSchema() {
   if (marketingSchemaEnsured) return marketingSchemaEnsured;
   marketingSchemaEnsured = (async () => {
     // Tables
