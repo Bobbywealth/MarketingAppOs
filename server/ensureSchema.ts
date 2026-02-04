@@ -503,7 +503,19 @@ export async function ensureMinimumSchema() {
   // Marketing Series: Fix column names and add missing columns
   await safeQuery(
     "marketing_series.channel column",
-    `ALTER TABLE IF EXISTS marketing_series ADD COLUMN IF NOT EXISTS channel VARCHAR NOT NULL;`
+    `ALTER TABLE IF EXISTS marketing_series ADD COLUMN IF NOT EXISTS channel VARCHAR;`
+  );
+  await safeQuery(
+    "marketing_series.channel backfill",
+    `UPDATE marketing_series SET channel = 'email' WHERE channel IS NULL;`
+  );
+  await safeQuery(
+    "marketing_series.channel default",
+    `ALTER TABLE IF EXISTS marketing_series ALTER COLUMN channel SET DEFAULT 'email';`
+  );
+  await safeQuery(
+    "marketing_series.channel not null",
+    `ALTER TABLE IF EXISTS marketing_series ALTER COLUMN channel SET NOT NULL;`
   );
   await safeQuery(
     "marketing_series.updated_at column",
@@ -511,7 +523,15 @@ export async function ensureMinimumSchema() {
   );
   await safeQuery(
     "marketing_series_enrollments.recipient_id column",
-    `ALTER TABLE IF EXISTS marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_id VARCHAR(255) NOT NULL;`
+    `ALTER TABLE IF EXISTS marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_id VARCHAR(255);`
+  );
+  await safeQuery(
+    "marketing_series_enrollments.recipient_id backfill",
+    `UPDATE marketing_series_enrollments SET recipient_id = COALESCE(lead_id, client_id) WHERE recipient_id IS NULL;`
+  );
+  await safeQuery(
+    "marketing_series_enrollments.recipient_id not null",
+    `ALTER TABLE IF EXISTS marketing_series_enrollments ALTER COLUMN recipient_id SET NOT NULL;`
   );
   await safeQuery(
     "idx_series_enrollments_recipient",
@@ -610,5 +630,4 @@ export async function ensureMinimumSchema() {
     `CREATE INDEX IF NOT EXISTS idx_scheduled_ai_commands_next_run_at ON scheduled_ai_commands(next_run_at);`
   );
 }
-
 
