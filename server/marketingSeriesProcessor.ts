@@ -51,7 +51,7 @@ export async function processMarketingSeries() {
 
         // Send the message
         let sent = false;
-        if (series.type === "email" && recipientEmail) {
+        if (series.channel === "email" && recipientEmail) {
           try {
             await emailNotifications.sendMarketingEmail(
               recipientEmail,
@@ -62,7 +62,7 @@ export async function processMarketingSeries() {
           } catch (err) {
             log(`❌ Failed to send series email to ${recipientEmail}: ${err}`, "series");
           }
-        } else if (series.type === "sms" && recipientPhone) {
+        } else if (series.channel === "sms" && recipientPhone) {
           try {
             await sendSms(
               recipientPhone,
@@ -87,13 +87,13 @@ export async function processMarketingSeries() {
             await storage.updateMarketingSeriesEnrollment(enrollment.id, {
               currentStep: nextStepOrder,
               lastStepSentAt: new Date(),
-              nextStepDueAt: nextDue,
+              nextStepAt: nextDue,
             });
           } else {
             await storage.updateMarketingSeriesEnrollment(enrollment.id, {
               status: "completed",
               lastStepSentAt: new Date(),
-              nextStepDueAt: null as any,
+              nextStepAt: null as any,
             });
           }
           log(`✅ Sent step ${enrollment.currentStep} of series "${series.name}" to ${recipientName}`, "series");

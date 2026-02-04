@@ -46,6 +46,7 @@ async function ensureMarketingCenterSchema() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS marketing_broadcasts (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        channel VARCHAR NOT NULL,
         type VARCHAR NOT NULL,
         status VARCHAR NOT NULL DEFAULT 'pending',
         subject VARCHAR,
@@ -59,14 +60,19 @@ async function ensureMarketingCenterSchema() {
         failed_count INTEGER DEFAULT 0,
         created_by INTEGER NOT NULL REFERENCES users(id),
         scheduled_at TIMESTAMP,
+        sent_at TIMESTAMP,
         completed_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
         is_recurring BOOLEAN DEFAULT false,
+        is_active BOOLEAN DEFAULT true,
         recurring_pattern VARCHAR,
         recurring_interval INTEGER DEFAULT 1,
         recurring_end_date TIMESTAMP,
         next_run_at TIMESTAMP,
-        parent_broadcast_id VARCHAR
+        parent_broadcast_id VARCHAR,
+        media_urls TEXT[],
+        use_ai_personalization BOOLEAN DEFAULT false
       );
     `);
 
@@ -96,23 +102,11 @@ async function ensureMarketingCenterSchema() {
       );
     `);
 
-    // Columns (schema drift fix)
-    await pool.query(`ALTER TABLE marketing_group_members ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS group_id VARCHAR REFERENCES marketing_groups(id);`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS filters JSONB;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_pattern VARCHAR;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_interval INTEGER DEFAULT 1;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_end_date TIMESTAMP;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS parent_broadcast_id VARCHAR;`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
-    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS use_ai_personalization BOOLEAN DEFAULT false;`);
-    await pool.query(`ALTER TABLE marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`);
+    // Add missing columns (schema drift fix for existing tables)
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS channel VARCHAR NOT NULL DEFAULT 'email';`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
 
     // Marketing Series tables
     await pool.query(`
@@ -120,7 +114,7 @@ async function ensureMarketingCenterSchema() {
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR NOT NULL,
         description TEXT,
-        type VARCHAR NOT NULL,
+        channel VARCHAR NOT NULL,
         is_active BOOLEAN DEFAULT true,
         created_by INTEGER NOT NULL REFERENCES users(id),
         created_at TIMESTAMP DEFAULT NOW(),
@@ -147,16 +141,39 @@ async function ensureMarketingCenterSchema() {
       CREATE TABLE IF NOT EXISTS marketing_series_enrollments (
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
         series_id VARCHAR NOT NULL REFERENCES marketing_series(id) ON DELETE CASCADE,
+        recipient_id VARCHAR(255) NOT NULL,
         lead_id VARCHAR REFERENCES leads(id) ON DELETE CASCADE,
         client_id VARCHAR REFERENCES clients(id) ON DELETE CASCADE,
         current_step INTEGER DEFAULT 0,
         status VARCHAR NOT NULL DEFAULT 'active',
         last_step_sent_at TIMESTAMP,
-        next_step_due_at TIMESTAMP,
+        next_step_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
+
+    // Add missing columns (schema drift fix for existing tables)
+    await pool.query(`ALTER TABLE marketing_group_members ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS group_id VARCHAR REFERENCES marketing_groups(id);`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS custom_recipient TEXT;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS filters JSONB;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_pattern VARCHAR;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_interval INTEGER DEFAULT 1;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_end_date TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS parent_broadcast_id VARCHAR;`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
+    await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS use_ai_personalization BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`);
+    await pool.query(`ALTER TABLE marketing_series ADD COLUMN IF NOT EXISTS channel VARCHAR NOT NULL;`);
+    await pool.query(`ALTER TABLE marketing_series ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;`);
+    await pool.query(`ALTER TABLE marketing_series ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+    await pool.query(`ALTER TABLE marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_id VARCHAR(255) NOT NULL;`);
   })().catch((err) => {
     // Allow retry on next request if this fails.
     marketingSchemaEnsured = null;

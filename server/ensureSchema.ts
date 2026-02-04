@@ -441,6 +441,9 @@ export async function ensureMinimumSchema() {
   await safeQuery("lead_automations.scheduled_for column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMP;`);
   await safeQuery("lead_automations.executed_at column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS executed_at TIMESTAMP;`);
   await safeQuery("lead_automations.created_at column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+  await safeQuery("lead_automations.is_active column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;`);
+  await safeQuery("lead_automations.next_run_at column", `ALTER TABLE IF EXISTS lead_automations ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMP;`);
+  await safeQuery("idx_lead_automations_next_run_at", `CREATE INDEX IF NOT EXISTS idx_lead_automations_next_run_at ON lead_automations(next_run_at);`);
 
   // Marketing Series tables
   await safeQuery("marketing_series table", `
@@ -448,7 +451,7 @@ export async function ensureMinimumSchema() {
       id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
       name VARCHAR NOT NULL,
       description TEXT,
-      type VARCHAR NOT NULL,
+      channel VARCHAR NOT NULL,
       is_active BOOLEAN DEFAULT true,
       created_by INTEGER NOT NULL REFERENCES users(id),
       created_at TIMESTAMP DEFAULT NOW(),
@@ -495,6 +498,24 @@ export async function ensureMinimumSchema() {
   await safeQuery(
     "marketing_broadcast_recipients.provider_call_id column",
     `ALTER TABLE IF EXISTS marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`
+  );
+
+  // Marketing Series: Fix column names and add missing columns
+  await safeQuery(
+    "marketing_series.channel column",
+    `ALTER TABLE IF EXISTS marketing_series ADD COLUMN IF NOT EXISTS channel VARCHAR NOT NULL;`
+  );
+  await safeQuery(
+    "marketing_series.updated_at column",
+    `ALTER TABLE IF EXISTS marketing_series ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`
+  );
+  await safeQuery(
+    "marketing_series_enrollments.recipient_id column",
+    `ALTER TABLE IF EXISTS marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_id VARCHAR(255) NOT NULL;`
+  );
+  await safeQuery(
+    "idx_series_enrollments_recipient",
+    `CREATE INDEX IF NOT EXISTS idx_series_enrollments_recipient ON marketing_series_enrollments(recipient_id);`
   );
 
   // Session storage table (Critical for persistent logins)

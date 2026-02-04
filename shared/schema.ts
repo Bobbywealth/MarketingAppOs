@@ -920,6 +920,7 @@ export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   mediaType: varchar("media_type"), // image, video
   channel: varchar("channel").notNull(), // sms, email, whatsapp, telegram
   status: varchar("status").notNull().default("pending"), // pending, scheduled, sending, sent, failed
+  isActive: boolean("is_active").notNull().default(true),
   scheduledAt: timestamp("scheduled_at"),
   sentAt: timestamp("sent_at"),
   isRecurring: boolean("is_recurring").default(false),
@@ -978,6 +979,7 @@ export const marketingSeries = pgTable("marketing_series", {
   description: text("description"),
   channel: varchar("channel").notNull(),
   status: varchar("status").notNull().default("draft"),
+  isActive: boolean("is_active").notNull().default(true),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
