@@ -170,10 +170,15 @@ export async function ensureMarketingCenterSchema() {
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS media_urls TEXT[];`);
     await pool.query(`ALTER TABLE marketing_broadcasts ADD COLUMN IF NOT EXISTS use_ai_personalization BOOLEAN DEFAULT false;`);
     await pool.query(`ALTER TABLE marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS provider_call_id VARCHAR;`);
-    await pool.query(`ALTER TABLE marketing_series ADD COLUMN IF NOT EXISTS channel VARCHAR NOT NULL;`);
+    await pool.query(`ALTER TABLE marketing_series ADD COLUMN IF NOT EXISTS channel VARCHAR;`);
+    await pool.query(`UPDATE marketing_series SET channel = 'email' WHERE channel IS NULL;`);
+    await pool.query(`ALTER TABLE marketing_series ALTER COLUMN channel SET DEFAULT 'email';`);
+    await pool.query(`ALTER TABLE marketing_series ALTER COLUMN channel SET NOT NULL;`);
     await pool.query(`ALTER TABLE marketing_series ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;`);
     await pool.query(`ALTER TABLE marketing_series ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
-    await pool.query(`ALTER TABLE marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_id VARCHAR(255) NOT NULL;`);
+    await pool.query(`ALTER TABLE marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_id VARCHAR(255);`);
+    await pool.query(`UPDATE marketing_series_enrollments SET recipient_id = COALESCE(lead_id, client_id) WHERE recipient_id IS NULL;`);
+    await pool.query(`ALTER TABLE marketing_series_enrollments ALTER COLUMN recipient_id SET NOT NULL;`);
   })().catch((err) => {
     // Allow retry on next request if this fails.
     marketingSchemaEnsured = null;
@@ -1017,4 +1022,3 @@ router.post("/series/:id/enroll", isAuthenticated, requireRole(UserRole.ADMIN), 
 });
 
 export default router;
-
