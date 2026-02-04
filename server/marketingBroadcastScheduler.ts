@@ -5,11 +5,14 @@ import { marketingBroadcasts } from "@shared/schema";
 import { processMarketingBroadcast } from "./marketingBroadcastProcessor";
 import { log } from "./vite";
 import { storage } from "./storage";
+import { ensureMarketingCenterSchema } from "./routes/marketing-center";
 
 /**
  * Picks up scheduled and recurring marketing broadcasts and starts sending them.
  */
 export function startMarketingBroadcastScheduler() {
+  // Ensure schema exists before running queries
+  void ensureMarketingCenterSchema();
   async function tick() {
     try {
       const now = new Date();
