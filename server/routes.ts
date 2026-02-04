@@ -7,6 +7,7 @@ import { AuditService } from "./auditService";
 import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
 import { dialpadService } from "./dialpadService";
+import marketingCenterRoutes from "./routes/marketing-center";
 import {
   insertClientSchema,
   insertCampaignSchema,
@@ -98,6 +99,9 @@ const upload = multer({
 });
 
 export function registerRoutes(app: Express) {
+  // Mount Marketing Center routes
+  app.use("/api/marketing-center", marketingCenterRoutes);
+
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
     try {
