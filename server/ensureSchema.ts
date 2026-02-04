@@ -588,6 +588,98 @@ export async function ensureMinimumSchema() {
     "idx_scheduled_ai_commands_next_run_at",
     `CREATE INDEX IF NOT EXISTS idx_scheduled_ai_commands_next_run_at ON scheduled_ai_commands(next_run_at);`
   );
+
+  // Marketing Broadcasts table (for SMS, Email, WhatsApp, Voice campaigns)
+  await safeQuery(
+    "marketing_broadcasts table",
+    `
+    CREATE TABLE IF NOT EXISTS marketing_broadcasts (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      title VARCHAR NOT NULL DEFAULT 'Untitled Broadcast',
+      content TEXT NOT NULL DEFAULT '',
+      type VARCHAR NOT NULL DEFAULT 'sms',
+      audience VARCHAR NOT NULL DEFAULT 'all',
+      group_id VARCHAR,
+      custom_recipient VARCHAR,
+      subject VARCHAR,
+      filters JSONB,
+      media_urls JSONB,
+      media_url VARCHAR,
+      media_type VARCHAR,
+      status VARCHAR NOT NULL DEFAULT 'pending',
+      scheduled_at TIMESTAMP,
+      sent_at TIMESTAMP,
+      completed_at TIMESTAMP,
+      total_recipients INTEGER DEFAULT 0,
+      success_count INTEGER DEFAULT 0,
+      failed_count INTEGER DEFAULT 0,
+      is_recurring BOOLEAN DEFAULT false,
+      recurring_pattern VARCHAR,
+      recurring_interval INTEGER DEFAULT 1,
+      next_run_at TIMESTAMP,
+      recurring_end_date TIMESTAMP,
+      parent_broadcast_id VARCHAR,
+      use_ai_personalization BOOLEAN DEFAULT false,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    `
+  );
+
+  // Marketing Broadcasts: Add missing columns if table exists but columns are missing
+  await safeQuery("marketing_broadcasts.type column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS type VARCHAR NOT NULL DEFAULT 'sms';`);
+  await safeQuery("marketing_broadcasts.audience column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS audience VARCHAR NOT NULL DEFAULT 'all';`);
+  await safeQuery("marketing_broadcasts.group_id column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS group_id VARCHAR;`);
+  await safeQuery("marketing_broadcasts.custom_recipient column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS custom_recipient VARCHAR;`);
+  await safeQuery("marketing_broadcasts.subject column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS subject VARCHAR;`);
+  await safeQuery("marketing_broadcasts.filters column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS filters JSONB;`);
+  await safeQuery("marketing_broadcasts.media_urls column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS media_urls JSONB;`);
+  await safeQuery("marketing_broadcasts.completed_at column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;`);
+  await safeQuery("marketing_broadcasts.total_recipients column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS total_recipients INTEGER DEFAULT 0;`);
+  await safeQuery("marketing_broadcasts.success_count column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS success_count INTEGER DEFAULT 0;`);
+  await safeQuery("marketing_broadcasts.failed_count column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS failed_count INTEGER DEFAULT 0;`);
+  await safeQuery("marketing_broadcasts.recurring_interval column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS recurring_interval INTEGER DEFAULT 1;`);
+  await safeQuery("marketing_broadcasts.parent_broadcast_id column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS parent_broadcast_id VARCHAR;`);
+  await safeQuery("marketing_broadcasts.use_ai_personalization column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS use_ai_personalization BOOLEAN DEFAULT false;`);
+  await safeQuery("marketing_broadcasts.title column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS title VARCHAR NOT NULL DEFAULT 'Untitled Broadcast';`);
+  await safeQuery("marketing_broadcasts.sent_at column", `ALTER TABLE IF EXISTS marketing_broadcasts ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP;`);
+
+  // Marketing Broadcasts indexes
+  await safeQuery("idx_marketing_broadcasts_type", `CREATE INDEX IF NOT EXISTS idx_marketing_broadcasts_type ON marketing_broadcasts(type);`);
+  await safeQuery("idx_marketing_broadcasts_status", `CREATE INDEX IF NOT EXISTS idx_marketing_broadcasts_status ON marketing_broadcasts(status);`);
+  await safeQuery("idx_marketing_broadcasts_created_by", `CREATE INDEX IF NOT EXISTS idx_marketing_broadcasts_created_by ON marketing_broadcasts(created_by);`);
+  await safeQuery("idx_marketing_broadcasts_scheduled_at", `CREATE INDEX IF NOT EXISTS idx_marketing_broadcasts_scheduled_at ON marketing_broadcasts(scheduled_at);`);
+
+  // Marketing Broadcast Recipients table
+  await safeQuery(
+    "marketing_broadcast_recipients table",
+    `
+    CREATE TABLE IF NOT EXISTS marketing_broadcast_recipients (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      broadcast_id VARCHAR NOT NULL REFERENCES marketing_broadcasts(id) ON DELETE CASCADE,
+      recipient_id VARCHAR,
+      recipient_type VARCHAR,
+      custom_recipient VARCHAR,
+      status VARCHAR NOT NULL DEFAULT 'pending',
+      sent_at TIMESTAMP,
+      delivered_at TIMESTAMP,
+      error_message TEXT,
+      provider_call_id VARCHAR,
+      lead_id VARCHAR REFERENCES leads(id) ON DELETE SET NULL,
+      client_id VARCHAR REFERENCES clients(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    `
+  );
+
+  // Marketing Broadcast Recipients: Add missing columns
+  await safeQuery("marketing_broadcast_recipients.custom_recipient column", `ALTER TABLE IF EXISTS marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS custom_recipient VARCHAR;`);
+  await safeQuery("marketing_broadcast_recipients.sent_at column", `ALTER TABLE IF EXISTS marketing_broadcast_recipients ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP;`);
+
+  // Marketing Broadcast Recipients indexes
+  await safeQuery("idx_marketing_broadcast_recipients_broadcast_id", `CREATE INDEX IF NOT EXISTS idx_marketing_broadcast_recipients_broadcast_id ON marketing_broadcast_recipients(broadcast_id);`);
+  await safeQuery("idx_marketing_broadcast_recipients_provider_call_id", `CREATE INDEX IF NOT EXISTS idx_marketing_broadcast_recipients_provider_call_id ON marketing_broadcast_recipients(provider_call_id);`);
 }
 
 
