@@ -90,6 +90,7 @@ export function startMarketingBroadcastScheduler() {
 
         // Create a child broadcast for this run
         const childBroadcast = await storage.createMarketingBroadcast({
+          title: template.title,
           type: template.type,
           status: "sending",
           subject: template.subject,
@@ -98,6 +99,8 @@ export function startMarketingBroadcastScheduler() {
           groupId: template.groupId,
           customRecipient: template.customRecipient,
           filters: template.filters,
+          mediaUrls: template.mediaUrls,
+          useAiPersonalization: template.useAiPersonalization,
           createdBy: template.createdBy,
           parentBroadcastId: template.id,
           isRecurring: false,

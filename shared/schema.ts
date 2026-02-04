@@ -914,18 +914,31 @@ export type Commission = typeof commissions.$inferSelect;
 // Marketing Broadcasts table
 export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: varchar("title").notNull(),
+  title: varchar("title").notNull().default("Untitled Broadcast"),
   content: text("content").notNull(),
-  mediaUrl: varchar("media_url"), // Optional media attachment
+  type: varchar("type").notNull().default("sms"), // sms, email, whatsapp, telegram, voice
+  audience: varchar("audience").notNull().default("all"), // all, leads, clients, group, individual
+  groupId: varchar("group_id"),
+  customRecipient: varchar("custom_recipient"),
+  subject: varchar("subject"), // For email broadcasts
+  filters: jsonb("filters"), // For filtered audiences
+  mediaUrls: jsonb("media_urls"), // Array of media URLs
+  mediaUrl: varchar("media_url"), // Single media URL (legacy)
   mediaType: varchar("media_type"), // image, video
-  channel: varchar("channel").notNull(), // sms, email, whatsapp, telegram
-  status: varchar("status").notNull().default("pending"), // pending, scheduled, sending, sent, failed
+  status: varchar("status").notNull().default("pending"), // pending, scheduled, sending, sent, completed, failed
   scheduledAt: timestamp("scheduled_at"),
   sentAt: timestamp("sent_at"),
+  completedAt: timestamp("completed_at"),
+  totalRecipients: integer("total_recipients").default(0),
+  successCount: integer("success_count").default(0),
+  failedCount: integer("failed_count").default(0),
   isRecurring: boolean("is_recurring").default(false),
   recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly
+  recurringInterval: integer("recurring_interval").default(1),
   nextRunAt: timestamp("next_run_at"),
   recurringEndDate: timestamp("recurring_end_date"),
+  parentBroadcastId: varchar("parent_broadcast_id"),
+  useAiPersonalization: boolean("use_ai_personalization").default(false),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -939,12 +952,14 @@ export type MarketingBroadcast = typeof marketingBroadcasts.$inferSelect;
 export const marketingBroadcastRecipients = pgTable("marketing_broadcast_recipients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   broadcastId: varchar("broadcast_id").notNull().references(() => marketingBroadcasts.id, { onDelete: "cascade" }),
-  recipientId: varchar("recipient_id").notNull(), // lead_id or client_id
-  recipientType: varchar("recipient_type").notNull(), // lead, client
+  recipientId: varchar("recipient_id"), // lead_id or client_id (optional for individual recipients)
+  recipientType: varchar("recipient_type"), // lead, client, individual
+  customRecipient: varchar("custom_recipient"), // For individual recipients (email or phone)
   status: varchar("status").notNull().default("pending"), // pending, sent, delivered, failed
   sentAt: timestamp("sent_at"),
   deliveredAt: timestamp("delivered_at"),
   errorMessage: text("error_message"),
+  providerCallId: varchar("provider_call_id"), // External ID from Twilio/Vapi
   leadId: varchar("lead_id").references(() => leads.id, { onDelete: "set null" }),
   clientId: varchar("client_id").references(() => clients.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),

@@ -102,6 +102,10 @@ import {
   type InsertMarketingSeriesStep,
   type MarketingSeriesEnrollment,
   type InsertMarketingSeriesEnrollment,
+  type MarketingBroadcast,
+  type InsertMarketingBroadcast,
+  type MarketingBroadcastRecipient,
+  type InsertMarketingBroadcastRecipient,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and, gte, count, sql } from "drizzle-orm";
@@ -254,6 +258,19 @@ export interface IStorage {
 
   // Lead automation operations
   getDueLeadAutomations(): Promise<LeadAutomation[]>;
+
+  // Marketing Broadcast operations
+  getMarketingBroadcasts(): Promise<MarketingBroadcast[]>;
+  getMarketingBroadcast(id: string): Promise<MarketingBroadcast | undefined>;
+  createMarketingBroadcast(broadcast: InsertMarketingBroadcast): Promise<MarketingBroadcast>;
+  updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast>;
+  deleteMarketingBroadcast(id: string): Promise<void>;
+
+  // Marketing Broadcast Recipient operations
+  getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]>;
+  createMarketingBroadcastRecipient(recipient: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
+  updateMarketingBroadcastRecipient(id: string, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
+  getMarketingBroadcastRecipientByProviderCallId(providerCallId: string): Promise<MarketingBroadcastRecipient | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1304,6 +1321,65 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(leadAutomations.nextRunAt)
       .limit(20);
+  }
+
+  // Marketing Broadcast operations
+  async getMarketingBroadcasts(): Promise<MarketingBroadcast[]> {
+    return await db.select().from(marketingBroadcasts).orderBy(desc(marketingBroadcasts.createdAt));
+  }
+
+  async getMarketingBroadcast(id: string): Promise<MarketingBroadcast | undefined> {
+    const [broadcast] = await db.select().from(marketingBroadcasts).where(eq(marketingBroadcasts.id, id));
+    return broadcast;
+  }
+
+  async createMarketingBroadcast(broadcast: InsertMarketingBroadcast): Promise<MarketingBroadcast> {
+    const [created] = await db.insert(marketingBroadcasts).values(broadcast).returning();
+    return created;
+  }
+
+  async updateMarketingBroadcast(id: string, data: Partial<InsertMarketingBroadcast>): Promise<MarketingBroadcast> {
+    const [updated] = await db
+      .update(marketingBroadcasts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(marketingBroadcasts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMarketingBroadcast(id: string): Promise<void> {
+    await db.delete(marketingBroadcasts).where(eq(marketingBroadcasts.id, id));
+  }
+
+  // Marketing Broadcast Recipient operations
+  async getMarketingBroadcastRecipients(broadcastId: string): Promise<MarketingBroadcastRecipient[]> {
+    return await db
+      .select()
+      .from(marketingBroadcastRecipients)
+      .where(eq(marketingBroadcastRecipients.broadcastId, broadcastId))
+      .orderBy(desc(marketingBroadcastRecipients.createdAt));
+  }
+
+  async createMarketingBroadcastRecipient(recipient: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient> {
+    const [created] = await db.insert(marketingBroadcastRecipients).values(recipient).returning();
+    return created;
+  }
+
+  async updateMarketingBroadcastRecipient(id: string, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient> {
+    const [updated] = await db
+      .update(marketingBroadcastRecipients)
+      .set(data)
+      .where(eq(marketingBroadcastRecipients.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getMarketingBroadcastRecipientByProviderCallId(providerCallId: string): Promise<MarketingBroadcastRecipient | undefined> {
+    const [recipient] = await db
+      .select()
+      .from(marketingBroadcastRecipients)
+      .where(eq(marketingBroadcastRecipients.providerCallId, providerCallId));
+    return recipient;
   }
 }
 
