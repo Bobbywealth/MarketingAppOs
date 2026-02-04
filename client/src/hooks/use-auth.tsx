@@ -44,21 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'D',location:'client/src/hooks/use-auth.tsx:loginMutation',message:'Login mutation start',data:{username:credentials?.username?.slice?.(0,80),origin:window.location.origin,viteApiBaseUrl:(import.meta as any)?.env?.VITE_API_BASE_URL||null},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      try {
-        const res = await apiRequest("POST", "/api/login", credentials);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'D',location:'client/src/hooks/use-auth.tsx:loginMutation',message:'Login mutation response ok',data:{status:res.status},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-        return await res.json();
-      } catch (e) {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/80b2583d-14fd-4900-b577-b2baae4d468c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'login-pre',hypothesisId:'D',location:'client/src/hooks/use-auth.tsx:loginMutation',message:'Login mutation error',data:{error:String((e as any)?.message||e)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-        throw e;
-      }
+      const res = await apiRequest("POST", "/api/login", credentials);
+      return await res.json();
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
