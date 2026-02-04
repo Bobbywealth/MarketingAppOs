@@ -11,6 +11,7 @@ import { pool } from "./db";
 import { User as SelectUser, insertUserSchema } from "@shared/schema";
 import { UserRole } from "@shared/roles";
 import { rolePermissions } from "./rbac";
+import { debugLog, authDebug } from "./debug";
 
 declare global {
   namespace Express {
@@ -97,6 +98,10 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        authDebug.loginAttempt(
+          typeof username === "string" ? username.slice(0, 80) : String(username)
+        );
+
         const identifierRaw = typeof username === "string" ? username.trim() : String(username || "").trim();
         // Support "Email or Username" login (the UI prompts for this).
         // We keep username-first so accounts with username=email continue working.
@@ -104,8 +109,11 @@ export function setupAuth(app: Express) {
         if (!user && identifierRaw.includes("@")) {
           user = await storage.getUserByEmail(identifierRaw.toLowerCase());
         }
+
         const passwordOk = !!user && (await comparePasswords(password, user.password));
+
         if (!user || !passwordOk) {
+          authDebug.loginFailed("Invalid credentials");
           return done(null, false, { message: "Invalid username or password" });
         }
 
@@ -114,9 +122,11 @@ export function setupAuth(app: Express) {
           const creator = await storage.getCreator(user.creatorId);
           if (creator) {
             if (creator.applicationStatus === "pending") {
+              authDebug.loginFailed("Creator application pending");
               return done(null, false, { message: "Your application is still under review." });
             }
             if (creator.applicationStatus === "declined") {
+              authDebug.loginFailed("Creator application declined");
               return done(null, false, { message: "Your application has been declined." });
             }
           }
@@ -133,6 +143,8 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
+      authDebug.sessionDeserialize(id, !!user);
+
       if (!user) {
         console.warn(`[Auth] Failed to deserialize user: id ${id} not found`);
       }
@@ -229,6 +241,9 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log('🔐 Login attempt', { origin: req.headers.origin, host: req.headers.host, cookieDomain: process.env.COOKIE_DOMAIN });
+    authDebug.loginAttempt(req.body.username, req.headers.origin as string);
+
     passport.authenticate("local", async (err: any, user: SelectUser | false, info: any) => {
       if (err) return next(err);
       if (!user) {
@@ -273,6 +288,7 @@ export function setupAuth(app: Express) {
             console.error("Failed to log activity:", error);
           }
 
+          authDebug.loginSuccess(user.id, req.session.id);
           res.status(200).json({
             id: user.id,
             username: user.username,
@@ -295,7 +311,8 @@ export function setupAuth(app: Express) {
   // Support both GET and POST for logout
   const handleLogout = async (req: any, res: any, next: any) => {
     const user = req.user as SelectUser;
-    
+    authDebug.logout(user?.id);
+
     // Log the logout activity before destroying session
     if (user) {
       try {
@@ -311,7 +328,7 @@ export function setupAuth(app: Express) {
         console.error("Failed to log logout activity:", error);
       }
     }
-    
+
     req.logout((err: any) => {
       if (err) return next(err);
       req.session.destroy((err: any) => {
@@ -440,9 +457,16 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     // Logged-out is not an error state for the SPA; return 200 + null to reduce noisy 401 logs.
-    if (!req.isAuthenticated()) return res.status(200).json(null);
+    if (!req.isAuthenticated()) {
+      authDebug.sessionNotAuthenticated(req.sessionID, !!req.headers.cookie);
+      if (!req.headers.cookie) {
+        authDebug.cookieIssue("No cookies in request", req.headers.cookie);
+      }
+      return res.status(200).json(null);
+    }
     const user = req.user as SelectUser;
     const permissions = rolePermissions[user.role as UserRole] || rolePermissions[UserRole.STAFF];
+    authDebug.sessionAuthenticated(user.id, req.sessionID);
     res.json({
       id: user.id,
       username: user.username,
@@ -457,6 +481,62 @@ export function setupAuth(app: Express) {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       permissions,
+    });
+  });
+
+  // Debug log endpoint for client-side logs
+  app.post("/api/debug/log", (req, res) => {
+    const entry = req.body;
+    // Log client entries through the same debug system
+    debugLog({
+      level: entry.level || "debug",
+      location: entry.location,
+      message: entry.message,
+      data: entry.data,
+    });
+    res.sendStatus(200);
+  });
+
+  // Endpoint to get debug logs (admin only)
+  app.get("/api/debug/logs", (req, res) => {
+    // In production, don't allow viewing logs via API - direct to platform logs
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({ message: "Logs not available via API in production" });
+    }
+
+    // Check if user is admin
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = req.user as SelectUser;
+    if (user.role !== "admin") {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    // Read logs from file
+    const fs = require("node:fs");
+    const logsPath = process.env.DEBUG_LOG_PATH || "./debug.log";
+
+    fs.readFile(logsPath, "utf8", (err: Error, data: string) => {
+      if (err) {
+        return res.json({ logs: [] });
+      }
+
+      const logs = data
+        .split("\n")
+        .filter(line => line.trim())
+        .map(line => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean)
+        .reverse()
+        .slice(0, 500); // Last 500 entries
+
+      res.json({ logs });
     });
   });
 }

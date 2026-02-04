@@ -58,6 +58,7 @@ import Training from "@/pages/training";
 import PushNotifications from "@/pages/push-notifications";
 import DashboardStaff from "@/pages/dashboard-staff";
 import DashboardManager from "@/pages/dashboard-manager";
+import AdminDebugLogs from "@/pages/admin-debug-logs";
 
 function Router() {
   const { user } = useAuth();
@@ -111,6 +112,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
       {!isClient && <ProtectedRoute path="/dashboard-staff" component={DashboardStaff} />}
       {!isClient && <ProtectedRoute path="/dashboard-manager" component={DashboardManager} />}
+      {!isClient && <ProtectedRoute path="/admin/debug-logs" component={AdminDebugLogs} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
       <ProtectedRoute path="/settings" component={Settings} />

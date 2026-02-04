@@ -33,6 +33,7 @@ import {
   Percent,
   Zap,
   Search,
+  FileText,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -419,6 +420,13 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     icon: KeyRound,
     roles: ["admin"] as const,
     sidebarKey: "vault" as const,
+  },
+  {
+    title: "Debug Logs",
+    url: "/admin/debug-logs",
+    icon: FileText,
+    roles: ["admin"] as const,
+    sidebarKey: "debugLogs" as const,
   },
   {
     title: "Social Stats",

@@ -1,5 +1,6 @@
 import { QueryFunction } from "@tanstack/react-query";
 import { isNativeApp } from "./runtime";
+import { clientDebug } from "./debug";
 
 function getApiBaseUrl(): string {
   const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
@@ -26,7 +27,7 @@ export function resolveApiUrl(url: string): string {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage = res.statusText;
-    
+
     try {
       const text = await res.text();
       if (text) {
@@ -40,7 +41,7 @@ async function throwIfResNotOk(res: Response) {
     } catch {
       // If we can't read the response, use status text
     }
-    
+
     // Provide user-friendly error messages for common status codes
     switch (res.status) {
       case 401:
@@ -66,13 +67,15 @@ export async function apiRequest(
 ): Promise<Response> {
   // Check if data is FormData (for file uploads)
   const isFormData = data instanceof FormData;
-  
+
   const res = await fetch(resolveApiUrl(url), {
     method,
     headers: isFormData ? {} : (data ? { "Content-Type": "application/json" } : {}),
     body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
     credentials: "include",
   });
+
+  clientDebug.apiRequest(method, url, res.status);
 
   await throwIfResNotOk(res);
   return res;
@@ -85,9 +88,12 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const path = queryKey.join("/") as string;
+
     const res = await fetch(resolveApiUrl(path), {
       credentials: "include",
     });
+
+    clientDebug.queryFetch(queryKey as string[], res.status);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
@@ -96,4 +102,3 @@ export const getQueryFn: <T>(options: {
     await throwIfResNotOk(res);
     return await res.json();
   };
-

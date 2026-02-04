@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import {
   useQuery,
   useMutation,
@@ -9,6 +9,7 @@ import { insertUserSchema } from "@shared/validation";
 import { InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { clientDebug } from "../lib/debug";
 // OneSignal removed - using Native Web Push
 
 type AuthContextType = {
@@ -30,7 +31,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  
+
   const {
     data: user,
     error,
@@ -40,12 +41,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
+  // Log auth state changes for debugging random logout issue
+  clientDebug.authStateChange(user?.id, isLoading);
+
   // OneSignal removed - using Native Web Push
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      clientDebug.loginStart(credentials.username);
+      try {
+        const res = await apiRequest("POST", "/api/login", credentials);
+        const userData = await res.json();
+        clientDebug.loginSuccess(userData.id);
+        return userData;
+      } catch (e) {
+        clientDebug.loginError(String((e as any)?.message || e));
+        throw e;
+      }
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -86,7 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      clientDebug.logoutStart(user?.id);
       await apiRequest("POST", "/api/logout");
+      clientDebug.logoutSuccess();
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
