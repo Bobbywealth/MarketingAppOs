@@ -62,11 +62,6 @@ import DashboardManager from "@/pages/dashboard-manager";
 function Router() {
   const { user } = useAuth();
   const isClient = user?.role === 'client';
-  
-  // Track page views for non-authenticated pages
-  if (!user) {
-    usePageTracking();
-  }
 
   return (
     <Switch>
