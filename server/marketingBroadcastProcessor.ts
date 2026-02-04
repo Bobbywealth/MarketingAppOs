@@ -87,6 +87,7 @@ export async function processMarketingBroadcast(broadcastId: string) {
     }
 
     // 1.2 Handle Group audience
+    const individualRecipients: { email?: string; phone?: string; type: "individual" }[] = [];
     if (broadcast.audience === "group" && broadcast.groupId) {
       const members = await storage.getMarketingGroupMembers(broadcast.groupId);
       const leadIds = members.filter(m => m.leadId).map(m => m.leadId!);
@@ -131,7 +132,6 @@ export async function processMarketingBroadcast(broadcastId: string) {
     }
 
     // 1.5 Handle Individual Recipient
-    const individualRecipients: { email?: string; phone?: string; type: "individual" }[] = [];
     if (broadcast.audience === "individual" && broadcast.customRecipient) {
       if (broadcast.type === "email") {
         individualRecipients.push({ email: broadcast.customRecipient, type: "individual" });
@@ -261,4 +261,3 @@ export async function processMarketingBroadcast(broadcastId: string) {
     });
   }
 }
-
