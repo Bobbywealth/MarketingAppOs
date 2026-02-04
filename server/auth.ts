@@ -76,6 +76,10 @@ export function setupAuth(app: Express) {
     tableName: "sessions",
   });
 
+  const normalizedCookieDomain = process.env.COOKIE_DOMAIN?.startsWith("www.")
+    ? process.env.COOKIE_DOMAIN.slice(4)
+    : process.env.COOKIE_DOMAIN;
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -87,7 +91,7 @@ export function setupAuth(app: Express) {
       // This prevents login loops when running production builds locally or on HTTP
       secure: process.env.NODE_ENV === "production" && process.env.DISABLE_SECURE_COOKIES !== "true",
       sameSite: "lax",
-      domain: process.env.COOKIE_DOMAIN || undefined, 
+      domain: normalizedCookieDomain || undefined, 
       maxAge: sessionTtl,
     },
   };
