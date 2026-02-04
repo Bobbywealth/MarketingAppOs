@@ -29,6 +29,7 @@ import {
   Globe,
   Package,
   Sparkles,
+  Zap,
 } from "lucide-react";
 
 interface TrainingSection {
