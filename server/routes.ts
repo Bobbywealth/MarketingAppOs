@@ -1158,11 +1158,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.log("🔍 Dashboard API called - fetching data...");
       
       // Only fetch lightweight data and minimal records for activity feed
-      const [clients, campaigns, leads, tasks] = await Promise.all([
+      const [clients, campaigns, leads, tasks, invoices] = await Promise.all([
         storage.getClients(), // Small dataset, usually < 100 records
         storage.getCampaigns(), // Small dataset
         storage.getLeads(), // Could be large, but we need value calc
         storage.getTasks(), // Could be large
+        storage.getInvoices(),
         // storage.getActivityLogs(15), // DISABLED - causing database errors
       ]);
       
@@ -1179,8 +1180,21 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
       
-      // Skip invoices for now - not critical for dashboard load
-      const monthlyRevenue = 0; // Will be replaced by Stripe data if available
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+      const monthlyRevenue = invoices
+        .filter((invoice) => invoice.status === "paid")
+        .filter((invoice) => {
+          const paidDate = invoice.paidAt || invoice.updatedAt || invoice.createdAt;
+          if (!paidDate) return false;
+          const paidTime = new Date(paidDate).getTime();
+          return paidTime >= monthStart.getTime() && paidTime < monthEnd.getTime();
+        })
+        .reduce((sum, invoice) => sum + (invoice.amount || 0), 0) / 100;
 
       // Task metrics
       const totalTasks = tasks.length;
