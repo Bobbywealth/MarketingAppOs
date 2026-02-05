@@ -84,6 +84,8 @@ export default function TasksPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "mine">("all");
+  const [assignmentFilterInitialized, setAssignmentFilterInitialized] = useState(false);
   // Load showCompleted preference from localStorage.
   // Default to TRUE so "previous tasks" (mostly completed) aren't accidentally hidden.
   const [showCompleted, setShowCompleted] = useState(() => {
@@ -105,6 +107,13 @@ export default function TasksPage() {
   });
 
   const isAdminOrManager = (user as any)?.role === "admin" || (user as any)?.role === "manager";
+  const userId = (user as any)?.id;
+
+  useEffect(() => {
+    if (assignmentFilterInitialized || !user) return;
+    setAssignmentFilter(isAdminOrManager ? "all" : "mine");
+    setAssignmentFilterInitialized(true);
+  }, [assignmentFilterInitialized, isAdminOrManager, user]);
   const backfillRecurringMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/tasks/backfill-recurring", {});
@@ -544,20 +553,33 @@ export default function TasksPage() {
     return true;
   };
 
+  const scopedTasks = useMemo(() => {
+    if (assignmentFilter === "mine" && userId) {
+      return tasks.filter((task) => Number(task.assignedToId) === Number(userId));
+    }
+    return tasks;
+  }, [assignmentFilter, tasks, userId]);
+
   const completedHiddenByToggle = !showCompleted
-    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
+    ? scopedTasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
     : 0;
 
   // Memoized filtered tasks for performance
   const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
+    return scopedTasks.filter((task) => {
       if (!matchesBaseFilters(task)) return false;
 
       // Hide all completed tasks if toggle is off
       if (!showCompleted && task.status === "completed") return false;
       return true;
     });
-  }, [tasks, filterStatus, filterPriority, selectedSpaceId, showCompleted]);
+  }, [scopedTasks, filterStatus, filterPriority, selectedSpaceId, showCompleted]);
+
+  const scopeLabel = assignmentFilter === "mine"
+    ? "Assigned to me"
+    : isAdminOrManager
+      ? "All team tasks"
+      : "All tasks";
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -921,7 +943,9 @@ export default function TasksPage() {
             <div>
               <h1 className="text-xl md:text-2xl font-bold">Tasks</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
+                Showing {filteredTasks.length} of {scopedTasks.length} task{scopedTasks.length !== 1 ? "s" : ""}
+                {` • ${scopeLabel}`}
+                {showCompleted ? " • Completed visible" : " • Completed hidden"}
                 {filterStatus !== "all" && ` • ${filterStatus.replace("_", " ")}`}
                 {filterPriority !== "all" && ` • ${filterPriority}`}
               </p>
@@ -1021,6 +1045,16 @@ export default function TasksPage() {
                   </SelectContent>
                 </Select>
 
+                <Select value={assignmentFilter} onValueChange={(value) => setAssignmentFilter(value as "all" | "mine")}>
+                  <SelectTrigger className="w-full sm:w-44" data-testid="select-filter-assignee">
+                    <SelectValue placeholder="Assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isAdminOrManager ? "All team tasks" : "All tasks"}</SelectItem>
+                    <SelectItem value="mine">Assigned to me</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 <Select
                   value={selectedSpaceId || ""}
                   onValueChange={(val) => setSelectedSpaceId(val || null)}
@@ -1048,13 +1082,18 @@ export default function TasksPage() {
                   {showCompleted ? "Hide Completed" : "Show Completed"}
                 </Button>
 
-                {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted) && (
+                {(filterStatus !== "all"
+                  || filterPriority !== "all"
+                  || selectedSpaceId !== null
+                  || !showCompleted
+                  || assignmentFilter !== (isAdminOrManager ? "all" : "mine")) && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => {
                       setFilterStatus("all");
                       setFilterPriority("all");
+                      setAssignmentFilter(isAdminOrManager ? "all" : "mine");
                       setSelectedSpaceId(null);
                       setShowCompleted(true);
                     }}
