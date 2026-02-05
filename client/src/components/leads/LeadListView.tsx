@@ -1,15 +1,15 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CheckSquare, 
-  Square, 
-  MoreVertical, 
-  Eye, 
-  PhoneCall, 
+import {
+  CheckSquare,
+  Square,
+  MoreVertical,
+  Eye,
+  PhoneCall,
   Phone,
-  Mail, 
-  Edit, 
+  Mail,
+  Edit,
   Trash2,
   DollarSign,
   MessageSquare,
@@ -21,7 +21,8 @@ import {
   Video,
   User,
   Globe,
-  Calendar
+  Calendar,
+  CheckCircle2
 } from "lucide-react";
 import { 
   DropdownMenu, 

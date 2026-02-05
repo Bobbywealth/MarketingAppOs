@@ -2,22 +2,23 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CheckSquare, 
-  Square, 
-  MoreVertical, 
-  Eye, 
-  PhoneCall, 
-  Mail, 
-  MessageSquare, 
-  FileText, 
-  Edit, 
+import {
+  CheckSquare,
+  Square,
+  MoreVertical,
+  Eye,
+  PhoneCall,
+  Mail,
+  MessageSquare,
+  FileText,
+  Edit,
   Trash2,
   DollarSign,
   Phone,
   Sparkles,
   BrainCircuit,
-  Wand2
+  Wand2,
+  CheckCircle2
 } from "lucide-react";
 import { 
   DropdownMenu, 
