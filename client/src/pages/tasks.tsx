@@ -586,16 +586,16 @@ export default function TasksPage() {
       { id: "review", title: "Review", icon: "👀" },
       { id: "completed", title: "Completed", icon: "✅" },
     ];
-
+    
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-full p-4 overflow-x-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 h-full p-4 overflow-x-auto">
         {columns.map((column) => {
           const columnTasks = filteredTasks.filter((task) => task.status === column.id);
           
           return (
-            <div 
-              key={column.id} 
-              className="flex flex-col h-full min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
+            <div
+              key={column.id}
+              className="flex flex-col h-full min-w-[200px] md:min-w-[240px] lg:min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >

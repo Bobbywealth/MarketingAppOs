@@ -53,14 +53,14 @@ export function getEffectiveRole(userRole: unknown): AppRole {
 }
 
 export function getDefaultDashboardPath(role: AppRole): string {
-  if (role === "admin") return "/admin/dashboard/admin";
-  if (role === "manager") return "/admin/dashboard/manager";
-  if (role === "staff") return "/admin/dashboard/staff";
-  if (role === "client") return "/client";
-  if (role === "creator") return "/creator";
-  if (role === "sales_agent") return "/sales";
+  if (role === "admin") return "/dashboard-admin";
+  if (role === "manager") return "/dashboard-manager";
+  if (role === "staff") return "/dashboard-staff";
+  if (role === "client") return "/client-dashboard";
+  if (role === "creator") return "/creator-dashboard";
+  if (role === "sales_agent") return "/sales-dashboard";
   if (role === "prospective_client") return "/signup";
-  if (role === "creator_manager" || role === "staff_content_creator") return "/admin";
+  if (role === "creator_manager" || role === "staff_content_creator") return "/dashboard-admin";
   return "/";
 }
 

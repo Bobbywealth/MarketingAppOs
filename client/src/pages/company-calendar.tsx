@@ -128,6 +128,12 @@ export default function CompanyCalendarPage() {
     location: "",
     type: "meeting",
     syncWithGoogle: false,
+    // Recurrence fields
+    isRecurring: false,
+    recurrencePattern: "weekly",
+    recurrenceDaysOfWeek: [],
+    recurrenceInterval: 1,
+    recurrenceEndDate: "",
   });
 
   // Real connection status (Outlook/Microsoft Graph via existing email account connection)
@@ -244,6 +250,13 @@ export default function CompanyCalendarPage() {
       location: formData.location || null,
       type: formData.type,
       syncWithGoogle: formData.syncWithGoogle,
+      // Recurrence fields
+      isRecurring: formData.isRecurring,
+      recurrencePattern: formData.isRecurring ? formData.recurrencePattern : null,
+      recurrenceDaysOfWeek: formData.isRecurring && formData.recurrencePattern === "weekly" ? formData.recurrenceDaysOfWeek : null,
+      recurrenceDayOfMonth: formData.isRecurring && formData.recurrencePattern === "monthly" ? formData.recurrenceDayOfMonth : null,
+      recurrenceInterval: formData.isRecurring ? formData.recurrenceInterval : null,
+      recurrenceEndDate: formData.isRecurring && formData.recurrenceEndDate ? new Date(formData.recurrenceEndDate).toISOString() : null,
     });
   };
 
@@ -454,8 +467,8 @@ export default function CompanyCalendarPage() {
                   <div>
                     <Label>Add to Google Calendar</Label>
                     <div className="flex items-center gap-2 mt-2">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         id="google-sync"
                         checked={formData.syncWithGoogle}
                         onChange={(e) => setFormData({...formData, syncWithGoogle: e.target.checked})}
@@ -465,6 +478,123 @@ export default function CompanyCalendarPage() {
                       </label>
                     </div>
                   </div>
+
+                  {/* Recurrence Section */}
+                  <div className="space-y-4 pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="is-recurring"
+                        checked={formData.isRecurring}
+                        onChange={(e) => setFormData({...formData, isRecurring: e.target.checked})}
+                      />
+                      <label htmlFor="is-recurring" className="text-sm font-medium cursor-pointer">
+                        Recurring Event
+                      </label>
+                    </div>
+
+                    {formData.isRecurring && (
+                      <div className="space-y-4">
+                        {/* Recurrence Pattern */}
+                        <div>
+                          <Label>Repeat</Label>
+                          <Select
+                            value={formData.recurrencePattern || "weekly"}
+                            onValueChange={(value) => setFormData({...formData, recurrencePattern: value as any})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select pattern" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Interval */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Every</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="52"
+                              value={formData.recurrenceInterval || 1}
+                              onChange={(e) => setFormData({...formData, recurrenceInterval: parseInt(e.target.value) || 1})}
+                              className="w-full"
+                            />
+                          </div>
+                          <div>
+                            <Label>
+                              {formData.recurrencePattern === "daily" ? "day(s)" :
+                               formData.recurrencePattern === "weekly" ? "week(s)" : "month(s)"}
+                            </Label>
+                          </div>
+                        </div>
+
+                        {/* Pattern-specific controls */}
+                        {formData.recurrencePattern === "weekly" && (
+                          <div>
+                            <Label>Repeat on</Label>
+                            <div className="grid grid-cols-7 gap-2">
+                              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
+                                <label key={day} className="flex items-center gap-2 cursor-pointer text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={(formData.recurrenceDaysOfWeek || []).includes(index)}
+                                    onChange={(e) => {
+                                      const days = formData.recurrenceDaysOfWeek || [];
+                                      if (e.target.checked) {
+                                        setFormData({...formData, recurrenceDaysOfWeek: [...days, index]});
+                                      } else {
+                                        setFormData({...formData, recurrenceDaysOfWeek: days.filter(d => d !== index)});
+                                      }
+                                    }}
+                                  />
+                                  {day}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {formData.recurrencePattern === "monthly" && (
+                          <div>
+                            <Label>Day of Month</Label>
+                            <Select
+                              value={formData.recurrenceDayOfMonth?.toString() || ""}
+                              onValueChange={(value) => setFormData({...formData, recurrenceDayOfMonth: parseInt(value) || 1})}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select day" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[...Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                                  <SelectItem key={day} value={day.toString()}>
+                                    {day}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* End Date */}
+                        <div>
+                          <Label>End Date (Optional)</Label>
+                          <Input
+                            type="date"
+                            value={formData.recurrenceEndDate ? formData.recurrenceEndDate.split('T')[0] : ""}
+                            onChange={(e) => setFormData({...formData, recurrenceEndDate: e.target.value})}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-end gap-2 pt-4">
                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                       Cancel

@@ -69,8 +69,11 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("IDX_clients_assigned_to").on(table.assignedToId),
-  index("IDX_clients_status").on(table.status),
+index("IDX_clients_assigned_to").on(table.assignedToId),
+index("IDX_clients_status").on(table.status),
+// COMPOSITE INDEXES for performance
+index("IDX_clients_status_assigned").on(table.status, table.assignedToId),
+index("IDX_clients_created_at").on(sql`${table.createdAt} DESC`),
 ]);
 
 export const clientsRelations = relations(clients, ({ one, many }) => ({
@@ -101,8 +104,10 @@ export const campaigns = pgTable("campaigns", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("IDX_campaigns_client_id").on(table.clientId),
-  index("IDX_campaigns_status").on(table.status),
+index("IDX_campaigns_client_id").on(table.clientId),
+index("IDX_campaigns_status").on(table.status),
+// COMPOSITE INDEXES for performance
+index("IDX_campaigns_status_created").on(table.status, sql`${table.createdAt} DESC`),
 ]);
 
 export const campaignsRelations = relations(campaigns, ({ one, many }) => ({
@@ -160,11 +165,15 @@ export const tasks = pgTable("tasks", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("IDX_tasks_assigned_to").on(table.assignedToId),
-  index("IDX_tasks_client_id").on(table.clientId),
-  index("IDX_tasks_space_id").on(table.spaceId),
-  index("IDX_tasks_status").on(table.status),
-  index("IDX_tasks_due_date").on(table.dueDate),
+index("IDX_tasks_assigned_to").on(table.assignedToId),
+index("IDX_tasks_client_id").on(table.clientId),
+index("IDX_tasks_space_id").on(table.spaceId),
+index("IDX_tasks_status").on(table.status),
+index("IDX_tasks_due_date").on(table.dueDate),
+// COMPOSITE INDEXES for performance
+index("IDX_tasks_status_due").on(table.status, table.dueDate),
+index("IDX_tasks_status_assigned").on(table.status, table.assignedToId),
+index("IDX_tasks_created_at").on(sql`${table.createdAt} DESC`),
 ]);
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -250,10 +259,14 @@ export const leads = pgTable("leads", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("IDX_leads_assigned_to").on(table.assignedToId),
-  index("IDX_leads_client_id").on(table.clientId),
-  index("IDX_leads_stage").on(table.stage),
-  index("IDX_leads_score").on(table.score),
+index("IDX_leads_assigned_to").on(table.assignedToId),
+index("IDX_leads_client_id").on(table.clientId),
+index("IDX_leads_stage").on(table.stage),
+index("IDX_leads_score").on(table.score),
+// COMPOSITE INDEXES for performance
+index("IDX_leads_stage_created").on(table.stage, sql`${table.createdAt} DESC`),
+index("IDX_leads_score_stage").on(table.score, table.stage),
+index("IDX_leads_created_at").on(sql`${table.createdAt} DESC`),
 ]);
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -845,6 +858,13 @@ export const calendarEvents = pgTable("calendar_events", {
   createdBy: integer("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  // Recurrence fields
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: varchar("recurrence_pattern"), // daily, weekly, monthly, yearly
+  recurrenceDaysOfWeek: integer("recurrence_days_of_week").array(), // Days of week for weekly recurrence (0=Sun, 1=Mon, ..., 6=Sat)
+  recurrenceDayOfMonth: integer("recurrence_day_of_month"), // Day of month for monthly recurrence (1-31)
+  recurrenceInterval: integer("recurrence_interval").default(1), // Interval between occurrences (e.g., every 2 weeks)
+  recurrenceEndDate: timestamp("recurrence_end_date"), // Optional end date for the recurring series
 });
 
 export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({ id: true, createdAt: true, updatedAt: true });

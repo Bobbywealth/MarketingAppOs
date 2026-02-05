@@ -378,7 +378,7 @@ export default function AIBusinessManager() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Main Chat Interface */}
           <Card className="lg:col-span-2 shadow-xl border-0 glass-strong flex flex-col h-[calc(100vh-12rem)]">
             <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-purple-500/5 to-transparent">
