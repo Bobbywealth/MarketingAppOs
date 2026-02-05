@@ -12,11 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Calendar as CalendarIcon, 
-  Plus, 
-  ChevronLeft, 
+import {
+  Calendar as CalendarIcon,
+  Plus,
+  ChevronLeft,
   ChevronRight,
   Clock,
   MapPin,
@@ -34,7 +35,8 @@ import {
   FileText,
   Zap,
   Filter,
-  X
+  X,
+  Repeat
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, differenceInHours, isPast } from "date-fns";
 
@@ -50,6 +52,13 @@ interface CalendarEvent {
   color?: string;
   googleEventId?: string;
   meetLink?: string;
+  // Recurrence fields
+  isRecurring?: boolean;
+  recurrencePattern?: "daily" | "weekly" | "monthly" | "yearly";
+  recurrenceDaysOfWeek?: number[];
+  recurrenceDayOfMonth?: number;
+  recurrenceInterval?: number;
+  recurrenceEndDate?: string;
 }
 
 const EVENT_TYPE_CONFIG = {
@@ -315,6 +324,13 @@ export default function CompanyCalendarPage() {
       location: selectedEvent.location || "",
       type: selectedEvent.type,
       syncWithGoogle: false,
+      // Recurrence fields
+      isRecurring: selectedEvent.isRecurring || false,
+      recurrencePattern: selectedEvent.recurrencePattern || "daily",
+      recurrenceDaysOfWeek: selectedEvent.recurrenceDaysOfWeek || [],
+      recurrenceDayOfMonth: selectedEvent.recurrenceDayOfMonth || 1,
+      recurrenceInterval: selectedEvent.recurrenceInterval || 1,
+      recurrenceEndDate: selectedEvent.recurrenceEndDate ? format(new Date(selectedEvent.recurrenceEndDate), "yyyy-MM-dd") : "",
     });
   };
 
@@ -339,6 +355,13 @@ export default function CompanyCalendarPage() {
         end: new Date(formData.end).toISOString(),
         location: formData.location || null,
         type: formData.type,
+        // Recurrence fields
+        isRecurring: formData.isRecurring,
+        recurrencePattern: formData.isRecurring ? formData.recurrencePattern : null,
+        recurrenceDaysOfWeek: formData.isRecurring && formData.recurrencePattern === "weekly" ? formData.recurrenceDaysOfWeek : null,
+        recurrenceDayOfMonth: formData.isRecurring && formData.recurrencePattern === "monthly" ? formData.recurrenceDayOfMonth : null,
+        recurrenceInterval: formData.isRecurring ? formData.recurrenceInterval : null,
+        recurrenceEndDate: formData.isRecurring && formData.recurrenceEndDate ? new Date(formData.recurrenceEndDate).toISOString() : null,
       },
     });
   };
@@ -571,7 +594,7 @@ export default function CompanyCalendarPage() {
                                 <SelectValue placeholder="Select day" />
                               </SelectTrigger>
                               <SelectContent>
-                                {[...Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                                {Array.from({length: 31}, (_, i) => i + 1).map(day => (
                                   <SelectItem key={day} value={day.toString()}>
                                     {day}
                                   </SelectItem>
@@ -654,6 +677,26 @@ export default function CompanyCalendarPage() {
                       </div>
                     )}
                     
+                    {/* Recurrence Information */}
+                    {selectedEvent.isRecurring && (
+                      <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                          <Repeat className="w-4 h-4" />
+                          <span className="font-semibold">Recurring Event</span>
+                        </div>
+                        <p className="text-sm mt-2 text-purple-600 dark:text-purple-400">
+                          {selectedEvent.recurrencePattern === "daily" && `Every ${selectedEvent.recurrenceInterval || 1} day(s)`}
+                          {selectedEvent.recurrencePattern === "weekly" && `Every ${selectedEvent.recurrenceInterval || 1} week(s) on ${selectedEvent.recurrenceDaysOfWeek?.map(d => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ")}`}
+                          {selectedEvent.recurrencePattern === "monthly" && `Every ${selectedEvent.recurrenceInterval || 1} month(s) on day ${selectedEvent.recurrenceDayOfMonth}`}
+                        </p>
+                        {selectedEvent.recurrenceEndDate && (
+                          <p className="text-xs mt-1 text-purple-500 dark:text-purple-400">
+                            Until {format(new Date(selectedEvent.recurrenceEndDate), "PPP")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
                     <div className="flex justify-between gap-2 pt-4 border-t">
                       <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleteEventMutation.isPending}>
                         <Trash2 className="w-4 h-4 mr-2" />
@@ -724,12 +767,119 @@ export default function CompanyCalendarPage() {
                     </div>
                     <div>
                       <Label>Location</Label>
-                      <Input 
+                      <Input
                         placeholder="Office, Zoom, etc."
                         value={formData.location}
                         onChange={(e) => setFormData({...formData, location: e.target.value})}
                       />
                     </div>
+                    
+                    {/* Recurrence Settings */}
+                    <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="edit-is-recurring"
+                          checked={formData.isRecurring}
+                          onCheckedChange={(checked) => setFormData({...formData, isRecurring: checked as boolean})}
+                        />
+                        <Label htmlFor="edit-is-recurring" className="cursor-pointer">
+                          This is a recurring event
+                        </Label>
+                      </div>
+                      
+                      {formData.isRecurring && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label>Repeat Pattern</Label>
+                              <Select
+                                value={formData.recurrencePattern}
+                                onValueChange={(value) => setFormData({...formData, recurrencePattern: value as any})}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select pattern" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="daily">Daily</SelectItem>
+                                  <SelectItem value="weekly">Weekly</SelectItem>
+                                  <SelectItem value="monthly">Monthly</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label>Every</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="52"
+                                value={formData.recurrenceInterval || 1}
+                                onChange={(e) => setFormData({...formData, recurrenceInterval: parseInt(e.target.value) || 1})}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Pattern-specific controls */}
+                          {formData.recurrencePattern === "weekly" && (
+                            <div>
+                              <Label>Repeat on</Label>
+                              <div className="grid grid-cols-7 gap-2">
+                                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
+                                  <label key={day} className="flex items-center gap-2 cursor-pointer text-sm">
+                                    <input
+                                      type="checkbox"
+                                      checked={(formData.recurrenceDaysOfWeek || []).includes(index)}
+                                      onChange={(e) => {
+                                        const days = formData.recurrenceDaysOfWeek || [];
+                                        if (e.target.checked) {
+                                          setFormData({...formData, recurrenceDaysOfWeek: [...days, index]});
+                                        } else {
+                                          setFormData({...formData, recurrenceDaysOfWeek: days.filter(d => d !== index)});
+                                        }
+                                      }}
+                                    />
+                                    {day}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {formData.recurrencePattern === "monthly" && (
+                            <div>
+                              <Label>Day of Month</Label>
+                              <Select
+                                value={formData.recurrenceDayOfMonth?.toString() || ""}
+                                onValueChange={(value) => setFormData({...formData, recurrenceDayOfMonth: parseInt(value) || 1})}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select day" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                                    <SelectItem key={day} value={day.toString()}>
+                                      {day}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {/* End Date */}
+                          <div>
+                            <Label>End Date (Optional)</Label>
+                            <Input
+                              type="date"
+                              value={formData.recurrenceEndDate ? formData.recurrenceEndDate.split('T')[0] : ""}
+                              onChange={(e) => setFormData({...formData, recurrenceEndDate: e.target.value})}
+                              min={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    
                     <div className="flex justify-end gap-2 pt-4">
                       <Button variant="outline" onClick={() => setIsEditMode(false)}>
                         Cancel
