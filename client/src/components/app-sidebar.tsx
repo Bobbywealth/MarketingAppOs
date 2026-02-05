@@ -240,7 +240,7 @@ const salesAgentTools: SidebarNavItem[] = [
 const communicationTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
-    url: "/admin",
+    url: "/dashboard-admin",
     icon: LayoutDashboard,
     permission: null,
     sidebarKey: "dashboard" as const,
