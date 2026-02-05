@@ -916,7 +916,7 @@ export default function TasksPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="p-3 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
+        <div className="p-3 md:p-6 flex-1 overflow-hidden flex flex-col gap-4 md:gap-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-xl md:text-2xl font-bold">Tasks</h1>
@@ -942,204 +942,204 @@ export default function TasksPage() {
                     onSpaceSelect={(id) => { setSelectedSpaceId(id); setSpacesDialogOpen(false); }}
                   />
                 </DialogContent>
-              </Dialog>
-            </div>
+            </Dialog>
+          </div>
         
-        <div className="flex flex-wrap items-center gap-3">
-          {tasksError && (
-            <div className="w-full rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-medium text-destructive">Tasks failed to load</div>
-                <div className="text-muted-foreground truncate">{tasksError.message}</div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] })}
-              >
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {!tasksError && completedHiddenByToggle > 0 && (
-            <div className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-medium">Completed tasks are hidden</div>
-                <div className="text-muted-foreground truncate">
-                  {completedHiddenByToggle} completed tasks match your current filters.
+          <div className="flex flex-wrap items-center gap-3">
+            {tasksError && (
+              <div className="w-full rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium text-destructive">Tasks failed to load</div>
+                  <div className="text-muted-foreground truncate">{tasksError.message}</div>
                 </div>
-              </div>
-              <Button variant="secondary" size="sm" onClick={() => setShowCompleted(true)}>
-                Show completed
-              </Button>
-            </div>
-          )}
-
-          {/* Filter Button */}
-          <Button
-            variant={isFilterPanelOpen ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            className="gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filter
-            {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
-              </Badge>
-            )}
-          </Button>
-
-          {/* Collapsible Filter Panel */}
-          {isFilterPanelOpen && (
-            <div className="w-full flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-status">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-priority">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={selectedSpaceId || ""}
-                onValueChange={(val) => setSelectedSpaceId(val || null)}
-              >
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="All Spaces" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Spaces</SelectItem>
-                  {buildSpaceOptions().map((space) => (
-                    <SelectItem key={space.id} value={space.id}>
-                      {space.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant={showCompleted ? "outline" : "secondary"}
-                size="sm"
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="gap-2"
-              >
-                {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showCompleted ? "Hide Completed" : "Show Completed"}
-              </Button>
-
-              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted) && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setFilterStatus("all");
-                    setFilterPriority("all");
-                    setSelectedSpaceId(null);
-                    setShowCompleted(true);
-                  }}
-                  className="text-muted-foreground"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] })}
                 >
-                  Clear filters
+                  Retry
                 </Button>
+              </div>
+            )}
+
+            {!tasksError && completedHiddenByToggle > 0 && (
+              <div className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium">Completed tasks are hidden</div>
+                  <div className="text-muted-foreground truncate">
+                    {completedHiddenByToggle} completed tasks match your current filters.
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => setShowCompleted(true)}>
+                  Show completed
+                </Button>
+              </div>
+            )}
+
+            {/* Filter Button */}
+            <Button
+              variant={isFilterPanelOpen ? "default" : "outline"}
+              size="sm"
+              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              className="gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filter
+              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
+                </Badge>
               )}
-            </div>
-          )}
+            </Button>
 
-          {/* View Mode Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                {viewMode === "kanban" && <LayoutGrid className="w-4 h-4" />}
-                {viewMode === "list" && <List className="w-4 h-4" />}
-                {viewMode === "compact" && <AlignLeft className="w-4 h-4" />}
-                <span className="hidden sm:inline capitalize">{viewMode}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewMode("kanban")}>
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Kanban
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode("list")}>
-                <List className="w-4 h-4 mr-2" />
-                List
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode("compact")}>
-                <AlignLeft className="w-4 h-4 mr-2" />
-                Compact
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            {/* Collapsible Filter Panel */}
+            {isFilterPanelOpen && (
+              <div className="w-full flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
 
-          {/* More Options Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {isAdminOrManager && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => backfillRecurringMutation.mutate()}
-                    disabled={backfillRecurringMutation.isPending}
+                <Select value={filterPriority} onValueChange={setFilterPriority}>
+                  <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-priority">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={selectedSpaceId || ""}
+                  onValueChange={(val) => setSelectedSpaceId(val || null)}
+                >
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="All Spaces" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Spaces</SelectItem>
+                    {buildSpaceOptions().map((space) => (
+                      <SelectItem key={space.id} value={space.id}>
+                        {space.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant={showCompleted ? "outline" : "secondary"}
+                  size="sm"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="gap-2"
+                >
+                  {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showCompleted ? "Hide Completed" : "Show Completed"}
+                </Button>
+
+                {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFilterStatus("all");
+                      setFilterPriority("all");
+                      setSelectedSpaceId(null);
+                      setShowCompleted(true);
+                    }}
+                    className="text-muted-foreground"
                   >
-                    <Repeat className="w-4 h-4 mr-2" />
-                    {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                All Spaces
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
-                <ListTodo className="w-4 h-4 mr-2" />
-                Manage Spaces
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            )}
 
-          <div className="flex-1" />
+            {/* View Mode Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {viewMode === "kanban" && <LayoutGrid className="w-4 h-4" />}
+                  {viewMode === "list" && <List className="w-4 h-4" />}
+                  {viewMode === "compact" && <AlignLeft className="w-4 h-4" />}
+                  <span className="hidden sm:inline capitalize">{viewMode}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setViewMode("kanban")}>
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Kanban
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode("list")}>
+                  <List className="w-4 h-4 mr-2" />
+                  List
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode("compact")}>
+                  <AlignLeft className="w-4 h-4 mr-2" />
+                  Compact
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          {/* New Task Button */}
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-task" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-                <DialogDescription>Add a new task to your workflow</DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createTaskMutation.mutate(data))} className="space-y-4">
+            {/* More Options Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isAdminOrManager && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => backfillRecurringMutation.mutate()}
+                      disabled={backfillRecurringMutation.isPending}
+                    >
+                      <Repeat className="w-4 h-4 mr-2" />
+                      {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  All Spaces
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
+                  <ListTodo className="w-4 h-4 mr-2" />
+                  Manage Spaces
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex-1" />
+
+            {/* New Task Button */}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-task" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Task
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
+                <DialogHeader>
+                  <DialogTitle>Create New Task</DialogTitle>
+                  <DialogDescription>Add a new task to your workflow</DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit((data) => createTaskMutation.mutate(data))} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -1775,9 +1775,9 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {viewMode === "kanban" ? renderKanbanView() : viewMode === "compact" ? renderCompactView() : renderListView()}
-      </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {viewMode === "kanban" ? renderKanbanView() : viewMode === "compact" ? renderCompactView() : renderListView()}
+          </div>
         </div>
       </div>
 
