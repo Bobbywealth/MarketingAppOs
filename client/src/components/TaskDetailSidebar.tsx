@@ -181,7 +181,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onEdit }: TaskDetailS
         <ScrollArea className="flex-1">
           <div className="p-6 space-y-8 pb-32">
             {/* Task Details Grid */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assignee</p>
                 <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onEdit }: TaskDetailS
                 <Paperclip className="w-4 h-4" />
                 Attachments
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-colors cursor-pointer min-h-[100px]">
                   <Plus className="w-5 h-5 text-muted-foreground" />
                   <span className="text-xs font-medium text-muted-foreground">Upload file</span>

@@ -1153,7 +1153,7 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Dashboard stats - OPTIMIZED
-  app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
+  const dashboardStatsHandler = async (_req: Request, res: Response) => {
     try {
       console.log("🔍 Dashboard API called - fetching data...");
       
@@ -1321,7 +1321,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.error("Error details:", error.message, error.stack);
       res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
     }
-  });
+  };
+
+  // Register the handler for all role-specific dashboard routes
+  app.get("/api/dashboard/stats", isAuthenticated, dashboardStatsHandler);
+  app.get("/api/dashboard/admin-stats", isAuthenticated, dashboardStatsHandler);
+  app.get("/api/dashboard/manager-stats", isAuthenticated, dashboardStatsHandler);
+  app.get("/api/dashboard/staff-stats", isAuthenticated, dashboardStatsHandler);
 
   // Helper functions for formatting
   function formatActivityTime(date: Date | null | undefined): string {

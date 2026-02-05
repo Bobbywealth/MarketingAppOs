@@ -595,7 +595,7 @@ export default function TasksPage() {
           return (
             <div
               key={column.id}
-              className="flex flex-col h-full min-w-[200px] md:min-w-[240px] lg:min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
+              className="flex flex-col h-full min-w-0 bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
@@ -863,7 +863,7 @@ export default function TasksPage() {
                 value={task.status}
                 onValueChange={(status) => updateTaskStatusMutation.mutate({ id: task.id, status })}
               >
-                <SelectTrigger className="w-32" onClick={(e) => e.stopPropagation()} data-testid={`select-status-${task.id}`}>
+                <SelectTrigger className="w-24 md:w-32" onClick={(e) => e.stopPropagation()} data-testid={`select-status-${task.id}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -996,7 +996,7 @@ export default function TasksPage() {
           {isFilterPanelOpen && (
             <div className="w-full flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-36" data-testid="select-filter-status">
+                <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-status">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1009,7 +1009,7 @@ export default function TasksPage() {
               </Select>
 
               <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger className="w-36" data-testid="select-filter-priority">
+                <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-priority">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1025,7 +1025,7 @@ export default function TasksPage() {
                 value={selectedSpaceId || ""}
                 onValueChange={(val) => setSelectedSpaceId(val || null)}
               >
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="All Spaces" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1133,7 +1133,7 @@ export default function TasksPage() {
                 New Task
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
               <DialogHeader>
                 <DialogTitle>Create New Task</DialogTitle>
                 <DialogDescription>Add a new task to your workflow</DialogDescription>
@@ -1481,7 +1481,7 @@ export default function TasksPage() {
 
           {/* Edit Task Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
               <DialogHeader>
                 <DialogTitle>Edit Task</DialogTitle>
                 <DialogDescription>Update task details</DialogDescription>
@@ -1819,15 +1819,15 @@ export default function TasksPage() {
 
       {/* Bulk Action Bar */}
       {selectedTaskIds.size > 0 && (
-        <div className="fixed bottom-[85px] md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-3 border-r pr-6">
+        <div className="fixed bottom-[85px] md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-2xl md:rounded-full px-3 md:px-6 py-3 flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300 w-[calc(100%-2rem)] md:w-auto max-w-[95vw]">
+          <div className="flex items-center gap-3 md:border-r md:pr-6">
             <span className="text-sm font-bold text-primary">{selectedTaskIds.size} selected</span>
             <Button variant="ghost" size="sm" onClick={() => setSelectedTaskIds(new Set())} className="h-7 text-xs">
               Clear
             </Button>
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
             {selectedTaskIds.size === 1 && (
               <Button
                 variant="outline"
@@ -1853,8 +1853,8 @@ export default function TasksPage() {
             )}
 
             <Select onValueChange={(status) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { status } })}>
-              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
-                <SelectValue placeholder="Update Status" />
+              <SelectTrigger className="h-9 w-28 md:w-32 rounded-full text-xs">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todo">To Do</SelectItem>
@@ -1865,8 +1865,8 @@ export default function TasksPage() {
             </Select>
 
             <Select onValueChange={(priority) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { priority } })}>
-              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
-                <SelectValue placeholder="Update Priority" />
+              <SelectTrigger className="h-9 w-28 md:w-32 rounded-full text-xs">
+                <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="low">Low</SelectItem>
@@ -1876,9 +1876,9 @@ export default function TasksPage() {
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10"
               onClick={() => {
                 if (confirm(`Delete ${selectedTaskIds.size} tasks?`)) {
