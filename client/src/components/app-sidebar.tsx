@@ -1551,18 +1551,6 @@ export function AppSidebar() {
                 forceOpen={hasFilter}
               />
 
-              {/* Analytics & Reports Group */}
-              <NavCollapsibleGroup
-                title="Analytics & Reports"
-                icon={BarChart3}
-                items={visibleAnalyticsReports}
-                location={location}
-                isCollapsed={isCollapsed}
-                onClick={handleNavClick}
-                getBadgeCount={getBadgeCount}
-                forceOpen={hasFilter}
-              />
-
               {/* Billing & Finance Group */}
               <NavCollapsibleGroup
                 title="Billing & Finance"
