@@ -733,9 +733,13 @@ export const marketingTemplates = {
 // Send email function
 export async function sendEmail(to: string | string[], subject: string, html: string, options?: { from?: string, fromName?: string }) {
   console.log(`📧 sendEmail called - To: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject}`);
-  
+
   if (!transporter) {
-    console.warn('⚠️  Email not sent - service not configured (transporter is null)');
+    initializeEmailService();
+  }
+
+  if (!transporter) {
+    console.warn('⚠️  Email not sent - service not configured (missing SMTP env or init failed)');
     return { success: false, message: 'Email service not configured' };
   }
 
