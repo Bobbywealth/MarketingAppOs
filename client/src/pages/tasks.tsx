@@ -31,14 +31,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
-import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
 import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
 import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST, isTodayEST } from "@/lib/dateUtils";
 
@@ -72,13 +71,9 @@ export default function TasksPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [aiInput, setAiInput] = useState("");
-  const [isAiParsing, setIsAiParsing] = useState(false);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
@@ -96,11 +91,23 @@ export default function TasksPage() {
       return true;
     }
   });
+  const [showSpacesSidebar, setShowSpacesSidebar] = useState(() => {
+    const saved = localStorage.getItem('tasks-show-spaces');
+    try {
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
 
   // Save showCompleted preference to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('tasks-show-completed', JSON.stringify(showCompleted));
   }, [showCompleted]);
+
+  useEffect(() => {
+    localStorage.setItem('tasks-show-spaces', JSON.stringify(showSpacesSidebar));
+  }, [showSpacesSidebar]);
 
   const { data: tasks = [], isLoading, error: tasksError } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -438,98 +445,6 @@ export default function TasksPage() {
     setIsDragging(false);
   };
 
-  const handleAiQuickAdd = async () => {
-    if (!aiInput.trim()) return;
-
-    setIsAiParsing(true);
-    try {
-      // Parse with AI
-      const parseRes = await apiRequest("POST", "/api/tasks/parse-ai", { input: aiInput });
-      const parseData = await parseRes.json();
-      
-      if (!parseData.success) {
-        throw new Error("Failed to parse task");
-      }
-
-      // Format the task data - convert date to ISO string if present
-      const taskData = {
-        ...parseData.taskData,
-        dueDate: parseData.taskData.dueDate 
-          ? new Date(parseData.taskData.dueDate).toISOString() 
-          : undefined,
-      };
-
-      // Create the task directly
-      await apiRequest("POST", "/api/tasks", taskData);
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ 
-        title: "✨ Task created with AI!", 
-        description: `Created: "${taskData.title}"` 
-      });
-      setAiInput("");
-    } catch (error: any) {
-      toast({ 
-        title: "Failed to create task", 
-        description: error.message || "AI parsing failed",
-        variant: "destructive" 
-      });
-    } finally {
-      setIsAiParsing(false);
-    }
-  };
-
-  const handleVoiceInput = () => {
-    // Check if browser supports speech recognition
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      toast({
-        title: "Voice input not supported",
-        description: "Please use Chrome or Edge browser for voice input",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      toast({
-        title: "🎤 Listening...",
-        description: "Speak your task naturally"
-      });
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setAiInput(transcript);
-      toast({
-        title: "✓ Captured",
-        description: `"${transcript}"`
-      });
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      toast({
-        title: "Voice input error",
-        description: event.error === 'no-speech' ? "No speech detected. Please try again." : "Failed to capture voice input",
-        variant: "destructive"
-      });
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
-  };
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -937,12 +852,14 @@ export default function TasksPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left Sidebar - Task Spaces - Hidden on mobile */}
-      <div className="hidden md:block w-64 border-r bg-card/50 overflow-y-auto">
-        <TaskSpacesSidebar 
-          selectedSpaceId={selectedSpaceId}
-          onSpaceSelect={setSelectedSpaceId}
-        />
-      </div>
+      {showSpacesSidebar && (
+        <div className="hidden md:block w-64 border-r bg-card/50 overflow-y-auto">
+          <TaskSpacesSidebar 
+            selectedSpaceId={selectedSpaceId}
+            onSpaceSelect={setSelectedSpaceId}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -959,23 +876,25 @@ export default function TasksPage() {
               </p>
             </div>
             {/* Mobile: open Spaces sidebar */}
-            <div className="md:hidden">
-              <Dialog open={spacesDialogOpen} onOpenChange={setSpacesDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">Spaces</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Spaces</DialogTitle>
-                    <DialogDescription>Select a space to filter tasks</DialogDescription>
-                  </DialogHeader>
-                  <TaskSpacesSidebar 
-                    selectedSpaceId={selectedSpaceId}
-                    onSpaceSelect={(id) => { setSelectedSpaceId(id); setSpacesDialogOpen(false); }}
-                  />
-                </DialogContent>
-            </Dialog>
-          </div>
+            {showSpacesSidebar && (
+              <div className="md:hidden">
+                <Dialog open={spacesDialogOpen} onOpenChange={setSpacesDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">Spaces</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Spaces</DialogTitle>
+                      <DialogDescription>Select a space to filter tasks</DialogDescription>
+                    </DialogHeader>
+                    <TaskSpacesSidebar 
+                      selectedSpaceId={selectedSpaceId}
+                      onSpaceSelect={(id) => { setSelectedSpaceId(id); setSpacesDialogOpen(false); }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
         
           <div className="flex flex-wrap items-center gap-3">
             {tasksError && (
@@ -1022,6 +941,16 @@ export default function TasksPage() {
                   {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
                 </Badge>
               )}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSpacesSidebar(!showSpacesSidebar)}
+              className="gap-2"
+            >
+              {showSpacesSidebar ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+              {showSpacesSidebar ? "Hide Spaces" : "Show Spaces"}
             </Button>
 
             {/* Collapsible Filter Panel */}
@@ -1163,10 +1092,12 @@ export default function TasksPage() {
                   <LayoutGrid className="w-4 h-4 mr-2" />
                   All Spaces
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
-                  <ListTodo className="w-4 h-4 mr-2" />
-                  Manage Spaces
-                </DropdownMenuItem>
+                {showSpacesSidebar && (
+                  <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
+                    <ListTodo className="w-4 h-4 mr-2" />
+                    Manage Spaces
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -1827,29 +1758,6 @@ export default function TasksPage() {
           </div>
         </div>
       </div>
-
-      {/* AI Task Assistant - Compact button */}
-      <>
-        {!isChatOpen ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-6 right-6 z-[9999] gap-2 shadow-lg"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">AI Assistant</span>
-          </Button>
-        ) : (
-          <ConversationalTaskChat
-            isOpen={isChatOpen}
-            onClose={() => setIsChatOpen(false)}
-            onTaskCreated={() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-            }}
-          />
-        )}
-      </>
 
       <TaskDetailSidebar
         task={selectedTask}
