@@ -163,6 +163,13 @@ export interface IStorage {
   getUserViewPreferences(userId: number): Promise<UserViewPreferences | undefined>;
   upsertUserViewPreferences(userId: number, preferences: Partial<InsertUserViewPreferences>): Promise<UserViewPreferences>;
 
+  // User Notification Preferences operations
+  getUserNotificationPreferences(userId: number): Promise<{
+    emailNotifications: boolean;
+    taskUpdates: boolean;
+    dueDateReminders: boolean;
+  }>;
+
   // Lead operations
   getLeads(options?: { limit?: number; offset?: number }): Promise<Lead[]>;
   createLead(lead: InsertLead): Promise<Lead>;
@@ -1064,6 +1071,24 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  // User Notification Preferences operations
+  // Returns default enabled preferences for all users
+  // TODO: Create notification_preferences table to store user-specific settings
+  async getUserNotificationPreferences(userId: number): Promise<{
+    emailNotifications: boolean;
+    taskUpdates: boolean;
+    dueDateReminders: boolean;
+  }> {
+    // For now, return default preferences (all enabled)
+    // In the future, this should query a notification_preferences table
+    console.log(`📧 Getting notification preferences for user ${userId} - returning defaults (all enabled)`);
+    return {
+      emailNotifications: true,
+      taskUpdates: true,
+      dueDateReminders: true,
+    };
   }
 
   // Role Permissions operations
