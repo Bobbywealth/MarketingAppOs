@@ -356,6 +356,13 @@ export default function TasksPage() {
     },
   });
 
+  const handleQuickDelete = (task: Task, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation();
+    if (confirm(`Delete "${task.title}"?`)) {
+      deleteTaskMutation.mutate(task.id);
+    }
+  };
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ ids, data }: { ids: string[], data: any }) => {
       // For now, update tasks one by one as we don't have a bulk endpoint
@@ -585,12 +592,21 @@ export default function TasksPage() {
                     <CardContent className="p-3 space-y-2">
                       {/* Priority indicator */}
                       <div className="flex items-start justify-between gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${
                           task.priority === "urgent" ? "bg-red-500" :
                           task.priority === "high" ? "bg-orange-500" :
                           task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
                         }`} />
                         <h4 className="font-medium text-sm leading-tight flex-1">{task.title}</h4>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={(event) => handleQuickDelete(task, event)}
+                          aria-label={`Delete ${task.title}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
 
                       {/* Meta info row */}
@@ -692,6 +708,15 @@ export default function TasksPage() {
                       {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
                     </div>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(event) => handleQuickDelete(task, event)}
+                    aria-label={`Delete ${task.title}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
 
                 {/* Desktop Layout */}
@@ -732,6 +757,15 @@ export default function TasksPage() {
                         <User className="w-3 h-3" />
                       </div>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={(event) => handleQuickDelete(task, event)}
+                      aria-label={`Delete ${task.title}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -829,6 +863,16 @@ export default function TasksPage() {
                   <User className="w-4 h-4" />
                 </div>
               )}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={(event) => handleQuickDelete(task, event)}
+                aria-label={`Delete ${task.title}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </CardContent>
           </Card>
         ))}
