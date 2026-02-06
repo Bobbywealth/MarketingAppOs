@@ -2406,7 +2406,11 @@ Examples:
       const users = await storage.getAllUsers();
       // Filter out clients - they should only appear in /clients page, not team management
       const teamMembers = users.filter(user => user.role !== 'client');
-      res.json(teamMembers);
+      const sanitizedUsers = teamMembers.map(({ password, ...user }) => ({
+        ...user,
+        password: undefined,
+      }));
+      res.json(sanitizedUsers);
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to fetch users" });
@@ -2818,11 +2822,14 @@ Examples:
     try {
       const users = await storage.getUsers();
       // Don't send password hashes to frontend
-      const sanitizedUsers = users.map(({ id, username, role, createdAt }) => ({
+      const sanitizedUsers = users.map(({ id, username, role, createdAt, email, firstName, lastName }) => ({
         id,
         username,
         role,
         createdAt,
+        email,
+        firstName,
+        lastName,
       }));
       res.json(sanitizedUsers);
     } catch (error) {
@@ -2833,13 +2840,25 @@ Examples:
 
   app.post("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
-      console.log("Creating user with data:", { username: req.body.username, role: req.body.role });
+      console.log("Creating user with data:", {
+        username: req.body.username,
+        role: req.body.role,
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+      });
       
       const { hashPassword } = await import("./auth.js");
+      const username = String(req.body.username || "");
+      const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
+      const fallbackEmail = email || (username.includes("@") ? username : undefined);
       const userData = {
-        username: req.body.username,
+        username,
         password: await hashPassword(req.body.password),
         role: req.body.role || "staff",
+        email: fallbackEmail,
+        firstName: typeof req.body.firstName === "string" ? req.body.firstName.trim() : undefined,
+        lastName: typeof req.body.lastName === "string" ? req.body.lastName.trim() : undefined,
       };
       
       console.log("Hashed password, calling storage.createUser...");
