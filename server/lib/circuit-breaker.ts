@@ -19,7 +19,13 @@ export class CircuitBreaker {
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     if (this.state === CircuitState.OPEN) {
-      if (this.lastFailureTime && Date.now() - this.lastFailureTime > this.resetTimeout) {
+      const timeSinceFailure = this.lastFailureTime ? Date.now() - this.lastFailureTime : 0;
+      const timeUntilReset = this.resetTimeout - timeSinceFailure;
+      
+      console.log(`🔌 Circuit breaker is OPEN. Time until reset: ${Math.ceil(timeUntilReset / 1000)}s`);
+      
+      if (this.lastFailureTime && timeSinceFailure > this.resetTimeout) {
+        console.log(`🔌 Circuit breaker transitioning to HALF_OPEN`);
         this.state = CircuitState.HALF_OPEN;
       } else {
         throw new Error("Circuit breaker is OPEN. Service unavailable.");
@@ -45,7 +51,11 @@ export class CircuitBreaker {
   private onFailure() {
     this.failureCount++;
     this.lastFailureTime = Date.now();
+    
+    console.log(`❌ Circuit breaker failure count: ${this.failureCount}/${this.failureThreshold}`);
+    
     if (this.failureCount >= this.failureThreshold) {
+      console.log(`🔌 Circuit breaker OPENED after ${this.failureCount} failures`);
       this.state = CircuitState.OPEN;
     }
   }

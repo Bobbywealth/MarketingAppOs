@@ -12,6 +12,17 @@ const emailCircuit = new CircuitBreaker(10, 300000);
 let transporter: Transporter | null = null;
 
 export function initializeEmailService() {
+  console.log('🔧 Initializing email service...');
+  console.log('📧 SMTP Config:', {
+    host: process.env.SMTP_HOST ? '✓ Set' : '✗ Missing',
+    user: process.env.SMTP_USER ? '✓ Set' : '✗ Missing',
+    pass: process.env.SMTP_PASS ? '✓ Set' : '✗ Missing',
+    port: process.env.SMTP_PORT,
+    secure: process.env.SMTP_SECURE,
+    fromEmail: process.env.SMTP_FROM_EMAIL,
+    fromName: process.env.SMTP_FROM_NAME,
+  });
+
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn('⚠️  Email service not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS in .env');
     return null;
@@ -30,7 +41,7 @@ export function initializeEmailService() {
       : {}),
   });
 
-  console.log('✅ Email service initialized');
+  console.log('✅ Email service initialized successfully');
   return transporter;
 }
 
@@ -721,8 +732,10 @@ export const marketingTemplates = {
 
 // Send email function
 export async function sendEmail(to: string | string[], subject: string, html: string, options?: { from?: string, fromName?: string }) {
+  console.log(`📧 sendEmail called - To: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject}`);
+  
   if (!transporter) {
-    console.warn('⚠️  Email not sent - service not configured');
+    console.warn('⚠️  Email not sent - service not configured (transporter is null)');
     return { success: false, message: 'Email service not configured' };
   }
 
@@ -735,6 +748,8 @@ export async function sendEmail(to: string | string[], subject: string, html: st
     const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Marketing Team';
     const logoAttachment = maybeGetLogoAttachment();
     
+    console.log(`📧 Attempting to send email via SMTP... From: ${fromName} <${fromEmail}>`);
+    
     const info = await emailCircuit.execute(() =>
       transporter!.sendMail({
         from: `"${fromName}" <${fromEmail}>`,
@@ -746,7 +761,8 @@ export async function sendEmail(to: string | string[], subject: string, html: st
       })
     );
     
-    log(`✅ Email sent: ${info.messageId}`, "email");
+    log(`✅ Email sent successfully: ${info.messageId}`, "email");
+    console.log(`✅ Email sent successfully - Message ID: ${info.messageId}, To: ${Array.isArray(to) ? to.join(', ') : to}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

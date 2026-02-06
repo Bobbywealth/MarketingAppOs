@@ -433,14 +433,20 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
 
       // Email notification
       try {
+        console.log(`📧 Task assignment email check - Task ID: ${task.id}, Assigned to: ${task.assignedToId}`);
         const assignee = await storage.getUser(String(task.assignedToId));
+        console.log(`📧 Assignee found:`, assignee ? { id: assignee.id, email: assignee.email, name: assignee.firstName || assignee.username } : 'Not found');
+        
         if (assignee?.email) {
           const { emailNotifications } = await import('../emailService');
           const assigneeName = assignee.firstName || assignee.username || 'there';
           
           // Respect preferences
           const prefs = await storage.getUserNotificationPreferences(assignee.id);
+          console.log(`📧 User notification preferences:`, prefs);
+          
           if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
+            console.log(`📧 Sending task assignment email to ${assignee.email}...`);
             void emailNotifications.sendTaskAssignedEmail(
               assigneeName,
               assignee.email,
@@ -450,7 +456,11 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
               task.dueDate ? task.dueDate.toISOString() : null,
               creatorName
             ).catch(err => console.error('Failed to send task assignment email:', err));
+          } else {
+            console.log(`📧 Email not sent - User has disabled email notifications or task updates`);
           }
+        } else {
+          console.log(`📧 Email not sent - Assignee has no email address`);
         }
       } catch (emailErr) {
         console.error('Error triggered during task assignment email:', emailErr);
