@@ -240,7 +240,7 @@ const salesAgentTools: SidebarNavItem[] = [
 const communicationTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
-    url: "/admin",
+    url: "/dashboard-admin",
     icon: LayoutDashboard,
     permission: null,
     sidebarKey: "dashboard" as const,
@@ -1544,18 +1544,6 @@ export function AppSidebar() {
                 title="AI Suite"
                 icon={Sparkles}
                 items={visibleAiSuite}
-                location={location}
-                isCollapsed={isCollapsed}
-                onClick={handleNavClick}
-                getBadgeCount={getBadgeCount}
-                forceOpen={hasFilter}
-              />
-
-              {/* Analytics & Reports Group */}
-              <NavCollapsibleGroup
-                title="Analytics & Reports"
-                icon={BarChart3}
-                items={visibleAnalyticsReports}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}

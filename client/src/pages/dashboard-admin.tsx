@@ -84,6 +84,16 @@ export default function AdminDashboard() {
     return Array.from({ length: 7 }, () => ({ value: baseValue }));
   };
 
+  const getCurrencyTickerProps = (value: number) => {
+    const isCompact = value >= 1000;
+
+    return {
+      value: isCompact ? value / 1000 : value,
+      suffix: isCompact ? 'k' : '',
+      decimalPlaces: isCompact ? 1 : 0,
+    };
+  };
+
   const metrics = [
     {
       title: "Total Clients",
@@ -409,12 +419,21 @@ export default function AdminDashboard() {
                         <div className="flex items-end justify-between gap-2">
                           <div className="text-3xl md:text-4xl font-bold tracking-tight font-mono" data-testid={`metric-${metric.title.toLowerCase().replace(/\s+/g, '-')}`}>
                             {typeof metric.displayValue === 'number' ? (
+                              (() => {
+                                const isCurrencyMetric = metric.title.includes('Revenue') || metric.title.includes('Value');
+                                const tickerProps = isCurrencyMetric
+                                  ? getCurrencyTickerProps(metric.displayValue)
+                                  : { value: metric.displayValue, suffix: '', decimalPlaces: 0 };
+
+                                return (
                               <NumberTicker 
-                                value={metric.displayValue} 
-                                prefix={metric.title.includes('Revenue') || metric.title.includes('Value') ? '$' : ''}
-                                suffix={metric.title.includes('Revenue') || metric.title.includes('Value') ? (metric.displayValue >= 1000 ? 'k' : '') : ''}
-                                decimalPlaces={metric.title.includes('Revenue') || metric.title.includes('Value') ? (metric.displayValue >= 1000 ? 1 : 0) : 0}
+                                value={tickerProps.value}
+                                prefix={isCurrencyMetric ? '$' : ''}
+                                suffix={isCurrencyMetric ? tickerProps.suffix : ''}
+                                decimalPlaces={tickerProps.decimalPlaces}
                               />
+                                );
+                              })()
                             ) : metric.value}
                           </div>
                           <div className={`flex items-center gap-0.5 text-xs md:text-sm font-semibold px-2 py-0.5 md:px-2.5 md:py-1 rounded-full flex-shrink-0 ${

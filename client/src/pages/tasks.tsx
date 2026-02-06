@@ -31,16 +31,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Sparkles, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
-import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
 import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
-import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
+import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST, isTodayEST } from "@/lib/dateUtils";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -72,22 +71,28 @@ export default function TasksPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [aiInput, setAiInput] = useState("");
-  const [isAiParsing, setIsAiParsing] = useState(false);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "mine">("all");
+  const [assignmentFilterInitialized, setAssignmentFilterInitialized] = useState(false);
   // Load showCompleted preference from localStorage.
   // Default to TRUE so "previous tasks" (mostly completed) aren't accidentally hidden.
   const [showCompleted, setShowCompleted] = useState(() => {
     const saved = localStorage.getItem('tasks-show-completed');
+    try {
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+  const [showSpacesSidebar, setShowSpacesSidebar] = useState(() => {
+    const saved = localStorage.getItem('tasks-show-spaces');
     try {
       return saved !== null ? JSON.parse(saved) : true;
     } catch {
@@ -100,11 +105,22 @@ export default function TasksPage() {
     localStorage.setItem('tasks-show-completed', JSON.stringify(showCompleted));
   }, [showCompleted]);
 
+  useEffect(() => {
+    localStorage.setItem('tasks-show-spaces', JSON.stringify(showSpacesSidebar));
+  }, [showSpacesSidebar]);
+
   const { data: tasks = [], isLoading, error: tasksError } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
 
   const isAdminOrManager = (user as any)?.role === "admin" || (user as any)?.role === "manager";
+  const userId = (user as any)?.id;
+
+  useEffect(() => {
+    if (assignmentFilterInitialized || !user) return;
+    setAssignmentFilter(isAdminOrManager ? "all" : "mine");
+    setAssignmentFilterInitialized(true);
+  }, [assignmentFilterInitialized, isAdminOrManager, user]);
   const backfillRecurringMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/tasks/backfill-recurring", {});
@@ -340,6 +356,13 @@ export default function TasksPage() {
     },
   });
 
+  const handleQuickDelete = (task: Task, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation();
+    if (confirm(`Delete "${task.title}"?`)) {
+      deleteTaskMutation.mutate(task.id);
+    }
+  };
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ ids, data }: { ids: string[], data: any }) => {
       // For now, update tasks one by one as we don't have a bulk endpoint
@@ -429,98 +452,6 @@ export default function TasksPage() {
     setIsDragging(false);
   };
 
-  const handleAiQuickAdd = async () => {
-    if (!aiInput.trim()) return;
-
-    setIsAiParsing(true);
-    try {
-      // Parse with AI
-      const parseRes = await apiRequest("POST", "/api/tasks/parse-ai", { input: aiInput });
-      const parseData = await parseRes.json();
-      
-      if (!parseData.success) {
-        throw new Error("Failed to parse task");
-      }
-
-      // Format the task data - convert date to ISO string if present
-      const taskData = {
-        ...parseData.taskData,
-        dueDate: parseData.taskData.dueDate 
-          ? new Date(parseData.taskData.dueDate).toISOString() 
-          : undefined,
-      };
-
-      // Create the task directly
-      await apiRequest("POST", "/api/tasks", taskData);
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ 
-        title: "✨ Task created with AI!", 
-        description: `Created: "${taskData.title}"` 
-      });
-      setAiInput("");
-    } catch (error: any) {
-      toast({ 
-        title: "Failed to create task", 
-        description: error.message || "AI parsing failed",
-        variant: "destructive" 
-      });
-    } finally {
-      setIsAiParsing(false);
-    }
-  };
-
-  const handleVoiceInput = () => {
-    // Check if browser supports speech recognition
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      toast({
-        title: "Voice input not supported",
-        description: "Please use Chrome or Edge browser for voice input",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      toast({
-        title: "🎤 Listening...",
-        description: "Speak your task naturally"
-      });
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setAiInput(transcript);
-      toast({
-        title: "✓ Captured",
-        description: `"${transcript}"`
-      });
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      toast({
-        title: "Voice input error",
-        description: event.error === 'no-speech' ? "No speech detected. Please try again." : "Failed to capture voice input",
-        variant: "destructive"
-      });
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
-  };
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -544,20 +475,41 @@ export default function TasksPage() {
     return true;
   };
 
+  const isCompletedToday = (task: Task) => {
+    if (task.status !== "completed") return false;
+    if (!task.completedAt) return false;
+    return isTodayEST(task.completedAt);
+  };
+
+  const scopedTasks = useMemo(() => {
+    if (assignmentFilter === "mine" && userId) {
+      return tasks.filter((task) => Number(task.assignedToId) === Number(userId));
+    }
+    return tasks;
+  }, [assignmentFilter, tasks, userId]);
+
   const completedHiddenByToggle = !showCompleted
-    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
+    ? scopedTasks.filter((t) => matchesBaseFilters(t) && isCompletedToday(t)).length
     : 0;
 
   // Memoized filtered tasks for performance
   const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
+    return scopedTasks.filter((task) => {
       if (!matchesBaseFilters(task)) return false;
+
+      if (task.status === "completed" && !isCompletedToday(task)) return false;
 
       // Hide all completed tasks if toggle is off
       if (!showCompleted && task.status === "completed") return false;
       return true;
     });
-  }, [tasks, filterStatus, filterPriority, selectedSpaceId, showCompleted]);
+  }, [scopedTasks, filterStatus, filterPriority, selectedSpaceId, showCompleted]);
+
+  const scopeLabel = assignmentFilter === "mine"
+    ? "Assigned to me"
+    : isAdminOrManager
+      ? "All team tasks"
+      : "All tasks";
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -584,7 +536,7 @@ export default function TasksPage() {
       { id: "todo", title: "To Do", icon: "📋" },
       { id: "in_progress", title: "In Progress", icon: "⚡" },
       { id: "review", title: "Review", icon: "👀" },
-      { id: "completed", title: "Completed", icon: "✅" },
+      { id: "completed", title: "Completed Today", icon: "✅" },
     ];
     
     return (
@@ -595,7 +547,7 @@ export default function TasksPage() {
           return (
             <div
               key={column.id}
-              className="flex flex-col h-full min-w-[200px] md:min-w-[240px] lg:min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
+              className="flex flex-col h-full min-w-0 bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
@@ -640,12 +592,21 @@ export default function TasksPage() {
                     <CardContent className="p-3 space-y-2">
                       {/* Priority indicator */}
                       <div className="flex items-start justify-between gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${
                           task.priority === "urgent" ? "bg-red-500" :
                           task.priority === "high" ? "bg-orange-500" :
                           task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
                         }`} />
                         <h4 className="font-medium text-sm leading-tight flex-1">{task.title}</h4>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={(event) => handleQuickDelete(task, event)}
+                          aria-label={`Delete ${task.title}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
                       </div>
 
                       {/* Meta info row */}
@@ -747,6 +708,15 @@ export default function TasksPage() {
                       {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
                     </div>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(event) => handleQuickDelete(task, event)}
+                    aria-label={`Delete ${task.title}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
 
                 {/* Desktop Layout */}
@@ -787,6 +757,15 @@ export default function TasksPage() {
                         <User className="w-3 h-3" />
                       </div>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={(event) => handleQuickDelete(task, event)}
+                      aria-label={`Delete ${task.title}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -863,7 +842,7 @@ export default function TasksPage() {
                 value={task.status}
                 onValueChange={(status) => updateTaskStatusMutation.mutate({ id: task.id, status })}
               >
-                <SelectTrigger className="w-32" onClick={(e) => e.stopPropagation()} data-testid={`select-status-${task.id}`}>
+                <SelectTrigger className="w-24 md:w-32" onClick={(e) => e.stopPropagation()} data-testid={`select-status-${task.id}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -884,6 +863,16 @@ export default function TasksPage() {
                   <User className="w-4 h-4" />
                 </div>
               )}
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={(event) => handleQuickDelete(task, event)}
+                aria-label={`Delete ${task.title}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -907,239 +896,272 @@ export default function TasksPage() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left Sidebar - Task Spaces - Hidden on mobile */}
-      <div className="hidden md:block w-64 border-r bg-card/50 overflow-y-auto">
-        <TaskSpacesSidebar 
-          selectedSpaceId={selectedSpaceId}
-          onSpaceSelect={setSelectedSpaceId}
-        />
-      </div>
+      {showSpacesSidebar && (
+        <div className="hidden md:block w-64 border-r bg-card/50 overflow-y-auto">
+          <TaskSpacesSidebar 
+            selectedSpaceId={selectedSpaceId}
+            onSpaceSelect={setSelectedSpaceId}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="p-3 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
+        <div className="p-3 md:p-6 flex-1 overflow-hidden flex flex-col gap-4 md:gap-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-xl md:text-2xl font-bold">Tasks</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
+                Showing {filteredTasks.length} of {scopedTasks.length} task{scopedTasks.length !== 1 ? "s" : ""}
+                {` • ${scopeLabel}`}
+                {showCompleted ? " • Completed today visible" : " • Completed today hidden"}
                 {filterStatus !== "all" && ` • ${filterStatus.replace("_", " ")}`}
                 {filterPriority !== "all" && ` • ${filterPriority}`}
               </p>
             </div>
             {/* Mobile: open Spaces sidebar */}
-            <div className="md:hidden">
-              <Dialog open={spacesDialogOpen} onOpenChange={setSpacesDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">Spaces</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Spaces</DialogTitle>
-                    <DialogDescription>Select a space to filter tasks</DialogDescription>
-                  </DialogHeader>
-                  <TaskSpacesSidebar 
-                    selectedSpaceId={selectedSpaceId}
-                    onSpaceSelect={(id) => { setSelectedSpaceId(id); setSpacesDialogOpen(false); }}
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          {tasksError && (
-            <div className="w-full rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-medium text-destructive">Tasks failed to load</div>
-                <div className="text-muted-foreground truncate">{tasksError.message}</div>
+            {showSpacesSidebar && (
+              <div className="md:hidden">
+                <Dialog open={spacesDialogOpen} onOpenChange={setSpacesDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">Spaces</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Spaces</DialogTitle>
+                      <DialogDescription>Select a space to filter tasks</DialogDescription>
+                    </DialogHeader>
+                    <TaskSpacesSidebar 
+                      selectedSpaceId={selectedSpaceId}
+                      onSpaceSelect={(id) => { setSelectedSpaceId(id); setSpacesDialogOpen(false); }}
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] })}
-              >
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {!tasksError && completedHiddenByToggle > 0 && (
-            <div className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-medium">Completed tasks are hidden</div>
-                <div className="text-muted-foreground truncate">
-                  {completedHiddenByToggle} completed tasks match your current filters.
-                </div>
-              </div>
-              <Button variant="secondary" size="sm" onClick={() => setShowCompleted(true)}>
-                Show completed
-              </Button>
-            </div>
-          )}
-
-          {/* Filter Button */}
-          <Button
-            variant={isFilterPanelOpen ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            className="gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filter
-            {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
-              </Badge>
             )}
-          </Button>
-
-          {/* Collapsible Filter Panel */}
-          {isFilterPanelOpen && (
-            <div className="w-full flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-36" data-testid="select-filter-status">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger className="w-36" data-testid="select-filter-priority">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={selectedSpaceId || ""}
-                onValueChange={(val) => setSelectedSpaceId(val || null)}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Spaces" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Spaces</SelectItem>
-                  {buildSpaceOptions().map((space) => (
-                    <SelectItem key={space.id} value={space.id}>
-                      {space.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant={showCompleted ? "outline" : "secondary"}
-                size="sm"
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="gap-2"
-              >
-                {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showCompleted ? "Hide Completed" : "Show Completed"}
-              </Button>
-
-              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted) && (
+        
+          <div className="flex flex-wrap items-center gap-3">
+            {tasksError && (
+              <div className="w-full rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium text-destructive">Tasks failed to load</div>
+                  <div className="text-muted-foreground truncate">{tasksError.message}</div>
+                </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setFilterStatus("all");
-                    setFilterPriority("all");
-                    setSelectedSpaceId(null);
-                    setShowCompleted(true);
-                  }}
-                  className="text-muted-foreground"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] })}
                 >
-                  Clear filters
+                  Retry
                 </Button>
+              </div>
+            )}
+
+            {!tasksError && completedHiddenByToggle > 0 && (
+              <div className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium">Completed today tasks are hidden</div>
+                  <div className="text-muted-foreground truncate">
+                    {completedHiddenByToggle} completed tasks match your current filters.
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => setShowCompleted(true)}>
+                  Show completed today
+                </Button>
+              </div>
+            )}
+
+            {/* Filter Button */}
+            <Button
+              variant={isFilterPanelOpen ? "default" : "outline"}
+              size="sm"
+              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              className="gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filter
+              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
+                </Badge>
               )}
-            </div>
-          )}
+            </Button>
 
-          {/* View Mode Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                {viewMode === "kanban" && <LayoutGrid className="w-4 h-4" />}
-                {viewMode === "list" && <List className="w-4 h-4" />}
-                {viewMode === "compact" && <AlignLeft className="w-4 h-4" />}
-                <span className="hidden sm:inline capitalize">{viewMode}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewMode("kanban")}>
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Kanban
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode("list")}>
-                <List className="w-4 h-4 mr-2" />
-                List
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode("compact")}>
-                <AlignLeft className="w-4 h-4 mr-2" />
-                Compact
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSpacesSidebar(!showSpacesSidebar)}
+              className="gap-2"
+            >
+              {showSpacesSidebar ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+              {showSpacesSidebar ? "Hide Spaces" : "Show Spaces"}
+            </Button>
 
-          {/* More Options Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {isAdminOrManager && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => backfillRecurringMutation.mutate()}
-                    disabled={backfillRecurringMutation.isPending}
+            {/* Collapsible Filter Panel */}
+            {isFilterPanelOpen && (
+              <div className="w-full flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterPriority} onValueChange={setFilterPriority}>
+                  <SelectTrigger className="w-full sm:w-36" data-testid="select-filter-priority">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={assignmentFilter} onValueChange={(value) => setAssignmentFilter(value as "all" | "mine")}>
+                  <SelectTrigger className="w-full sm:w-44" data-testid="select-filter-assignee">
+                    <SelectValue placeholder="Assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isAdminOrManager ? "All team tasks" : "All tasks"}</SelectItem>
+                    <SelectItem value="mine">Assigned to me</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={selectedSpaceId || ""}
+                  onValueChange={(val) => setSelectedSpaceId(val || null)}
+                >
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="All Spaces" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Spaces</SelectItem>
+                    {buildSpaceOptions().map((space) => (
+                      <SelectItem key={space.id} value={space.id}>
+                        {space.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant={showCompleted ? "outline" : "secondary"}
+                  size="sm"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="gap-2"
+                >
+                  {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showCompleted ? "Hide Completed Today" : "Show Completed Today"}
+                </Button>
+
+                {(filterStatus !== "all"
+                  || filterPriority !== "all"
+                  || selectedSpaceId !== null
+                  || !showCompleted
+                  || assignmentFilter !== (isAdminOrManager ? "all" : "mine")) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFilterStatus("all");
+                      setFilterPriority("all");
+                      setAssignmentFilter(isAdminOrManager ? "all" : "mine");
+                      setSelectedSpaceId(null);
+                      setShowCompleted(true);
+                    }}
+                    className="text-muted-foreground"
                   >
-                    <Repeat className="w-4 h-4 mr-2" />
-                    {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* View Mode Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {viewMode === "kanban" && <LayoutGrid className="w-4 h-4" />}
+                  {viewMode === "list" && <List className="w-4 h-4" />}
+                  {viewMode === "compact" && <AlignLeft className="w-4 h-4" />}
+                  <span className="hidden sm:inline capitalize">{viewMode}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setViewMode("kanban")}>
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Kanban
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode("list")}>
+                  <List className="w-4 h-4 mr-2" />
+                  List
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode("compact")}>
+                  <AlignLeft className="w-4 h-4 mr-2" />
+                  Compact
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* More Options Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isAdminOrManager && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => backfillRecurringMutation.mutate()}
+                      disabled={backfillRecurringMutation.isPending}
+                    >
+                      <Repeat className="w-4 h-4 mr-2" />
+                      {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  All Spaces
+                </DropdownMenuItem>
+                {showSpacesSidebar && (
+                  <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
+                    <ListTodo className="w-4 h-4 mr-2" />
+                    Manage Spaces
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                All Spaces
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
-                <ListTodo className="w-4 h-4 mr-2" />
-                Manage Spaces
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <div className="flex-1" />
+            <div className="flex-1" />
 
-          {/* New Task Button */}
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-task" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-                <DialogDescription>Add a new task to your workflow</DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createTaskMutation.mutate(data))} className="space-y-4">
+            {/* New Task Button */}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-task" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Task
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
+                <DialogHeader>
+                  <DialogTitle>Create New Task</DialogTitle>
+                  <DialogDescription>Add a new task to your workflow</DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit((data) => createTaskMutation.mutate(data))} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -1481,7 +1503,7 @@ export default function TasksPage() {
 
           {/* Edit Task Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
               <DialogHeader>
                 <DialogTitle>Edit Task</DialogTitle>
                 <DialogDescription>Update task details</DialogDescription>
@@ -1775,34 +1797,11 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {viewMode === "kanban" ? renderKanbanView() : viewMode === "compact" ? renderCompactView() : renderListView()}
-      </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {viewMode === "kanban" ? renderKanbanView() : viewMode === "compact" ? renderCompactView() : renderListView()}
+          </div>
         </div>
       </div>
-
-      {/* AI Task Assistant - Compact button */}
-      <>
-        {!isChatOpen ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-6 right-6 z-[9999] gap-2 shadow-lg"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">AI Assistant</span>
-          </Button>
-        ) : (
-          <ConversationalTaskChat
-            isOpen={isChatOpen}
-            onClose={() => setIsChatOpen(false)}
-            onTaskCreated={() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-            }}
-          />
-        )}
-      </>
 
       <TaskDetailSidebar
         task={selectedTask}
@@ -1819,15 +1818,15 @@ export default function TasksPage() {
 
       {/* Bulk Action Bar */}
       {selectedTaskIds.size > 0 && (
-        <div className="fixed bottom-[85px] md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-3 border-r pr-6">
+        <div className="fixed bottom-[85px] md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-2xl md:rounded-full px-3 md:px-6 py-3 flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300 w-[calc(100%-2rem)] md:w-auto max-w-[95vw]">
+          <div className="flex items-center gap-3 md:border-r md:pr-6">
             <span className="text-sm font-bold text-primary">{selectedTaskIds.size} selected</span>
             <Button variant="ghost" size="sm" onClick={() => setSelectedTaskIds(new Set())} className="h-7 text-xs">
               Clear
             </Button>
           </div>
-          
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
             {selectedTaskIds.size === 1 && (
               <Button
                 variant="outline"
@@ -1853,8 +1852,8 @@ export default function TasksPage() {
             )}
 
             <Select onValueChange={(status) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { status } })}>
-              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
-                <SelectValue placeholder="Update Status" />
+              <SelectTrigger className="h-9 w-28 md:w-32 rounded-full text-xs">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todo">To Do</SelectItem>
@@ -1865,8 +1864,8 @@ export default function TasksPage() {
             </Select>
 
             <Select onValueChange={(priority) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { priority } })}>
-              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
-                <SelectValue placeholder="Update Priority" />
+              <SelectTrigger className="h-9 w-28 md:w-32 rounded-full text-xs">
+                <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="low">Low</SelectItem>
@@ -1876,9 +1875,9 @@ export default function TasksPage() {
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10"
               onClick={() => {
                 if (confirm(`Delete ${selectedTaskIds.size} tasks?`)) {

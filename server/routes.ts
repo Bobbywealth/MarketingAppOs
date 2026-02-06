@@ -1152,8 +1152,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Dashboard stats - OPTIMIZED with pagination
-  app.get("/api/dashboard/stats", isAuthenticated, async (req: Request, res: Response) => {
+  // Dashboard stats - OPTIMIZED
+  const dashboardStatsHandler = async (_req: Request, res: Response) => {
     try {
       console.log("🔍 Dashboard API called - fetching data...");
       
@@ -1162,11 +1162,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const offset = parseInt(req.query.offset as string) || 0;
       
       // Only fetch lightweight data and minimal records for activity feed
-      const [clients, campaigns, leads, tasks] = await Promise.all([
-        storage.getClients({ limit, offset }), // Paginated fetch
-        storage.getCampaigns({ limit: 50, offset }), // Small dataset, limit to 50
-        storage.getLeads({ limit, offset }), // Paginated fetch
-        storage.getTasks({ limit, offset }), // Paginated fetch
+      const [clients, campaigns, leads, tasks, invoices] = await Promise.all([
+        storage.getClients(), // Small dataset, usually < 100 records
+        storage.getCampaigns(), // Small dataset
+        storage.getLeads(), // Could be large, but we need value calc
+        storage.getTasks(), // Could be large
+        storage.getInvoices(),
         // storage.getActivityLogs(15), // DISABLED - causing database errors
       ]);
       
@@ -1183,8 +1184,21 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
       const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
       
-      // Skip invoices for now - not critical for dashboard load
-      const monthlyRevenue = 0; // Will be replaced by Stripe data if available
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+      const monthlyRevenue = invoices
+        .filter((invoice) => invoice.status === "paid")
+        .filter((invoice) => {
+          const paidDate = invoice.paidAt || invoice.updatedAt || invoice.createdAt;
+          if (!paidDate) return false;
+          const paidTime = new Date(paidDate).getTime();
+          return paidTime >= monthStart.getTime() && paidTime < monthEnd.getTime();
+        })
+        .reduce((sum, invoice) => sum + (invoice.amount || 0), 0) / 100;
 
       // Task metrics
       const totalTasks = tasks.length;
@@ -1325,7 +1339,13 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.error("Error details:", error.message, error.stack);
       res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message });
     }
-  });
+  };
+
+  // Register the handler for all role-specific dashboard routes
+  app.get("/api/dashboard/stats", isAuthenticated, dashboardStatsHandler);
+  app.get("/api/dashboard/admin-stats", isAuthenticated, dashboardStatsHandler);
+  app.get("/api/dashboard/manager-stats", isAuthenticated, dashboardStatsHandler);
+  app.get("/api/dashboard/staff-stats", isAuthenticated, dashboardStatsHandler);
 
   // Helper functions for formatting
   function formatActivityTime(date: Date | null | undefined): string {

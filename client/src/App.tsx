@@ -18,6 +18,8 @@ import SignupPage from "@/pages/signup";
 import PaymentSuccessPage from "@/pages/payment-success";
 import Dashboard from "@/pages/dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
+import CreatorDashboard from "@/pages/creator-dashboard";
+import SalesDashboard from "@/pages/sales-dashboard";
 import ClientContent from "@/pages/client-content";
 import ClientCampaigns from "@/pages/client-campaigns";
 import ClientBilling from "@/pages/client-billing";
@@ -58,6 +60,7 @@ import Training from "@/pages/training";
 import PushNotifications from "@/pages/push-notifications";
 import DashboardStaff from "@/pages/dashboard-staff";
 import DashboardManager from "@/pages/dashboard-manager";
+import DashboardAdmin from "@/pages/dashboard-admin";
 import AdminDebugLogs from "@/pages/admin-debug-logs";
 
 function Router() {
@@ -73,6 +76,7 @@ function Router() {
       {!user && <Route path="/" component={Landing} />}
       {/* Client-specific routes */}
       {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
+      {isClient && <ProtectedRoute path="/client-dashboard" component={ClientDashboard} allowedRoles={["client"]} />}
       {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
       {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
       {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
@@ -80,6 +84,18 @@ function Router() {
       {isClient && <ProtectedRoute path="/second-me" component={SecondMe} />}
       {/* Admin/Manager/Staff routes */}
       {!isClient && <ProtectedRoute path="/" component={Dashboard} />}
+      {!isClient && <ProtectedRoute path="/dashboard" component={Dashboard} />}
+      {!isClient && (
+        <ProtectedRoute
+          path="/dashboard-admin"
+          component={DashboardAdmin}
+          allowedRoles={["admin", "creator_manager", "staff_content_creator"]}
+        />
+      )}
+      {!isClient && <ProtectedRoute path="/dashboard-manager" component={DashboardManager} allowedRoles={["manager"]} />}
+      {!isClient && <ProtectedRoute path="/dashboard-staff" component={DashboardStaff} allowedRoles={["staff"]} />}
+      {!isClient && <ProtectedRoute path="/creator-dashboard" component={CreatorDashboard} allowedRoles={["creator"]} />}
+      {!isClient && <ProtectedRoute path="/sales-dashboard" component={SalesDashboard} allowedRoles={["sales_agent"]} />}
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
       {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
       {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
@@ -110,8 +126,6 @@ function Router() {
       {!isClient && <ProtectedRoute path="/admin/ai-content-generator" component={AIContentGenerator} />}
       {!isClient && <ProtectedRoute path="/training" component={Training} />}
       {!isClient && <ProtectedRoute path="/push-notifications" component={PushNotifications} />}
-      {!isClient && <ProtectedRoute path="/dashboard-staff" component={DashboardStaff} />}
-      {!isClient && <ProtectedRoute path="/dashboard-manager" component={DashboardManager} />}
       {!isClient && <ProtectedRoute path="/admin/debug-logs" component={AdminDebugLogs} />}
       {/* Shared routes (both clients and staff) */}
       <ProtectedRoute path="/tickets" component={Tickets} />
