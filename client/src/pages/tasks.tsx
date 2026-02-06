@@ -642,6 +642,19 @@ export default function TasksPage() {
                             {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
                           </div>
                         )}
+                        {/* Delete button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete task "${task.title}"?`)) {
+                              deleteTaskMutation.mutate(task.id);
+                            }
+                          }}
+                          className="absolute top-2 right-2 p-1.5 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+                          title="Delete task"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </CardContent>
                   </Card>
