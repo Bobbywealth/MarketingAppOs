@@ -1152,17 +1152,21 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Dashboard stats - OPTIMIZED
-  app.get("/api/dashboard/stats", isAuthenticated, async (_req: Request, res: Response) => {
+  // Dashboard stats - OPTIMIZED with pagination
+  app.get("/api/dashboard/stats", isAuthenticated, async (req: Request, res: Response) => {
     try {
       console.log("🔍 Dashboard API called - fetching data...");
       
+      // Parse pagination parameters from query string
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
       // Only fetch lightweight data and minimal records for activity feed
       const [clients, campaigns, leads, tasks] = await Promise.all([
-        storage.getClients(), // Small dataset, usually < 100 records
-        storage.getCampaigns(), // Small dataset
-        storage.getLeads(), // Could be large, but we need value calc
-        storage.getTasks(), // Could be large
+        storage.getClients({ limit, offset }), // Paginated fetch
+        storage.getCampaigns({ limit: 50, offset }), // Small dataset, limit to 50
+        storage.getLeads({ limit, offset }), // Paginated fetch
+        storage.getTasks({ limit, offset }), // Paginated fetch
         // storage.getActivityLogs(15), // DISABLED - causing database errors
       ]);
       
@@ -1449,10 +1453,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Client routes
-  app.get("/api/clients", isAuthenticated, requirePermission("canManageClients"), async (_req: Request, res: Response) => {
+  // Client routes - with pagination support
+  app.get("/api/clients", isAuthenticated, requirePermission("canManageClients"), async (req: Request, res: Response) => {
     try {
-      const clients = await storage.getClients();
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const clients = await storage.getClients({ limit, offset });
       res.json(clients);
     } catch (error) {
       console.error(error);
@@ -1513,10 +1519,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Campaign routes
-  app.get("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (_req: Request, res: Response) => {
+  // Campaign routes - with pagination support
+  app.get("/api/campaigns", isAuthenticated, requirePermission("canManageCampaigns"), async (req: Request, res: Response) => {
     try {
-      const campaigns = await storage.getCampaigns();
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const campaigns = await storage.getCampaigns({ limit, offset });
       res.json(campaigns);
     } catch (error) {
       console.error(error);
@@ -1649,10 +1657,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Task routes (admin and staff only)
-  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
+  // Task routes (admin and staff only) - with pagination support
+  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
     try {
-      const tasks = await storage.getTasks();
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const tasks = await storage.getTasks({ limit, offset });
       res.json(tasks);
     } catch (error) {
       console.error(error);
@@ -1921,10 +1931,12 @@ Examples:
     }
   });
 
-  // Lead routes
-  app.get("/api/leads", isAuthenticated, requirePermission("canManageLeads"), async (_req: Request, res: Response) => {
+  // Lead routes - with pagination support
+  app.get("/api/leads", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
     try {
-      const leads = await storage.getLeads();
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const leads = await storage.getLeads({ limit, offset });
       res.json(leads);
     } catch (error) {
       console.error(error);

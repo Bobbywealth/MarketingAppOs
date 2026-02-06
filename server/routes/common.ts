@@ -61,12 +61,18 @@ export async function notifyAdminsAboutSecurityEvent(title: string, message: str
     const { sendPushToUser } = await import('../push');
     const { emailNotifications } = await import('../emailService');
 
-    // Batch fetch notification preferences for all admins
+    // OPTIMIZED: Batch fetch notification preferences using single query with IN clause
     const adminIds = admins.map(a => a.id);
-    const allPrefs = await Promise.all(
-      adminIds.map(id => storage.getUserNotificationPreferences(id).catch(() => null))
-    );
-    const prefsMap = new Map(adminIds.map((id, i) => [id, allPrefs[i]]));
+    const { userViewPreferences } = await import('@shared/schema');
+    const { inArray } = await import('drizzle-orm');
+    const { db } = await import('../db');
+    
+    // Single query to get all admin preferences at once
+    const prefs = await db.select()
+      .from(userViewPreferences)
+      .where(inArray(userViewPreferences.userId, adminIds));
+    
+    const prefsMap = new Map(prefs.map(p => [p.userId, p]));
 
     // Prepare all notifications and push notifications
     const notifications = [];
@@ -91,29 +97,30 @@ export async function notifyAdminsAboutSecurityEvent(title: string, message: str
       });
     }
 
-    // Batch create notifications
-    for (const notif of notifications) {
-      await storage.createNotification(notif);
-    }
+    // OPTIMIZED: Batch create notifications using Promise.all
+    await Promise.all(notifications.map(notif => storage.createNotification(notif)));
 
-    // Send push notifications
-    for (const pushNotif of pushNotifications) {
-      await sendPushToUser(pushNotif.userId, pushNotif).catch(err =>
+    // OPTIMIZED: Send push notifications in parallel
+    await Promise.all(pushNotifications.map(pushNotif =>
+      sendPushToUser(pushNotif.userId, pushNotif).catch(err =>
         console.error(`Failed to send push to admin ${pushNotif.userId}:`, err)
-      );
-    }
+      )
+    ));
 
-    // Send email alerts to admins
-    for (const admin of admins) {
-      if (admin.email) {
+    // OPTIMIZED: Send email alerts to admins in parallel
+    const emailPromises = admins
+      .filter(admin => admin.email)
+      .map(admin => {
         const prefs = prefsMap.get(admin.id);
         if (prefs?.emailNotifications !== false) {
-          emailNotifications.sendSecurityAlertEmail(admin.email, title, message).catch(err =>
+          return emailNotifications.sendSecurityAlertEmail(admin.email, title, message).catch(err =>
             console.error(`Failed to send security email to admin ${admin.id}:`, err)
           );
         }
-      }
-    }
+        return Promise.resolve();
+      });
+    
+    await Promise.all(emailPromises);
   } catch (error) {
     console.error('Failed to notify admins about security event:', error);
   }

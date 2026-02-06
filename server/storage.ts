@@ -120,14 +120,14 @@ export interface IStorage {
   updateUserRole(userId: string, role: string): Promise<User>;
 
   // Client operations
-  getClients(): Promise<Client[]>;
+  getClients(options?: { limit?: number; offset?: number }): Promise<Client[]>;
   getClient(id: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, data: Partial<InsertClient>): Promise<Client>;
   deleteClient(id: string): Promise<void>;
 
   // Campaign operations
-  getCampaigns(): Promise<Campaign[]>;
+  getCampaigns(options?: { limit?: number; offset?: number }): Promise<Campaign[]>;
   getCampaign(id: string): Promise<Campaign | undefined>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
   updateCampaign(id: string, data: Partial<InsertCampaign>): Promise<Campaign>;
@@ -141,7 +141,7 @@ export interface IStorage {
   deleteTaskSpace(id: string): Promise<void>;
   
   // Task operations
-  getTasks(): Promise<Task[]>;
+  getTasks(options?: { limit?: number; offset?: number }): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
   getTasksBySpace(spaceId: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
@@ -164,7 +164,7 @@ export interface IStorage {
   upsertUserViewPreferences(userId: number, preferences: Partial<InsertUserViewPreferences>): Promise<UserViewPreferences>;
 
   // Lead operations
-  getLeads(): Promise<Lead[]>;
+  getLeads(options?: { limit?: number; offset?: number }): Promise<Lead[]>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, data: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: string): Promise<void>;
@@ -345,8 +345,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Client operations
-  async getClients(): Promise<Client[]> {
-    const clientList = await db.select().from(clients).orderBy(desc(clients.createdAt));
+  async getClients(options?: { limit?: number; offset?: number }): Promise<Client[]> {
+    let query = db.select().from(clients).orderBy(desc(clients.createdAt));
+    
+    if (options?.limit) {
+      query = query.limit(options.limit) as any;
+    }
+    if (options?.offset) {
+      query = query.offset(options.offset) as any;
+    }
+    
+    const clientList = await query;
     console.log("🔍 getClients() called - Found", clientList.length, "clients");
     console.log("   Client IDs:", clientList.map(c => c.id).join(", "));
     return clientList;
@@ -379,8 +388,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Campaign operations
-  async getCampaigns(): Promise<Campaign[]> {
-    return await db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
+  async getCampaigns(options?: { limit?: number; offset?: number }): Promise<Campaign[]> {
+    let query = db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
+    
+    if (options?.limit) {
+      query = query.limit(options.limit) as any;
+    }
+    if (options?.offset) {
+      query = query.offset(options.offset) as any;
+    }
+    
+    return await query;
   }
 
   async getCampaign(id: string): Promise<Campaign | undefined> {
@@ -440,8 +458,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Task operations
-  async getTasks(): Promise<Task[]> {
-    return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  async getTasks(options?: { limit?: number; offset?: number }): Promise<Task[]> {
+    let query = db.select().from(tasks).orderBy(desc(tasks.createdAt));
+    
+    if (options?.limit) {
+      query = query.limit(options.limit) as any;
+    }
+    if (options?.offset) {
+      query = query.offset(options.offset) as any;
+    }
+    
+    return await query;
   }
 
   async getTask(id: string): Promise<Task | undefined> {
@@ -521,8 +548,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Lead operations
-  async getLeads(): Promise<Lead[]> {
-    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  async getLeads(options?: { limit?: number; offset?: number }): Promise<Lead[]> {
+    let query = db.select().from(leads).orderBy(desc(leads.createdAt));
+    
+    if (options?.limit) {
+      query = query.limit(options.limit) as any;
+    }
+    if (options?.offset) {
+      query = query.offset(options.offset) as any;
+    }
+    
+    return await query;
   }
 
   async createLead(leadData: InsertLead): Promise<Lead> {
@@ -813,28 +849,35 @@ export class DatabaseStorage implements IStorage {
     await db.delete(analyticsMetrics).where(eq(analyticsMetrics.id, id));
   }
 
-  // Global search
+  // Global search - OPTIMIZED with ILIKE for case-insensitive search
   async globalSearch(query: string) {
-    const searchTerm = `%${query.toLowerCase()}%`;
+    // Use ILIKE for case-insensitive search (PostgreSQL specific)
+    const searchTerm = `%${query}%`; // Prefix match is faster than contains
 
     const [clientResults, campaignResults, leadResults, contentResults, invoiceResults, ticketResults] = await Promise.all([
+      // Clients: search name, email, company
       db.select().from(clients).where(
-        sql`LOWER(${clients.name}) LIKE ${searchTerm} OR LOWER(${clients.email}) LIKE ${searchTerm} OR LOWER(${clients.company}) LIKE ${searchTerm}`
+        sql`${clients.name} ILIKE ${searchTerm} OR ${clients.email} ILIKE ${searchTerm} OR ${clients.company} ILIKE ${searchTerm}`
       ).limit(5),
+      // Campaigns: search name, description
       db.select().from(campaigns).where(
-        sql`LOWER(${campaigns.name}) LIKE ${searchTerm} OR LOWER(${campaigns.description}) LIKE ${searchTerm}`
+        sql`${campaigns.name} ILIKE ${searchTerm} OR ${campaigns.description} ILIKE ${searchTerm}`
       ).limit(5),
+      // Leads: search name, email, company
       db.select().from(leads).where(
-        sql`LOWER(${leads.name}) LIKE ${searchTerm} OR LOWER(${leads.email}) LIKE ${searchTerm} OR LOWER(${leads.company}) LIKE ${searchTerm}`
+        sql`${leads.name} ILIKE ${searchTerm} OR ${leads.email} ILIKE ${searchTerm} OR ${leads.company} ILIKE ${searchTerm}`
       ).limit(5),
+      // Content posts: search title
       db.select().from(contentPosts).where(
-        sql`LOWER(${contentPosts.title}) LIKE ${searchTerm}`
+        sql`${contentPosts.caption} ILIKE ${searchTerm}`
       ).limit(5),
+      // Invoices: search invoice number
       db.select().from(invoices).where(
-        sql`LOWER(${invoices.invoiceNumber}) LIKE ${searchTerm}`
+        sql`${invoices.invoiceNumber} ILIKE ${searchTerm}`
       ).limit(5),
+      // Tickets: search subject, description
       db.select().from(tickets).where(
-        sql`LOWER(${tickets.subject}) LIKE ${searchTerm} OR LOWER(${tickets.description}) LIKE ${searchTerm}`
+        sql`${tickets.subject} ILIKE ${searchTerm} OR ${tickets.description} ILIKE ${searchTerm}`
       ).limit(5)
     ]);
 
