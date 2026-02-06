@@ -1788,7 +1788,7 @@ export default function TasksPage() {
           </div>
           
           <div className="flex items-center gap-2">
-            {selectedTaskIds.size === 1 && (
+            {selectedTaskIds.size >= 1 && (
               <Button
                 variant="outline"
                 size="sm"
