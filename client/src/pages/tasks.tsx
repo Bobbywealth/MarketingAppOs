@@ -40,7 +40,7 @@ import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { ConversationalTaskChat } from "@/components/ConversationalTaskChat";
 import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
-import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
+import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST, isTodayEST } from "@/lib/dateUtils";
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -553,6 +553,12 @@ export default function TasksPage() {
     return true;
   };
 
+  const isCompletedToday = (task: Task) => {
+    if (task.status !== "completed") return false;
+    if (!task.completedAt) return false;
+    return isTodayEST(task.completedAt);
+  };
+
   const scopedTasks = useMemo(() => {
     if (assignmentFilter === "mine" && userId) {
       return tasks.filter((task) => Number(task.assignedToId) === Number(userId));
@@ -561,13 +567,15 @@ export default function TasksPage() {
   }, [assignmentFilter, tasks, userId]);
 
   const completedHiddenByToggle = !showCompleted
-    ? scopedTasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
+    ? scopedTasks.filter((t) => matchesBaseFilters(t) && isCompletedToday(t)).length
     : 0;
 
   // Memoized filtered tasks for performance
   const filteredTasks = useMemo(() => {
     return scopedTasks.filter((task) => {
       if (!matchesBaseFilters(task)) return false;
+
+      if (task.status === "completed" && !isCompletedToday(task)) return false;
 
       // Hide all completed tasks if toggle is off
       if (!showCompleted && task.status === "completed") return false;
@@ -606,7 +614,7 @@ export default function TasksPage() {
       { id: "todo", title: "To Do", icon: "📋" },
       { id: "in_progress", title: "In Progress", icon: "⚡" },
       { id: "review", title: "Review", icon: "👀" },
-      { id: "completed", title: "Completed", icon: "✅" },
+      { id: "completed", title: "Completed Today", icon: "✅" },
     ];
     
     return (
@@ -945,7 +953,7 @@ export default function TasksPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 Showing {filteredTasks.length} of {scopedTasks.length} task{scopedTasks.length !== 1 ? "s" : ""}
                 {` • ${scopeLabel}`}
-                {showCompleted ? " • Completed visible" : " • Completed hidden"}
+                {showCompleted ? " • Completed today visible" : " • Completed today hidden"}
                 {filterStatus !== "all" && ` • ${filterStatus.replace("_", " ")}`}
                 {filterPriority !== "all" && ` • ${filterPriority}`}
               </p>
@@ -989,13 +997,13 @@ export default function TasksPage() {
             {!tasksError && completedHiddenByToggle > 0 && (
               <div className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="font-medium">Completed tasks are hidden</div>
+                  <div className="font-medium">Completed today tasks are hidden</div>
                   <div className="text-muted-foreground truncate">
                     {completedHiddenByToggle} completed tasks match your current filters.
                   </div>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => setShowCompleted(true)}>
-                  Show completed
+                  Show completed today
                 </Button>
               </div>
             )}
@@ -1079,7 +1087,7 @@ export default function TasksPage() {
                   className="gap-2"
                 >
                   {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {showCompleted ? "Hide Completed" : "Show Completed"}
+                  {showCompleted ? "Hide Completed Today" : "Show Completed Today"}
                 </Button>
 
                 {(filterStatus !== "all"
