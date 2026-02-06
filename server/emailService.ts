@@ -5,8 +5,8 @@ import path from "path";
 import { CircuitBreaker } from './lib/circuit-breaker';
 import { log } from './vite';
 
-// Email circuit breaker: trip after 3 failures, reset after 1 minute
-const emailCircuit = new CircuitBreaker(3, 60000);
+// Email circuit breaker: trip after 10 failures, reset after 5 minutes
+const emailCircuit = new CircuitBreaker(10, 300000);
 
 // Email transporter configuration
 let transporter: Transporter | null = null;
@@ -726,12 +726,16 @@ export async function sendEmail(to: string | string[], subject: string, html: st
     return { success: false, message: 'Email service not configured' };
   }
 
+  // Log circuit breaker state
+  const circuitState = emailCircuit.getState();
+  console.log(`📧 Email send attempt - Circuit state: ${circuitState}, To: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject}`);
+  
   try {
     const fromEmail = options?.from || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'business@marketingteam.app';
     const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Marketing Team';
     const logoAttachment = maybeGetLogoAttachment();
     
-    const info = await emailCircuit.execute(() => 
+    const info = await emailCircuit.execute(() =>
       transporter!.sendMail({
         from: `"${fromName}" <${fromEmail}>`,
         to: Array.isArray(to) ? to.join(', ') : to,
@@ -741,12 +745,14 @@ export async function sendEmail(to: string | string[], subject: string, html: st
         ...(logoAttachment ? { attachments: [logoAttachment] } : {}),
       })
     );
-
+    
     log(`✅ Email sent: ${info.messageId}`, "email");
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    log(`❌ Email send error: ${error instanceof Error ? error.message : 'Unknown error'}`, "email");
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`❌ Email send error: ${errorMessage}`, error);
+    console.error(`❌ Full error details:`, error);
+    return { success: false, error: errorMessage };
   }
 }
 

@@ -640,14 +640,14 @@ export default function LeadsPage() {
   });
 
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = !searchQuery || 
-      lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = !searchQuery ||
+      (lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ??
+       lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ??
+       lead.company?.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesStatus = filterStatus === "all" || lead.stage === filterStatus;
-    const matchesIndustry = filterIndustry === "all" || !filterIndustry || 
-      lead.industry?.toLowerCase() === filterIndustry.toLowerCase();
+    const matchesIndustry = filterIndustry === "all" || !filterIndustry ||
+      (lead.industry?.toLowerCase() === filterIndustry.toLowerCase());
     
     // Quick filters
     const matchesQuickStage = !quickFilterStage || lead.stage === quickFilterStage;
