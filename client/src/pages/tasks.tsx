@@ -558,14 +558,14 @@ export default function TasksPage() {
     ];
     
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 h-full p-4 overflow-x-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 h-full min-h-0 p-4 overflow-x-auto overflow-y-hidden">
         {columns.map((column) => {
           const columnTasks = filteredTasks.filter((task) => task.status === column.id);
           
           return (
             <div
               key={column.id}
-              className="flex flex-col h-full min-w-[200px] md:min-w-[240px] lg:min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
+              className="flex flex-col h-full min-h-0 min-w-[200px] md:min-w-[240px] lg:min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
@@ -584,7 +584,7 @@ export default function TasksPage() {
                 </Button>
               </div>
 
-              <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar"
+              <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1 custom-scrollbar"
                 style={{ 
                   borderColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.3)' : 'transparent',
                   backgroundColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.05)' : 'transparent'
@@ -899,7 +899,7 @@ export default function TasksPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="p-3 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
+        <div className="p-3 md:p-6 space-y-4 md:space-y-6 shrink-0">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-xl md:text-2xl font-bold">Tasks</h1>
@@ -1758,7 +1758,7 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {viewMode === "kanban" ? renderKanbanView() : viewMode === "compact" ? renderCompactView() : renderListView()}
       </div>
         </div>
