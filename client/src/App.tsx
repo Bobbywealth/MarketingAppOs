@@ -27,6 +27,7 @@ import ClientAnalytics from "@/pages/client-analytics";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
+import RecurringTasks from "@/pages/recurring-tasks";
 import Leads from "@/pages/leads";
 import Pipeline from "@/pages/pipeline";
 import Content from "@/pages/content";
@@ -99,6 +100,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
       {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
       {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
+      {!isClient && <ProtectedRoute path="/recurring-tasks" component={RecurringTasks} />}
       {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
       {!isClient && <ProtectedRoute path="/pipeline" component={Pipeline} />}
       {!isClient && <ProtectedRoute path="/content" component={Content} />}

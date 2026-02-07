@@ -18,7 +18,7 @@ import { insertTaskSchema, insertTaskSpaceSchema, insertTaskCommentSchema } from
 import { ZodError } from "zod";
 import { randomUUID } from "crypto";
 import { DEFAULT_RECURRENCE_TZ, getDateKeyInTimeZone, getEndOfDayUtcFromDateKey, getNextInstanceDateKey } from "../lib/recurrence";
-import { backfillRecurringTasks } from "../lib/recurringTaskBackfill";
+import { backfillRecurringTasks, stableRecurrenceSeriesId } from "../lib/recurringTaskBackfill";
 
 const router = Router();
 
@@ -200,6 +200,110 @@ router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
   } catch (error) {
     console.error("❌ Task fetch error:", error);
     res.status(500).json({ message: "Failed to fetch tasks" });
+  }
+});
+
+router.get("/tasks/recurring-series", isAuthenticated, async (_req: Request, res: Response) => {
+  try {
+    const recurringTasks = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.isRecurring, true));
+
+    const seriesMap = new Map<string, any[]>();
+    for (const task of recurringTasks) {
+      const seriesId =
+        (task as any).recurrenceSeriesId || stableRecurrenceSeriesId(task);
+      if (!seriesMap.has(seriesId)) seriesMap.set(seriesId, []);
+      seriesMap.get(seriesId)!.push({ ...task, recurrenceSeriesId: seriesId });
+    }
+
+    const now = new Date();
+    const todayKey = getDateKeyInTimeZone(now, DEFAULT_RECURRENCE_TZ);
+
+    const series = Array.from(seriesMap.entries()).map(([seriesId, seriesTasks]) => {
+      const template = [...seriesTasks].sort((a, b) => {
+        const ad = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+        const bd = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+        if (ad !== bd) return bd - ad;
+        const ac = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bc = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bc - ac;
+      })[0];
+
+      const pattern = String(template?.recurringPattern || "daily");
+      const interval = Number(template?.recurringInterval || 1);
+      const scheduleFrom = String(template?.scheduleFrom || "due_date");
+      const recurringEndDate = template?.recurringEndDate
+        ? new Date(template.recurringEndDate)
+        : null;
+
+      const derivedKeyForTask = (t: any): string => {
+        const base =
+          t.recurrenceInstanceDate ||
+          t.dueDate ||
+          t.completedAt ||
+          t.createdAt ||
+          now;
+        return typeof base === "string"
+          ? base
+          : getDateKeyInTimeZone(new Date(base), DEFAULT_RECURRENCE_TZ);
+      };
+
+      const derivedKeys = seriesTasks
+        .map(derivedKeyForTask)
+        .filter(Boolean)
+        .sort();
+      const lastKey = derivedKeys.length ? derivedKeys[derivedKeys.length - 1] : todayKey;
+
+      let nextKey: string | null = null;
+      if (pattern) {
+        const candidate = getNextInstanceDateKey({
+          pattern: pattern as any,
+          interval,
+          baseDate: getEndOfDayUtcFromDateKey(lastKey, DEFAULT_RECURRENCE_TZ),
+          timeZone: DEFAULT_RECURRENCE_TZ,
+        });
+        const candidateDueUtc = getEndOfDayUtcFromDateKey(
+          candidate,
+          DEFAULT_RECURRENCE_TZ,
+        );
+        nextKey =
+          recurringEndDate && candidateDueUtc > recurringEndDate ? null : candidate;
+      }
+
+      const completedInstances = seriesTasks.filter((t) => t.status === "completed").length;
+      const openInstances = seriesTasks.length - completedInstances;
+
+      return {
+        seriesId,
+        title: template?.title ?? "Untitled recurring task",
+        recurringPattern: pattern,
+        recurringInterval: interval,
+        recurringEndDate: recurringEndDate ? recurringEndDate.toISOString() : null,
+        scheduleFrom,
+        totalInstances: seriesTasks.length,
+        openInstances,
+        completedInstances,
+        lastInstanceDateKey: lastKey,
+        nextInstanceDateKey: nextKey,
+        latestTask: template
+          ? {
+              id: template.id,
+              status: template.status,
+              dueDate: template.dueDate,
+              assignedToId: template.assignedToId,
+              clientId: template.clientId,
+              spaceId: template.spaceId,
+            }
+          : null,
+      };
+    });
+
+    res.json(series);
+  } catch (error) {
+    console.error("❌ Recurring series fetch error:", error);
+    res.status(500).json({ message: "Failed to fetch recurring series" });
   }
 });
 
@@ -771,4 +875,3 @@ router.post("/tasks/:taskId/comments", isAuthenticated, async (req: Request, res
 });
 
 export default router;
-

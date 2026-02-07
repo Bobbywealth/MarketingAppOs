@@ -34,6 +34,7 @@ import {
   Zap,
   Search,
   FileText,
+  Repeat,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -265,6 +266,13 @@ const coreTools: SidebarNavItem[] = [
     icon: ListTodo,
     permission: null,
     sidebarKey: "tasks" as const,
+  },
+  {
+    title: "Recurring Tasks",
+    url: "/recurring-tasks",
+    icon: Repeat,
+    permission: null,
+    sidebarKey: "recurringTasks" as const,
   },
 ];
 
