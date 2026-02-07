@@ -18,7 +18,8 @@ import {
   Sparkles,
   BrainCircuit,
   Wand2,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -127,7 +128,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 {lead.stage && (
                   <Badge variant={getStageBadge(lead.stage)} className="text-[10px] h-5 px-1.5 uppercase font-bold tracking-wider">
-                    {lead.stage.replace('_', ' ')}
+                    {lead.stage.replace(/_/g, ' ')}
                   </Badge>
                 )}
                 {lead.value && (

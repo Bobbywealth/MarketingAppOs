@@ -332,12 +332,17 @@ export default function LeadsPage() {
     } catch {}
   }, [leads]);
 
-  // Populate editTags when editing a lead
+  // Populate editTags and editNeeds when editing a lead
   useEffect(() => {
     if (editingLead && editingLead.tags) {
       setEditTags(Array.isArray(editingLead.tags) ? editingLead.tags : []);
     } else {
       setEditTags([]);
+    }
+    if (editingLead && editingLead.needs) {
+      setEditNeeds(Array.isArray(editingLead.needs) ? editingLead.needs : []);
+    } else {
+      setEditNeeds([]);
     }
   }, [editingLead]);
 
@@ -641,9 +646,9 @@ export default function LeadsPage() {
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = !searchQuery ||
-      (lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ??
-       lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ??
-       lead.company?.toLowerCase().includes(searchQuery.toLowerCase()));
+      lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.company?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = filterStatus === "all" || lead.stage === filterStatus;
     const matchesIndustry = filterIndustry === "all" || !filterIndustry ||
@@ -1994,7 +1999,7 @@ export default function LeadsPage() {
                     <DialogTitle className="text-2xl">{selectedLead.name}</DialogTitle>
                     <DialogDescription className="flex items-center gap-2 mt-2">
                       <Badge variant={getStageBadge(selectedLead.stage) as any}>
-                        {selectedLead.stage.replace('_', ' ')}
+                        {selectedLead.stage.replace(/_/g, ' ')}
                       </Badge>
                       {selectedLead.score && (
                         <Badge 
@@ -2081,7 +2086,7 @@ export default function LeadsPage() {
                     )}
                     {selectedLead.website && (
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <Globe className="w-4 h-4 text-muted-foreground" />
                         <a href={selectedLead.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                           Website
                         </a>
@@ -2140,7 +2145,7 @@ export default function LeadsPage() {
                     )}
                     <div className="flex items-center justify-between py-2 border-b">
                       <span className="text-muted-foreground">Source</span>
-                      <span className="capitalize">{selectedLead.source.replace('_', ' ')}</span>
+                      <span className="capitalize">{selectedLead.source.replace(/_/g, ' ')}</span>
                     </div>
                     {selectedLead.createdAt && (
                       <div className="flex items-center justify-between py-2 border-b">
@@ -2276,9 +2281,8 @@ export default function LeadsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">All Stages</SelectItem>
                   <SelectItem value="prospect">Prospect</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
                   <SelectItem value="qualified">Qualified</SelectItem>
                   <SelectItem value="proposal">Proposal</SelectItem>
                   <SelectItem value="closed_won">Won</SelectItem>
