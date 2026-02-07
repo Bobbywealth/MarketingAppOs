@@ -133,6 +133,35 @@ router.patch("/task-spaces/:id", isAuthenticated, async (req: Request, res: Resp
   }
 });
 
+// Bulk reorder spaces
+router.patch("/task-spaces-reorder", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+
+    if (normalizedRole !== "admin" && normalizedRole !== "manager" && normalizedRole !== "staff") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const items: Array<{ id: string; order: number }> = req.body?.items;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ message: "items array is required" });
+    }
+
+    for (const item of items) {
+      await db
+        .update(taskSpaces)
+        .set({ order: item.order, updatedAt: new Date() })
+        .where(eq(taskSpaces.id, item.id));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Reorder spaces error:", error);
+    res.status(500).json({ message: "Failed to reorder spaces" });
+  }
+});
+
 router.delete("/task-spaces/:id", isAuthenticated, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;

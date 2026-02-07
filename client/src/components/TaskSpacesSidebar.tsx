@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Plus, MoreVertical, Edit, Trash2, Folder } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, MoreVertical, Edit, Trash2, Folder, EyeOff, Eye, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,12 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState<TaskSpace | null>(null);
   const [collapsedSpaces, setCollapsedSpaces] = useState<Set<string>>(new Set());
+  const [showHidden, setShowHidden] = useState(false);
+
+  // Drag state
+  const [draggedSpaceId, setDraggedSpaceId] = useState<string | null>(null);
+  const [dragOverSpaceId, setDragOverSpaceId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<"above" | "below" | null>(null);
 
   const { data: spaces = [], isLoading } = useQuery<TaskSpace[]>({
     queryKey: ["/api/task-spaces"],
@@ -32,8 +38,6 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     spaces
       .filter((s) => (s.parentSpaceId ?? null) === parentId)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
-
-  const hasChildren = (spaceId: string) => getChildren(spaceId).length > 0;
 
   const flattenSpaceOptions = (opts?: { excludeIds?: Set<string> }) => {
     const excludeIds = opts?.excludeIds ?? new Set<string>();
@@ -112,6 +116,35 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async (items: Array<{ id: string; order: number }>) => {
+      const response = await apiRequest("PATCH", "/api/task-spaces-reorder", { items });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-spaces"] });
+    },
+    onError: (error: any) => {
+      console.error("Reorder error:", error);
+      toast({ title: "Failed to reorder spaces", variant: "destructive" });
+    },
+  });
+
+  const toggleHideMutation = useMutation({
+    mutationFn: async ({ id, isHidden }: { id: string; isHidden: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/task-spaces/${id}`, { isHidden });
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/task-spaces"] });
+      toast({ title: variables.isHidden ? "Space hidden" : "Space visible" });
+    },
+    onError: (error: any) => {
+      console.error("Toggle hide error:", error);
+      toast({ title: "Failed to update space visibility", variant: "destructive" });
+    },
+  });
+
   const handleCreateSpace = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -150,19 +183,128 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     setCollapsedSpaces(newCollapsed);
   };
 
+  // Drag-and-drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, spaceId: string) => {
+    setDraggedSpaceId(spaceId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", spaceId);
+    // Add a slight delay to show drag styling
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-space-id="${spaceId}"]`) as HTMLElement;
+      if (el) el.style.opacity = "0.5";
+    });
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    // Reset opacity on previously dragged item
+    if (draggedSpaceId) {
+      const el = document.querySelector(`[data-space-id="${draggedSpaceId}"]`) as HTMLElement;
+      if (el) el.style.opacity = "1";
+    }
+    setDraggedSpaceId(null);
+    setDragOverSpaceId(null);
+    setDropPosition(null);
+  }, [draggedSpaceId]);
+
+  const handleDragOver = useCallback((e: React.DragEvent, spaceId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const pos = e.clientY < midY ? "above" : "below";
+
+    setDragOverSpaceId(spaceId);
+    setDropPosition(pos);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverSpaceId(null);
+    setDropPosition(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetSpaceId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData("text/plain");
+    if (!sourceId || sourceId === targetSpaceId) {
+      handleDragEnd();
+      return;
+    }
+
+    const sourceSpace = spaces.find((s) => s.id === sourceId);
+    const targetSpace = spaces.find((s) => s.id === targetSpaceId);
+    if (!sourceSpace || !targetSpace) {
+      handleDragEnd();
+      return;
+    }
+
+    // Only reorder siblings (same parent)
+    const parentId = targetSpace.parentSpaceId ?? null;
+    const siblings = getChildren(parentId);
+    const filteredSiblings = siblings.filter((s) => s.id !== sourceId);
+
+    const targetIndex = filteredSiblings.findIndex((s) => s.id === targetSpaceId);
+    const insertIndex = dropPosition === "above" ? targetIndex : targetIndex + 1;
+
+    // Build new order
+    const reordered = [...filteredSiblings];
+    reordered.splice(insertIndex, 0, { ...sourceSpace, parentSpaceId: parentId });
+
+    const items = reordered.map((s, i) => ({ id: s.id, order: i }));
+
+    // If the source is moving to a different parent, update parentSpaceId too
+    if ((sourceSpace.parentSpaceId ?? null) !== parentId) {
+      updateSpaceMutation.mutate({
+        id: sourceId,
+        data: { parentSpaceId: parentId, order: insertIndex },
+      });
+      // Reorder the remaining items
+      const remainingItems = items.filter((item) => item.id !== sourceId);
+      if (remainingItems.length > 0) {
+        reorderMutation.mutate(remainingItems);
+      }
+    } else {
+      reorderMutation.mutate(items);
+    }
+
+    handleDragEnd();
+  }, [spaces, dropPosition, getChildren, handleDragEnd, reorderMutation, updateSpaceMutation]);
+
+  const hiddenCount = spaces.filter((s) => s.isHidden).length;
+
   const renderSpaceRow = (space: TaskSpace, depth: number) => {
     const children = getChildren(space.id);
+    const visibleChildren = showHidden ? children : children.filter((c) => !c.isHidden);
     const isCollapsed = collapsedSpaces.has(space.id);
-    const showChevron = children.length > 0;
+    const showChevron = visibleChildren.length > 0;
     const paddingLeft = depth === 0 ? "pl-0" : depth === 1 ? "pl-4" : depth === 2 ? "pl-7" : "pl-10";
+    const isHidden = space.isHidden;
+    const isDragOver = dragOverSpaceId === space.id;
+    const isDragging = draggedSpaceId === space.id;
 
     return (
       <div key={space.id} className="space-y-1">
+        {/* Drop indicator above */}
+        {isDragOver && dropPosition === "above" && (
+          <div className="h-0.5 bg-primary rounded-full mx-2" />
+        )}
         <div
-          className={`flex items-center gap-1 rounded-md hover:bg-accent transition-colors ${
+          data-space-id={space.id}
+          draggable
+          onDragStart={(e) => handleDragStart(e, space.id)}
+          onDragEnd={handleDragEnd}
+          onDragOver={(e) => handleDragOver(e, space.id)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, space.id)}
+          className={`flex items-center gap-1 rounded-md hover:bg-accent transition-colors group ${
             selectedSpaceId === space.id ? "bg-accent" : ""
-          } ${paddingLeft}`}
+          } ${paddingLeft} ${isHidden ? "opacity-50" : ""} ${isDragging ? "opacity-30" : ""}`}
         >
+          {/* Drag handle */}
+          <div className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0">
+            <GripVertical className="w-3 h-3 text-muted-foreground" />
+          </div>
+
           {showChevron ? (
             <Button
               variant="ghost"
@@ -188,6 +330,7 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
           >
             <span className="text-lg">{space.icon}</span>
             <span className="flex-1 truncate">{space.name}</span>
+            {isHidden && <EyeOff className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
           </button>
 
           <DropdownMenu>
@@ -200,6 +343,21 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
               <DropdownMenuItem onClick={() => setEditingSpace(space)}>
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => toggleHideMutation.mutate({ id: space.id, isHidden: !isHidden })}
+              >
+                {isHidden ? (
+                  <>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Show
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="w-4 h-4 mr-2" />
+                    Hide
+                  </>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
@@ -215,10 +373,14 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        {/* Drop indicator below */}
+        {isDragOver && dropPosition === "below" && (
+          <div className="h-0.5 bg-primary rounded-full mx-2" />
+        )}
 
-        {children.length > 0 && !isCollapsed && (
+        {visibleChildren.length > 0 && !isCollapsed && (
           <div className="space-y-1">
-            {children.map((child) => renderSpaceRow(child, depth + 1))}
+            {visibleChildren.map((child) => renderSpaceRow(child, depth + 1))}
           </div>
         )}
       </div>
@@ -238,6 +400,7 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
   }
 
   const topLevelSpaces = getChildren(null);
+  const visibleTopLevel = showHidden ? topLevelSpaces : topLevelSpaces.filter((s) => !s.isHidden);
   const parentSpaceOptions = flattenSpaceOptions();
   const editParentExcludeIds =
     editingSpace
@@ -344,8 +507,28 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
 
       {/* Spaces List */}
       <div className="space-y-1">
-        {topLevelSpaces.map((space) => renderSpaceRow(space, 0))}
+        {visibleTopLevel.map((space) => renderSpaceRow(space, 0))}
       </div>
+
+      {/* Show/Hide hidden spaces toggle */}
+      {hiddenCount > 0 && (
+        <button
+          onClick={() => setShowHidden(!showHidden)}
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 w-full"
+        >
+          {showHidden ? (
+            <>
+              <EyeOff className="w-3 h-3" />
+              Hide {hiddenCount} hidden space{hiddenCount !== 1 ? "s" : ""}
+            </>
+          ) : (
+            <>
+              <Eye className="w-3 h-3" />
+              Show {hiddenCount} hidden space{hiddenCount !== 1 ? "s" : ""}
+            </>
+          )}
+        </button>
+      )}
 
       {/* Edit Space Dialog */}
       <Dialog open={!!editingSpace} onOpenChange={() => setEditingSpace(null)}>
@@ -420,4 +603,3 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     </div>
   );
 }
-
