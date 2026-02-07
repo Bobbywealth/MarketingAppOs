@@ -236,8 +236,8 @@ const salesAgentTools: SidebarNavItem[] = [
   },
 ];
 
-// Reordered for better workflow logic - Team communication tools together
-const communicationTools: SidebarNavItem[] = [
+// Core items always visible at the top for quick access
+const coreTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
     url: "/dashboard-admin",
@@ -246,12 +246,30 @@ const communicationTools: SidebarNavItem[] = [
     sidebarKey: "dashboard" as const,
   },
   {
-    title: "User Management",
-    url: "/team",
-    icon: UsersRound,
-    permission: "canManageUsers" as const,
-    sidebarKey: "team" as const,
+    title: "Clients",
+    url: "/clients",
+    icon: Users,
+    permission: "canManageClients" as const,
+    sidebarKey: "clients" as const,
   },
+  {
+    title: "Leads",
+    url: "/leads",
+    icon: UserPlus,
+    permission: "canManageLeads" as const,
+    sidebarKey: "leads" as const,
+  },
+  {
+    title: "Tasks",
+    url: "/tasks",
+    icon: ListTodo,
+    permission: null,
+    sidebarKey: "tasks" as const,
+  },
+];
+
+// Communication tools grouped together
+const communicationTools: SidebarNavItem[] = [
   {
     title: "Messages",
     url: "/messages",
@@ -276,7 +294,7 @@ const communicationTools: SidebarNavItem[] = [
     sidebarKey: "phone" as const,
   },
   {
-    title: "My Calendar",
+    title: "Calendar",
     url: "/company-calendar",
     icon: Calendar,
     permission: null,
@@ -284,21 +302,8 @@ const communicationTools: SidebarNavItem[] = [
   },
 ];
 
-const growthTools: SidebarNavItem[] = [
-  {
-    title: "Leads",
-    url: "/leads",
-    icon: UserPlus,
-    permission: "canManageLeads" as const,
-    sidebarKey: "leads" as const,
-  },
-  {
-    title: "Marketing Center",
-    url: "/marketing-center",
-    icon: Zap,
-    roles: ["admin"] as const,
-    sidebarKey: "marketingCenter" as const,
-  },
+// Marketing & Content - merged from Growth + Content/Creators
+const marketingContentTools: SidebarNavItem[] = [
   {
     title: "Campaigns",
     url: "/campaigns",
@@ -307,16 +312,12 @@ const growthTools: SidebarNavItem[] = [
     sidebarKey: "campaigns" as const,
   },
   {
-    title: "Website Projects",
-    url: "/website-projects",
-    icon: Globe,
-    permission: "canManageClients" as const,
-    sidebarKey: "websiteProjects" as const,
-    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
+    title: "Marketing Center",
+    url: "/marketing-center",
+    icon: Zap,
+    roles: ["admin"] as const,
+    sidebarKey: "marketingCenter" as const,
   },
-];
-
-const contentCreatorsTools: SidebarNavItem[] = [
   {
     title: "Content Calendar",
     url: "/content",
@@ -349,93 +350,17 @@ const contentCreatorsTools: SidebarNavItem[] = [
     roles: ["admin", "manager", "staff", "creator_manager"] as const,
   },
   {
-    title: "Payouts",
-    url: "/admin/creators/payouts",
-    icon: DollarSign,
-    permission: "canManageInvoices" as const,
-    sidebarKey: "invoices" as const,
-    roles: ["admin", "manager"] as const,
-  },
-  {
-    title: "Manage Courses",
-    url: "/admin/manage-courses",
-    icon: BookOpen,
-    roles: ["admin"] as const,
-    sidebarKey: "training" as const,
-  },
-  {
-    title: "AI Digital Twin",
-    url: "/admin/second-me",
-    icon: Sparkles,
+    title: "Website Projects",
+    url: "/website-projects",
+    icon: Globe,
     permission: "canManageClients" as const,
-    sidebarKey: "secondMe" as const,
+    sidebarKey: "websiteProjects" as const,
     roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
   },
 ];
 
-const managementTools: SidebarNavItem[] = [
-  {
-    title: "Clients",
-    url: "/clients",
-    icon: Users,
-    permission: "canManageClients" as const,
-    sidebarKey: "clients" as const,
-  },
-  {
-    title: "Tasks",
-    url: "/tasks",
-    icon: ListTodo,
-    permission: null,
-    sidebarKey: "tasks" as const,
-  },
-  {
-    title: "Support Tickets",
-    url: "/tickets",
-    icon: Ticket,
-    permission: "canManageTickets" as const,
-    sidebarKey: "tickets" as const,
-  },
-  {
-    title: "Onboarding",
-    url: "/onboarding",
-    icon: ClipboardCheck,
-    permission: "canManageClients" as const,
-    sidebarKey: "onboarding" as const,
-    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
-  },
-];
-
-const intelligenceFinanceTools: SidebarNavItem[] = [
-  {
-    title: "Analytics",
-    url: "/analytics",
-    icon: BarChart3,
-    permission: "canManageClients" as const,
-    sidebarKey: "analytics" as const,
-    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
-  },
-  {
-    title: "Password Vault",
-    url: "/admin/vault",
-    icon: KeyRound,
-    roles: ["admin"] as const,
-    sidebarKey: "vault" as const,
-  },
-  {
-    title: "Debug Logs",
-    url: "/admin/debug-logs",
-    icon: FileText,
-    roles: ["admin"] as const,
-    sidebarKey: "debugLogs" as const,
-  },
-  {
-    title: "Social Stats",
-    url: "/admin/social-stats",
-    icon: LineChart,
-    permission: "canManageClients" as const,
-    sidebarKey: "socialStats" as const,
-    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
-  },
+// Finance & Billing - consolidated financial tools
+const financeBillingTools: SidebarNavItem[] = [
   {
     title: "Invoices & Billing",
     url: "/invoices",
@@ -451,6 +376,14 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     sidebarKey: "commissions" as const,
   },
   {
+    title: "Payouts",
+    url: "/admin/creators/payouts",
+    icon: DollarSign,
+    permission: "canManageInvoices" as const,
+    sidebarKey: "invoices" as const,
+    roles: ["admin", "manager"] as const,
+  },
+  {
     title: "Subscription Packages",
     url: "/subscription-packages",
     icon: Package,
@@ -464,10 +397,22 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     roles: ["admin"] as const,
     sidebarKey: "discountCodes" as const,
   },
+];
+
+// AI Tools - consolidated AI features
+const aiTools: SidebarNavItem[] = [
+  {
+    title: "AI Digital Twin",
+    url: "/admin/second-me",
+    icon: Sparkles,
+    permission: "canManageClients" as const,
+    sidebarKey: "secondMe" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
+  },
   {
     title: "AI Business Manager",
     url: "/admin/ai-manager",
-    icon: Sparkles,
+    icon: Bot,
     roles: ["admin"] as const,
     sidebarKey: "aiManager" as const,
   },
@@ -478,6 +423,33 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     roles: ["admin"] as const,
     sidebarKey: "aiContentGenerator" as const,
   },
+];
+
+// Administration - less frequently used management tools
+const administrationTools: SidebarNavItem[] = [
+  {
+    title: "User Management",
+    url: "/team",
+    icon: UsersRound,
+    permission: "canManageUsers" as const,
+    sidebarKey: "team" as const,
+  },
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
+    permission: "canManageClients" as const,
+    sidebarKey: "analytics" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
+  },
+  {
+    title: "Social Stats",
+    url: "/admin/social-stats",
+    icon: LineChart,
+    permission: "canManageClients" as const,
+    sidebarKey: "socialStats" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
+  },
   {
     title: "Training",
     url: "/training",
@@ -486,103 +458,47 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
     sidebarKey: "training" as const,
   },
   {
+    title: "Manage Courses",
+    url: "/admin/manage-courses",
+    icon: BookOpen,
+    roles: ["admin"] as const,
+    sidebarKey: "training" as const,
+  },
+  {
+    title: "Onboarding",
+    url: "/onboarding",
+    icon: ClipboardCheck,
+    permission: "canManageClients" as const,
+    sidebarKey: "onboarding" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
+  },
+  {
+    title: "Support Tickets",
+    url: "/tickets",
+    icon: Ticket,
+    permission: "canManageTickets" as const,
+    sidebarKey: "tickets" as const,
+  },
+  {
     title: "Push Notifications",
     url: "/push-notifications",
     icon: Bell,
     roles: ["admin", "manager", "staff"] as const,
     sidebarKey: "pushNotifications" as const,
   },
-];
-
-// Merged tool groups for simplified navigation
-const aiSuiteTools: SidebarNavItem[] = [
   {
-    title: "AI Suite",
-    icon: Sparkles,
-    subItems: [
-      {
-        title: "Digital Twin",
-        url: "/admin/second-me",
-        icon: Sparkles,
-      },
-      {
-        title: "Business Manager",
-        url: "/admin/ai-manager",
-        icon: Bot,
-      },
-      {
-        title: "Content Generator",
-        url: "/admin/ai-content-generator",
-        icon: Bot,
-      },
-    ],
+    title: "Password Vault",
+    url: "/admin/vault",
+    icon: KeyRound,
+    roles: ["admin"] as const,
+    sidebarKey: "vault" as const,
   },
-];
-
-const billingFinanceTools: SidebarNavItem[] = [
   {
-    title: "Billing & Finance",
-    icon: DollarSign,
-    subItems: [
-      {
-        title: "Invoices & Billing",
-        url: "/invoices",
-        icon: DollarSign,
-      },
-      {
-        title: "Commissions",
-        url: "/commissions",
-        icon: TrendingUp,
-      },
-      {
-        title: "Subscription Packages",
-        url: "/subscription-packages",
-        icon: Package,
-      },
-      {
-        title: "Discount Codes",
-        url: "/discount-codes",
-        icon: Percent,
-      },
-    ],
-  },
-];
-
-const analyticsReportsTools: SidebarNavItem[] = [
-  {
-    title: "Analytics & Reports",
-    icon: BarChart3,
-    subItems: [
-      {
-        title: "Analytics Overview",
-        url: "/analytics",
-        icon: BarChart3,
-      },
-      {
-        title: "Social Stats",
-        url: "/admin/social-stats",
-        icon: LineChart,
-      },
-    ],
-  },
-];
-
-const trainingCoursesTools: SidebarNavItem[] = [
-  {
-    title: "Training & Courses",
-    icon: BookOpen,
-    subItems: [
-      {
-        title: "Training Materials",
-        url: "/training",
-        icon: BookOpen,
-      },
-      {
-        title: "Manage Courses",
-        url: "/admin/manage-courses",
-        icon: BookOpen,
-      },
-    ],
+    title: "Debug Logs",
+    url: "/admin/debug-logs",
+    icon: FileText,
+    roles: ["admin"] as const,
+    sidebarKey: "debugLogs" as const,
   },
 ];
 
@@ -1260,117 +1176,40 @@ export function AppSidebar() {
     );
   }
 
+  // Shared filter function for role/permission checking
+  const filterByAccess = (item: SidebarNavItem) => {
+    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) return false;
+    if (item.roles && !item.roles.includes(effectiveRole as any)) return false;
+    if (!item.permission) return true;
+    return canAccess(item.permission);
+  };
+
   // For staff/managers/admins, show full menu
-  const filteredCommunication = communicationTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
+  const filteredCore = coreTools.filter(filterByAccess);
+  const filteredCommunication = communicationTools.filter(filterByAccess);
+  const filteredMarketingContent = marketingContentTools.filter(filterByAccess);
+  const filteredFinanceBilling = financeBillingTools.filter(filterByAccess);
+  const filteredAiTools = aiTools.filter(filterByAccess);
+  const filteredAdministration = administrationTools.filter(filterByAccess);
 
-  const filteredGrowth = growthTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  const filteredContentCreators = contentCreatorsTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  const filteredManagement = managementTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  const filteredIntelligenceFinance = intelligenceFinanceTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  // Filter merged groups (these don't need role/permission filtering as they're pre-configured)
-  const filteredAiSuite = aiSuiteTools;
-  const filteredBillingFinance = billingFinanceTools;
-  const filteredAnalyticsReports = analyticsReportsTools;
-  const filteredTrainingCourses = trainingCoursesTools;
-
-  // Split communication for better organization
+  // Search filter
   const matchesFilter = (item: SidebarNavItem) =>
     item.title.toLowerCase().includes(normalizedFilter);
 
-  // Also check subItems for filter matching
-  const matchesFilterDeep = (item: SidebarNavItem) => {
-    if (matchesFilter(item)) return true;
-    if (item.subItems) {
-      return item.subItems.some(subItem => matchesFilter(subItem));
-    }
-    return false;
-  };
+  const visibleCore = hasFilter ? filteredCore.filter(matchesFilter) : filteredCore;
+  const visibleCommunication = hasFilter ? filteredCommunication.filter(matchesFilter) : filteredCommunication;
+  const visibleMarketingContent = hasFilter ? filteredMarketingContent.filter(matchesFilter) : filteredMarketingContent;
+  const visibleFinanceBilling = hasFilter ? filteredFinanceBilling.filter(matchesFilter) : filteredFinanceBilling;
+  const visibleAiTools = hasFilter ? filteredAiTools.filter(matchesFilter) : filteredAiTools;
+  const visibleAdministration = hasFilter ? filteredAdministration.filter(matchesFilter) : filteredAdministration;
 
-  const visibleCommunication = hasFilter
-    ? filteredCommunication.filter(matchesFilter)
-    : filteredCommunication;
-  const visibleGrowth = hasFilter ? filteredGrowth.filter(matchesFilter) : filteredGrowth;
-  const visibleContentCreators = hasFilter
-    ? filteredContentCreators.filter(matchesFilter)
-    : filteredContentCreators;
-  const visibleManagement = hasFilter
-    ? filteredManagement.filter(matchesFilter)
-    : filteredManagement;
-  const visibleIntelligenceFinance = hasFilter
-    ? filteredIntelligenceFinance.filter(matchesFilter)
-    : filteredIntelligenceFinance;
-
-  // Filter merged groups
-  const visibleAiSuite = hasFilter ? filteredAiSuite.filter(matchesFilterDeep) : filteredAiSuite;
-  const visibleBillingFinance = hasFilter ? filteredBillingFinance.filter(matchesFilterDeep) : filteredBillingFinance;
-  const visibleAnalyticsReports = hasFilter ? filteredAnalyticsReports.filter(matchesFilterDeep) : filteredAnalyticsReports;
-  const visibleTrainingCourses = hasFilter ? filteredTrainingCourses.filter(matchesFilterDeep) : filteredTrainingCourses;
-
-  // Calculate total visible items including merged groups
   const totalVisibleItems =
+    visibleCore.length +
     visibleCommunication.length +
-    visibleGrowth.length +
-    visibleContentCreators.length +
-    visibleManagement.length +
-    visibleIntelligenceFinance.length +
-    visibleAiSuite.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
-    visibleBillingFinance.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
-    visibleAnalyticsReports.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
-    visibleTrainingCourses.reduce((sum, item) => sum + (item.subItems?.length || 1), 0);
-
-  const topLevelItems = visibleCommunication.filter(item => 
-    ["dashboard", "team"].includes(item.sidebarKey)
-  );
-  
-  const communicationGroupItems = visibleCommunication.filter(item => 
-    !["dashboard", "team"].includes(item.sidebarKey)
-  );
+    visibleMarketingContent.length +
+    visibleFinanceBilling.length +
+    visibleAiTools.length +
+    visibleAdministration.length;
 
   return (
     <Sidebar 
@@ -1457,14 +1296,14 @@ export function AppSidebar() {
             )}
           </div>
         )}
-        {/* Main Section - Top Level Items */}
+        {/* Core Items - Always visible at the top */}
         <SidebarGroup className="mt-2">
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Overview
+            Main
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {topLevelItems.map((item) => (
+              {visibleCore.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <NavItem
                     item={item}
@@ -1483,18 +1322,17 @@ export function AppSidebar() {
           <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
         </div>
 
-        {/* Organized Groups */}
+        {/* Collapsible Groups */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Tools & Operations
+            Tools
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {/* Communication Group */}
-              <NavCollapsibleGroup 
+              <NavCollapsibleGroup
                 title="Communication"
                 icon={MessageSquare}
-                items={communicationGroupItems}
+                items={visibleCommunication}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
@@ -1502,35 +1340,10 @@ export function AppSidebar() {
                 forceOpen={hasFilter}
               />
 
-              {/* Growth Group */}
-              <NavCollapsibleGroup 
-                title="Growth & Sales"
-                icon={Zap}
-                items={visibleGrowth}
-                location={location}
-                isCollapsed={isCollapsed}
-                onClick={handleNavClick}
-                getBadgeCount={getBadgeCount}
-                forceOpen={hasFilter}
-              />
-
-              {/* Creators Group */}
-              <NavCollapsibleGroup 
-                title="Creators & Content"
-                icon={Sparkles}
-                items={visibleContentCreators}
-                location={location}
-                isCollapsed={isCollapsed}
-                onClick={handleNavClick}
-                getBadgeCount={getBadgeCount}
-                forceOpen={hasFilter}
-              />
-
-              {/* Management Group */}
               <NavCollapsibleGroup
-                title="Operations"
-                icon={ClipboardCheck}
-                items={visibleManagement}
+                title="Marketing & Content"
+                icon={Megaphone}
+                items={visibleMarketingContent}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
@@ -1538,24 +1351,10 @@ export function AppSidebar() {
                 forceOpen={hasFilter}
               />
 
-              {/* Merged Groups for Simplified Navigation */}
-              {/* AI Suite Group */}
               <NavCollapsibleGroup
-                title="AI Suite"
-                icon={Sparkles}
-                items={visibleAiSuite}
-                location={location}
-                isCollapsed={isCollapsed}
-                onClick={handleNavClick}
-                getBadgeCount={getBadgeCount}
-                forceOpen={hasFilter}
-              />
-
-              {/* Billing & Finance Group */}
-              <NavCollapsibleGroup
-                title="Billing & Finance"
+                title="Finance & Billing"
                 icon={DollarSign}
-                items={visibleBillingFinance}
+                items={visibleFinanceBilling}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
@@ -1563,11 +1362,21 @@ export function AppSidebar() {
                 forceOpen={hasFilter}
               />
 
-              {/* Training & Courses Group */}
               <NavCollapsibleGroup
-                title="Training & Courses"
-                icon={BookOpen}
-                items={visibleTrainingCourses}
+                title="AI Tools"
+                icon={Sparkles}
+                items={visibleAiTools}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleNavClick}
+                getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
+              />
+
+              <NavCollapsibleGroup
+                title="Administration"
+                icon={Settings}
+                items={visibleAdministration}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
