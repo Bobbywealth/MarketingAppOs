@@ -517,12 +517,14 @@ export default function TasksPage() {
   };
 
   const completedHiddenByToggle = !showCompleted
-    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
+    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed" && !t.isRecurring).length
     : 0;
 
   const filteredTasks = useMemo(() => {
     const filtered = tasks.filter((task) => {
       if (!matchesBaseFilters(task)) return false;
+      // Always hide completed recurring tasks — a new instance already exists
+      if (task.status === "completed" && task.isRecurring) return false;
       if (!showCompleted && task.status === "completed") return false;
       return true;
     });
