@@ -1070,7 +1070,51 @@ export default function TasksPage() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 h-full min-h-0 p-4 overflow-x-auto overflow-y-hidden">
         {columns.map((column) => {
-          const columnTasks = filteredTasks.filter((task) => task.status === column.id);
+          let columnTasks = filteredTasks.filter((task) => task.status === column.id);
+
+          // Deduplicate completed recurring tasks: only show the most recent
+          // completed instance per recurring series to prevent the column from
+          // filling up with identical daily/weekly entries.
+          if (column.id === "completed") {
+            const recurringGroups = new Map<string, Task>();
+            const nonRecurring: Task[] = [];
+
+            for (const task of columnTasks) {
+              if (task.isRecurring) {
+                const seriesKey = [
+                  task.title,
+                  task.assignedToId ?? "",
+                  task.clientId ?? "",
+                  task.spaceId ?? "",
+                  task.recurringPattern ?? "",
+                ].join("|");
+
+                const existing = recurringGroups.get(seriesKey);
+                if (!existing) {
+                  recurringGroups.set(seriesKey, task);
+                } else {
+                  const taskTime = task.completedAt
+                    ? new Date(task.completedAt).getTime()
+                    : task.dueDate
+                      ? new Date(task.dueDate).getTime()
+                      : 0;
+                  const existingTime = existing.completedAt
+                    ? new Date(existing.completedAt).getTime()
+                    : existing.dueDate
+                      ? new Date(existing.dueDate).getTime()
+                      : 0;
+                  if (taskTime > existingTime) {
+                    recurringGroups.set(seriesKey, task);
+                  }
+                }
+              } else {
+                nonRecurring.push(task);
+              }
+            }
+
+            columnTasks = [...nonRecurring, ...recurringGroups.values()];
+          }
+
           const isDragTarget = draggedTask && draggedTask.status !== column.id;
 
           return (
