@@ -27,14 +27,18 @@ export default function AdminDashboard() {
     if (!isAdmin) navigate(getDefaultDashboardPath(role));
   }, [isAdmin, navigate, role]);
   
-  const { data: stats, isLoading, error, refetch } = useQuery({
+  const { data: stats, isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["/api/dashboard/admin-stats"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
     retry: 3,
-    onSuccess: () => {
-      setLastUpdatedAt(new Date());
-    },
   });
+
+  // Track when data was last refreshed (onSuccess removed in React Query v5)
+  useEffect(() => {
+    if (dataUpdatedAt > 0) {
+      setLastUpdatedAt(new Date(dataUpdatedAt));
+    }
+  }, [dataUpdatedAt]);
 
   const { data: stripeData } = useQuery({
     queryKey: ["/api/stripe/dashboard"],

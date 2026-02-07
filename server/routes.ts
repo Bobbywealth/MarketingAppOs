@@ -1153,10 +1153,10 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   });
 
   // Dashboard stats - OPTIMIZED
-  const dashboardStatsHandler = async (_req: Request, res: Response) => {
+  const dashboardStatsHandler = async (req: Request, res: Response) => {
     try {
       console.log("🔍 Dashboard API called - fetching data...");
-      
+
       // Parse pagination parameters from query string
       const limit = parseInt(req.query.limit as string) || 100;
       const offset = parseInt(req.query.offset as string) || 0;
@@ -1294,7 +1294,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
           upcomingDeadlines.push({
             title: task.title,
             date: formatDeadlineDate(task.dueDate),
-            urgent: daysUntil <= 3,
+            urgent: daysUntil < 0,
+            soon: daysUntil >= 0 && daysUntil <= 3,
             timestamp: task.dueDate,
           });
         });
@@ -1309,6 +1310,12 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
         activeCampaigns,
         pipelineValue,
         monthlyRevenue,
+        totalLeads: leads.length,
+        // Percentage change indicators (static for now — historical tracking needed for real deltas)
+        clientsChange: "0",
+        campaignsChange: "0",
+        pipelineChange: "0",
+        revenueChange: "0",
         recentActivity: sortedActivity,
         upcomingDeadlines: sortedDeadlines,
         taskMetrics: {
