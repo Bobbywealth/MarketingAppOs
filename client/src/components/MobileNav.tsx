@@ -58,10 +58,10 @@ export function MobileNav() {
   const getNavItems = () => {
     if (role === 'client') {
       return [
-        { title: "Home", url: "/client", icon: LayoutDashboard },
-        { title: "Campaigns", url: "/client/campaigns", icon: Megaphone },
-        { title: "Content", url: "/client/content", icon: Calendar },
-        { title: "Second Me", url: "/client/second-me", icon: Sparkles },
+        { title: "Home", url: "/client-dashboard", icon: LayoutDashboard },
+        { title: "Campaigns", url: "/client-campaigns", icon: Megaphone },
+        { title: "Content", url: "/client-content", icon: Calendar },
+        { title: "Second Me", url: "/second-me", icon: Sparkles },
         { title: "Tickets", url: "/tickets", icon: Ticket },
       ];
     }
@@ -93,8 +93,8 @@ export function MobileNav() {
     if (role === "client") {
       return [
         { label: "Go to Tickets", url: "/tickets" },
-        { label: "Go to Campaigns", url: "/client/campaigns" },
-        { label: "Go to Content", url: "/client/content" },
+        { label: "Go to Campaigns", url: "/client-campaigns" },
+        { label: "Go to Content", url: "/client-content" },
         { label: "Settings", url: "/settings" },
       ];
     }
@@ -295,7 +295,6 @@ export function MobileNav() {
     </>
   );
 }
-
 
 
 

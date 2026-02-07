@@ -109,32 +109,32 @@ type SubNavItem = {
 const clientTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
-    url: "/client",
+    url: "/client-dashboard",
     icon: LayoutDashboard,
   },
   {
     title: "My Campaigns",
-    url: "/client/campaigns",
+    url: "/client-campaigns",
     icon: Megaphone,
   },
   {
     title: "My Content",
-    url: "/client/content",
+    url: "/client-content",
     icon: Calendar,
   },
   {
     title: "Analytics",
-    url: "/client/analytics",
+    url: "/client-analytics",
     icon: BarChart3,
   },
   {
     title: "Billing",
-    url: "/client/billing",
+    url: "/client-billing",
     icon: DollarSign,
   },
   {
     title: "AI Digital Twin",
-    url: "/client/second-me",
+    url: "/second-me",
     icon: Sparkles,
   },
   {
@@ -411,7 +411,7 @@ const financeBillingTools: SidebarNavItem[] = [
 const aiTools: SidebarNavItem[] = [
   {
     title: "AI Digital Twin",
-    url: "/admin/second-me",
+    url: "/admin-second-me",
     icon: Sparkles,
     permission: "canManageClients" as const,
     sidebarKey: "secondMe" as const,
