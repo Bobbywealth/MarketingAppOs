@@ -78,140 +78,162 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
   onCall,
   onAIAnalyze,
   onAIDraftOutreach,
-  onSendPaymentLink
+  onSendPaymentLink,
+  onConvert
 }) => {
   return (
-    <div className="overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
+    <div className="overflow-hidden bg-background rounded-xl border shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/50">
+            <tr className="border-b bg-muted/50">
               <th className="p-4 w-[40px]">
-                <button 
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectAll();
-                  }} 
-                  className="p-1 hover:bg-slate-200 rounded-md transition-colors"
+                  }}
+                  className="p-1 hover:bg-accent rounded-md transition-colors"
                 >
                   {selectedLeads.size === leads.length && leads.length > 0 ? (
-                    <CheckSquare className="w-4 h-4 text-blue-600" />
+                    <CheckSquare className="w-4 h-4 text-primary" />
                   ) : (
-                    <Square className="w-4 h-4 text-slate-300" />
+                    <Square className="w-4 h-4 text-muted-foreground/50" />
                   )}
                 </button>
               </th>
-              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Company</th>
-              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
-              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Industry</th>
-              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Activity</th>
-              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Next Action</th>
-              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Owner</th>
+              <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Company</th>
+              <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact</th>
+              <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Industry</th>
+              <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Last Activity</th>
+              <th className="p-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Follow-up</th>
               <th className="p-4 text-right w-[140px]"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {leads.map((lead) => (
-              <tr 
+              <tr
                 key={lead.id}
-                className={`group hover:bg-slate-50/80 cursor-pointer transition-colors ${
-                  selectedLeads.has(lead.id) ? 'bg-blue-50/30' : ''
+                className={`group hover:bg-muted/50 cursor-pointer transition-colors ${
+                  selectedLeads.has(lead.id) ? 'bg-primary/5' : ''
                 }`}
                 onClick={() => onLeadClick(lead)}
               >
                 <td className="p-4">
                   <button
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onToggleSelection(lead.id);
                     }}
-                    className={`p-1 hover:bg-slate-200 rounded-md transition-colors ${
+                    className={`p-1 hover:bg-accent rounded-md transition-colors ${
                       !selectedLeads.has(lead.id) ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
                     }`}
                   >
                     {selectedLeads.has(lead.id) ? (
-                      <CheckSquare className="w-4 h-4 text-blue-600" />
+                      <CheckSquare className="w-4 h-4 text-primary" />
                     ) : (
-                      <Square className="w-4 h-4 text-slate-300" />
+                      <Square className="w-4 h-4 text-muted-foreground/50" />
                     )}
                   </button>
                 </td>
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden font-bold text-slate-500 text-xs">
+                    <div className="h-10 w-10 rounded-lg bg-muted border flex items-center justify-center shrink-0 overflow-hidden font-bold text-muted-foreground text-xs">
                       {lead.company?.substring(0, 2).toUpperCase() || "??"}
                     </div>
                     <div>
                       <div className="flex items-center">
-                        <span className="font-semibold text-slate-900 text-sm">
+                        <span className="font-semibold text-foreground text-sm">
                           {lead.company || "N/A"}
                         </span>
                         {getScoreBadge(lead.score)}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 font-normal bg-slate-50 text-slate-500 border-slate-200">
-                          {lead.source?.replace('_', ' ') || "Direct"}
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 py-0 font-normal">
+                          {lead.source?.replace(/_/g, ' ') || "Direct"}
                         </Badge>
                       </div>
                     </div>
                   </div>
                 </td>
                 <td className="p-4">
-                  <div className="text-sm font-medium text-slate-900">{lead.name}</div>
+                  <div className="text-sm font-medium text-foreground">{lead.name}</div>
                   <div className="flex items-center gap-2 mt-1">
-                    {lead.email && <Mail className="w-3.5 h-3.5 text-slate-400" />}
-                    {lead.website && <Globe className="w-3.5 h-3.5 text-slate-400" />}
+                    {lead.email && <Mail className="w-3.5 h-3.5 text-muted-foreground" />}
+                    {lead.website && <Globe className="w-3.5 h-3.5 text-muted-foreground" />}
                   </div>
                 </td>
                 <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs font-normal bg-slate-50 text-slate-600 border-slate-200">
-                      {lead.industry || "General"}
-                    </Badge>
-                    <span className="text-slate-400 text-xs">{lead.source?.replace('_', ' ') || "Website"}</span>
-                  </div>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {lead.industry || "General"}
+                  </Badge>
                 </td>
                 <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center">
-                      <Phone className="w-3.5 h-3.5 text-slate-500" />
+                  {lead.lastContactMethod ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
+                        {lead.lastContactMethod === 'call' && <Phone className="w-3.5 h-3.5 text-muted-foreground" />}
+                        {lead.lastContactMethod === 'email' && <Mail className="w-3.5 h-3.5 text-muted-foreground" />}
+                        {lead.lastContactMethod === 'sms' && <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />}
+                        {lead.lastContactMethod === 'meeting' && <Video className="w-3.5 h-3.5 text-muted-foreground" />}
+                        {!['call', 'email', 'sms', 'meeting'].includes(lead.lastContactMethod) && <Phone className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-foreground capitalize">{lead.lastContactMethod}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {lead.lastContactDate
+                            ? formatDistanceToNow(new Date(lead.lastContactDate), { addSuffix: true })
+                            : lead.updatedAt
+                            ? formatDistanceToNow(new Date(lead.updatedAt), { addSuffix: true })
+                            : 'Recently'}
+                        </div>
+                      </div>
                     </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Not contacted</span>
+                  )}
+                </td>
+                <td className="p-4">
+                  {lead.nextFollowUpDate ? (
                     <div>
-                      <div className="text-sm font-medium text-slate-900">Called</div>
-                      <div className="text-[10px] text-slate-500">{lead.updatedAt ? formatDistanceToNow(new Date(lead.updatedAt), { addSuffix: true }) : 'Recently'}</div>
+                      <div className="text-sm font-medium text-foreground">
+                        {new Date(lead.nextFollowUpDate).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(lead.nextFollowUpDate), { addSuffix: true })}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="text-sm font-medium text-slate-900">Follow up tomorrow</div>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-[10px] text-slate-500">Scheduled next step</span>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-7 w-7 border border-white shadow-sm">
-                      <AvatarImage src={`https://avatar.vercel.sh/${lead.ownerId || 'team'}.png`} />
-                      <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700 font-bold">
-                        {lead.ownerId?.substring(0, 2).toUpperCase() || "TM"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-slate-600 font-medium">Team</span>
-                  </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">No follow-up set</span>
+                  )}
                 </td>
                 <td className="p-4 text-right">
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                      onClick={(e) => { e.stopPropagation(); if (lead.phone) onCall(lead.phone); }}
+                      disabled={!lead.phone}
+                    >
                       <Phone className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                      onClick={(e) => { e.stopPropagation(); if (lead.email) window.location.href = `mailto:${lead.email}`; }}
+                      disabled={!lead.email}
+                    >
                       <Mail className="w-4 h-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50"
                       onClick={(e) => { e.stopPropagation(); onSendPaymentLink(lead); }}
                     >
                       <DollarSign className="w-4 h-4" />
@@ -228,13 +250,23 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
                           <Eye className="w-4 h-4 mr-2" /> View Details
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLogActivity(lead, 'call'); }}>
+                          <PhoneCall className="w-4 h-4 mr-2" /> Log Call
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLogActivity(lead, 'email'); }}>
+                          <Mail className="w-4 h-4 mr-2" /> Log Email
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLogActivity(lead, 'note'); }}>
+                          <FileText className="w-4 h-4 mr-2" /> Add Note
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
                           onClick={(e) => { e.stopPropagation(); onSendPaymentLink(lead); }}
                           className="text-emerald-600 focus:text-emerald-700"
                         >
                           <DollarSign className="w-4 h-4 mr-2" /> Send Payment Link
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={(e) => { e.stopPropagation(); onConvert(lead); }}
                           className="text-blue-600 focus:text-blue-700"
                         >
@@ -244,7 +276,7 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={(e) => { e.stopPropagation(); onDelete(lead); }}
                           className="text-destructive focus:text-destructive"
                         >
