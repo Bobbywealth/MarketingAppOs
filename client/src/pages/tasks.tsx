@@ -516,15 +516,15 @@ export default function TasksPage() {
     return true;
   };
 
-  const completedHiddenByToggle = !showCompleted
-    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed" && !t.isRecurring).length
-    : 0;
+  const hiddenCompletedTasks = !showCompleted
+    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed")
+    : [];
+  const completedHiddenByToggle = hiddenCompletedTasks.length;
+  const recurringHiddenCount = hiddenCompletedTasks.filter((t) => t.isRecurring).length;
 
   const filteredTasks = useMemo(() => {
     const filtered = tasks.filter((task) => {
       if (!matchesBaseFilters(task)) return false;
-      // Always hide completed recurring tasks — a new instance already exists
-      if (task.status === "completed" && task.isRecurring) return false;
       if (!showCompleted && task.status === "completed") return false;
       return true;
     });
@@ -618,6 +618,16 @@ export default function TasksPage() {
   };
 
   const formatStatus = (status: string) => status.replace("_", " ");
+
+  const getRecurrenceLabel = (task: Task) => {
+    if (!task.isRecurring) return null;
+    const interval = task.recurringInterval && task.recurringInterval > 1 ? `every ${task.recurringInterval} ` : "";
+    const pattern = task.recurringPattern || "daily";
+    const unit = task.recurringInterval && task.recurringInterval > 1
+      ? pattern === "daily" ? "days" : pattern === "weekly" ? "weeks" : pattern === "monthly" ? "months" : "years"
+      : pattern;
+    return `Repeats ${interval}${unit}`;
+  };
 
   const SortButton = ({ field, label }: { field: SortField; label: string }) => (
     <button
@@ -1146,7 +1156,21 @@ export default function TasksPage() {
                               </div>
                             )}
                             {task.isRecurring && (
-                              <Repeat className="w-3 h-3 text-blue-500" />
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-1 text-blue-500">
+                                      <Repeat className="w-3 h-3" />
+                                      {task.status === "completed" && (
+                                        <span className="text-[10px] font-medium">{getRecurrenceLabel(task)}</span>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{getRecurrenceLabel(task)}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                           {task.assignedToId && (
@@ -1255,7 +1279,10 @@ export default function TasksPage() {
                     />
                     <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-sm truncate block">{task.title}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-sm truncate">{task.title}</span>
+                        {task.isRecurring && <Repeat className="w-3 h-3 text-blue-500 flex-shrink-0" />}
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         <Badge variant="outline" className={`${getStatusBadge(task.status)} text-[10px] h-4 px-1.5`}>
                           {formatStatus(task.status)}
@@ -1264,6 +1291,9 @@ export default function TasksPage() {
                           <span className={getDueDateClass(task.dueDate, task.status)}>
                             {toLocaleDateStringEST(task.dueDate)}
                           </span>
+                        )}
+                        {task.isRecurring && task.status === "completed" && (
+                          <span className="text-[10px] text-blue-500 font-medium">{getRecurrenceLabel(task)}</span>
                         )}
                       </div>
                     </div>
@@ -1287,7 +1317,23 @@ export default function TasksPage() {
                     <div className="col-span-4 flex items-center gap-2.5 min-w-0">
                       <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                       <span className="truncate text-sm font-medium">{task.title}</span>
-                      {task.isRecurring && <Repeat className="w-3 h-3 text-blue-500 flex-shrink-0" />}
+                      {task.isRecurring && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 text-blue-500 flex-shrink-0">
+                                <Repeat className="w-3 h-3" />
+                                {task.status === "completed" && (
+                                  <span className="text-[10px] font-medium">{getRecurrenceLabel(task)}</span>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{getRecurrenceLabel(task)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {task.checklist && task.checklist.length > 0 && (
                         <span className="text-[10px] text-muted-foreground flex-shrink-0">
                           {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
@@ -1423,7 +1469,23 @@ export default function TasksPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium truncate">{task.title}</h3>
-                    {task.isRecurring && <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
+                    {task.isRecurring && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 text-blue-500 flex-shrink-0">
+                              <Repeat className="w-3.5 h-3.5" />
+                              {task.status === "completed" && (
+                                <span className="text-[10px] font-medium">{getRecurrenceLabel(task)}</span>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{getRecurrenceLabel(task)}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                   {task.description && (
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{task.description}</p>
@@ -1670,6 +1732,9 @@ export default function TasksPage() {
             <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
               <span className="text-muted-foreground">
                 {completedHiddenByToggle} completed task{completedHiddenByToggle !== 1 ? "s" : ""} hidden
+                {recurringHiddenCount > 0 && (
+                  <span className="text-blue-500 font-medium"> ({recurringHiddenCount} recurring)</span>
+                )}
               </span>
               <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowCompleted(true)}>
                 Show
