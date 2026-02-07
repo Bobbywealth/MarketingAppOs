@@ -195,7 +195,18 @@ router.get("/task-spaces/:id/tasks", isAuthenticated, async (req: Request, res: 
 router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    const tasksList = await storage.getTasks(user);
+    const userId = user?.id ? Number(user.id) : null;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+    const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
+    const tasksList = await storage.getTasks();
+
+    if (!isAllAccess && normalizedRole !== "client" && userId) {
+      return res.json(tasksList.filter((t: any) => Number(t.assignedToId) === Number(userId)));
+    }
+    if (normalizedRole === "client") {
+      return res.json(tasksList.filter((t: any) => t.clientId === user.clientId));
+    }
+
     res.json(tasksList);
   } catch (error) {
     console.error("❌ Task fetch error:", error);
