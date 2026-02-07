@@ -33,7 +33,10 @@ router.get("/task-spaces", isAuthenticated, async (req: Request, res: Response) 
     console.log(`📋 Spaces fetch for user: id=${userId}, role=${normalizedRole}`);
 
     // Admin and Managers see all spaces
-    const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
+    const isAllAccess =
+      normalizedRole === "admin" ||
+      normalizedRole === "manager" ||
+      normalizedRole === "creator_manager";
     
     const spaces = isAllAccess
       ? await storage.getTaskSpaces()

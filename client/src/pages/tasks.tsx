@@ -577,6 +577,24 @@ export default function TasksPage() {
     };
   }, [tasks, selectedSpaceId]);
 
+  const formatStatus = (status: string) => status.replace("_", " ");
+
+  const selectedSpaceLabel = useMemo(() => {
+    if (!selectedSpaceId) return null;
+    const space = spaces.find((s) => s.id === selectedSpaceId);
+    return space?.name ?? "Selected space";
+  }, [selectedSpaceId, spaces]);
+
+  const activeFilters = useMemo(() => {
+    const filters: string[] = [];
+    if (filterStatus !== "all") filters.push(`Status: ${formatStatus(filterStatus)}`);
+    if (filterPriority !== "all") filters.push(`Priority: ${filterPriority}`);
+    if (selectedSpaceLabel) filters.push(`Space: ${selectedSpaceLabel}`);
+    if (!showCompleted) filters.push("Completed: hidden");
+    if (searchQuery.trim()) filters.push(`Search: "${searchQuery.trim()}"`);
+    return filters;
+  }, [filterStatus, filterPriority, selectedSpaceLabel, showCompleted, searchQuery]);
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "urgent": return "bg-red-500";
@@ -617,7 +635,6 @@ export default function TasksPage() {
     }
   };
 
-  const formatStatus = (status: string) => status.replace("_", " ");
 
   const getRecurrenceLabel = (task: Task) => {
     if (!task.isRecurring) return null;
@@ -1787,142 +1804,172 @@ export default function TasksPage() {
           )}
 
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[180px] max-w-xs">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search tasks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 pl-9 pr-8 text-sm"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted transition-colors"
-                >
-                  <X className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-              )}
+          <div className="rounded-lg border bg-card/50 p-3 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[180px] max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-9 pl-9 pr-8 text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Button */}
+              <Button
+                variant={isFilterPanelOpen ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+                className="h-9 gap-1.5"
+              >
+                <Filter className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Filters</span>
+                {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
+                  <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px]">
+                    {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
             </div>
 
-            {/* Filter Button */}
-            <Button
-              variant={isFilterPanelOpen ? "default" : "outline"}
-              size="sm"
-              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-              className="h-9 gap-1.5"
-            >
-              <Filter className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Filter</span>
-              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
-                <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[10px]">
-                  {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
-                </Badge>
-              )}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Sort Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline capitalize">{sortBy === "createdAt" ? "Newest" : sortBy === "dueDate" ? "Due Date" : sortBy}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => { setSortBy("createdAt"); setSortOrder("desc"); }}>
+                    Newest First
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy("dueDate"); setSortOrder("asc"); }}>
+                    Due Date (Soonest)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy("priority"); setSortOrder("desc"); }}>
+                    Priority (Highest)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy("title"); setSortOrder("asc"); }}>
+                    Title (A-Z)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy("status"); setSortOrder("asc"); }}>
+                    Status
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {/* Sort Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-1.5">
-                  <ArrowUpDown className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline capitalize">{sortBy === "createdAt" ? "Newest" : sortBy === "dueDate" ? "Due Date" : sortBy}</span>
+              {/* View Mode Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                    {viewMode === "kanban" && <LayoutGrid className="w-3.5 h-3.5" />}
+                    {viewMode === "list" && <List className="w-3.5 h-3.5" />}
+                    {viewMode === "compact" && <AlignLeft className="w-3.5 h-3.5" />}
+                    <span className="hidden sm:inline capitalize">{viewMode}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setViewMode("kanban")}>
+                    <LayoutGrid className="w-4 h-4 mr-2" /> Kanban
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setViewMode("list")}>
+                    <List className="w-4 h-4 mr-2" /> List
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setViewMode("compact")}>
+                    <AlignLeft className="w-4 h-4 mr-2" /> Compact
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* More Options */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isAdminOrManager && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => backfillRecurringMutation.mutate()}
+                        disabled={backfillRecurringMutation.isPending}
+                      >
+                        <Repeat className="w-4 h-4 mr-2" />
+                        {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
+                    <LayoutGrid className="w-4 h-4 mr-2" /> All Spaces
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
+                    <ListTodo className="w-4 h-4 mr-2" /> Manage Spaces
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div className="flex-1" />
+
+              {/* New Task Button */}
+              <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+                setIsCreateDialogOpen(open);
+                if (!open) form.reset();
+              }}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-create-task" size="sm" className="h-9 gap-1.5">
+                    <Plus className="w-4 h-4" />
+                    New Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Create New Task</DialogTitle>
+                    <DialogDescription>Add a new task to your workflow</DialogDescription>
+                  </DialogHeader>
+                  {renderTaskForm((data) => createTaskMutation.mutate(data), createTaskMutation.isPending, "Create Task")}
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {activeFilters.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Active filters:</span>
+                {activeFilters.map((filter) => (
+                  <Badge key={filter} variant="secondary" className="rounded-md">
+                    {filter}
+                  </Badge>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setFilterStatus("all");
+                    setFilterPriority("all");
+                    setSelectedSpaceId(null);
+                    setShowCompleted(true);
+                    setSearchQuery("");
+                  }}
+                  className="h-7 px-2 text-xs text-muted-foreground"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Clear all
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => { setSortBy("createdAt"); setSortOrder("desc"); }}>
-                  Newest First
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setSortBy("dueDate"); setSortOrder("asc"); }}>
-                  Due Date (Soonest)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setSortBy("priority"); setSortOrder("desc"); }}>
-                  Priority (Highest)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setSortBy("title"); setSortOrder("asc"); }}>
-                  Title (A-Z)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setSortBy("status"); setSortOrder("asc"); }}>
-                  Status
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* View Mode Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-1.5">
-                  {viewMode === "kanban" && <LayoutGrid className="w-3.5 h-3.5" />}
-                  {viewMode === "list" && <List className="w-3.5 h-3.5" />}
-                  {viewMode === "compact" && <AlignLeft className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline capitalize">{viewMode}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setViewMode("kanban")}>
-                  <LayoutGrid className="w-4 h-4 mr-2" /> Kanban
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setViewMode("list")}>
-                  <List className="w-4 h-4 mr-2" /> List
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setViewMode("compact")}>
-                  <AlignLeft className="w-4 h-4 mr-2" /> Compact
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* More Options */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {isAdminOrManager && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={() => backfillRecurringMutation.mutate()}
-                      disabled={backfillRecurringMutation.isPending}
-                    >
-                      <Repeat className="w-4 h-4 mr-2" />
-                      {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
-                  <LayoutGrid className="w-4 h-4 mr-2" /> All Spaces
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
-                  <ListTodo className="w-4 h-4 mr-2" /> Manage Spaces
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <div className="flex-1" />
-
-            {/* New Task Button */}
-            <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-              setIsCreateDialogOpen(open);
-              if (!open) form.reset();
-            }}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-create-task" size="sm" className="h-9 gap-1.5">
-                  <Plus className="w-4 h-4" />
-                  New Task
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Task</DialogTitle>
-                  <DialogDescription>Add a new task to your workflow</DialogDescription>
-                </DialogHeader>
-                {renderTaskForm((data) => createTaskMutation.mutate(data), createTaskMutation.isPending, "Create Task")}
-              </DialogContent>
-            </Dialog>
+              </div>
+            )}
           </div>
 
           {/* Collapsible Filter Panel */}
@@ -1981,22 +2028,6 @@ export default function TasksPage() {
                 {showCompleted ? "Hide Completed" : "Show Completed"}
               </Button>
 
-              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFilterStatus("all");
-                    setFilterPriority("all");
-                    setSelectedSpaceId(null);
-                    setShowCompleted(true);
-                  }}
-                  className="h-8 text-xs text-muted-foreground"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Clear all
-                </Button>
-              )}
             </div>
           )}
         </div>
