@@ -1914,17 +1914,18 @@ export default function TasksPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Task Detail Sidebar */}
+      {/* Task Detail View */}
       <TaskDetailSidebar
-        task={selectedTask}
+        task={selectedTask ? (tasks.find(t => t.id === selectedTask.id) || selectedTask) : null}
         isOpen={isDetailSidebarOpen}
         onClose={() => {
           setIsDetailSidebarOpen(false);
           setSelectedTask(null);
         }}
-        onEdit={(task) => {
-          handleEditTask(task);
+        onDelete={(taskId) => {
+          deleteTaskMutation.mutate(taskId);
           setIsDetailSidebarOpen(false);
+          setSelectedTask(null);
         }}
       />
 
