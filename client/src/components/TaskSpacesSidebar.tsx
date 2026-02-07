@@ -28,7 +28,7 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
   // Drag state
   const [draggedSpaceId, setDraggedSpaceId] = useState<string | null>(null);
   const [dragOverSpaceId, setDragOverSpaceId] = useState<string | null>(null);
-  const [dropPosition, setDropPosition] = useState<"above" | "below" | null>(null);
+  const [dropPosition, setDropPosition] = useState<"above" | "below" | "inside" | null>(null);
 
   const { data: spaces = [], isLoading } = useQuery<TaskSpace[]>({
     queryKey: ["/api/task-spaces"],
@@ -211,8 +211,16 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     e.dataTransfer.dropEffect = "move";
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    const pos = e.clientY < midY ? "above" : "below";
+    const upperBand = rect.top + rect.height * 0.33;
+    const lowerBand = rect.bottom - rect.height * 0.33;
+    let pos: "above" | "below" | "inside";
+    if (e.clientY < upperBand) {
+      pos = "above";
+    } else if (e.clientY > lowerBand) {
+      pos = "below";
+    } else {
+      pos = "inside";
+    }
 
     setDragOverSpaceId(spaceId);
     setDropPosition(pos);
@@ -234,6 +242,41 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     const sourceSpace = spaces.find((s) => s.id === sourceId);
     const targetSpace = spaces.find((s) => s.id === targetSpaceId);
     if (!sourceSpace || !targetSpace) {
+      handleDragEnd();
+      return;
+    }
+
+    const oldParentId = sourceSpace.parentSpaceId ?? null;
+
+    if (dropPosition === "inside") {
+      const descendantIds = getDescendantIds(sourceId);
+      if (descendantIds.has(targetSpaceId)) {
+        toast({ title: "Can't move a space into its own child", variant: "destructive" });
+        handleDragEnd();
+        return;
+      }
+
+      const parentId = targetSpace.id;
+      const children = getChildren(parentId).filter((s) => s.id !== sourceId);
+      const insertIndex = children.length;
+      const reordered = [...children, { ...sourceSpace, parentSpaceId: parentId }];
+      const items = reordered.map((s, i) => ({ id: s.id, order: i }));
+
+      updateSpaceMutation.mutate({
+        id: sourceId,
+        data: { parentSpaceId: parentId, order: insertIndex },
+      });
+
+      if (items.length > 1) {
+        const remainingItems = items.filter((item) => item.id !== sourceId);
+        if (remainingItems.length > 0) reorderMutation.mutate(remainingItems);
+      }
+      if (oldParentId !== parentId) {
+        const oldSiblings = getChildren(oldParentId).filter((s) => s.id !== sourceId);
+        if (oldSiblings.length > 0) {
+          reorderMutation.mutate(oldSiblings.map((s, i) => ({ id: s.id, order: i })));
+        }
+      }
       handleDragEnd();
       return;
     }
@@ -263,12 +306,18 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
       if (remainingItems.length > 0) {
         reorderMutation.mutate(remainingItems);
       }
+      if (oldParentId !== parentId) {
+        const oldSiblings = getChildren(oldParentId).filter((s) => s.id !== sourceId);
+        if (oldSiblings.length > 0) {
+          reorderMutation.mutate(oldSiblings.map((s, i) => ({ id: s.id, order: i })));
+        }
+      }
     } else {
       reorderMutation.mutate(items);
     }
 
     handleDragEnd();
-  }, [spaces, dropPosition, getChildren, handleDragEnd, reorderMutation, updateSpaceMutation]);
+  }, [spaces, dropPosition, getChildren, handleDragEnd, reorderMutation, updateSpaceMutation, getDescendantIds, toast]);
 
   const hiddenCount = spaces.filter((s) => s.isHidden).length;
 
@@ -281,6 +330,7 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
     const isHidden = space.isHidden;
     const isDragOver = dragOverSpaceId === space.id;
     const isDragging = draggedSpaceId === space.id;
+    const isDropInside = isDragOver && dropPosition === "inside";
 
     return (
       <div key={space.id} className="space-y-1">
@@ -298,7 +348,7 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
           onDrop={(e) => handleDrop(e, space.id)}
           className={`flex items-center gap-1 rounded-md hover:bg-accent transition-colors group ${
             selectedSpaceId === space.id ? "bg-accent" : ""
-          } ${paddingLeft} ${isHidden ? "opacity-50" : ""} ${isDragging ? "opacity-30" : ""}`}
+          } ${paddingLeft} ${isHidden ? "opacity-50" : ""} ${isDragging ? "opacity-30" : ""} ${isDropInside ? "ring-1 ring-primary/40 bg-primary/5" : ""}`}
         >
           {/* Drag handle */}
           <div className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0">
@@ -508,6 +558,21 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
       {/* Spaces List */}
       <div className="space-y-1">
         {visibleTopLevel.map((space) => renderSpaceRow(space, 0))}
+        {visibleTopLevel.length === 0 && (
+          <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+            <p>No visible spaces yet.</p>
+            {hiddenCount > 0 && !showHidden && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 h-7 px-2 text-xs"
+                onClick={() => setShowHidden(true)}
+              >
+                Show hidden spaces
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Show/Hide hidden spaces toggle */}
