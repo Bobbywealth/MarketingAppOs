@@ -184,7 +184,7 @@ router.post("/:id/activities", isAuthenticated, requirePermission("canManageLead
 
     // Notify assigned agent if someone else added an activity
     if (lead.assignedToId && Number(lead.assignedToId) !== Number(userId)) {
-      storage.createNotification({
+      await storage.createNotification({
         userId: lead.assignedToId,
         type: 'info',
         title: `💬 New ${type} Activity`,
@@ -193,6 +193,25 @@ router.post("/:id/activities", isAuthenticated, requirePermission("canManageLead
         actionUrl: `/leads?leadId=${lead.id}`,
         isRead: false,
       }).catch(err => console.error("Failed to notify agent about activity:", err));
+
+      // Send email notification to assigned agent
+      try {
+        const assignedUser = await storage.getUser(String(lead.assignedToId));
+        if (assignedUser?.email) {
+          const { emailNotifications } = await import("../emailService");
+          const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+          const leadUrl = `${appUrl}/leads?leadId=${lead.id}`;
+          void emailNotifications.sendLeadActivityEmail(
+            assignedUser.email,
+            assignedUser.firstName || assignedUser.username,
+            type,
+            lead.company,
+            leadUrl
+          ).catch(err => console.error("Failed to send lead activity email:", err));
+        }
+      } catch (emailErr) {
+        console.error("Failed to send lead activity email:", emailErr);
+      }
     }
 
     // Update lead's last contact info if it's a contact activity

@@ -612,7 +612,7 @@ export const emailTemplates = {
   },
 
   // Creator application received
-  creatorApplicationReceived: (creatorName: string, _verifyUrl?: string | null) => {
+  creatorApplicationReceived: (creatorName: string, verifyUrl?: string | null) => {
     const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
     const content = `
       <h2 style="margin-top: 0;">Hi ${creatorName}! 👋</h2>
@@ -669,6 +669,160 @@ export const emailTemplates = {
     return {
       subject: `Update on your creator application: ${creatorName}`,
       html: renderEmail('Application Update', content, '#64748b')
+    };
+  },
+
+  // Login denied notification (sent to user who was denied)
+  loginDenied: (userName: string, reason: string) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${userName},</h2>
+      <p>We detected a login attempt to your account that was denied.</p>
+
+      <div class="card" style="border: 1px solid #fee2e2; background-color: #fef2f2;">
+        <div class="badge" style="background-color: #fee2e2; color: #991b1b;">ACCESS DENIED</div>
+        <div class="info-label">REASON</div>
+        <div class="info-value" style="color: #dc2626;">${reason}</div>
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">This login attempt was blocked based on your account status.</p>
+      </div>
+
+      <p style="font-size: 14px; color: #4b5563;">If this was you and you believe this is a mistake, please contact our support team for assistance.</p>
+
+      <div style="text-align: center;">
+        <a href="${appUrl}/contact" class="button" style="background-color: #dc2626;">Contact Support →</a>
+      </div>
+
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">If you did not attempt this login, please disregard this email — your account remains secure.</p>
+    `;
+    return {
+      subject: `🔒 Login Attempt Denied`,
+      html: renderEmail('Login Attempt Denied', content, '#dc2626')
+    };
+  },
+
+  // Invoice overdue notification (sent to client users)
+  invoiceOverdue: (clientName: string, invoiceNumber: string) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${clientName},</h2>
+      <p>This is a reminder that you have an overdue invoice that requires your attention.</p>
+
+      <div class="card" style="border: 1px solid #fee2e2; background-color: #fef2f2;">
+        <div class="badge" style="background-color: #fee2e2; color: #991b1b;">OVERDUE</div>
+        <div class="info-label">INVOICE NUMBER</div>
+        <div class="info-value">#${invoiceNumber}</div>
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">Please process this payment at your earliest convenience to avoid any service disruption.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${appUrl}/client-billing" class="button" style="background-color: #ef4444;">View Invoice & Pay →</a>
+      </div>
+
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">If you've already made this payment, please disregard this message.</p>
+    `;
+    return {
+      subject: `💰 Invoice #${invoiceNumber} is overdue`,
+      html: renderEmail('Invoice Overdue', content, '#ef4444')
+    };
+  },
+
+  // Invoice overdue notification (sent to admins)
+  invoiceOverdueAdmin: (adminName: string, invoiceNumber: string, clientInfo: string) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${adminName},</h2>
+      <p>An invoice is now overdue and may require follow-up.</p>
+
+      <div class="card" style="border-left: 4px solid #ef4444;">
+        <div class="badge" style="background-color: #fee2e2; color: #991b1b;">OVERDUE</div>
+        <div class="info-label">INVOICE</div>
+        <div class="info-value">#${invoiceNumber}</div>
+        <div class="info-label">CLIENT</div>
+        <div class="info-value">${clientInfo}</div>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${appUrl}/invoices" class="button" style="background-color: #ef4444;">Review Invoices →</a>
+      </div>
+    `;
+    return {
+      subject: `💰 Invoice #${invoiceNumber} overdue for ${clientInfo}`,
+      html: renderEmail('Invoice Overdue Alert', content, '#ef4444')
+    };
+  },
+
+  // Upcoming meeting reminder
+  meetingReminder: (userName: string, meetingTitle: string, meetingTime: string) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${userName},</h2>
+      <p>You have a meeting coming up in less than 1 hour.</p>
+
+      <div class="card" style="border-left: 4px solid #f59e0b;">
+        <div class="badge" style="background-color: #ffedd5; color: #9a3412;">UPCOMING</div>
+        <div class="info-label">MEETING</div>
+        <div class="info-value">${meetingTitle}</div>
+        <div class="info-label">TIME</div>
+        <div class="info-value">${meetingTime}</div>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${appUrl}/company-calendar" class="button" style="background-color: #f59e0b;">View Calendar →</a>
+      </div>
+    `;
+    return {
+      subject: `📅 Upcoming: ${meetingTitle} at ${meetingTime}`,
+      html: renderEmail('Meeting Reminder', content, '#f59e0b')
+    };
+  },
+
+  // Upload overdue notification
+  uploadOverdue: (userName: string, visitId: string) => {
+    const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${userName},</h2>
+      <p>A content upload is now overdue and requires attention.</p>
+
+      <div class="card" style="border-left: 4px solid #f59e0b;">
+        <div class="badge" style="background-color: #ffedd5; color: #9a3412;">OVERDUE</div>
+        <div class="info-label">VISIT ID</div>
+        <div class="info-value">${visitId}</div>
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">The content upload deadline for this visit has passed. Please follow up with the creator.</p>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${appUrl}/visits/${visitId}" class="button" style="background-color: #f59e0b;">Review Visit →</a>
+      </div>
+    `;
+    return {
+      subject: `⏰ Upload overdue for visit ${visitId}`,
+      html: renderEmail('Upload Overdue', content, '#f59e0b')
+    };
+  },
+
+  // Lead activity notification
+  leadActivity: (userName: string, activityType: string, leadCompany: string, leadUrl: string) => {
+    const content = `
+      <h2 style="margin-top: 0;">Hi ${userName},</h2>
+      <p>A new <strong>${activityType}</strong> activity has been added to one of your assigned leads.</p>
+
+      <div class="card" style="border-left: 4px solid #3b82f6;">
+        <div class="badge" style="background-color: #dbeafe; color: #1e40af;">NEW ACTIVITY</div>
+        <div class="info-label">LEAD</div>
+        <div class="info-value">${leadCompany}</div>
+        <div class="info-label">ACTIVITY TYPE</div>
+        <div class="info-value" style="text-transform: capitalize;">${activityType}</div>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="${leadUrl}" class="button" style="background-color: #3b82f6;">View Lead Details →</a>
+      </div>
+    `;
+    return {
+      subject: `💬 New ${activityType} activity on ${leadCompany}`,
+      html: renderEmail('Lead Activity Update', content, '#3b82f6')
     };
   },
 
@@ -879,6 +1033,36 @@ export const emailNotifications = {
 
   async sendBookingConfirmationEmail(toEmail: string, bookerName: string, whenEt: string, phone: string) {
     const { subject, html } = emailTemplates.bookingConfirmation(bookerName, whenEt, phone);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendLoginDeniedEmail(toEmail: string, userName: string, reason: string) {
+    const { subject, html } = emailTemplates.loginDenied(userName, reason);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendInvoiceOverdueEmail(toEmail: string, clientName: string, invoiceNumber: string) {
+    const { subject, html } = emailTemplates.invoiceOverdue(clientName, invoiceNumber);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendInvoiceOverdueAdminEmail(toEmail: string, adminName: string, invoiceNumber: string, clientInfo: string) {
+    const { subject, html } = emailTemplates.invoiceOverdueAdmin(adminName, invoiceNumber, clientInfo);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendMeetingReminderEmail(toEmail: string, userName: string, meetingTitle: string, meetingTime: string) {
+    const { subject, html } = emailTemplates.meetingReminder(userName, meetingTitle, meetingTime);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendUploadOverdueEmail(toEmail: string, userName: string, visitId: string) {
+    const { subject, html } = emailTemplates.uploadOverdue(userName, visitId);
+    return sendEmail(toEmail, subject, html);
+  },
+
+  async sendLeadActivityEmail(toEmail: string, userName: string, activityType: string, leadCompany: string, leadUrl: string) {
+    const { subject, html } = emailTemplates.leadActivity(userName, activityType, leadCompany, leadUrl);
     return sendEmail(toEmail, subject, html);
   },
 

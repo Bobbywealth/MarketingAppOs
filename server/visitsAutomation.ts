@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { pool } from "./db";
 import { storage } from "./storage";
 import { UserRole } from "@shared/roles";
+import { emailNotifications } from "./emailService";
 
 let visitsCron: any = null;
 let creatorVisitsTableChecked = false;
@@ -73,6 +74,15 @@ async function markOverdueUploadsAndNotify() {
           actionUrl: `/visits/${row.id}`,
           isRead: false,
         });
+
+        // Send email notification
+        if (u.email) {
+          void emailNotifications.sendUploadOverdueEmail(
+            u.email,
+            u.firstName || u.username,
+            row.id
+          ).catch(err => console.error(`Failed to send upload overdue email to ${u.id}:`, err));
+        }
       }
     }
   } catch (error) {

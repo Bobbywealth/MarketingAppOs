@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { UserRole } from "@shared/roles";
+import { emailNotifications } from "./emailService";
 
 /**
  * Background jobs for the MarketingOS system.
@@ -32,12 +33,21 @@ export async function checkOverdueInvoices() {
             actionUrl: '/client-billing',
             isRead: false,
           });
-          
+
           await sendPushToUser(clientUser.id, {
             title: '💰 Invoice Overdue',
             body: `Invoice #${invoice.invoiceNumber} is overdue. Please pay immediately.`,
             url: '/client-billing',
           }).catch(err => console.error('Failed to send push notification:', err));
+
+          // Send email notification to client user
+          if (clientUser.email) {
+            void emailNotifications.sendInvoiceOverdueEmail(
+              clientUser.email,
+              clientUser.firstName || clientUser.username,
+              invoice.invoiceNumber || invoice.id
+            ).catch(err => console.error('Failed to send invoice overdue email to client:', err));
+          }
         }
       }
       
@@ -55,12 +65,22 @@ export async function checkOverdueInvoices() {
           actionUrl: `/invoices?invoiceId=${invoice.id}`,
           isRead: false,
         });
-        
+
         await sendPushToAdmin(admin.id, {
           title: '💰 Invoice Overdue',
           body: `Invoice #${invoice.invoiceNumber} is overdue for client ${invoice.clientId}`,
           url: '/invoices',
         }).catch(err => console.error('Failed to send push notification:', err));
+
+        // Send email notification to admin
+        if (admin.email) {
+          void emailNotifications.sendInvoiceOverdueAdminEmail(
+            admin.email,
+            admin.firstName || admin.username,
+            invoice.invoiceNumber || invoice.id,
+            `Client ${invoice.clientId}`
+          ).catch(err => console.error('Failed to send invoice overdue email to admin:', err));
+        }
       }
     }
     
@@ -94,21 +114,34 @@ export async function runMeetingReminders() {
     const { sendPushToUser } = await import('./push');
 
     for (const ev of upcoming) {
+      const meetingTitle = ev.title || 'Scheduled meeting';
+      const meetingTime = new Date(ev.start || ev.datetime).toLocaleTimeString();
+
       for (const admin of admins) {
         await storage.createNotification({
           userId: admin.id,
           type: 'warning',
           title: '📅 Upcoming Meeting',
-          message: `${ev.title || 'Scheduled meeting'} at ${new Date(ev.start || ev.datetime).toLocaleTimeString()}`,
+          message: `${meetingTitle} at ${meetingTime}`,
           category: 'communication',
           actionUrl: '/company-calendar',
           isRead: false,
         });
         await sendPushToUser(admin.id, {
           title: '📅 Upcoming Meeting',
-          body: `${ev.title || 'Scheduled meeting'} in less than 1 hour`,
+          body: `${meetingTitle} in less than 1 hour`,
           url: '/company-calendar',
         }).catch(err => console.error('Failed to send push notification:', err));
+
+        // Send email reminder
+        if (admin.email) {
+          void emailNotifications.sendMeetingReminderEmail(
+            admin.email,
+            admin.firstName || admin.username,
+            meetingTitle,
+            meetingTime
+          ).catch(err => console.error('Failed to send meeting reminder email:', err));
+        }
       }
     }
     console.log(`✅ Meeting reminders sent for ${upcoming.length} event(s)`);
