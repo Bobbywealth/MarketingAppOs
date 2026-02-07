@@ -126,6 +126,7 @@ export const taskSpaces = pgTable("task_spaces", {
   color: varchar("color").default("#3B82F6"), // Hex color
   parentSpaceId: varchar("parent_space_id"), // For nested spaces
   order: integer("order").default(0), // Display order
+  isHidden: boolean("is_hidden").default(false), // Hide from sidebar
   createdBy: integer("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

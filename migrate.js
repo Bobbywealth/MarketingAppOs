@@ -375,6 +375,14 @@ async function runMigrations() {
         console.log('⚠️ page_views indexes already exist or error:', e.message);
       }
       
+      // Add is_hidden column to task_spaces table
+      try {
+        await client.query(`ALTER TABLE task_spaces ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT false;`);
+        console.log('✅ Added is_hidden to task_spaces');
+      } catch (e) {
+        console.log('⚠️ is_hidden in task_spaces already exists or error:', e.message);
+      }
+
       console.log('✅ Migration script completed successfully!');
       break; // Success - exit retry loop
       
