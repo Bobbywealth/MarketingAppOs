@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { storage } from "./storage";
 import { processAIChat } from "./aiManager";
 import { sendPushToUser } from "./push";
+import { emailNotifications } from "./emailService";
 import { log } from "./vite";
 
 /**
@@ -75,6 +76,23 @@ export function startAiCommandScheduler() {
             body: notificationMessage,
             url: actionUrl,
           }).catch((err) => log(`Failed to send push notification for AI command: ${err.message}`, "ai"));
+
+          // Send email notification
+          try {
+            const user = await storage.getUser(String(command.userId));
+            if (user?.email) {
+              const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+              void emailNotifications.sendActionAlertEmail(
+                user.email,
+                notificationTitle,
+                notificationMessage,
+                `${appUrl}${actionUrl}`,
+                'success'
+              ).catch((err) => log(`Failed to send email for AI command: ${err.message}`, "ai"));
+            }
+          } catch (emailErr) {
+            log(`Failed to send AI command email: ${emailErr instanceof Error ? emailErr.message : 'Unknown'}`, "ai");
+          }
 
         } catch (error: any) {
           console.error(`Error processing scheduled AI command ${command.id}:`, error);

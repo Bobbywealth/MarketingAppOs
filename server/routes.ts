@@ -2996,6 +2996,24 @@ Examples:
                 category: "deadline",
                 metadata: { taskId: task.id },
               });
+
+              // Send email notification for due/overdue task
+              try {
+                const user = req.user as any;
+                if (user?.email) {
+                  const { emailNotifications } = await import("./emailService");
+                  const userName = user.firstName || user.username || "there";
+                  void emailNotifications.sendTaskDueReminder(
+                    userName,
+                    user.email,
+                    task.title,
+                    task.dueDate.toISOString()
+                  ).catch(err => console.error("Failed to send task due email:", err));
+                }
+              } catch (emailErr) {
+                console.error("Failed to send task due email:", emailErr);
+              }
+
               notificationsCreated++;
             }
           }
@@ -3046,7 +3064,25 @@ Examples:
         message: 'This is a test notification to verify the system is working!',
         category: 'general',
       });
-      
+
+      // Also send a test email to verify email delivery
+      try {
+        const userObj = req.user as any;
+        if (userObj?.email) {
+          const { emailNotifications } = await import("./emailService");
+          const appUrl = process.env.APP_URL || 'https://www.marketingteam.app';
+          await emailNotifications.sendActionAlertEmail(
+            userObj.email,
+            '🎉 Test Notification',
+            'This is a test notification to verify the email system is working! If you received this email, your notification emails are configured correctly.',
+            `${appUrl}/dashboard`,
+            'success'
+          );
+        }
+      } catch (emailErr) {
+        console.error("Failed to send test email:", emailErr);
+      }
+
       res.json({ message: "Test notification created" });
     } catch (error) {
       console.error(error);
