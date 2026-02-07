@@ -8,11 +8,10 @@ import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
 import { dialpadService } from "./dialpadService";
 import marketingCenterRoutes from "./routes/marketing-center";
+import tasksRouter from "./routes/tasks";
 import {
   insertClientSchema,
   insertCampaignSchema,
-  insertTaskSchema,
-  insertTaskCommentSchema,
   insertLeadSchema,
   insertContentPostSchema,
   insertInvoiceSchema,
@@ -101,6 +100,9 @@ const upload = multer({
 export function registerRoutes(app: Express) {
   // Mount Marketing Center routes
   app.use("/api/marketing-center", marketingCenterRoutes);
+
+  // Mount Task routes (spaces, tasks, comments)
+  app.use("/api", tasksRouter);
 
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
@@ -1596,69 +1598,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     }
   });
 
-  // Task Spaces routes
-  app.get("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (_req: Request, res: Response) => {
-    try {
-      const spaces = await storage.getTaskSpaces();
-      res.json(spaces);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch task spaces" });
-    }
-  });
-
-  app.post("/api/task-spaces", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const userId = user?.id || user?.claims?.sub;
-      
-      // Ensure userId is a valid integer
-      const parsedUserId = typeof userId === 'number' ? userId : parseInt(userId);
-      if (isNaN(parsedUserId)) {
-        return res.status(400).json({ message: "Invalid user ID" });
-      }
-      
-      const spaceData = { ...req.body, createdBy: parsedUserId };
-      console.log("Creating task space:", spaceData);
-      const space = await storage.createTaskSpace(spaceData);
-      res.status(201).json(space);
-    } catch (error) {
-      console.error("Task space creation error:", error);
-      res.status(500).json({ message: "Failed to create task space" });
-    }
-  });
-
-  app.patch("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const space = await storage.updateTaskSpace(req.params.id, req.body);
-      res.json(space);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to update task space" });
-    }
-  });
-
-  app.delete("/api/task-spaces/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      await storage.deleteTaskSpace(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to delete task space" });
-    }
-  });
-
-  // Get tasks by space
-  app.get("/api/task-spaces/:id/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const tasks = await storage.getTasksBySpace(req.params.id);
-      res.json(tasks);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch tasks for space" });
-    }
-  });
-
   // User View Preferences routes
   app.get("/api/user-preferences", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1681,203 +1620,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to save user preferences" });
-    }
-  });
-
-  // Task routes (admin and staff only) - with pagination support
-  app.get("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 100;
-      const offset = parseInt(req.query.offset as string) || 0;
-      const tasks = await storage.getTasks({ limit, offset });
-      res.json(tasks);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch tasks" });
-    }
-  });
-
-  app.post("/api/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      console.log("📥 Backend received task data:", JSON.stringify(req.body, null, 2));
-      const validatedData = insertTaskSchema.parse(req.body);
-      console.log("✅ Validation passed, creating task:", validatedData);
-      const task = await storage.createTask(validatedData);
-      res.status(201).json(task);
-    } catch (error) {
-      console.error("❌ Task creation error:", error);
-      handleValidationError(error, res);
-    }
-  });
-
-  // AI-powered task parsing from natural language
-  app.post("/api/tasks/parse-ai", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const { input } = req.body;
-      
-      if (!input || typeof input !== 'string') {
-        return res.status(400).json({ message: "Input text is required" });
-      }
-
-      // Check if OpenAI API key is configured
-      if (!process.env.OPENAI_API_KEY) {
-        return res.status(503).json({ 
-          message: "AI assistant not configured. Please add OPENAI_API_KEY to environment variables." 
-        });
-      }
-
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-      // Get clients and users for context
-      const [clients, users] = await Promise.all([
-        storage.getClients(),
-        storage.getUsers(),
-      ]);
-
-      const systemPrompt = `You are a task parsing assistant. Extract task details from natural language.
-
-Available clients: ${clients.map(c => `${c.name} (ID: ${c.id})`).join(', ')}
-Available users: ${users.map(u => `${u.username} (ID: ${u.id})`).join(', ')}
-
-Return JSON with:
-- title: string (required)
-- description: string (optional)
-- priority: "low" | "normal" | "high" | "urgent" (default: "normal")
-- status: "todo" | "in_progress" | "review" | "completed" (default: "todo")
-- dueDate: ISO date string (optional, parse relative dates like "tomorrow", "next Friday", etc.)
-- clientId: string (optional, match from available clients)
-- assignedToId: string (optional, match from available users)
-
-Examples:
-"Call Bobby tomorrow about website" -> {"title":"Call Bobby about website","dueDate":"2025-10-16","priority":"normal"}
-"High priority: Fix login bug ASAP" -> {"title":"Fix login bug","priority":"urgent","status":"todo"}
-`;
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: input }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.3,
-      });
-
-      const parsed = JSON.parse(completion.choices[0].message.content || '{}');
-      
-      // Transform the parsed data - convert date string to Date object if present
-      const transformedData = {
-        ...parsed,
-        dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
-        assignedToId: parsed.assignedToId ? parseInt(parsed.assignedToId) : undefined,
-      };
-      
-      // Validate the transformed data
-      const taskData = insertTaskSchema.parse(transformedData);
-      
-      res.json({
-        success: true,
-        taskData,
-        originalInput: input,
-      });
-
-    } catch (error: any) {
-      console.error("AI parsing error:", error);
-      if (error.message?.includes('API key')) {
-        return res.status(503).json({ message: "OpenAI API configuration error" });
-      }
-      res.status(500).json({ 
-        message: "Failed to parse task with AI", 
-        error: error.message 
-      });
-    }
-  });
-
-  app.patch("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      const validatedData = insertTaskSchema.partial().strip().parse(req.body);
-      
-      // Check if task is being marked as completed and is recurring
-      const existingTask = await storage.getTask(req.params.id);
-      if (!existingTask) {
-        return res.status(404).json({ message: "Task not found" });
-      }
-
-      const task = await storage.updateTask(req.params.id, validatedData);
-
-      // If task is recurring and was just completed, create next instance
-      if (
-        existingTask.isRecurring && 
-        validatedData.status === "completed" && 
-        existingTask.status !== "completed"
-      ) {
-        console.log("🔄 Creating recurring task instance for:", existingTask.title);
-        
-        // Calculate next due date based on recurrence pattern
-        let nextDueDate: Date | null = null;
-        if (existingTask.dueDate && existingTask.recurringPattern && existingTask.recurringInterval) {
-          const currentDueDate = new Date(existingTask.dueDate);
-          nextDueDate = new Date(currentDueDate);
-          
-          switch (existingTask.recurringPattern) {
-            case "daily":
-              nextDueDate.setDate(currentDueDate.getDate() + existingTask.recurringInterval);
-              break;
-            case "weekly":
-              nextDueDate.setDate(currentDueDate.getDate() + (existingTask.recurringInterval * 7));
-              break;
-            case "monthly":
-              nextDueDate.setMonth(currentDueDate.getMonth() + existingTask.recurringInterval);
-              break;
-            case "yearly":
-              nextDueDate.setFullYear(currentDueDate.getFullYear() + existingTask.recurringInterval);
-              break;
-          }
-
-          // Check if we've exceeded the recurring end date
-          if (existingTask.recurringEndDate && nextDueDate > new Date(existingTask.recurringEndDate)) {
-            console.log("⏸️ Recurring task has reached end date, not creating new instance");
-          } else {
-            // Create new task instance
-            await storage.createTask({
-              title: existingTask.title,
-              description: existingTask.description,
-              status: "todo",
-              priority: existingTask.priority,
-              dueDate: nextDueDate,
-              clientId: existingTask.clientId,
-              assignedToId: existingTask.assignedToId,
-              isRecurring: true,
-              recurringPattern: existingTask.recurringPattern,
-              recurringInterval: existingTask.recurringInterval,
-              recurringEndDate: existingTask.recurringEndDate,
-            });
-            console.log("✅ New recurring task instance created for:", nextDueDate.toDateString());
-          }
-        }
-      }
-
-      res.json(task);
-    } catch (error: any) {
-      if (error instanceof ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
-      if (error.message?.includes("not found")) {
-        return res.status(404).json({ message: error.message });
-      }
-      console.error(error);
-      res.status(500).json({ message: "Failed to update task" });
-    }
-  });
-
-  app.delete("/api/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
-    try {
-      await storage.deleteTask(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to delete task" });
     }
   });
 
@@ -1929,32 +1671,6 @@ Examples:
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Failed to delete calendar event" });
-    }
-  });
-
-  // Task comment routes
-  app.get("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const comments = await storage.getTaskComments(req.params.taskId);
-      res.json(comments);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch task comments" });
-    }
-  });
-
-  app.post("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const user = req.user as any;
-      const validatedData = insertTaskCommentSchema.parse({
-        ...req.body,
-        taskId: req.params.taskId,
-        userId: user.claims.sub,
-      });
-      const comment = await storage.createTaskComment(validatedData);
-      res.status(201).json(comment);
-    } catch (error) {
-      handleValidationError(error, res);
     }
   });
 
