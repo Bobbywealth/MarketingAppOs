@@ -533,37 +533,41 @@ function NavItem({
       <Link
         href={item.url}
         onClick={() => onClick(item)}
-        className="flex items-center gap-3 w-full py-0 px-3 overflow-hidden"
+        className={`flex items-center w-full overflow-hidden ${
+          isCollapsed ? 'justify-center p-0 gap-0' : 'gap-3 py-0 px-3'
+        }`}
       >
         {/* Animated Left Border */}
-        <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-primary rounded-r-full transition-all duration-300 ${
-          isActive ? 'h-6 opacity-100' : 'group-hover:h-4 group-hover:opacity-50'
-        }`} />
-        
-        <motion.div 
-          className={`transition-all duration-300 ${
-            isActive 
-              ? 'text-primary' 
+        {!isCollapsed && (
+          <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-0 bg-primary rounded-r-full transition-all duration-300 ${
+            isActive ? 'h-6 opacity-100' : 'group-hover:h-4 group-hover:opacity-50'
+          }`} />
+        )}
+
+        <motion.div
+          className={`flex-shrink-0 transition-all duration-300 ${
+            isActive
+              ? 'text-primary'
               : 'text-zinc-400 group-hover:text-primary'
           }`}
           whileHover={{ scale: 1.2, rotate: 5 }}
           whileTap={{ scale: 0.9 }}
         >
-          <Icon className="w-5 h-5" />
+          <Icon className="w-4 h-4" />
         </motion.div>
-        
+
         {!isCollapsed && (
           <>
-            <span className={`font-semibold text-sm transition-all duration-300 ${
-              isActive 
-                ? 'text-zinc-900 dark:text-zinc-100 translate-x-1' 
+            <span className={`font-semibold text-sm transition-all duration-300 truncate ${
+              isActive
+                ? 'text-zinc-900 dark:text-zinc-100 translate-x-1'
                 : 'text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 group-hover:translate-x-1'
             }`}>
               {item.title}
             </span>
             {showBadge && (
-              <Badge 
-                variant="destructive" 
+              <Badge
+                variant="destructive"
                 className="ml-auto text-[10px] h-5 min-w-[20px] rounded-full flex items-center justify-center animate-pulse shadow-lg shadow-destructive/20"
               >
                 {badgeCount > 99 ? '99+' : badgeCount}
@@ -735,14 +739,14 @@ function NavCollapsibleGroup({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               isActive={hasActiveItem}
-              className={`group transition-all duration-300 ease-in-out rounded-lg h-11 ${
+              className={`group transition-all duration-300 ease-in-out rounded-lg ${
                 hasActiveItem
                   ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20'
                   : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
               }`}
             >
-              <div className={`flex items-center justify-center w-full ${hasActiveItem ? 'text-primary' : 'text-zinc-400 group-hover:text-primary'}`}>
-                <Icon className="w-5 h-5" />
+              <div className={`flex items-center justify-center ${hasActiveItem ? 'text-primary' : 'text-zinc-400 group-hover:text-primary'}`}>
+                <Icon className="w-4 h-4" />
               </div>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
@@ -811,7 +815,7 @@ function NavCollapsibleGroup({
             }`}
           >
             <div className="flex items-center gap-3 w-full px-3">
-              <Icon className={`w-5 h-5 transition-colors duration-300 ${
+              <Icon className={`w-4 h-4 flex-shrink-0 transition-colors duration-300 ${
                 hasActiveItem ? 'text-primary' : 'text-zinc-400 group-hover:text-primary'
               }`} />
               <span className={`font-semibold text-sm transition-colors duration-300 flex-1 text-left ${
@@ -925,14 +929,14 @@ export function AppSidebar() {
 
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
-        <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
+        <SidebarHeader className={`border-b border-border/50 flex items-center justify-center ${isCollapsed ? 'px-1 py-3' : 'px-3 py-6'}`}>
           <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
             {isCollapsed ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="w-full flex justify-center">
-                      <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                    <div className="w-full flex justify-center overflow-hidden">
+                      <Logo variant="auto" size="sm" className="!h-8 !w-8 object-contain" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -1015,14 +1019,14 @@ export function AppSidebar() {
 
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
-        <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
+        <SidebarHeader className={`border-b border-border/50 flex items-center justify-center ${isCollapsed ? 'px-1 py-3' : 'px-3 py-6'}`}>
           <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
             {isCollapsed ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="w-full flex justify-center">
-                      <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                    <div className="w-full flex justify-center overflow-hidden">
+                      <Logo variant="auto" size="sm" className="!h-8 !w-8 object-contain" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -1104,14 +1108,14 @@ export function AppSidebar() {
 
     return (
       <Sidebar collapsible="icon" className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]">
-        <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center">
+        <SidebarHeader className={`border-b border-border/50 flex items-center justify-center ${isCollapsed ? 'px-1 py-3' : 'px-3 py-6'}`}>
           <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
             {isCollapsed ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="w-full flex justify-center">
-                      <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                    <div className="w-full flex justify-center overflow-hidden">
+                      <Logo variant="auto" size="sm" className="!h-8 !w-8 object-contain" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
@@ -1217,14 +1221,14 @@ export function AppSidebar() {
       className="bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] border-r border-border/50 shadow-[inset_-1px_0_0_0_rgb(229,231,235)]"
       style={{ "--sidebar-width": "260px" } as React.CSSProperties}
     >
-      <SidebarHeader className="px-3 py-6 border-b border-border/50 flex items-center justify-center relative">
+      <SidebarHeader className={`border-b border-border/50 flex items-center justify-center relative ${isCollapsed ? 'px-1 py-3' : 'px-3 py-6'}`}>
         <Link href="/" className="flex items-center justify-center group transition-opacity hover:opacity-80 w-full">
           {isCollapsed ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="w-full flex justify-center">
-                    <Logo variant="auto" size="xl" className="!h-24 !w-auto" />
+                  <div className="w-full flex justify-center overflow-hidden">
+                    <Logo variant="auto" size="sm" className="!h-8 !w-8 object-contain" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -1250,24 +1254,6 @@ export function AppSidebar() {
               </TooltipTrigger>
               <TooltipContent side="right">
                 Collapse sidebar
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        {!isMobile && isCollapsed && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={toggleSidebar}
-                  className="absolute top-6 right-2 p-1.5 rounded-md hover:bg-muted transition-colors opacity-0 group-hover/sidebar-wrapper:opacity-100"
-                  aria-label="Expand sidebar"
-                >
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                Expand sidebar
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
