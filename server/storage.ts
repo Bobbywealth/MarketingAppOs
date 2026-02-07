@@ -108,7 +108,7 @@ import {
   type InsertMarketingBroadcastRecipient,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, and, gte, count, sql } from "drizzle-orm";
+import { eq, desc, or, and, gte, count, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -391,6 +391,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteClient(id: string): Promise<void> {
+    // Delete nested child records first to avoid foreign key constraint violations
+    const clientTaskIds = db.select({ id: tasks.id }).from(tasks).where(eq(tasks.clientId, id));
+    await db.delete(taskComments).where(inArray(taskComments.taskId, clientTaskIds));
+
+    const clientLeadIds = db.select({ id: leads.id }).from(leads).where(eq(leads.clientId, id));
+    await db.delete(leadActivities).where(inArray(leadActivities.leadId, clientLeadIds));
+    await db.delete(leadAutomations).where(inArray(leadAutomations.leadId, clientLeadIds));
+
+    const clientProjectIds = db.select({ id: websiteProjects.id }).from(websiteProjects).where(eq(websiteProjects.clientId, id));
+    await db.delete(projectFeedback).where(inArray(projectFeedback.projectId, clientProjectIds));
+
+    // Delete direct child records
+    await db.delete(secondMeContent).where(eq(secondMeContent.clientId, id));
+    await db.delete(secondMe).where(eq(secondMe.clientId, id));
+    await db.delete(analyticsMetrics).where(eq(analyticsMetrics.clientId, id));
+    await db.delete(clientDocuments).where(eq(clientDocuments.clientId, id));
+    await db.delete(onboardingTasks).where(eq(onboardingTasks.clientId, id));
+    await db.delete(messages).where(eq(messages.clientId, id));
+    await db.delete(tickets).where(eq(tickets.clientId, id));
+    await db.delete(invoices).where(eq(invoices.clientId, id));
+    await db.delete(contentPosts).where(eq(contentPosts.clientId, id));
+    await db.delete(leads).where(eq(leads.clientId, id));
+    await db.delete(tasks).where(eq(tasks.clientId, id));
+    await db.delete(campaigns).where(eq(campaigns.clientId, id));
+    await db.delete(websiteProjects).where(eq(websiteProjects.clientId, id));
+
+    // Finally delete the client
     await db.delete(clients).where(eq(clients.id, id));
   }
 
