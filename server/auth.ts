@@ -123,10 +123,36 @@ export function setupAuth(app: Express) {
           if (creator) {
             if (creator.applicationStatus === "pending") {
               authDebug.loginFailed("Creator application pending");
+              // Send login denied email to the user
+              if (user.email) {
+                try {
+                  const { emailNotifications } = await import("./emailService");
+                  void emailNotifications.sendLoginDeniedEmail(
+                    user.email,
+                    user.firstName || user.username,
+                    "Your creator application is still under review. You will be notified once a decision has been made."
+                  ).catch(err => console.error("Failed to send login denied email:", err));
+                } catch (emailErr) {
+                  console.error("Failed to send login denied email:", emailErr);
+                }
+              }
               return done(null, false, { message: "Your application is still under review." });
             }
             if (creator.applicationStatus === "declined") {
               authDebug.loginFailed("Creator application declined");
+              // Send login denied email to the user
+              if (user.email) {
+                try {
+                  const { emailNotifications } = await import("./emailService");
+                  void emailNotifications.sendLoginDeniedEmail(
+                    user.email,
+                    user.firstName || user.username,
+                    "Your creator application has been declined. You may re-apply after 6 months if your portfolio has significant updates."
+                  ).catch(err => console.error("Failed to send login denied email:", err));
+                } catch (emailErr) {
+                  console.error("Failed to send login denied email:", emailErr);
+                }
+              }
               return done(null, false, { message: "Your application has been declined." });
             }
           }

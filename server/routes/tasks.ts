@@ -552,7 +552,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
         const clientUsers = await storage.getUsersByClientId(task.clientId);
         for (const clientUser of clientUsers) {
           if (clientUser.id === task.assignedToId) continue;
-          
+
           await storage.createNotification({
             userId: clientUser.id,
             type: 'success',
@@ -562,12 +562,26 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
             actionUrl: '/client-dashboard',
             isRead: false,
           });
-          
+
           void sendPushToUser(clientUser.id, {
             title: '📋 New Task Created',
             body: `New task "${task.title}" has been created for your project`,
             url: '/client-dashboard',
           }).catch(err => console.error('Failed to send push notification:', err));
+
+          // Send email notification to client user
+          if (clientUser.email) {
+            const { emailNotifications } = await import("../emailService");
+            void emailNotifications.sendTaskAssignedEmail(
+              clientUser.firstName || clientUser.username,
+              clientUser.email,
+              task.title,
+              task.description || '',
+              task.priority || 'normal',
+              task.dueDate?.toISOString() || null,
+              req.user?.firstName || req.user?.username || 'Team'
+            ).catch(err => console.error('Failed to send task email to client user:', err));
+          }
         }
       } catch (notifError) {
         console.error('Failed to notify client about task:', notifError);
