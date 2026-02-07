@@ -4,6 +4,7 @@ import { sendPushToUser } from "./push";
 import { emailNotifications } from "./emailService";
 import { checkAndNotifyTaskDeadlines } from "./notificationService";
 import { log } from "./vite";
+import { backfillRecurringTasks } from "./lib/recurringTaskBackfill";
 
 export function startTaskAutomation() {
   // Run every 15 minutes to generate due/overdue notifications without client polling.
@@ -86,6 +87,26 @@ export function startTaskAutomation() {
     }
   });
   
+  // Run daily at midnight EST: repopulate all recurring tasks for the new day
+  cron.schedule(
+    "0 0 * * *",
+    async () => {
+      console.log("🔄 Midnight EST: Repopulating recurring tasks...");
+      try {
+        const result = await backfillRecurringTasks();
+        console.log(
+          `🔄 Recurring task reset complete — ${result.tasksCreated} created, ${result.skipped} skipped (${result.seriesProcessed} series processed)`,
+        );
+      } catch (error) {
+        console.error(
+          "Error in midnight recurring task reset:",
+          error instanceof Error ? error.message : "Unknown error",
+        );
+      }
+    },
+    { timezone: "America/New_York" },
+  );
+
   console.log("🚀 Task automation service started");
 }
 
