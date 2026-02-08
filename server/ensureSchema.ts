@@ -44,6 +44,12 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS task_progress INTEGER DEFAULT 0;`
   );
 
+  // Tasks: estimated_hours column
+  await safeQuery(
+    "tasks.estimated_hours column",
+    `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS estimated_hours INTEGER DEFAULT 0;`
+  );
+
   // Emails: recipient_type column
   await safeQuery(
     "emails.recipient_type column",
@@ -76,6 +82,12 @@ export async function ensureMinimumSchema() {
   await safeQuery(
     "users.google_calendar_connected column",
     `ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS google_calendar_connected BOOLEAN DEFAULT FALSE;`
+  );
+
+  // Calendar events: is_recurring column
+  await safeQuery(
+    "calendar_events.is_recurring column",
+    `ALTER TABLE IF EXISTS calendar_events ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`
   );
 
   // These are referenced widely in the app; ensure they exist to prevent runtime errors on older DBs.
@@ -552,6 +564,32 @@ export async function ensureMinimumSchema() {
   await safeQuery(
     "idx_series_enrollments_recipient",
     `CREATE INDEX IF NOT EXISTS idx_series_enrollments_recipient ON marketing_series_enrollments(recipient_id);`
+  );
+  await safeQuery(
+    "marketing_series_enrollments.recipient_type column",
+    `ALTER TABLE IF EXISTS marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_type VARCHAR NOT NULL DEFAULT 'lead';`
+  );
+  await safeQuery(
+    "marketing_series_enrollments.next_step_at column",
+    `ALTER TABLE IF EXISTS marketing_series_enrollments ADD COLUMN IF NOT EXISTS next_step_at TIMESTAMP;`
+  );
+  await safeQuery(
+    "marketing_series_enrollments.completed_at column",
+    `ALTER TABLE IF EXISTS marketing_series_enrollments ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;`
+  );
+  await safeQuery(
+    "marketing_series_enrollments.last_step_sent_at column",
+    `ALTER TABLE IF EXISTS marketing_series_enrollments ADD COLUMN IF NOT EXISTS last_step_sent_at TIMESTAMP;`
+  );
+
+  // Marketing series steps: subject and delay_days columns
+  await safeQuery(
+    "marketing_series_steps.subject column",
+    `ALTER TABLE IF EXISTS marketing_series_steps ADD COLUMN IF NOT EXISTS subject VARCHAR;`
+  );
+  await safeQuery(
+    "marketing_series_steps.delay_days column",
+    `ALTER TABLE IF EXISTS marketing_series_steps ADD COLUMN IF NOT EXISTS delay_days INTEGER DEFAULT 0;`
   );
 
   // Session storage table (Critical for persistent logins)

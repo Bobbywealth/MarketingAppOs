@@ -243,6 +243,7 @@ export interface IStorage {
   }>;
 
   // Lead operations
+  getLead(id: string): Promise<Lead | undefined>;
   getLeads(options?: { limit?: number; offset?: number }): Promise<Lead[]>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, data: Partial<InsertLead>): Promise<Lead>;
@@ -325,6 +326,7 @@ export interface IStorage {
   updateScheduledAiCommand(id: string, data: Partial<InsertScheduledAiCommand>): Promise<ScheduledAiCommand>;
 
   // Marketing Series operations
+  getMarketingSeriesWithSteps(id: string): Promise<(MarketingSeries & { steps: MarketingSeriesStep[] }) | undefined>;
   getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]>;
   createMarketingSeries(series: InsertMarketingSeries): Promise<MarketingSeries>;
   createMarketingSeriesStep(step: InsertMarketingSeriesStep): Promise<MarketingSeriesStep>;
@@ -867,6 +869,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Lead operations
+  async getLead(id: string): Promise<Lead | undefined> {
+    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead;
+  }
+
   async getLeads(options?: { limit?: number; offset?: number }): Promise<Lead[]> {
     let query = db.select().from(leads).orderBy(desc(leads.createdAt));
     
@@ -1632,6 +1639,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Marketing Series operations
+  async getMarketingSeriesWithSteps(id: string): Promise<(MarketingSeries & { steps: MarketingSeriesStep[] }) | undefined> {
+    const [series] = await db.select().from(marketingSeries).where(eq(marketingSeries.id, id));
+    if (!series) return undefined;
+    const steps = await db
+      .select()
+      .from(marketingSeriesSteps)
+      .where(eq(marketingSeriesSteps.seriesId, id))
+      .orderBy(marketingSeriesSteps.stepOrder);
+    return { ...series, steps };
+  }
+
   async getDueSeriesEnrollments(): Promise<MarketingSeriesEnrollment[]> {
     return await db
       .select()
