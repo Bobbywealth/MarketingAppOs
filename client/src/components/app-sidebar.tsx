@@ -236,8 +236,9 @@ const salesAgentTools: SidebarNavItem[] = [
   },
 ];
 
-// Reordered for better workflow logic - Team communication tools together
-const communicationTools: SidebarNavItem[] = [
+// IMPROVED SIDEBAR STRUCTURE - User Workflow Based
+// Tier 1: Always Visible (Primary Tools)
+const primaryTools: SidebarNavItem[] = [
   {
     title: "Dashboard",
     url: "/dashboard-admin",
@@ -246,11 +247,18 @@ const communicationTools: SidebarNavItem[] = [
     sidebarKey: "dashboard" as const,
   },
   {
-    title: "User Management",
-    url: "/team",
-    icon: UsersRound,
-    permission: "canManageUsers" as const,
-    sidebarKey: "team" as const,
+    title: "My Tasks",
+    url: "/tasks",
+    icon: ListTodo,
+    permission: null,
+    sidebarKey: "tasks" as const,
+  },
+  {
+    title: "My Calendar",
+    url: "/company-calendar",
+    icon: Calendar,
+    permission: null,
+    sidebarKey: "calendar" as const,
   },
   {
     title: "Messages",
@@ -275,16 +283,24 @@ const communicationTools: SidebarNavItem[] = [
     permission: null,
     sidebarKey: "phone" as const,
   },
-  {
-    title: "My Calendar",
-    url: "/company-calendar",
-    icon: Calendar,
-    permission: null,
-    sidebarKey: "calendar" as const,
-  },
 ];
 
-const growthTools: SidebarNavItem[] = [
+// Tier 1: People & Clients
+const peopleTools: SidebarNavItem[] = [
+  {
+    title: "Team",
+    url: "/team",
+    icon: UsersRound,
+    permission: "canManageUsers" as const,
+    sidebarKey: "team" as const,
+  },
+  {
+    title: "Clients",
+    url: "/clients",
+    icon: Users,
+    permission: "canManageClients" as const,
+    sidebarKey: "clients" as const,
+  },
   {
     title: "Leads",
     url: "/leads",
@@ -293,18 +309,30 @@ const growthTools: SidebarNavItem[] = [
     sidebarKey: "leads" as const,
   },
   {
-    title: "Marketing Center",
-    url: "/marketing-center",
-    icon: Zap,
-    roles: ["admin"] as const,
-    sidebarKey: "marketingCenter" as const,
+    title: "Creators",
+    url: "/creators",
+    icon: UsersRound,
+    permission: "canManageClients" as const,
+    sidebarKey: "creators" as const,
+    roles: ["admin", "manager", "staff", "creator_manager"] as const,
   },
+];
+
+// Tier 2: Growth & Marketing (Collapsible)
+const growthTools: SidebarNavItem[] = [
   {
     title: "Campaigns",
     url: "/campaigns",
     icon: Megaphone,
     permission: "canManageCampaigns" as const,
     sidebarKey: "campaigns" as const,
+  },
+  {
+    title: "Marketing Center",
+    url: "/marketing-center",
+    icon: Zap,
+    roles: ["admin"] as const,
+    sidebarKey: "marketingCenter" as const,
   },
   {
     title: "Website Projects",
@@ -316,7 +344,8 @@ const growthTools: SidebarNavItem[] = [
   },
 ];
 
-const contentCreatorsTools: SidebarNavItem[] = [
+// Tier 2: Content (Collapsible)
+const contentTools: SidebarNavItem[] = [
   {
     title: "Content Calendar",
     url: "/content",
@@ -333,14 +362,6 @@ const contentCreatorsTools: SidebarNavItem[] = [
     roles: ["admin", "manager", "staff", "creator_manager"] as const,
   },
   {
-    title: "Creators",
-    url: "/creators",
-    icon: UsersRound,
-    permission: "canManageClients" as const,
-    sidebarKey: "creators" as const,
-    roles: ["admin", "manager", "staff", "creator_manager"] as const,
-  },
-  {
     title: "Visits",
     url: "/visits",
     icon: Calendar,
@@ -348,60 +369,94 @@ const contentCreatorsTools: SidebarNavItem[] = [
     sidebarKey: "visits" as const,
     roles: ["admin", "manager", "staff", "creator_manager"] as const,
   },
+];
+
+// Tier 2: Finance (Collapsible)
+const financeTools: SidebarNavItem[] = [
   {
-    title: "Payouts",
-    url: "/admin/creators/payouts",
+    title: "Invoices & Billing",
+    url: "/invoices",
     icon: DollarSign,
     permission: "canManageInvoices" as const,
     sidebarKey: "invoices" as const,
+  },
+  {
+    title: "Commissions",
+    url: "/commissions",
+    icon: TrendingUp,
     roles: ["admin", "manager"] as const,
+    sidebarKey: "commissions" as const,
   },
   {
-    title: "Manage Courses",
-    url: "/admin/manage-courses",
-    icon: BookOpen,
+    title: "Subscription Packages",
+    url: "/subscription-packages",
+    icon: Package,
+    permission: "canManageUsers" as const,
+    sidebarKey: "packages" as const,
+  },
+  {
+    title: "Discount Codes",
+    url: "/discount-codes",
+    icon: Percent,
     roles: ["admin"] as const,
-    sidebarKey: "training" as const,
+    sidebarKey: "discountCodes" as const,
   },
+];
+
+// Tier 2: AI Suite (Collapsible) - Consolidated
+const aiSuiteTools: SidebarNavItem[] = [
   {
-    title: "AI Digital Twin",
+    title: "Digital Twin",
     url: "/admin/second-me",
     icon: Sparkles,
     permission: "canManageClients" as const,
     sidebarKey: "secondMe" as const,
     roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
   },
+  {
+    title: "Business Manager",
+    url: "/admin/ai-manager",
+    icon: Bot,
+    roles: ["admin"] as const,
+    sidebarKey: "aiManager" as const,
+  },
+  {
+    title: "Content Generator",
+    url: "/admin/ai-content-generator",
+    icon: Bot,
+    roles: ["admin"] as const,
+    sidebarKey: "aiContentGenerator" as const,
+  },
 ];
 
-const managementTools: SidebarNavItem[] = [
+// Tier 2: Reports (Collapsible)
+const reportsTools: SidebarNavItem[] = [
   {
-    title: "Clients",
-    url: "/clients",
-    icon: Users,
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
     permission: "canManageClients" as const,
-    sidebarKey: "clients" as const,
-  },
-  {
-    title: "Tasks",
-    url: "/tasks",
-    icon: ListTodo,
-    permission: null,
-    sidebarKey: "tasks" as const,
-  },
-  {
-    title: "Support Tickets",
-    url: "/tickets",
-    icon: Ticket,
-    permission: "canManageTickets" as const,
-    sidebarKey: "tickets" as const,
-  },
-  {
-    title: "Onboarding",
-    url: "/onboarding",
-    icon: ClipboardCheck,
-    permission: "canManageClients" as const,
-    sidebarKey: "onboarding" as const,
+    sidebarKey: "analytics" as const,
     roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
+  },
+  {
+    title: "Social Stats",
+    url: "/admin/social-stats",
+    icon: LineChart,
+    permission: "canManageClients" as const,
+    sidebarKey: "socialStats" as const,
+    roles: ["admin", "manager", "staff", "sales_agent", "creator_manager"] as const,
+  },
+];
+
+// Tier 3: Training (Collapsible)
+const trainingTools: SidebarNavItem[] = [
+  {
+    title: "Training Materials",
+    url: "/training",
+    icon: BookOpen,
+    permission: "canManageUsers" as const,
+    sidebarKey: "training" as const,
   },
 ];
 
@@ -1315,15 +1370,14 @@ export function AppSidebar() {
 
   // Filter merged groups (these don't need role/permission filtering as they're pre-configured)
   const filteredAiSuite = aiSuiteTools;
-  const filteredBillingFinance = billingFinanceTools;
-  const filteredAnalyticsReports = analyticsReportsTools;
-  const filteredTrainingCourses = trainingCoursesTools;
+  const filteredFinance = financeTools;
+  const filteredReports = reportsTools;
+  const filteredTraining = trainingTools;
 
-  // Split communication for better organization
+  // Split navigation for better organization
   const matchesFilter = (item: SidebarNavItem) =>
     item.title.toLowerCase().includes(normalizedFilter);
 
-  // Also check subItems for filter matching
   const matchesFilterDeep = (item: SidebarNavItem) => {
     if (matchesFilter(item)) return true;
     if (item.subItems) {
@@ -1332,45 +1386,28 @@ export function AppSidebar() {
     return false;
   };
 
-  const visibleCommunication = hasFilter
-    ? filteredCommunication.filter(matchesFilter)
-    : filteredCommunication;
-  const visibleGrowth = hasFilter ? filteredGrowth.filter(matchesFilter) : filteredGrowth;
-  const visibleContentCreators = hasFilter
-    ? filteredContentCreators.filter(matchesFilter)
-    : filteredContentCreators;
-  const visibleManagement = hasFilter
-    ? filteredManagement.filter(matchesFilter)
-    : filteredManagement;
-  const visibleIntelligenceFinance = hasFilter
-    ? filteredIntelligenceFinance.filter(matchesFilter)
-    : filteredIntelligenceFinance;
-
-  // Filter merged groups
+  const visiblePrimary = hasFilter ? primaryTools.filter(matchesFilter) : primaryTools;
+  const visiblePeople = hasFilter ? peopleTools.filter(matchesFilter) : peopleTools;
+  const visibleGrowth = hasFilter ? growthTools.filter(matchesFilter) : growthTools;
+  const visibleContent = hasFilter ? contentTools.filter(matchesFilter) : contentTools;
+  const visibleFinance = hasFilter ? filteredFinance.filter(matchesFilter) : filteredFinance;
   const visibleAiSuite = hasFilter ? filteredAiSuite.filter(matchesFilterDeep) : filteredAiSuite;
-  const visibleBillingFinance = hasFilter ? filteredBillingFinance.filter(matchesFilterDeep) : filteredBillingFinance;
-  const visibleAnalyticsReports = hasFilter ? filteredAnalyticsReports.filter(matchesFilterDeep) : filteredAnalyticsReports;
-  const visibleTrainingCourses = hasFilter ? filteredTrainingCourses.filter(matchesFilterDeep) : filteredTrainingCourses;
+  const visibleReports = hasFilter ? filteredReports.filter(matchesFilterDeep) : filteredReports;
+  const visibleTraining = hasFilter ? filteredTraining.filter(matchesFilterDeep) : filteredTraining;
 
-  // Calculate total visible items including merged groups
+  // Calculate total visible items
   const totalVisibleItems =
-    visibleCommunication.length +
+    visiblePrimary.length +
+    visiblePeople.length +
     visibleGrowth.length +
-    visibleContentCreators.length +
-    visibleManagement.length +
-    visibleIntelligenceFinance.length +
+    visibleContent.length +
+    visibleFinance.length +
     visibleAiSuite.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
-    visibleBillingFinance.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
-    visibleAnalyticsReports.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
-    visibleTrainingCourses.reduce((sum, item) => sum + (item.subItems?.length || 1), 0);
+    visibleReports.reduce((sum, item) => sum + (item.subItems?.length || 1), 0) +
+    visibleTraining.reduce((sum, item) => sum + (item.subItems?.length || 1), 0);
 
-  const topLevelItems = visibleCommunication.filter(item => 
-    ["dashboard", "team"].includes(item.sidebarKey)
-  );
-  
-  const communicationGroupItems = visibleCommunication.filter(item => 
-    !["dashboard", "team"].includes(item.sidebarKey)
-  );
+  const topLevelItems = visiblePrimary;
+  const secondaryGroupItems = visiblePeople;
 
   return (
     <Sidebar 
@@ -1460,7 +1497,7 @@ export function AppSidebar() {
         {/* Main Section - Top Level Items */}
         <SidebarGroup className="mt-2">
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Overview
+            Dashboard
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
@@ -1483,28 +1520,41 @@ export function AppSidebar() {
           <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
         </div>
 
-        {/* Organized Groups */}
+        {/* Secondary Section - People & Clients */}
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
-            Tools & Operations
+            People & Clients
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {/* Communication Group */}
-              <NavCollapsibleGroup 
-                title="Communication"
-                icon={MessageSquare}
-                items={communicationGroupItems}
-                location={location}
-                isCollapsed={isCollapsed}
-                onClick={handleNavClick}
-                getBadgeCount={getBadgeCount}
-                forceOpen={hasFilter}
-              />
+              {secondaryGroupItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <NavItem
+                    item={item}
+                    isActive={location === item.url}
+                    isCollapsed={isCollapsed}
+                    onClick={handleNavClick}
+                    badgeCount={getBadgeCount((item as any).badgeKey)}
+                  />
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-              {/* Growth Group */}
-              <NavCollapsibleGroup 
-                title="Growth & Sales"
+        <div className="px-4 my-2">
+          <Separator className="bg-zinc-100 dark:bg-zinc-800 opacity-50" />
+        </div>
+
+        {/* Collapsible Groups */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Growth & Marketing
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              <NavCollapsibleGroup
+                title="Growth & Marketing"
                 icon={Zap}
                 items={visibleGrowth}
                 location={location}
@@ -1513,33 +1563,56 @@ export function AppSidebar() {
                 getBadgeCount={getBadgeCount}
                 forceOpen={hasFilter}
               />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-              {/* Creators Group */}
-              <NavCollapsibleGroup 
-                title="Creators & Content"
-                icon={Sparkles}
-                items={visibleContentCreators}
-                location={location}
-                isCollapsed={isCollapsed}
-                onClick={handleNavClick}
-                getBadgeCount={getBadgeCount}
-                forceOpen={hasFilter}
-              />
-
-              {/* Management Group */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Content
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
               <NavCollapsibleGroup
-                title="Operations"
-                icon={ClipboardCheck}
-                items={visibleManagement}
+                title="Content"
+                icon={Calendar}
+                items={visibleContent}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
                 getBadgeCount={getBadgeCount}
                 forceOpen={hasFilter}
               />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-              {/* Merged Groups for Simplified Navigation */}
-              {/* AI Suite Group */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Finance
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              <NavCollapsibleGroup
+                title="Finance"
+                icon={DollarSign}
+                items={visibleFinance}
+                location={location}
+                isCollapsed={isCollapsed}
+                onClick={handleNavClick}
+                getBadgeCount={getBadgeCount}
+                forceOpen={hasFilter}
+              />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            AI Suite
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
               <NavCollapsibleGroup
                 title="AI Suite"
                 icon={Sparkles}
@@ -1550,24 +1623,40 @@ export function AppSidebar() {
                 getBadgeCount={getBadgeCount}
                 forceOpen={hasFilter}
               />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-              {/* Billing & Finance Group */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Reports
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
               <NavCollapsibleGroup
-                title="Billing & Finance"
-                icon={DollarSign}
-                items={visibleBillingFinance}
+                title="Reports"
+                icon={BarChart3}
+                items={visibleReports}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
                 getBadgeCount={getBadgeCount}
                 forceOpen={hasFilter}
               />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-              {/* Training & Courses Group */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest opacity-80">
+            Training
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
               <NavCollapsibleGroup
-                title="Training & Courses"
+                title="Training"
                 icon={BookOpen}
-                items={visibleTrainingCourses}
+                items={visibleTraining}
                 location={location}
                 isCollapsed={isCollapsed}
                 onClick={handleNavClick}
