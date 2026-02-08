@@ -5,6 +5,7 @@ import {
   jsonb,
   pgTable,
   timestamp,
+  date,
   varchar,
   text,
   integer,
