@@ -160,17 +160,6 @@ export const tasks = pgTable("tasks", {
   dueDate: timestamp("due_date"),
   completedAt: timestamp("completed_at"),
   checklist: jsonb("checklist"), // Array of checklist items with id, text, completed
-  // Recurring task fields
-  isRecurring: boolean("is_recurring").default(false),
-  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, yearly
-  recurringInterval: integer("recurring_interval").default(1), // e.g., every 2 weeks
-  recurringEndDate: timestamp("recurring_end_date"),
-  // Progress and tracking fields
-  taskProgress: integer("task_progress").default(0), // 0-100
-  estimatedHours: integer("estimated_hours"),
-  tags: text("tags").array(),
-  startDate: timestamp("start_date"),
-  blocksCompletion: boolean("blocks_completion").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -262,9 +251,6 @@ export const taskTemplates = pgTable("task_templates", {
   status: varchar("status").notNull().default("todo"), // Default status
   priority: varchar("priority").notNull().default("normal"), // Default priority
   dueDateOffset: integer("due_date_offset"), // Number of days from now for default due date (null = no due date)
-  isRecurring: boolean("is_recurring").default(false), // Default recurring setting
-  recurringPattern: varchar("recurring_pattern"), // Default recurring pattern
-  recurringInterval: integer("recurring_interval").default(1), // Default recurring interval
   checklist: jsonb("checklist"), // Default checklist items as JSON array
   createdBy: integer("created_by").references(() => users.id),
   isSystemTemplate: boolean("is_system_template").default(false), // System templates are visible to all users
@@ -1013,13 +999,6 @@ export const calendarEvents = pgTable("calendar_events", {
   createdBy: integer("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  // Recurrence fields
-  isRecurring: boolean("is_recurring").default(false),
-  recurrencePattern: varchar("recurrence_pattern"), // daily, weekly, monthly, yearly
-  recurrenceDaysOfWeek: integer("recurrence_days_of_week").array(), // Days of week for weekly recurrence (0=Sun, 1=Mon, ..., 6=Sat)
-  recurrenceDayOfMonth: integer("recurrence_day_of_month"), // Day of month for monthly recurrence (1-31)
-  recurrenceInterval: integer("recurrence_interval").default(1), // Interval between occurrences (e.g., every 2 weeks)
-  recurrenceEndDate: timestamp("recurrence_end_date"), // Optional end date for the recurring series
 });
 
 export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({ id: true, createdAt: true, updatedAt: true });
@@ -1109,11 +1088,6 @@ export const marketingBroadcasts = pgTable("marketing_broadcasts", {
   totalRecipients: integer("total_recipients").default(0),
   successCount: integer("success_count").default(0),
   failedCount: integer("failed_count").default(0),
-  isRecurring: boolean("is_recurring").default(false),
-  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly
-  recurringInterval: integer("recurring_interval").default(1),
-  nextRunAt: timestamp("next_run_at"),
-  recurringEndDate: timestamp("recurring_end_date"),
   parentBroadcastId: varchar("parent_broadcast_id"),
   useAiPersonalization: boolean("use_ai_personalization").default(false),
   createdBy: integer("created_by").references(() => users.id),
