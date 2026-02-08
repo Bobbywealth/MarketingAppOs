@@ -1158,8 +1158,8 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       console.log("🔍 Dashboard API called - fetching data...");
       
       // Parse pagination parameters from query string
-      const limit = parseInt(req.query.limit as string) || 100;
-      const offset = parseInt(req.query.offset as string) || 0;
+      const limit = parseInt(_req.query.limit as string) || 100;
+      const offset = parseInt(_req.query.offset as string) || 0;
       
       // Only fetch lightweight data and minimal records for activity feed
       const [clients, campaigns, leads, tasks, invoices] = await Promise.all([
