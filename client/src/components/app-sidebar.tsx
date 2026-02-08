@@ -1291,45 +1291,6 @@ export function AppSidebar() {
   }
 
 
-  const filteredContentCreators = contentCreatorsTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  const filteredManagement = managementTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  const filteredIntelligenceFinance = intelligenceFinanceTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  // Filter merged groups (these don't need role/permission filtering as they're pre-configured)
-  const filteredAiSuite = aiSuiteTools;
-  const filteredFinance = financeTools;
-  const filteredReports = reportsTools;
-  const filteredTraining = trainingTools;
-
   // Split navigation for better organization
   const matchesFilter = (item: SidebarNavItem) =>
     item.title.toLowerCase().includes(normalizedFilter);
