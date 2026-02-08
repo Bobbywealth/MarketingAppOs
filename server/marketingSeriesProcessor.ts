@@ -33,15 +33,15 @@ export async function processMarketingSeries() {
         let recipientEmail = "";
         let recipientPhone = "";
 
-        if (enrollment.leadId) {
-          const lead = await storage.getLead(enrollment.leadId);
+        if (enrollment.recipientType === "lead") {
+          const lead = await storage.getLead(enrollment.recipientId);
           if (lead) {
             recipientName = lead.name || "there";
             recipientEmail = lead.email || "";
             recipientPhone = lead.phone || "";
           }
-        } else if (enrollment.clientId) {
-          const client = await storage.getClient(enrollment.clientId);
+        } else if (enrollment.recipientType === "client") {
+          const client = await storage.getClient(enrollment.recipientId);
           if (client) {
             recipientName = client.name || "there";
             recipientEmail = client.email || "";

@@ -160,6 +160,7 @@ export const tasks = pgTable("tasks", {
   dueDate: timestamp("due_date"),
   completedAt: timestamp("completed_at"),
   checklist: jsonb("checklist"), // Array of checklist items with id, text, completed
+  estimatedHours: integer("estimated_hours").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -996,6 +997,7 @@ export const calendarEvents = pgTable("calendar_events", {
   attendees: text("attendees").array(),
   googleEventId: varchar("google_event_id"),
   meetLink: varchar("meet_link"),
+  isRecurring: boolean("is_recurring").default(false),
   createdBy: integer("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -1160,7 +1162,9 @@ export const marketingSeriesSteps = pgTable("marketing_series_steps", {
   seriesId: varchar("series_id").notNull().references(() => marketingSeries.id, { onDelete: "cascade" }),
   stepOrder: integer("step_order").notNull(),
   name: varchar("name").notNull(),
+  subject: varchar("subject"),
   content: text("content").notNull(),
+  delayDays: integer("delay_days").default(0),
   delayHours: integer("delay_hours").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -1177,6 +1181,7 @@ export const marketingSeriesEnrollments = pgTable("marketing_series_enrollments"
   recipientType: varchar("recipient_type").notNull(),
   currentStep: integer("current_step").default(1),
   status: varchar("status").notNull().default("active"),
+  lastStepSentAt: timestamp("last_step_sent_at"),
   nextStepAt: timestamp("next_step_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
