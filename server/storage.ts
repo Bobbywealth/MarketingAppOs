@@ -6,6 +6,12 @@ import {
   taskSpaces,
   userViewPreferences,
   taskComments,
+  taskTemplates,
+  taskDependencies,
+  taskActivity,
+  taskAttachments,
+  taskAnalyticsSnapshot,
+  savedTaskSearches,
   leads,
   leadActivities,
   leadAutomations,
@@ -50,6 +56,17 @@ import {
   type InsertUserViewPreferences,
   type TaskComment,
   type InsertTaskComment,
+  type TaskTemplate,
+  type InsertTaskTemplate,
+  type TaskDependency,
+  type InsertTaskDependency,
+  type TaskActivity,
+  type InsertTaskActivity,
+  type TaskAttachment,
+  type InsertTaskAttachment,
+  type TaskAnalyticsSnapshot,
+  type SavedTaskSearch,
+  type InsertSavedTaskSearch,
   type Lead,
   type InsertLead,
   type LeadActivity,
@@ -151,7 +168,62 @@ export interface IStorage {
   // Task comment operations
   getTaskComments(taskId: string): Promise<TaskComment[]>;
   createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
-  
+
+  // Task template operations
+  getTaskTemplates(): Promise<TaskTemplate[]>;
+  getTaskTemplate(id: string): Promise<TaskTemplate | undefined>;
+  createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate>;
+  updateTaskTemplate(id: string, data: Partial<InsertTaskTemplate>): Promise<TaskTemplate>;
+  deleteTaskTemplate(id: string): Promise<void>;
+
+  // Task dependency operations
+  getTaskDependencies(taskId: string): Promise<TaskDependency[]>;
+  getDependentTasks(taskId: string): Promise<TaskDependency[]>;
+  createTaskDependency(dependency: InsertTaskDependency): Promise<TaskDependency>;
+  deleteTaskDependency(id: string): Promise<void>;
+  validateTaskDependencies(taskId: string): Promise<{ valid: boolean; blockedBy: Task[] }>;
+
+  // Task activity operations
+  getTaskActivity(taskId: string, limit?: number): Promise<TaskActivity[]>;
+  getUserActivity(userId: number, limit?: number): Promise<TaskActivity[]>;
+  createTaskActivity(activity: InsertTaskActivity): Promise<TaskActivity>;
+
+  // Task attachment operations
+  getTaskAttachments(taskId: string): Promise<TaskAttachment[]>;
+  createTaskAttachment(attachment: InsertTaskAttachment): Promise<TaskAttachment>;
+  deleteTaskAttachment(id: string): Promise<void>;
+
+  // User workload operations
+  getUserWorkload(userId: number): Promise<{
+    activeTasks: number;
+    overdueTasks: number;
+    estimatedHoursTotal: number;
+    tasksByPriority: Record<string, number>;
+    upcomingDeadlines: Task[];
+  }>;
+
+  // Task analytics operations
+  getTaskAnalytics(dateFrom: Date, dateTo: Date): Promise<TaskAnalyticsSnapshot[]>;
+  createTaskAnalyticsSnapshot(snapshot: TaskAnalyticsSnapshot): Promise<TaskAnalyticsSnapshot>;
+
+  // Saved search operations
+  getSavedTaskSearches(userId: number): Promise<SavedTaskSearch[]>;
+  saveTaskSearch(search: InsertSavedTaskSearch): Promise<SavedTaskSearch>;
+  deleteSavedTaskSearch(id: string): Promise<void>;
+
+  // Advanced task search
+  searchTasks(filters: {
+    status?: string[];
+    priority?: string[];
+    assigneeId?: number;
+    spaceId?: string;
+    clientId?: string;
+    dueDateFrom?: Date;
+    dueDateTo?: Date;
+    tags?: string[];
+    searchText?: string;
+  }): Promise<Task[]>;
+
   // Calendar Events operations
   getCalendarEvents(): Promise<CalendarEvent[]>;
   getCalendarEvent(id: string): Promise<CalendarEvent | undefined>;
@@ -520,6 +592,246 @@ export class DatabaseStorage implements IStorage {
   async createTaskComment(commentData: InsertTaskComment): Promise<TaskComment> {
     const [comment] = await db.insert(taskComments).values(commentData).returning();
     return comment;
+  }
+
+  // Task template operations
+  async getTaskTemplates(): Promise<TaskTemplate[]> {
+    return await db.select().from(taskTemplates).orderBy(taskTemplates.createdAt);
+  }
+
+  async getTaskTemplate(id: string): Promise<TaskTemplate | undefined> {
+    const [template] = await db.select().from(taskTemplates).where(eq(taskTemplates.id, id));
+    return template;
+  }
+
+  async createTaskTemplate(templateData: InsertTaskTemplate): Promise<TaskTemplate> {
+    const [template] = await db.insert(taskTemplates).values(templateData).returning();
+    return template;
+  }
+
+  async updateTaskTemplate(id: string, data: Partial<InsertTaskTemplate>): Promise<TaskTemplate> {
+    const [template] = await db
+      .update(taskTemplates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(taskTemplates.id, id))
+      .returning();
+    return template;
+  }
+
+  async deleteTaskTemplate(id: string): Promise<void> {
+    await db.delete(taskTemplates).where(eq(taskTemplates.id, id));
+  }
+
+  // Task dependency operations
+  async getTaskDependencies(taskId: string): Promise<TaskDependency[]> {
+    return await db
+      .select()
+      .from(taskDependencies)
+      .where(eq(taskDependencies.taskId, taskId));
+  }
+
+  async getDependentTasks(taskId: string): Promise<TaskDependency[]> {
+    return await db
+      .select()
+      .from(taskDependencies)
+      .where(eq(taskDependencies.prerequisiteTaskId, taskId));
+  }
+
+  async createTaskDependency(dependencyData: InsertTaskDependency): Promise<TaskDependency> {
+    const [dependency] = await db.insert(taskDependencies).values(dependencyData).returning();
+    return dependency;
+  }
+
+  async deleteTaskDependency(id: string): Promise<void> {
+    await db.delete(taskDependencies).where(eq(taskDependencies.id, id));
+  }
+
+  async validateTaskDependencies(taskId: string): Promise<{ valid: boolean; blockedBy: Task[] }> {
+    const dependencies = await this.getTaskDependencies(taskId);
+    const blockedBy: Task[] = [];
+
+    for (const dep of dependencies) {
+      const prerequisiteTask = await this.getTask(dep.prerequisiteTaskId);
+      if (prerequisiteTask && prerequisiteTask.status !== 'completed') {
+        blockedBy.push(prerequisiteTask);
+      }
+    }
+
+    return {
+      valid: blockedBy.length === 0,
+      blockedBy,
+    };
+  }
+
+  // Task activity operations
+  async getTaskActivity(taskId: string, limit: number = 50): Promise<TaskActivity[]> {
+    return await db
+      .select()
+      .from(taskActivity)
+      .where(eq(taskActivity.taskId, taskId))
+      .orderBy(desc(taskActivity.createdAt))
+      .limit(limit);
+  }
+
+  async getUserActivity(userId: number, limit: number = 100): Promise<TaskActivity[]> {
+    return await db
+      .select()
+      .from(taskActivity)
+      .where(eq(taskActivity.userId, userId))
+      .orderBy(desc(taskActivity.createdAt))
+      .limit(limit);
+  }
+
+  async createTaskActivity(activityData: InsertTaskActivity): Promise<TaskActivity> {
+    const [activity] = await db.insert(taskActivity).values(activityData).returning();
+    return activity;
+  }
+
+  // Task attachment operations
+  async getTaskAttachments(taskId: string): Promise<TaskAttachment[]> {
+    return await db
+      .select()
+      .from(taskAttachments)
+      .where(eq(taskAttachments.taskId, taskId))
+      .orderBy(desc(taskAttachments.createdAt));
+  }
+
+  async createTaskAttachment(attachmentData: InsertTaskAttachment): Promise<TaskAttachment> {
+    const [attachment] = await db.insert(taskAttachments).values(attachmentData).returning();
+    return attachment;
+  }
+
+  async deleteTaskAttachment(id: string): Promise<void> {
+    await db.delete(taskAttachments).where(eq(taskAttachments.id, id));
+  }
+
+  // User workload operations
+  async getUserWorkload(userId: number): Promise<{
+    activeTasks: number;
+    overdueTasks: number;
+    estimatedHoursTotal: number;
+    tasksByPriority: Record<string, number>;
+    upcomingDeadlines: Task[];
+  }> {
+    const allTasks = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.assignedToId, userId));
+
+    const now = new Date();
+    const activeTasks = allTasks.filter(t => t.status !== 'completed');
+    const overdueTasks = activeTasks.filter(t => t.dueDate && new Date(t.dueDate) < now);
+    const upcomingDeadlines = activeTasks
+      .filter(t => t.dueDate && new Date(t.dueDate) > now)
+      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+      .slice(0, 5);
+
+    const tasksByPriority: Record<string, number> = {};
+    for (const task of activeTasks) {
+      tasksByPriority[task.priority] = (tasksByPriority[task.priority] || 0) + 1;
+    }
+
+    const estimatedHoursTotal = activeTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+
+    return {
+      activeTasks: activeTasks.length,
+      overdueTasks: overdueTasks.length,
+      estimatedHoursTotal,
+      tasksByPriority,
+      upcomingDeadlines,
+    };
+  }
+
+  // Task analytics operations
+  async getTaskAnalytics(dateFrom: Date, dateTo: Date): Promise<TaskAnalyticsSnapshot[]> {
+    return await db
+      .select()
+      .from(taskAnalyticsSnapshot)
+      .where(
+        and(
+          gte(taskAnalyticsSnapshot.snapshotDate, dateFrom),
+          gte(taskAnalyticsSnapshot.snapshotDate, dateTo)
+        )
+      )
+      .orderBy(desc(taskAnalyticsSnapshot.snapshotDate));
+  }
+
+  async createTaskAnalyticsSnapshot(snapshot: TaskAnalyticsSnapshot): Promise<TaskAnalyticsSnapshot> {
+    const [result] = await db.insert(taskAnalyticsSnapshot).values(snapshot).returning();
+    return result;
+  }
+
+  // Saved search operations
+  async getSavedTaskSearches(userId: number): Promise<SavedTaskSearch[]> {
+    return await db
+      .select()
+      .from(savedTaskSearches)
+      .where(eq(savedTaskSearches.userId, userId))
+      .orderBy(desc(savedTaskSearches.createdAt));
+  }
+
+  async saveTaskSearch(search: InsertSavedTaskSearch): Promise<SavedTaskSearch> {
+    const [result] = await db.insert(savedTaskSearches).values(search).returning();
+    return result;
+  }
+
+  async deleteSavedTaskSearch(id: string): Promise<void> {
+    await db.delete(savedTaskSearches).where(eq(savedTaskSearches.id, id));
+  }
+
+  // Advanced task search
+  async searchTasks(filters: {
+    status?: string[];
+    priority?: string[];
+    assigneeId?: number;
+    spaceId?: string;
+    clientId?: string;
+    dueDateFrom?: Date;
+    dueDateTo?: Date;
+    tags?: string[];
+    searchText?: string;
+  }): Promise<Task[]> {
+    let query = db.select().from(tasks);
+    const conditions = [];
+
+    if (filters.status?.length) {
+      conditions.push(sql`${tasks.status} = ANY(${filters.status})`);
+    }
+    if (filters.priority?.length) {
+      conditions.push(sql`${tasks.priority} = ANY(${filters.priority})`);
+    }
+    if (filters.assigneeId) {
+      conditions.push(eq(tasks.assignedToId, filters.assigneeId));
+    }
+    if (filters.spaceId) {
+      conditions.push(eq(tasks.spaceId, filters.spaceId));
+    }
+    if (filters.clientId) {
+      conditions.push(eq(tasks.clientId, filters.clientId));
+    }
+    if (filters.dueDateFrom) {
+      conditions.push(gte(tasks.dueDate, filters.dueDateFrom));
+    }
+    if (filters.dueDateTo) {
+      conditions.push(gte(tasks.dueDate, filters.dueDateTo));
+    }
+    if (filters.tags?.length) {
+      conditions.push(sql`${tasks.tags} && ${filters.tags}`);
+    }
+    if (filters.searchText) {
+      conditions.push(
+        or(
+          sql`${tasks.title} ILIKE ${'%' + filters.searchText + '%'}`,
+          sql`${tasks.description} ILIKE ${'%' + filters.searchText + '%'}:`
+        )
+      );
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+
+    return await query.orderBy(desc(tasks.createdAt));
   }
 
   // Calendar Events operations

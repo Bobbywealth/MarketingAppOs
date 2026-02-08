@@ -63,5 +63,16 @@ export class CircuitBreaker {
   getState(): CircuitState {
     return this.state;
   }
+
+  getFailureCount(): number {
+    return this.failureCount;
+  }
+
+  reset(): void {
+    this.state = CircuitState.CLOSED;
+    this.failureCount = 0;
+    this.lastFailureTime = null;
+    console.log('🔌 Circuit breaker reset to CLOSED state');
+  }
 }
 

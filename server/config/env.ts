@@ -162,13 +162,13 @@ export function isServiceConfigured(service: 'email' | 'sms' | 'stripe' | 'googl
     case 'sms':
       return !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN);
     case 'stripe':
-      return !env.STRIPE_SECRET_KEY;
+      return !!env.STRIPE_SECRET_KEY;
     case 'google':
       return !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
     case 'openai':
-      return !env.OPENAI_API_KEY;
+      return !!env.OPENAI_API_KEY;
     case 'vapi':
-      return !env.VAPI_API_KEY;
+      return !!env.VAPI_API_KEY;
     default:
       return false;
   }

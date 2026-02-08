@@ -32,7 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft } from "lucide-react";
-import type { Task, InsertTask, Client, User as UserType, TaskSpace } from "@shared/schema";
+import type { Task, InsertTask, Client, User as UserType, TaskSpace, TaskTemplate } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,6 +40,54 @@ import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
 import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
+
+function getNextWeekday(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = 7 - day; // Days until next Monday
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() + diff);
+  return nextMonday.toISOString().split('T')[0];
+}
+
+interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+function applyTemplate(
+  template: TaskTemplate,
+  form: any,
+  setSelectedTemplateId: (id: string | null) => void
+) {
+  // Set basic fields
+  form.setValue('title', template.title);
+  form.setValue('description', template.taskDescription || '');
+  form.setValue('status', template.status);
+  form.setValue('priority', template.priority);
+  
+  // Set due date based on offset
+  if (template.dueDateOffset !== null && template.dueDateOffset !== undefined) {
+    const now = new Date();
+    now.setDate(now.getDate() + template.dueDateOffset);
+    form.setValue('dueDate', now.toISOString().split('T')[0]);
+  } else {
+    form.setValue('dueDate', '');
+  }
+  
+  // Set recurring settings
+  form.setValue('isRecurring', template.isRecurring);
+  form.setValue('recurringPattern', template.recurringPattern || '');
+  form.setValue('recurringInterval', template.recurringInterval || 1);
+  
+  // Set checklist if available
+  if (template.checklist && Array.isArray(template.checklist)) {
+    form.setValue('checklist', template.checklist);
+  }
+  
+  setSelectedTemplateId(template.id);
+}
 
 const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -57,6 +105,11 @@ const taskFormSchema = z.object({
   recurringInterval: z.number().optional(),
   recurringEndDate: z.string().optional(),
   scheduleFrom: z.enum(["due_date", "completion_date"]).optional(),
+  checklist: z.array(z.object({
+    id: z.string(),
+    text: z.string(),
+    completed: z.boolean(),
+  })).optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -64,10 +117,12 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 export default function TasksPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "kanban" | "compact">("kanban");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -160,6 +215,12 @@ export default function TasksPage() {
 
   const { data: spaces = [] } = useQuery<TaskSpace[]>({
     queryKey: ["/api/task-spaces"],
+    retry: false,
+    meta: { returnNull: true }, // Don't throw error if forbidden
+  });
+
+  const { data: templates = [] } = useQuery<TaskTemplate[]>({
+    queryKey: ["/api/tasks/templates"],
     retry: false,
     meta: { returnNull: true }, // Don't throw error if forbidden
   });
@@ -511,6 +572,7 @@ export default function TasksPage() {
     if (filterStatus !== "all" && task.status !== filterStatus) return false;
     if (filterPriority !== "all" && task.priority !== filterPriority) return false;
     if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
+    if (searchQuery.trim() !== '' && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) && !task.description?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   };
 
@@ -1040,6 +1102,7 @@ export default function TasksPage() {
                     setFilterPriority("all");
                     setSelectedSpaceId(null);
                     setShowCompleted(true);
+                    setSearchQuery('');
                   }}
                   className="text-muted-foreground"
                 >
@@ -1121,8 +1184,39 @@ export default function TasksPage() {
                 <DialogTitle>Create New Task</DialogTitle>
                 <DialogDescription>Add a new task to your workflow</DialogDescription>
               </DialogHeader>
+              {/* Predefined Task Templates */}
+              <div className="mb-4">
+                <label className="text-sm font-medium text-muted-foreground">Quick Templates</label>
+                {templates.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {templates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => applyTemplate(template, form, setSelectedTemplateId)}
+                        className={`p-3 text-left border rounded-lg hover:bg-muted/50 transition-colors ${
+                          selectedTemplateId === template.id ? 'border-primary bg-primary/5' : ''
+                        }`}
+                      >
+                        <div className="text-sm">
+                          <div className="font-medium">{template.name}</div>
+                          <div className="text-xs text-muted-foreground">{template.description || template.title}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No templates available</div>
+                )}
+              </div>
+
               <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createTaskMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={form.handleSubmit((data) => {
+                  const templateData = selectedTemplateId
+                    ? { ...data, templateId: selectedTemplateId }
+                    : data;
+                  createTaskMutation.mutate(templateData);
+                })} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"

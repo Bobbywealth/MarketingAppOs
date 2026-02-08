@@ -47,6 +47,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   assignedTasks: many(tasks),
   messages: many(messages),
   tickets: many(tickets),
+  createdTaskTemplates: many(taskTemplates),
 }));
 
 // Clients table
@@ -157,11 +158,18 @@ export const tasks = pgTable("tasks", {
   priority: varchar("priority").notNull().default("normal"), // low, normal, high, urgent
   dueDate: timestamp("due_date"),
   completedAt: timestamp("completed_at"),
+  checklist: jsonb("checklist"), // Array of checklist items with id, text, completed
   // Recurring task fields
   isRecurring: boolean("is_recurring").default(false),
   recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, yearly
   recurringInterval: integer("recurring_interval").default(1), // e.g., every 2 weeks
   recurringEndDate: timestamp("recurring_end_date"),
+  // Progress and tracking fields
+  taskProgress: integer("task_progress").default(0), // 0-100
+  estimatedHours: integer("estimated_hours"),
+  tags: text("tags").array(),
+  startDate: timestamp("start_date"),
+  blocksCompletion: boolean("blocks_completion").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -194,6 +202,10 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     references: [taskSpaces.id],
   }),
   comments: many(taskComments),
+  dependencies: many(taskDependencies),
+  prerequisiteTasks: many(taskDependencies),
+  activity: many(taskActivity),
+  attachments: many(taskAttachments),
 }));
 
 // User View Preferences table (for customizing task views)
@@ -235,6 +247,148 @@ export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
   }),
   user: one(users, {
     fields: [taskComments.userId],
+    references: [users.id],
+  }),
+}));
+
+// Task Templates table (for reusable task configurations)
+export const taskTemplates = pgTable("task_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  title: varchar("title").notNull(), // Default task title
+  taskDescription: text("task_description"), // Default task description
+  status: varchar("status").notNull().default("todo"), // Default status
+  priority: varchar("priority").notNull().default("normal"), // Default priority
+  dueDateOffset: integer("due_date_offset"), // Number of days from now for default due date (null = no due date)
+  isRecurring: boolean("is_recurring").default(false), // Default recurring setting
+  recurringPattern: varchar("recurring_pattern"), // Default recurring pattern
+  recurringInterval: integer("recurring_interval").default(1), // Default recurring interval
+  checklist: jsonb("checklist"), // Default checklist items as JSON array
+  createdBy: integer("created_by").references(() => users.id),
+  isSystemTemplate: boolean("is_system_template").default(false), // System templates are visible to all users
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_task_templates_created_by").on(table.createdBy),
+  index("IDX_task_templates_is_system").on(table.isSystemTemplate),
+]);
+
+export const taskTemplatesRelations = relations(taskTemplates, ({ one }) => ({
+  createdByUser: one(users, {
+    fields: [taskTemplates.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Task Dependencies table (prerequisite relationships)
+export const taskDependencies = pgTable("task_dependencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull(), // The dependent task
+  prerequisiteTaskId: varchar("prerequisite_task_id").notNull(), // Must complete first
+  dependencyType: varchar("dependency_type").default("finish_to_start"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_task_deps_task").on(table.taskId),
+  index("IDX_task_deps_prerequisite").on(table.prerequisiteTaskId),
+]);
+
+export const taskDependenciesRelations = relations(taskDependencies, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskDependencies.taskId],
+    references: [tasks.id],
+  }),
+  prerequisiteTask: one(tasks, {
+    fields: [taskDependencies.prerequisiteTaskId],
+    references: [tasks.id],
+  }),
+}));
+
+// Task Activity table (full audit trail)
+export const taskActivity = pgTable("task_activity", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull(),
+  userId: integer("user_id"),
+  action: varchar("action").notNull(), // created, updated, status_changed, assigned, commented, etc.
+  fieldName: varchar("field_name"),
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_task_activity_task").on(table.taskId),
+  index("IDX_task_activity_user").on(table.userId),
+  index("IDX_task_activity_created").on(table.createdAt),
+]);
+
+export const taskActivityRelations = relations(taskActivity, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskActivity.taskId],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskActivity.userId],
+    references: [users.id],
+  }),
+}));
+
+// Task Attachments table
+export const taskAttachments = pgTable("task_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  taskId: varchar("task_id").notNull(),
+  uploadedBy: integer("uploaded_by").notNull(),
+  fileName: varchar("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileType: varchar("file_type"),
+  objectPath: varchar("object_path").notNull(),
+  thumbnailPath: varchar("thumbnail_path"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_task_attachments_task").on(table.taskId),
+]);
+
+export const taskAttachmentsRelations = relations(taskAttachments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskAttachments.taskId],
+    references: [tasks.id],
+  }),
+  uploadedByUser: one(users, {
+    fields: [taskAttachments.uploadedBy],
+    references: [users.id],
+  }),
+}));
+
+// Task Analytics Snapshot table
+export const taskAnalyticsSnapshot = pgTable("task_analytics_snapshot", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  snapshotDate: date("snapshot_date").notNull(),
+  totalTasks: integer("total_tasks").default(0),
+  completedTasks: integer("completed_tasks").default(0),
+  overdueTasks: integer("overdue_tasks").default(0),
+  avgCompletionTime: integer("avg_completion_time"),
+  tasksByStatus: jsonb("tasks_by_status"),
+  tasksByPriority: jsonb("tasks_by_priority"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_task_analytics_date").on(table.snapshotDate),
+]);
+
+// Saved Task Searches table
+export const savedTaskSearches = pgTable("saved_task_searches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").notNull(),
+  name: varchar("name").notNull(),
+  filters: jsonb("filters").notNull(),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_saved_searches_user").on(table.userId),
+]);
+
+export const savedTaskSearchesRelations = relations(savedTaskSearches, ({ one }) => ({
+  user: one(users, {
+    fields: [savedTaskSearches.userId],
     references: [users.id],
   }),
 }));
@@ -1057,3 +1211,7 @@ export const marketingSeriesEnrollments = pgTable("marketing_series_enrollments"
 export const insertMarketingSeriesEnrollmentSchema = createInsertSchema(marketingSeriesEnrollments).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertMarketingSeriesEnrollment = z.infer<typeof insertMarketingSeriesEnrollmentSchema>;
 export type MarketingSeriesEnrollment = typeof marketingSeriesEnrollments.$inferSelect;
+
+export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
+export type TaskTemplate = typeof taskTemplates.$inferSelect;

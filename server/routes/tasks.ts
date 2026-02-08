@@ -1,20 +1,20 @@
 import { Router, Request, Response } from "express";
 import { storage } from "../storage";
 import { db, pool } from "../db";
-import { tasks, taskSpaces, taskComments } from "@shared/schema";
+import { tasks, taskSpaces, taskComments, taskTemplates, taskDependencies, taskActivity, taskAttachments, taskAnalyticsSnapshot, savedTaskSearches } from "@shared/schema";
 import { rolePermissions } from "../rbac";
 import { UserRole } from "@shared/roles";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { isAuthenticated } from "../auth";
 import { requireRole, requirePermission } from "../rbac";
-import { 
-  getCurrentUserContext 
+import {
+  getCurrentUserContext
 } from "./utils";
-import { 
-  handleValidationError, 
-  notifyAdminsAboutAction 
+import {
+  handleValidationError,
+  notifyAdminsAboutAction
 } from "./common";
-import { insertTaskSchema, insertTaskSpaceSchema, insertTaskCommentSchema } from "@shared/schema";
+import { insertTaskSchema, insertTaskSpaceSchema, insertTaskCommentSchema, insertTaskTemplateSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { randomUUID } from "crypto";
 import { createHash } from "crypto";
@@ -926,6 +926,526 @@ router.post("/tasks/:taskId/comments", isAuthenticated, async (req: Request, res
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to create comment" });
+  }
+});
+
+// Task Templates routes
+
+// GET /api/tasks/templates - Get all task templates
+router.get("/templates", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const userId = user?.id ? Number(user.id) : null;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+
+    // Admin and Managers see all templates, others see only their own + system templates
+    const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
+
+    let templates;
+    if (isAllAccess) {
+      templates = await db.select().from(taskTemplates).orderBy(taskTemplates.createdAt);
+    } else {
+      templates = await db.select().from(taskTemplates).where(
+        eq(taskTemplates.isSystemTemplate, true)
+      );
+      
+      // Add user's own templates
+      if (userId) {
+        const userTemplates = await db.select().from(taskTemplates).where(
+          eq(taskTemplates.createdBy, userId)
+        );
+        templates = [...templates, ...userTemplates];
+      }
+    }
+
+    res.json(templates);
+  } catch (error) {
+    console.error("Error fetching task templates:", error);
+    res.status(500).json({ message: "Failed to fetch templates" });
+  }
+});
+
+// GET /api/tasks/templates/:id - Get a single task template
+router.get("/templates/:id", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const template = await db.select().from(taskTemplates).where(eq(taskTemplates.id, id)).limit(1);
+
+    if (!template || template.length === 0) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+
+    res.json(template[0]);
+  } catch (error) {
+    console.error("Error fetching task template:", error);
+    res.status(500).json({ message: "Failed to fetch template" });
+  }
+});
+
+// POST /api/tasks/templates - Create a new task template
+router.post("/templates", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const userId = user?.id ? Number(user.id) : null;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const validatedData = insertTaskTemplateSchema.parse({
+      ...req.body,
+      createdBy: userId,
+      isSystemTemplate: false, // Only system templates can be created via migration
+    });
+
+    const template = await db.insert(taskTemplates).values(validatedData).returning();
+
+    res.status(201).json(template[0]);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({ message: "Validation error", errors: error.errors });
+    }
+    console.error("Error creating task template:", error);
+    res.status(500).json({ message: "Failed to create template" });
+  }
+});
+
+// PATCH /api/tasks/templates/:id - Update a task template
+router.patch("/templates/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    const userId = user?.id ? Number(user.id) : null;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+
+    // Check if template exists and user has permission
+    const existingTemplate = await db.select().from(taskTemplates).where(eq(taskTemplates.id, id)).limit(1);
+    
+    if (!existingTemplate || existingTemplate.length === 0) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+
+    const template = existingTemplate[0];
+
+    // Only admins can modify system templates, others can only modify their own
+    if (template.isSystemTemplate && normalizedRole !== "admin") {
+      return res.status(403).json({ message: "Cannot modify system templates" });
+    }
+
+    if (!template.isSystemTemplate && template.createdBy !== userId) {
+      return res.status(403).json({ message: "You can only modify your own templates" });
+    }
+
+    const updatedTemplate = await db.update(taskTemplates)
+      .set({
+        ...req.body,
+        updatedAt: new Date(),
+      })
+      .where(eq(taskTemplates.id, id))
+      .returning();
+
+    res.json(updatedTemplate[0]);
+  } catch (error) {
+    console.error("Error updating task template:", error);
+    res.status(500).json({ message: "Failed to update template" });
+  }
+});
+
+// DELETE /api/tasks/templates/:id - Delete a task template
+router.delete("/templates/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    const userId = user?.id ? Number(user.id) : null;
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+
+    // Check if template exists and user has permission
+    const existingTemplate = await db.select().from(taskTemplates).where(eq(taskTemplates.id, id)).limit(1);
+    
+    if (!existingTemplate || existingTemplate.length === 0) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+
+    const template = existingTemplate[0];
+
+    // Only admins can delete system templates, others can only delete their own
+    if (template.isSystemTemplate && normalizedRole !== "admin") {
+      return res.status(403).json({ message: "Cannot delete system templates" });
+    }
+
+    if (!template.isSystemTemplate && template.createdBy !== userId) {
+      return res.status(403).json({ message: "You can only delete your own templates" });
+    }
+
+    await db.delete(taskTemplates).where(eq(taskTemplates.id, id));
+
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting task template:", error);
+    res.status(500).json({ message: "Failed to delete template" });
+  }
+});
+
+// ==================== TASK DEPENDENCIES ====================
+
+// Get dependencies for a task
+router.get("/tasks/:taskId/dependencies", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const dependencies = await storage.getTaskDependencies(req.params.taskId);
+    
+    // Get prerequisite task details
+    const tasks = await Promise.all(
+      dependencies.map(async (dep) => {
+        const prerequisiteTask = await storage.getTask(dep.prerequisiteTaskId);
+        return {
+          ...dep,
+          prerequisiteTask,
+        };
+      })
+    );
+    
+    res.json(tasks);
+  } catch (error) {
+    console.error("Error fetching task dependencies:", error);
+    res.status(500).json({ message: "Failed to fetch dependencies" });
+  }
+});
+
+// Get tasks that depend on this task
+router.get("/tasks/:taskId/dependents", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const dependents = await storage.getDependentTasks(req.params.taskId);
+    
+    // Get dependent task details
+    const tasks = await Promise.all(
+      dependents.map(async (dep) => {
+        const dependentTask = await storage.getTask(dep.taskId);
+        return {
+          ...dep,
+          dependentTask,
+        };
+      })
+    );
+    
+    res.json(tasks);
+  } catch (error) {
+    console.error("Error fetching dependent tasks:", error);
+    res.status(500).json({ message: "Failed to fetch dependents" });
+  }
+});
+
+// Add a dependency
+router.post("/tasks/:taskId/dependencies", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { prerequisiteTaskId, dependencyType } = req.body;
+    
+    // Validate that prerequisite task exists
+    const prerequisiteTask = await storage.getTask(prerequisiteTaskId);
+    if (!prerequisiteTask) {
+      return res.status(404).json({ message: "Prerequisite task not found" });
+    }
+    
+    // Check for circular dependencies
+    const validation = await storage.validateTaskDependencies(prerequisiteTaskId);
+    if (!validation.valid && validation.blockedBy.some(t => t.id === req.params.taskId)) {
+      return res.status(400).json({ message: "Cannot create dependency - would cause circular reference" });
+    }
+    
+    const dependency = await storage.createTaskDependency({
+      taskId: req.params.taskId,
+      prerequisiteTaskId,
+      dependencyType: dependencyType || "finish_to_start",
+    });
+    
+    // Log activity
+    await storage.createTaskActivity({
+      taskId: req.params.taskId,
+      userId: user?.id ? Number(user.id) : undefined,
+      action: "dependency_added",
+      fieldName: "dependency",
+      newValue: `Added dependency on: ${prerequisiteTask.title}`,
+    });
+    
+    res.status(201).json({ ...dependency, prerequisiteTask });
+  } catch (error) {
+    console.error("Error creating task dependency:", error);
+    res.status(500).json({ message: "Failed to create dependency" });
+  }
+});
+
+// Remove a dependency
+router.delete("/tasks/:taskId/dependencies/:depId", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const dependency = await storage.getTaskDependencies(req.params.taskId);
+    const dep = dependency.find(d => d.id === req.params.depId);
+    
+    if (dep) {
+      const prerequisiteTask = await storage.getTask(dep.prerequisiteTaskId);
+      
+      await storage.deleteTaskDependency(req.params.depId);
+      
+      // Log activity
+      await storage.createTaskActivity({
+        taskId: req.params.taskId,
+        userId: user?.id ? Number(user.id) : undefined,
+        action: "dependency_removed",
+        fieldName: "dependency",
+        oldValue: `Removed dependency on: ${prerequisiteTask?.title || dep.prerequisiteTaskId}`,
+      });
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting task dependency:", error);
+    res.status(500).json({ message: "Failed to delete dependency" });
+  }
+});
+
+// Validate if task can be started (dependencies completed)
+router.get("/tasks/:taskId/validate-dependencies", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const validation = await storage.validateTaskDependencies(req.params.taskId);
+    res.json(validation);
+  } catch (error) {
+    console.error("Error validating task dependencies:", error);
+    res.status(500).json({ message: "Failed to validate dependencies" });
+  }
+});
+
+// ==================== TASK ACTIVITY ====================
+
+// Get activity history for a task
+router.get("/tasks/:taskId/activity", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const activity = await storage.getTaskActivity(req.params.taskId, limit);
+    
+    // Get user details for each activity
+    const activities = await Promise.all(
+      activity.map(async (a) => {
+        const user = a.userId ? await storage.getUser(String(a.userId)) : null;
+        return {
+          ...a,
+          user,
+        };
+      })
+    );
+    
+    res.json(activities);
+  } catch (error) {
+    console.error("Error fetching task activity:", error);
+    res.status(500).json({ message: "Failed to fetch activity" });
+  }
+});
+
+// Get user's activity feed
+router.get("/users/:userId/activity", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const limit = parseInt(req.query.limit as string) || 100;
+    const activity = await storage.getUserActivity(userId, limit);
+    
+    // Get task and user details
+    const activities = await Promise.all(
+      activity.map(async (a) => {
+        const task = await storage.getTask(a.taskId);
+        const user = a.userId ? await storage.getUser(String(a.userId)) : null;
+        return {
+          ...a,
+          task,
+          user,
+        };
+      })
+    );
+    
+    res.json(activities);
+  } catch (error) {
+    console.error("Error fetching user activity:", error);
+    res.status(500).json({ message: "Failed to fetch activity" });
+  }
+});
+
+// ==================== TASK ATTACHMENTS ====================
+
+// Get attachments for a task
+router.get("/tasks/:taskId/attachments", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const attachments = await storage.getTaskAttachments(req.params.taskId);
+    
+    // Get uploader details
+    const attachmentsWithUploader = await Promise.all(
+      attachments.map(async (a) => {
+        const uploader = await storage.getUser(String(a.uploadedBy));
+        return {
+          ...a,
+          uploader,
+        };
+      })
+    );
+    
+    res.json(attachmentsWithUploader);
+  } catch (error) {
+    console.error("Error fetching task attachments:", error);
+    res.status(500).json({ message: "Failed to fetch attachments" });
+  }
+});
+
+// Create attachment (stub - actual upload handled by multer)
+router.post("/tasks/:taskId/attachments", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { fileName, fileSize, fileType, objectPath } = req.body;
+    
+    const attachment = await storage.createTaskAttachment({
+      taskId: req.params.taskId,
+      uploadedBy: user?.id ? Number(user.id) : 1,
+      fileName,
+      fileSize,
+      fileType,
+      objectPath,
+    });
+    
+    // Log activity
+    await storage.createTaskActivity({
+      taskId: req.params.taskId,
+      userId: user?.id ? Number(user.id) : undefined,
+      action: "attachment_added",
+      fieldName: "attachment",
+      newValue: `Added file: ${fileName}`,
+    });
+    
+    res.status(201).json(attachment);
+  } catch (error) {
+    console.error("Error creating task attachment:", error);
+    res.status(500).json({ message: "Failed to create attachment" });
+  }
+});
+
+// Delete attachment
+router.delete("/tasks/:taskId/attachments/:attId", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const attachment = await storage.getTaskAttachments(req.params.taskId);
+    const att = attachment.find(a => a.id === req.params.attId);
+    
+    if (att) {
+      await storage.createTaskActivity({
+        taskId: req.params.taskId,
+        userId: user?.id ? Number(user.id) : undefined,
+        action: "attachment_removed",
+        fieldName: "attachment",
+        oldValue: `Removed file: ${att.fileName}`,
+      });
+    }
+    
+    await storage.deleteTaskAttachment(req.params.attId);
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting task attachment:", error);
+    res.status(500).json({ message: "Failed to delete attachment" });
+  }
+});
+
+// ==================== WORKLOAD ====================
+
+// Get user workload
+router.get("/users/:userId/workload", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const workload = await storage.getUserWorkload(userId);
+    res.json(workload);
+  } catch (error) {
+    console.error("Error fetching user workload:", error);
+    res.status(500).json({ message: "Failed to fetch workload" });
+  }
+});
+
+// ==================== ANALYTICS ====================
+
+// Get task analytics
+router.get("/tasks/analytics", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const dateTo = req.query.dateTo ? new Date(req.query.dateTo as string) : new Date();
+    
+    const analytics = await storage.getTaskAnalytics(dateFrom, dateTo);
+    res.json(analytics);
+  } catch (error) {
+    console.error("Error fetching task analytics:", error);
+    res.status(500).json({ message: "Failed to fetch analytics" });
+  }
+});
+
+// ==================== ADVANCED SEARCH ====================
+
+// Advanced task search
+router.get("/tasks/search", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      status: req.query.status ? (req.query.status as string).split(",") : undefined,
+      priority: req.query.priority ? (req.query.priority as string).split(",") : undefined,
+      assigneeId: req.query.assigneeId ? parseInt(req.query.assigneeId as string) : undefined,
+      spaceId: req.query.spaceId as string | undefined,
+      clientId: req.query.clientId as string | undefined,
+      dueDateFrom: req.query.dueDateFrom ? new Date(req.query.dueDateFrom as string) : undefined,
+      dueDateTo: req.query.dueDateTo ? new Date(req.query.dueDateTo as string) : undefined,
+      tags: req.query.tags ? (req.query.tags as string).split(",") : undefined,
+      searchText: req.query.q as string | undefined,
+    };
+    
+    const tasks = await storage.searchTasks(filters);
+    res.json(tasks);
+  } catch (error) {
+    console.error("Error searching tasks:", error);
+    res.status(500).json({ message: "Failed to search tasks" });
+  }
+});
+
+// ==================== SAVED SEARCHES ====================
+
+// Get saved searches for user
+router.get("/tasks/searches/saved", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const userId = user?.id ? Number(user.id) : 0;
+    const searches = await storage.getSavedTaskSearches(userId);
+    res.json(searches);
+  } catch (error) {
+    console.error("Error fetching saved searches:", error);
+    res.status(500).json({ message: "Failed to fetch saved searches" });
+  }
+});
+
+// Save a search
+router.post("/tasks/searches/saved", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { name, filters } = req.body;
+    
+    const search = await storage.saveTaskSearch({
+      userId: user?.id ? Number(user.id) : 1,
+      name,
+      filters,
+      isDefault: false,
+    });
+    
+    res.status(201).json(search);
+  } catch (error) {
+    console.error("Error saving search:", error);
+    res.status(500).json({ message: "Failed to save search" });
+  }
+});
+
+// Delete a saved search
+router.delete("/tasks/searches/saved/:id", isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    await storage.deleteSavedTaskSearch(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting saved search:", error);
+    res.status(500).json({ message: "Failed to delete saved search" });
   }
 });
 

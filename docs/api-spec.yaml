@@ -1,0 +1,1379 @@
+openapi: 3.0.0
+info:
+  title: MarketingAppOs API
+  version: 1.0.0
+  description: CRM and operations platform API for MarketingAppOs
+  contact:
+    name: MarketingAppOs Support
+    email: support@marketingteam.app
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+  - url: https://www.marketingteam.app/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User management operations
+  - name: Clients
+    description: Client management operations
+  - name: Campaigns
+    description: Campaign management operations
+  - name: Tasks
+    description: Task management operations
+  - name: Leads
+    description: Lead management operations
+  - name: Calendar
+    description: Calendar event management
+  - name: Emails
+    description: Email operations
+  - name: SMS
+    description: SMS messaging operations
+  - name: Payments
+    description: Payment and billing operations
+  - name: Analytics
+    description: Analytics and reporting operations
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      username:
+                        type: string
+                        example: user@example.com
+                      role:
+                        type: string
+                        enum: [admin, manager, staff, sales_agent, creator, client]
+                        example: admin
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      security:
+        - bearerAuth
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      security:
+        - bearerAuth
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+                    example: 100
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      security:
+        - bearerAuth
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags:
+        - Users
+      summary: Update user
+      security:
+        - bearerAuth
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [admin, manager, staff, sales_agent, creator, client]
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+
+  /clients:
+    get:
+      tags:
+        - Clients
+      summary: Get all clients
+      security:
+        - bearerAuth
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  clients:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Client'
+
+    post:
+      tags:
+        - Clients
+      summary: Create new client
+      security:
+        - bearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClient'
+      responses:
+        '201':
+          description: Client created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  client:
+                    $ref: '#/components/schemas/Client'
+
+  /clients/{clientId}:
+    get:
+      tags:
+        - Clients
+      summary: Get client by ID
+      security:
+        - bearerAuth
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Client details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  client:
+                    $ref: '#/components/schemas/Client'
+
+    patch:
+      tags:
+        - Clients
+      summary: Update client
+      security:
+        - bearerAuth
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClient'
+      responses:
+        '200':
+          description: Client updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  client:
+                    $ref: '#/components/schemas/Client'
+
+    delete:
+      tags:
+        - Clients
+      summary: Delete client
+      security:
+        - bearerAuth
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Client deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      summary: Get all tasks
+      security:
+        - bearerAuth
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [todo, in-progress, review, completed]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+
+    post:
+      tags:
+        - Tasks
+      summary: Create new task
+      security:
+        - bearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTask'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  task:
+                    $ref: '#/components/schemas/Task'
+
+  /tasks/{taskId}:
+    get:
+      tags:
+        - Tasks
+      summary: Get task by ID
+      security:
+        - bearerAuth
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  task:
+                    $ref: '#/components/schemas/Task'
+
+    patch:
+      tags:
+        - Tasks
+      summary: Update task
+      security:
+        - bearerAuth
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTask'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  task:
+                    $ref: '#/components/schemas/Task'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete task
+      security:
+        - bearerAuth
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /tasks/{taskId}/comments:
+    get:
+      tags:
+        - Tasks
+      summary: Get task comments
+      security:
+        - bearerAuth
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  comments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaskComment'
+
+    post:
+      tags:
+        - Tasks
+      summary: Add comment to task
+      security:
+        - bearerAuth
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  example: This looks great!
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  comment:
+                    $ref: '#/components/schemas/TaskComment'
+
+  /leads:
+    get:
+      tags:
+        - Leads
+      summary: Get all leads
+      security:
+        - bearerAuth
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [new, contacted, qualified, converted, lost]
+      responses:
+        '200':
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  leads:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lead'
+
+    post:
+      tags:
+        - Leads
+      summary: Create new lead
+      security:
+        - bearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLead'
+      responses:
+        '201':
+          description: Lead created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  lead:
+                    $ref: '#/components/schemas/Lead'
+
+  /leads/{leadId}:
+    get:
+      tags:
+        - Leads
+      summary: Get lead by ID
+      security:
+        - bearerAuth
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lead details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  lead:
+                    $ref: '#/components/schemas/Lead'
+
+    patch:
+      tags:
+        - Leads
+      summary: Update lead
+      security:
+        - bearerAuth
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLead'
+      responses:
+        '200':
+          description: Lead updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  lead:
+                    $ref: '#/components/schemas/Lead'
+
+  /campaigns:
+    get:
+      tags:
+        - Campaigns
+      summary: Get all campaigns
+      security:
+        - bearerAuth
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+
+    post:
+      tags:
+        - Campaigns
+      summary: Create new campaign
+      security:
+        - bearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCampaign'
+      responses:
+        '201':
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+
+  /campaigns/{campaignId}:
+    get:
+      tags:
+        - Campaigns
+      summary: Get campaign by ID
+      security:
+        - bearerAuth
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+
+  /emails/send:
+    post:
+      tags:
+        - Emails
+      summary: Send an email
+      security:
+        - bearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - to
+                - subject
+                - html
+              properties:
+                to:
+                  type: string
+                  format: email
+                  example: recipient@example.com
+                subject:
+                  type: string
+                  example: Welcome to MarketingAppOs
+                html:
+                  type: string
+                  example: <p>Welcome!</p>
+      responses:
+        '200':
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  messageId:
+                    type: string
+                    example: msg_123456
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Email service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /calendar/events:
+    get:
+      tags:
+        - Calendar
+      summary: Get calendar events
+      security:
+        - bearerAuth
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CalendarEvent'
+
+    post:
+      tags:
+        - Calendar
+      summary: Create calendar event
+      security:
+        - bearerAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCalendarEvent'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  event:
+                    $ref: '#/components/schemas/CalendarEvent'
+
+  /analytics/metrics:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics metrics
+      security:
+        - bearerAuth
+      parameters:
+        - name: clientId
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Analytics metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  metrics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnalyticsMetric'
+
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Invalid input data
+        details:
+          type: object
+          additionalProperties: true
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          format: email
+          example: user@example.com
+        role:
+          type: string
+          enum: [admin, manager, staff, sales_agent, creator, client]
+          example: admin
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          example: client_123
+        name:
+          type: string
+          example: Acme Corporation
+        company:
+          type: string
+          example: Acme
+        email:
+          type: string
+          format: email
+          example: contact@acme.com
+        phone:
+          type: string
+          example: +1-555-123-4567
+        industry:
+          type: string
+          example: Technology
+        status:
+          type: string
+          enum: [active, inactive, archived]
+          example: active
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          example: task_123
+        title:
+          type: string
+          example: Complete project proposal
+        description:
+          type: string
+          example: Draft the Q1 project proposal
+        status:
+          type: string
+          enum: [todo, in-progress, review, completed]
+          example: todo
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          example: high
+        dueDate:
+          type: string
+          format: date
+          example: 2024-01-15
+        assignedToId:
+          type: integer
+          nullable: true
+          example: 1
+        clientId:
+          type: string
+          nullable: true
+          example: client_123
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              text:
+                type: string
+              completed:
+                type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+
+    CreateTask:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Complete project proposal
+        description:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          enum: [todo, in-progress, review, completed]
+          default: todo
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          default: medium
+        dueDate:
+          type: string
+          format: date
+        assignedToId:
+          type: integer
+        clientId:
+          type: string
+        spaceId:
+          type: string
+
+    UpdateTask:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [todo, in-progress, review, completed]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        dueDate:
+          type: string
+          format: date
+        assignedToId:
+          type: integer
+        clientId:
+          type: string
+
+    TaskComment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: comment_123
+        taskId:
+          type: string
+          example: task_123
+        userId:
+          type: integer
+          example: 1
+        content:
+          type: string
+          example: This looks great!
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+          example: lead_123
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        phone:
+          type: string
+          example: +1-555-123-4567
+        company:
+          type: string
+          example: Acme Corp
+        status:
+          type: string
+          enum: [new, contacted, qualified, converted, lost]
+          example: new
+        source:
+          type: string
+          example: Website
+        assignedToId:
+          type: integer
+          nullable: true
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+
+    CreateLead:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: John Doe
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        source:
+          type: string
+        assignedToId:
+          type: integer
+
+    UpdateLead:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        status:
+          type: string
+          enum: [new, contacted, qualified, converted, lost]
+        assignedToId:
+          type: integer
+
+    CreateClient:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Acme Corporation
+        company:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        industry:
+          type: string
+
+    UpdateClient:
+      type: object
+      properties:
+        name:
+          type: string
+        company:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        industry:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, archived]
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+          example: campaign_123
+        name:
+          type: string
+          example: Q1 Marketing Campaign
+        description:
+          type: string
+          example: Marketing campaign for Q1
+        clientId:
+          type: string
+          example: client_123
+        status:
+          type: string
+          enum: [draft, active, paused, completed]
+          example: active
+        budget:
+          type: number
+          example: 5000
+        startDate:
+          type: string
+          format: date
+          example: 2024-01-01
+        endDate:
+          type: string
+          format: date
+          example: 2024-03-31
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+
+    CreateCampaign:
+      type: object
+      required:
+        - name
+        properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Q1 Marketing Campaign
+        description:
+          type: string
+        clientId:
+          type: string
+        budget:
+          type: number
+          minimum: 0
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    CalendarEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          example: event_123
+        title:
+          type: string
+          example: Team Meeting
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+          example: 2024-01-15T10:00:00Z
+        endDate:
+          type: string
+          format: date-time
+          example: 2024-01-15T11:00:00Z
+        location:
+          type: string
+          example: Conference Room A
+        type:
+          type: string
+          enum: [meeting, call, task, reminder]
+          example: meeting
+        attendees:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-01-01T00:00:00Z
+
+    CreateCalendarEvent:
+      type: object
+      required:
+        - title
+        - startDate
+        - endDate
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        location:
+          type: string
+        type:
+          type: string
+          enum: [meeting, call, task, reminder]
+        attendees:
+          type: array
+          items:
+            type: integer
+
+    AnalyticsMetric:
+      type: object
+      properties:
+        id:
+          type: string
+          example: metric_123
+        name:
+          type: string
+          example: Page Views
+        value:
+          type: number
+          example: 1250
+        unit:
+          type: string
+          example: views
+        date:
+          type: string
+          format: date
+          example: 2024-01-15
+        clientId:
+          type: string
+          nullable: true
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication
