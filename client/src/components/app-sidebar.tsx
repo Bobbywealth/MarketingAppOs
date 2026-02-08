@@ -549,31 +549,6 @@ const intelligenceFinanceTools: SidebarNavItem[] = [
   },
 ];
 
-// Merged tool groups for simplified navigation
-const aiSuiteTools: SidebarNavItem[] = [
-  {
-    title: "AI Suite",
-    icon: Sparkles,
-    subItems: [
-      {
-        title: "Digital Twin",
-        url: "/admin/second-me",
-        icon: Sparkles,
-      },
-      {
-        title: "Business Manager",
-        url: "/admin/ai-manager",
-        icon: Bot,
-      },
-      {
-        title: "Content Generator",
-        url: "/admin/ai-content-generator",
-        icon: Bot,
-      },
-    ],
-  },
-];
-
 const billingFinanceTools: SidebarNavItem[] = [
   {
     title: "Billing & Finance",
