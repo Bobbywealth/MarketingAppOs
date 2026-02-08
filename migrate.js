@@ -256,6 +256,7 @@ async function runMigrations() {
             recurring_pattern VARCHAR,
             recurring_interval INTEGER DEFAULT 1,
             recurring_end_date TIMESTAMP,
+            schedule_from VARCHAR(50) DEFAULT 'due_date',
             created_at TIMESTAMP DEFAULT NOW(),
             updated_at TIMESTAMP DEFAULT NOW()
           );
@@ -366,6 +367,77 @@ async function runMigrations() {
         console.log('⚠️ page_views table already exists or error:', e.message);
       }
 
+// Messaging enhancements: delivery/read receipts and media fields
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;`);
+        console.log('✅ Added delivered_at to messages');
+      } catch (e) {
+        console.log('⚠️ delivered_at already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP;`);
+        console.log('✅ Added read_at to messages');
+      } catch (e) {
+        console.log('⚠️ read_at already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url VARCHAR;`);
+        console.log('✅ Added media_url to messages');
+      } catch (e) {
+        console.log('⚠️ media_url already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_type VARCHAR;`);
+        console.log('✅ Added media_type to messages');
+      } catch (e) {
+        console.log('⚠️ media_type already exists or error:', e.message);
+      }
+      try {
+        await client.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
+        console.log('✅ Added duration_ms to messages');
+      } catch (e) {
+        console.log('⚠️ duration_ms already exists or error:', e.message);
+      }
+
+      // Add schedule_from column to existing tasks table
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS schedule_from VARCHAR(50) DEFAULT 'due_date';`);
+        console.log('✅ Added schedule_from column to tasks');
+      } catch (e) {
+        console.log('⚠️ schedule_from column already exists or error:', e.message);
+      }
+
+      // Create user notification preferences table
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS user_notification_preferences (
+            id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            email_notifications BOOLEAN DEFAULT true,
+            task_updates BOOLEAN DEFAULT true,
+            client_messages BOOLEAN DEFAULT true,
+            due_date_reminders BOOLEAN DEFAULT true,
+            project_updates BOOLEAN DEFAULT true,
+            system_alerts BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id)
+          );
+        `);
+        console.log('✅ Created user_notification_preferences table');
+      } catch (e) {
+        console.log('⚠️ user_notification_preferences table already exists or error:', e.message);
+      }
+
+      // Create index for user notification preferences
+      try {
+        await client.query('CREATE INDEX IF NOT EXISTS idx_user_notification_preferences_user_id ON user_notification_preferences(user_id);');
+        console.log('✅ Created index for user_notification_preferences');
+      } catch (e) {
+        console.log('⚠️ user_notification_preferences index already exists or error:', e.message);
+      }
+
+>>>>>>> f1d6ed5 (fix: Add schedule_from column and migration for recurring tasks)
       // Create indexes for faster analytics queries
       try {
         await client.query(`CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);`);
