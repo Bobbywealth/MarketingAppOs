@@ -1290,16 +1290,7 @@ export function AppSidebar() {
     );
   }
 
-  // For staff/managers/admins, show full menu
-  const filteredCommunication = communicationTools.filter(item => {
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
-
-  const filteredGrowth = growthTools.filter(item => {
+  // Filter merged groups (these don't need role/permission filtering as they're pre-configured)
     if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
       return false;
     }
