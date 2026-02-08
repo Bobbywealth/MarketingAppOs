@@ -1307,10 +1307,10 @@ export function AppSidebar() {
   const visiblePeople = hasFilter ? peopleTools.filter(matchesFilter) : peopleTools;
   const visibleGrowth = hasFilter ? growthTools.filter(matchesFilter) : growthTools;
   const visibleContent = hasFilter ? contentTools.filter(matchesFilter) : contentTools;
-  const visibleFinance = hasFilter ? filteredFinance.filter(matchesFilter) : filteredFinance;
-  const visibleAiSuite = hasFilter ? filteredAiSuite.filter(matchesFilterDeep) : filteredAiSuite;
-  const visibleReports = hasFilter ? filteredReports.filter(matchesFilterDeep) : filteredReports;
-  const visibleTraining = hasFilter ? filteredTraining.filter(matchesFilterDeep) : filteredTraining;
+  const visibleFinance = hasFilter ? financeTools.filter(matchesFilter) : financeTools;
+  const visibleAiSuite = hasFilter ? aiSuiteTools.filter(matchesFilterDeep) : aiSuiteTools;
+  const visibleReports = hasFilter ? reportsTools.filter(matchesFilterDeep) : reportsTools;
+  const visibleTraining = hasFilter ? trainingTools.filter(matchesFilterDeep) : trainingTools;
 
   // Calculate total visible items
   const totalVisibleItems =
