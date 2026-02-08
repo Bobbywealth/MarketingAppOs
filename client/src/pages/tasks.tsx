@@ -671,13 +671,13 @@ export default function TasksPage() {
                   >
                     <CardContent className="p-3 space-y-2">
                       {/* Priority indicator */}
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-2 mr-8">
                         <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${
                           task.priority === "urgent" ? "bg-red-500" :
                           task.priority === "high" ? "bg-orange-500" :
                           task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
                         }`} />
-                        <h4 className="font-medium text-sm leading-tight flex-1">{task.title}</h4>
+                        <h4 className="font-medium text-sm leading-tight flex-1 truncate">{task.title}</h4>
                       </div>
 
                       {/* Meta info row */}
