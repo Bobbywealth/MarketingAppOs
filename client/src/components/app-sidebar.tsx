@@ -1290,16 +1290,6 @@ export function AppSidebar() {
     );
   }
 
-  // Filter merged groups (these don't need role/permission filtering as they're pre-configured)
-    if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
-      return false;
-    }
-    if (item.roles) {
-      return item.roles.includes(effectiveRole as any);
-    }
-    if (!item.permission) return true;
-    return canAccess(item.permission);
-  });
 
   const filteredContentCreators = contentCreatorsTools.filter(item => {
     if (item.sidebarKey && !canSeeSidebarItem(item.sidebarKey)) {
