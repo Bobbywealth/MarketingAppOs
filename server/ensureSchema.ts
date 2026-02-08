@@ -33,6 +33,22 @@ export async function ensureMinimumSchema() {
     "idx_tasks_recurrence_series_id index",
     `CREATE INDEX IF NOT EXISTS idx_tasks_recurrence_series_id ON tasks(recurrence_series_id);`
   );
+  // Tasks: is_recurring column
+  await safeQuery(
+    "tasks.is_recurring column",
+    `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`
+  );
+  // Tasks: task_progress column
+  await safeQuery(
+    "tasks.task_progress column",
+    `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS task_progress INTEGER DEFAULT 0;`
+  );
+
+  // Emails: recipient_type column
+  await safeQuery(
+    "emails.recipient_type column",
+    `ALTER TABLE IF EXISTS emails ADD COLUMN IF NOT EXISTS recipient_type VARCHAR DEFAULT 'primary';`
+  );
 
   // User columns: creator_id and client_id (critical for role-based access)
   await safeQuery(
