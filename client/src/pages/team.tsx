@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Pencil, Trash2, Shield, Users as UsersIcon, CheckCircle2, Settings2 } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Shield, Users as UsersIcon, CheckCircle2, Settings2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -44,6 +44,8 @@ interface User {
   firstName?: string;
   lastName?: string;
   email?: string;
+  lastLogin?: string | null;
+  isActive?: boolean;
 }
 
 interface NewUser {
@@ -63,6 +65,7 @@ export default function UserManagementPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [permissionsDialogUser, setPermissionsDialogUser] = useState<User | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [newUser, setNewUser] = useState<NewUser>({
     username: "",
     password: "",
@@ -441,6 +444,15 @@ export default function UserManagementPage() {
             <CardDescription>View and manage all user accounts across the platform</CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-[200px]"
+              />
+            </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by role" />
@@ -470,13 +482,22 @@ export default function UserManagementPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users
-                  .filter(user => roleFilter === "all" || user.role === roleFilter)
+                  .filter(user => {
+                    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+                    const matchesSearch = searchQuery === "" ||
+                      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (user.firstName && user.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                      (user.lastName && user.lastName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                      (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()));
+                    return matchesRole && matchesSearch;
+                  })
                   .map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
@@ -491,6 +512,16 @@ export default function UserManagementPage() {
                       )}
                     </TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${user.isActive !== false ? 'bg-green-500' : 'bg-gray-300'}`} />
+                        <span className="text-sm text-muted-foreground">
+                          {user.lastLogin 
+                            ? `${new Date(user.lastLogin).toLocaleDateString()}` 
+                            : 'Never'}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right space-x-2">
                       {/* Sidebar Permissions Button (staff/admin full-menu only) */}
