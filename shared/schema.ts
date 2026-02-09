@@ -151,7 +151,7 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   clientId: varchar("client_id").references(() => clients.id),
-  assignedToId: integer("assigned_to_id").references(() => users.id).onDelete(sql`SET NULL`),
+  assignedToId: integer("assigned_to_id").references(() => users.id).onDelete('SET NULL'),
   spaceId: varchar("space_id").references(() => taskSpaces.id), // NEW: Link to space
   title: varchar("title").notNull(),
   description: text("description"),
