@@ -1938,7 +1938,7 @@ export default function TasksPage() {
           {/* Recurring tasks list */}
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {(() => {
-              const recurringTasks = tasks.filter(t => (t as any).isRecurring);
+              const recurringTasks = tasks.filter(t => t.isRecurring);
               const filteredRecurring = recurringTasks.filter(task =>
                 task.title.toLowerCase().includes(searchQuery.toLowerCase())
               );
@@ -1957,9 +1957,7 @@ export default function TasksPage() {
                 );
               }
               
-              return filteredRecurring.map(task => {
-                const taskData = task as any;
-                return (
+              return filteredRecurring.map(task => (
                 <Card key={task.id} className="hover:bg-muted/30 transition-colors">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
@@ -1967,11 +1965,11 @@ export default function TasksPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium truncate">{task.title}</h4>
                           <Badge variant="outline" className="text-xs">
-                            {taskData.recurringPattern || "weekly"}
+                            {task.recurringPattern || "weekly"}
                           </Badge>
-                          {taskData.recurringInterval && taskData.recurringInterval > 1 && (
+                          {task.recurringInterval && task.recurringInterval > 1 && (
                             <Badge variant="secondary" className="text-xs">
-                              Every {taskData.recurringInterval}
+                              Every {task.recurringInterval}
                             </Badge>
                           )}
                         </div>
@@ -2001,15 +1999,15 @@ export default function TasksPage() {
                       <div className="flex items-center gap-2">
                         {/* Toggle recurring */}
                         <Button
-                          variant={taskData.isRecurring ? "default" : "outline"}
+                          variant={task.isRecurring ? "default" : "outline"}
                           size="sm"
                           onClick={() => updateRecurringSeriesMutation.mutate({
                             id: task.id,
-                            data: { isRecurring: !taskData.isRecurring }
+                            data: { isRecurring: !task.isRecurring }
                           })}
                           className="gap-2"
                         >
-                          {taskData.isRecurring ? (
+                          {task.isRecurring ? (
                             <>
                               <CheckCircle2 className="w-4 h-4" />
                               Active
@@ -2051,8 +2049,7 @@ export default function TasksPage() {
                     </div>
                   </CardContent>
                 </Card>
-                );
-              });
+              ));
             })()}
           </div>
           

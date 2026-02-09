@@ -161,6 +161,12 @@ export const tasks = pgTable("tasks", {
   completedAt: timestamp("completed_at"),
   checklist: jsonb("checklist"), // Array of checklist items with id, text, completed
   estimatedHours: integer("estimated_hours").default(0),
+  // Recurring task fields
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, yearly
+  recurringInterval: integer("recurring_interval").default(1),
+  recurringEndDate: timestamp("recurring_end_date"),
+  scheduleFrom: varchar("schedule_from").default("due_date"), // due_date or completion_date
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
