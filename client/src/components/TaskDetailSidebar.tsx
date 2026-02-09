@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,7 +46,7 @@ interface TaskDetailSidebarProps {
 
 export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetailSidebarProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("checklist");
 
   // Inline editing state
   const [editingTitle, setEditingTitle] = useState(false);
@@ -60,7 +59,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
 
   useEffect(() => {
     if (isOpen && task) {
-      setActiveTab("details");
+      setActiveTab("checklist");
       setEditingTitle(false);
       setEditingDescription(false);
       setDescriptionExpanded(false);
@@ -195,8 +194,8 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl p-0 flex flex-col max-h-[85vh] overflow-hidden">
-        {/* Header - Editable Title & Description */}
+      <DialogContent className="max-w-5xl p-0 flex flex-col max-h-[85vh] overflow-hidden">
+        {/* Header - Status/Priority badges + Title */}
         <div className="p-6 pb-4 bg-muted/30 border-b">
           <DialogHeader className="space-y-3">
             {/* Status & Priority inline selects */}
@@ -279,215 +278,219 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
           </DialogHeader>
         </div>
 
-        {/* Description Section - separated from header for better visual hierarchy */}
-        <div className="px-6 pb-2">
-          <div className="rounded-lg border bg-muted/20">
-            <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30 rounded-t-lg">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" />
-                Description
-              </span>
-              {!editingDescription && task.description && task.description.length > 150 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => setDescriptionExpanded(!descriptionExpanded)}
-                >
-                  {descriptionExpanded ? (
-                    <>Show less <ChevronUp className="w-3 h-3 ml-1" /></>
-                  ) : (
-                    <>Show more <ChevronDown className="w-3 h-3 ml-1" /></>
-                  )}
-                </Button>
-              )}
-            </div>
-            <div className="px-3 py-2.5">
-              {editingDescription ? (
-                <Textarea
-                  ref={descriptionRef}
-                  value={descriptionValue}
-                  onChange={(e) => setDescriptionValue(e.target.value)}
-                  onBlur={saveDescription}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      setDescriptionValue(task.description || "");
-                      setEditingDescription(false);
-                    }
-                  }}
-                  className="text-sm min-h-[100px] max-h-[250px] resize-y border-0 shadow-none focus-visible:ring-0 p-0"
-                  placeholder="Add a description..."
-                  autoFocus
-                />
-              ) : (
-                <div
-                  className={`text-sm leading-relaxed cursor-pointer hover:bg-muted/30 rounded p-1 -m-1 transition-colors whitespace-pre-wrap break-words ${
-                    !descriptionExpanded && task.description && task.description.length > 150
-                      ? "max-h-[4.5rem] overflow-hidden relative"
-                      : ""
-                  }`}
-                  onClick={() => {
-                    setEditingDescription(true);
-                    setTimeout(() => descriptionRef.current?.focus(), 0);
-                  }}
-                >
-                  <span className={!task.description ? "text-muted-foreground italic" : "text-foreground/90"}>
-                    {task.description || "Click to add a description..."}
-                  </span>
-                  {!descriptionExpanded && task.description && task.description.length > 150 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-muted/20 to-transparent rounded-b pointer-events-none" />
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Two-column body: Description (left) + Details sidebar (right) */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr,280px] h-full">
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="mx-6 mt-4 justify-start h-auto bg-transparent p-0 gap-2">
-            <TabsTrigger value="details" className="data-[state=active]:bg-muted px-4 py-2">
-              Details
-            </TabsTrigger>
-            <TabsTrigger value="checklist" className="data-[state=active]:bg-muted px-4 py-2">
-              Checklist
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="data-[state=active]:bg-muted px-4 py-2">
-              Activity
-            </TabsTrigger>
-            <TabsTrigger value="attachments" className="data-[state=active]:bg-muted px-4 py-2">
-              Files
-            </TabsTrigger>
-          </TabsList>
-
-          <ScrollArea className="flex-1">
-            <div className="p-6 space-y-6 pb-32">
-              {/* Details Tab - All editable fields */}
-              <TabsContent value="details" className="mt-0 space-y-5">
-                {/* Assignee */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5" />
-                    Assignee
-                  </label>
-                  <Select
-                    value={task.assignedToId?.toString() || "unassigned"}
-                    onValueChange={(val) => handleFieldUpdate("assignedToId", val === "unassigned" ? null : val)}
-                  >
-                    <SelectTrigger className="w-full h-9">
-                      <SelectValue placeholder="Unassigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {users.map((u: any) => (
-                        <SelectItem key={u.id} value={u.id.toString()}>
-                          {u.firstName || u.username}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {/* Left column: Description + Tabs (Checklist, Activity, Files) */}
+            <ScrollArea className="h-full">
+              <div className="p-6 space-y-5">
+                {/* Description */}
+                <div className="rounded-lg border bg-muted/20">
+                  <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30 rounded-t-lg">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" />
+                      Description
+                    </span>
+                    {!editingDescription && task.description && task.description.length > 200 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                      >
+                        {descriptionExpanded ? (
+                          <>Show less <ChevronUp className="w-3 h-3 ml-1" /></>
+                        ) : (
+                          <>Show more <ChevronDown className="w-3 h-3 ml-1" /></>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="px-3 py-2.5">
+                    {editingDescription ? (
+                      <Textarea
+                        ref={descriptionRef}
+                        value={descriptionValue}
+                        onChange={(e) => setDescriptionValue(e.target.value)}
+                        onBlur={saveDescription}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            setDescriptionValue(task.description || "");
+                            setEditingDescription(false);
+                          }
+                        }}
+                        className="text-sm min-h-[120px] max-h-[350px] resize-y border-0 shadow-none focus-visible:ring-0 p-0"
+                        placeholder="Add a description..."
+                        autoFocus
+                      />
+                    ) : (
+                      <div
+                        className={`text-sm leading-relaxed cursor-pointer hover:bg-muted/30 rounded p-1 -m-1 transition-colors whitespace-pre-wrap break-words ${
+                          !descriptionExpanded && task.description && task.description.length > 200
+                            ? "max-h-[10rem] overflow-hidden relative"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          setEditingDescription(true);
+                          setTimeout(() => descriptionRef.current?.focus(), 0);
+                        }}
+                      >
+                        <span className={!task.description ? "text-muted-foreground italic" : "text-foreground/90"}>
+                          {task.description || "Click to add a description..."}
+                        </span>
+                        {!descriptionExpanded && task.description && task.description.length > 200 && (
+                          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-muted/30 to-transparent rounded-b pointer-events-none" />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Due Date */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Due Date
-                  </label>
-                  <Input
-                    type="date"
-                    value={task.dueDate ? toInputDateEST(task.dueDate) : ""}
-                    onChange={(e) => handleFieldUpdate("dueDate", e.target.value)}
-                    className="w-full h-9"
-                  />
-                </div>
+                {/* Tabs: Checklist, Activity, Files */}
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="justify-start h-auto bg-transparent p-0 gap-2">
+                    <TabsTrigger value="checklist" className="data-[state=active]:bg-muted px-4 py-2">
+                      Checklist
+                    </TabsTrigger>
+                    <TabsTrigger value="activity" className="data-[state=active]:bg-muted px-4 py-2">
+                      Activity
+                    </TabsTrigger>
+                    <TabsTrigger value="attachments" className="data-[state=active]:bg-muted px-4 py-2">
+                      Files
+                    </TabsTrigger>
+                  </TabsList>
 
-                {/* Client */}
-                {clients.length > 0 && (
+                  <div className="mt-4">
+                    <TabsContent value="checklist" className="mt-0">
+                      <TaskProgressBar task={task} onUpdate={handleChecklistUpdate} />
+                    </TabsContent>
+                    <TabsContent value="activity" className="mt-0">
+                      <TaskActivityTimeline taskId={task.id} limit={50} />
+                    </TabsContent>
+                    <TabsContent value="attachments" className="mt-0">
+                      <TaskAttachmentsList taskId={task.id} />
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </div>
+            </ScrollArea>
+
+            {/* Right column: Details sidebar */}
+            <div className="hidden md:block border-l bg-muted/10">
+              <ScrollArea className="h-full">
+                <div className="p-5 space-y-5">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Details</h3>
+
+                  {/* Assignee */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      <Briefcase className="w-3.5 h-3.5" />
-                      Client
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" />
+                      Assignee
                     </label>
                     <Select
-                      value={task.clientId || "none"}
-                      onValueChange={(val) => handleFieldUpdate("clientId", val === "none" ? null : val)}
+                      value={task.assignedToId?.toString() || "unassigned"}
+                      onValueChange={(val) => handleFieldUpdate("assignedToId", val === "unassigned" ? null : val)}
                     >
                       <SelectTrigger className="w-full h-9">
-                        <SelectValue placeholder="No client" />
+                        <SelectValue placeholder="Unassigned" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No client</SelectItem>
-                        {clients.map((c: any) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {users.map((u: any) => (
+                          <SelectItem key={u.id} value={u.id.toString()}>
+                            {u.firstName || u.username}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                )}
 
-                {/* Space */}
-                {spaces.length > 0 && (
+                  {/* Due Date */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      <FolderOpen className="w-3.5 h-3.5" />
-                      Space
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Due Date
                     </label>
-                    <Select
-                      value={task.spaceId || "none"}
-                      onValueChange={(val) => handleFieldUpdate("spaceId", val === "none" ? null : val)}
-                    >
-                      <SelectTrigger className="w-full h-9">
-                        <SelectValue placeholder="No space" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No space</SelectItem>
-                        {buildSpaceOptions().map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      type="date"
+                      value={task.dueDate ? toInputDateEST(task.dueDate) : ""}
+                      onChange={(e) => handleFieldUpdate("dueDate", e.target.value)}
+                      className="w-full h-9"
+                    />
                   </div>
-                )}
 
-                {/* Timestamps */}
-                <div className="pt-3 border-t space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Created {task.createdAt ? toLocaleDateStringEST(task.createdAt) : "N/A"}</span>
-                  </div>
-                  {task.completedAt && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Completed {toLocaleDateStringEST(task.completedAt)}</span>
+                  {/* Client */}
+                  {clients.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <Briefcase className="w-3.5 h-3.5" />
+                        Client
+                      </label>
+                      <Select
+                        value={task.clientId || "none"}
+                        onValueChange={(val) => handleFieldUpdate("clientId", val === "none" ? null : val)}
+                      >
+                        <SelectTrigger className="w-full h-9">
+                          <SelectValue placeholder="No client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No client</SelectItem>
+                          {clients.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
+
+                  {/* Space */}
+                  {spaces.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <FolderOpen className="w-3.5 h-3.5" />
+                        Space
+                      </label>
+                      <Select
+                        value={task.spaceId || "none"}
+                        onValueChange={(val) => handleFieldUpdate("spaceId", val === "none" ? null : val)}
+                      >
+                        <SelectTrigger className="w-full h-9">
+                          <SelectValue placeholder="No space" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No space</SelectItem>
+                          {buildSpaceOptions().map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="pt-3 border-t space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Created {task.createdAt ? toLocaleDateStringEST(task.createdAt) : "N/A"}</span>
+                    </div>
+                    {task.completedAt && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Completed {toLocaleDateStringEST(task.completedAt)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </TabsContent>
-
-              {/* Checklist Tab */}
-              <TabsContent value="checklist" className="mt-0">
-                <TaskProgressBar task={task} onUpdate={handleChecklistUpdate} />
-              </TabsContent>
-
-              {/* Activity Tab */}
-              <TabsContent value="activity" className="mt-0">
-                <TaskActivityTimeline taskId={task.id} limit={50} />
-              </TabsContent>
-
-              {/* Attachments Tab */}
-              <TabsContent value="attachments" className="mt-0">
-                <TaskAttachmentsList taskId={task.id} />
-              </TabsContent>
+              </ScrollArea>
             </div>
-          </ScrollArea>
-        </Tabs>
 
-        {/* Footer with actions */}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
