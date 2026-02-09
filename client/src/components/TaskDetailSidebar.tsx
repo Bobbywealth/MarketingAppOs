@@ -26,6 +26,7 @@ import {
   Briefcase,
   FolderOpen,
   Clock,
+  X,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -125,9 +126,14 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
   };
 
   const handleFieldUpdate = (field: string, value: any) => {
-    if (field === "dueDate" && value) {
-      const parsed = parseInputDateEST(`${value}T23:59`);
-      updateTaskMutation.mutate({ [field]: parsed.toISOString() } as any);
+    if (field === "dueDate") {
+      if (value) {
+        const parsed = parseInputDateEST(`${value}T23:59`);
+        updateTaskMutation.mutate({ [field]: parsed.toISOString() } as any);
+      } else {
+        // Explicitly clear the due date
+        updateTaskMutation.mutate({ [field]: null } as any);
+      }
     } else if (field === "assignedToId") {
       const parsed = value ? parseInt(value) : null;
       updateTaskMutation.mutate({ [field]: parsed } as any);
@@ -352,13 +358,26 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
                     Due Date
+                    <span className="normal-case font-normal">(Optional)</span>
                   </label>
-                  <Input
-                    type="date"
-                    value={task.dueDate ? toInputDateEST(task.dueDate) : ""}
-                    onChange={(e) => handleFieldUpdate("dueDate", e.target.value)}
-                    className="w-full h-9"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      value={task.dueDate ? toInputDateEST(task.dueDate) : ""}
+                      onChange={(e) => handleFieldUpdate("dueDate", e.target.value)}
+                      className="w-full h-9"
+                    />
+                    {task.dueDate && (
+                      <button
+                        type="button"
+                        onClick={() => handleFieldUpdate("dueDate", "")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground"
+                        title="Clear due date"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Client */}

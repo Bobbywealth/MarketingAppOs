@@ -348,10 +348,10 @@ export default function TasksPage() {
         status: data.status,
         priority: data.priority,
       };
-      
+
       // Only add optional fields if they have values
       if (data.description) taskData.description = data.description;
-      
+
       // Combine date and time if both are provided, using EST timezone
       if (data.dueDate) {
         if (data.dueTime) {
@@ -361,6 +361,9 @@ export default function TasksPage() {
           // Parse as EST date, set to end of day (11:59 PM EST)
           taskData.dueDate = parseInputDateEST(`${data.dueDate}T23:59`).toISOString();
         }
+      } else {
+        // Explicitly clear due date when not provided
+        taskData.dueDate = null;
       }
       
       if (data.campaignId) taskData.campaignId = data.campaignId;
@@ -1388,9 +1391,21 @@ export default function TasksPage() {
                       name="dueDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Due Date</FormLabel>
+                          <FormLabel>Due Date (Optional)</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} data-testid="input-task-due-date" />
+                            <div className="relative">
+                              <Input type="date" {...field} data-testid="input-task-due-date" />
+                              {field.value && (
+                                <button
+                                  type="button"
+                                  onClick={() => field.onChange("")}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground"
+                                  title="Clear due date"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1735,9 +1750,21 @@ export default function TasksPage() {
                     name="dueDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Due Date</FormLabel>
+                        <FormLabel>Due Date (Optional)</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <div className="relative">
+                            <Input type="date" {...field} />
+                            {field.value && (
+                              <button
+                                type="button"
+                                onClick={() => field.onChange("")}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground"
+                                title="Clear due date"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
