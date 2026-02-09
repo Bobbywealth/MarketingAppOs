@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -208,11 +207,11 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
   const space = spaces.find((s: any) => s.id === task.spaceId);
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-xl p-0 flex flex-col h-full border-l-0 shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl p-0 flex flex-col max-h-[85vh] overflow-hidden">
         {/* Header - Editable Title & Description */}
         <div className="p-6 pb-4 bg-muted/30 border-b">
-          <SheetHeader className="space-y-3">
+          <DialogHeader className="space-y-3">
             {/* Status & Priority inline selects */}
             <div className="flex items-center gap-2 flex-wrap">
               <Select
@@ -279,7 +278,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
                 autoFocus
               />
             ) : (
-              <SheetTitle
+              <DialogTitle
                 className="text-2xl font-bold leading-tight cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -ml-2 transition-colors"
                 onClick={() => {
                   setEditingTitle(true);
@@ -287,7 +286,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
                 }}
               >
                 {task.title}
-              </SheetTitle>
+              </DialogTitle>
             )}
 
             {/* Editable Description */}
@@ -308,7 +307,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
                 autoFocus
               />
             ) : (
-              <SheetDescription
+              <DialogDescription
                 className="text-base cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5 -ml-2 transition-colors min-h-[32px]"
                 onClick={() => {
                   setEditingDescription(true);
@@ -316,9 +315,9 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
                 }}
               >
                 {task.description || "Click to add a description..."}
-              </SheetDescription>
+              </DialogDescription>
             )}
-          </SheetHeader>
+          </DialogHeader>
         </div>
 
         {/* Tabs */}
@@ -466,7 +465,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
         </Tabs>
 
         {/* Comment Input */}
-        <SheetFooter className="p-4 bg-background border-t">
+        <div className="p-4 bg-background border-t">
           <div className="w-full space-y-3">
             <Textarea
               placeholder="Write a comment..."
@@ -483,9 +482,9 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
               {addCommentMutation.isPending ? "Sending..." : "Send"}
             </Button>
           </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
