@@ -22,7 +22,6 @@ import {
 import {
   Calendar,
   User,
-  Send,
   Trash2,
   Briefcase,
   FolderOpen,
@@ -30,7 +29,7 @@ import {
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, TaskComment, Client, User as UserType, TaskSpace } from "@shared/schema";
+import type { Task, Client, User as UserType, TaskSpace } from "@shared/schema";
 import { toLocaleDateStringEST, toInputDateEST, parseInputDateEST } from "@/lib/dateUtils";
 import { TaskProgressBar } from "./tasks/TaskProgressBar";
 import { TaskActivityTimeline } from "./tasks/TaskActivityTimeline";
@@ -45,7 +44,6 @@ interface TaskDetailSidebarProps {
 
 export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetailSidebarProps) {
   const { toast } = useToast();
-  const [comment, setComment] = useState("");
   const [activeTab, setActiveTab] = useState("details");
 
   // Inline editing state
@@ -78,11 +76,6 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
   const { data: clients = [] } = useQuery<Client[]>({ queryKey: ["/api/clients"], retry: false, meta: { returnNull: true } });
   const { data: spaces = [] } = useQuery<TaskSpace[]>({ queryKey: ["/api/task-spaces"], retry: false, meta: { returnNull: true } });
 
-  const { data: comments = [] } = useQuery<TaskComment[]>({
-    queryKey: [`/api/tasks/${task?.id}/comments`],
-    enabled: !!task?.id,
-  });
-
   const updateTaskMutation = useMutation({
     mutationFn: async (data: Partial<Task>) => {
       const res = await apiRequest("PATCH", `/api/tasks/${task?.id}`, data);
@@ -94,17 +87,6 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
     },
     onError: (error: any) => {
       toast({ title: "Failed to update task", description: error?.message, variant: "destructive" });
-    },
-  });
-
-  const addCommentMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const res = await apiRequest("POST", `/api/tasks/${task?.id}/comments`, { comment: content });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task?.id}/comments`] });
-      setComment("");
     },
   });
 
@@ -464,25 +446,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
           </ScrollArea>
         </Tabs>
 
-        {/* Comment Input */}
-        <div className="p-4 bg-background border-t">
-          <div className="w-full space-y-3">
-            <Textarea
-              placeholder="Write a comment..."
-              className="min-h-[80px] pr-12 text-sm resize-none focus-visible:ring-1"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-            <Button
-              size="sm"
-              onClick={() => addCommentMutation.mutate(comment)}
-              disabled={!comment.trim() || addCommentMutation.isPending}
-            >
-              <Send className="w-4 h-4 mr-2" />
-              {addCommentMutation.isPending ? "Sending..." : "Send"}
-            </Button>
-          </div>
-        </div>
+        {/* Footer with actions */}
       </DialogContent>
     </Dialog>
   );
