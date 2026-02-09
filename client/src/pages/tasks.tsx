@@ -714,8 +714,15 @@ export default function TasksPage() {
                           task.priority === "high" ? "bg-orange-500" :
                           task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
                         }`} />
-                        <h4 className="font-medium text-sm leading-tight flex-1 truncate">{task.title}</h4>
+                        <h4 className="font-medium text-sm leading-tight flex-1 line-clamp-2">{task.title}</h4>
                       </div>
+
+                      {/* Description preview */}
+                      {task.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                          {task.description}
+                        </p>
+                      )}
 
                       {/* Meta info row */}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -818,7 +825,12 @@ export default function TasksPage() {
                     task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
                   }`} />
                   <div className="flex-1 min-w-0">
-                    <span className="font-medium text-sm truncate block">{task.title}</span>
+                    <span className="font-medium text-sm line-clamp-2">{task.title}</span>
+                    {task.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
+                        {task.description}
+                      </p>
+                    )}
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                       <span className="capitalize">{task.status.replace("_", " ")}</span>
                       {task.dueDate && <span>{toLocaleDateStringEST(task.dueDate)}</span>}
@@ -847,7 +859,14 @@ export default function TasksPage() {
                       task.priority === "high" ? "bg-orange-500" :
                       task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
                     }`} />
-                    <span className="truncate text-sm font-medium">{task.title}</span>
+                    <div className="min-w-0">
+                      <span className="line-clamp-2 text-sm font-medium">{task.title}</span>
+                      {task.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5 leading-relaxed">
+                          {task.description}
+                        </p>
+                      )}
+                    </div>
                     {task.isRecurring && <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
                   </div>
 
@@ -920,7 +939,12 @@ export default function TasksPage() {
 
               {/* Task info */}
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{task.title}</h3>
+                <h3 className="font-medium line-clamp-2">{task.title}</h3>
+                {task.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
+                    {task.description}
+                  </p>
+                )}
                 <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                   {task.dueDate && (
                     <div className="flex items-center gap-1">
@@ -1984,7 +2008,7 @@ export default function TasksPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium truncate">{task.title}</h4>
+                          <h4 className="font-medium line-clamp-2">{task.title}</h4>
                           <Badge variant="outline" className="text-xs">
                             {task.recurringPattern || "weekly"}
                           </Badge>
@@ -1996,7 +2020,7 @@ export default function TasksPage() {
                         </div>
                         
                         {task.description && (
-                          <p className="text-sm text-muted-foreground truncate mb-2">
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2 leading-relaxed">
                             {task.description}
                           </p>
                         )}

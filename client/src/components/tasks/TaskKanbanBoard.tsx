@@ -219,6 +219,13 @@ function KanbanCard({ task, onClick, onDragStart }: KanbanCardProps) {
           </Button>
         </div>
 
+        {/* Description preview */}
+        {task.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            {task.description}
+          </p>
+        )}
+
         {/* Priority Badge */}
         <div className="flex items-center gap-2">
           <Badge
