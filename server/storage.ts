@@ -425,6 +425,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(users).where(eq(users.id, userId));
   }
 
+  async clearUserTasks(userId: number): Promise<void> {
+    await db.update(tasks)
+      .set({ assignedToId: null })
+      .where(eq(tasks.assignedToId, userId));
+  }
+
   // Client operations
   async getClients(options?: { limit?: number; offset?: number }): Promise<Client[]> {
     let query = db.select().from(clients).orderBy(desc(clients.createdAt));

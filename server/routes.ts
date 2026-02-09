@@ -2889,6 +2889,10 @@ Examples:
   app.delete("/api/users/:id", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
+      
+      // Clear assigned tasks before deleting user (for databases without ON DELETE SET NULL)
+      await storage.clearUserTasks(userId);
+      
       await storage.deleteUser(userId);
       res.status(204).send();
     } catch (error) {
