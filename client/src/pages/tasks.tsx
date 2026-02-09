@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace, TaskTemplate } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -1007,6 +1007,27 @@ export default function TasksPage() {
                 {filterStatus !== "all" && ` • ${filterStatus.replace("_", " ")}`}
                 {filterPriority !== "all" && ` • ${filterPriority}`}
               </p>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-full lg:w-72">
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
             </div>
             {/* Mobile: open Spaces sidebar */}
             <div className="md:hidden">
