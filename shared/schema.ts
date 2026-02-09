@@ -12,6 +12,7 @@ import {
   boolean,
   serial,
   numeric,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -151,7 +152,7 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   campaignId: varchar("campaign_id").references(() => campaigns.id),
   clientId: varchar("client_id").references(() => clients.id),
-  assignedToId: integer("assigned_to_id").references(() => users.id).onDelete('SET NULL'),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
   spaceId: varchar("space_id").references(() => taskSpaces.id), // NEW: Link to space
   title: varchar("title").notNull(),
   description: text("description"),
@@ -170,15 +171,21 @@ export const tasks = pgTable("tasks", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-index("IDX_tasks_assigned_to").on(table.assignedToId),
-index("IDX_tasks_client_id").on(table.clientId),
-index("IDX_tasks_space_id").on(table.spaceId),
-index("IDX_tasks_status").on(table.status),
-index("IDX_tasks_due_date").on(table.dueDate),
-// COMPOSITE INDEXES for performance
-index("IDX_tasks_status_due").on(table.status, table.dueDate),
-index("IDX_tasks_status_assigned").on(table.status, table.assignedToId),
-index("IDX_tasks_created_at").on(sql`${table.createdAt} DESC`),
+  // Foreign key constraint with ON DELETE SET NULL
+  foreignKey({
+    columns: [table.assignedToId],
+    foreignColumns: [users.id],
+    name: "FK_tasks_assigned_to_user"
+  }).onDelete("SET NULL"),
+  index("IDX_tasks_assigned_to").on(table.assignedToId),
+  index("IDX_tasks_client_id").on(table.clientId),
+  index("IDX_tasks_space_id").on(table.spaceId),
+  index("IDX_tasks_status").on(table.status),
+  index("IDX_tasks_due_date").on(table.dueDate),
+  // COMPOSITE INDEXES for performance
+  index("IDX_tasks_status_due").on(table.status, table.dueDate),
+  index("IDX_tasks_status_assigned").on(table.status, table.assignedToId),
+  index("IDX_tasks_created_at").on(sql`${table.createdAt} DESC`),
 ]);
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
