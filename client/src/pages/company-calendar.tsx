@@ -36,7 +36,12 @@ import {
   Zap,
   Filter,
   X,
-  Repeat
+  Repeat,
+  CheckSquare,
+  ArrowUpRight,
+  Circle,
+  CheckCircle2,
+  ListTodo,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, differenceInHours, isPast } from "date-fns";
 
@@ -60,6 +65,36 @@ interface CalendarEvent {
   recurrenceInterval?: number;
   recurrenceEndDate?: string;
 }
+
+interface CalendarTask {
+  id: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  priority: string;
+  dueDate: string;
+  assignedToId?: number | null;
+  clientId?: string | null;
+  campaignId?: string | null;
+  spaceId?: string | null;
+  completedAt?: string | null;
+  estimatedHours?: number | null;
+  checklist?: any;
+}
+
+const PRIORITY_CONFIG: Record<string, { color: string; label: string }> = {
+  urgent: { color: "bg-red-600", label: "Urgent" },
+  high: { color: "bg-orange-500", label: "High" },
+  normal: { color: "bg-blue-500", label: "Normal" },
+  low: { color: "bg-gray-400", label: "Low" },
+};
+
+const STATUS_CONFIG: Record<string, { icon: React.ComponentType<any>; label: string; color: string }> = {
+  todo: { icon: Circle, label: "To Do", color: "text-gray-400" },
+  in_progress: { icon: Clock, label: "In Progress", color: "text-blue-500" },
+  review: { icon: AlertCircle, label: "Review", color: "text-yellow-500" },
+  completed: { icon: CheckCircle2, label: "Completed", color: "text-green-500" },
+};
 
 const EVENT_TYPE_CONFIG = {
   meeting: {
@@ -107,6 +142,15 @@ const EVENT_TYPE_CONFIG = {
     borderColor: "border-purple-500/20",
     emoji: "🎉"
   },
+  task: {
+    icon: CheckSquare,
+    color: "bg-teal-500",
+    hoverColor: "hover:bg-teal-600",
+    textColor: "text-teal-600",
+    bgColor: "bg-teal-500/10",
+    borderColor: "border-teal-500/20",
+    emoji: "✅"
+  },
 };
 
 export default function CompanyCalendarPage() {
@@ -119,6 +163,9 @@ export default function CompanyCalendarPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
+  const [showTasks, setShowTasks] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<CalendarTask | null>(null);
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -153,6 +200,11 @@ export default function CompanyCalendarPage() {
   // Fetch calendar events from API
   const { data: events = [], isLoading } = useQuery<CalendarEvent[]>({
     queryKey: [eventsQueryUrl],
+  });
+
+  // Fetch tasks with due dates for calendar overlay
+  const { data: calendarTasks = [] } = useQuery<CalendarTask[]>({
+    queryKey: ["/api/calendar/tasks"],
   });
 
   // Update last sync time when events load
@@ -275,13 +327,22 @@ export default function CompanyCalendarPage() {
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToToday = () => setCurrentDate(new Date());
 
+  // Get tasks for a specific day
+  const getTasksForDay = (day: Date): CalendarTask[] => {
+    if (!showTasks) return [];
+    return calendarTasks.filter(task =>
+      task.dueDate && isSameDay(new Date(task.dueDate), day)
+    );
+  };
+
   const getEventsForDay = (day: Date) => {
-    const dayEvents = events.filter(event => 
+    const dayEvents = events.filter(event =>
       isSameDay(new Date(event.start), day)
     );
-    
+
     // Apply filter
     if (eventTypeFilter === "all") return dayEvents;
+    if (eventTypeFilter === "task") return []; // tasks shown separately
     return dayEvents.filter(event => event.type === eventTypeFilter);
   };
 
@@ -293,8 +354,12 @@ export default function CompanyCalendarPage() {
     return EVENT_TYPE_CONFIG[type as keyof typeof EVENT_TYPE_CONFIG]?.emoji || "📅";
   };
 
-  const todayEvents = events.filter(event => 
+  const todayEvents = events.filter(event =>
     isSameDay(new Date(event.start), new Date())
+  );
+
+  const todayTasks = calendarTasks.filter(task =>
+    task.dueDate && isSameDay(new Date(task.dueDate), new Date())
   );
 
   const upcomingEvents = events
@@ -302,7 +367,12 @@ export default function CompanyCalendarPage() {
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
     .slice(0, 10);
 
-  const upcomingWithin48Hours = upcomingEvents.filter(event => 
+  const upcomingTasks = calendarTasks
+    .filter(task => task.dueDate && new Date(task.dueDate) > new Date() && task.status !== "completed")
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 10);
+
+  const upcomingWithin48Hours = upcomingEvents.filter(event =>
     differenceInHours(new Date(event.start), new Date()) <= 48
   );
 
@@ -311,6 +381,12 @@ export default function CompanyCalendarPage() {
     setSelectedEvent(event);
     setIsViewDialogOpen(true);
     setIsEditMode(false);
+  };
+
+  const handleTaskClick = (task: CalendarTask, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedTask(task);
+    setIsTaskDialogOpen(true);
   };
 
   const handleEditEvent = () => {
@@ -404,6 +480,23 @@ export default function CompanyCalendarPage() {
             <p className="text-sm md:text-base text-muted-foreground">Manage team schedules and events</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showTasks ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowTasks(!showTasks)}
+                  className={showTasks ? "bg-teal-500 hover:bg-teal-600 text-white" : ""}
+                >
+                  <ListTodo className="w-4 h-4 mr-2" />
+                  Tasks {showTasks ? "On" : "Off"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{showTasks ? "Hide tasks from calendar" : "Show tasks on calendar"}</p>
+              </TooltipContent>
+            </Tooltip>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -895,55 +988,157 @@ export default function CompanyCalendarPage() {
           </div>
         </div>
 
+        {/* Task Detail Dialog */}
+        <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Task Details</DialogTitle>
+              <DialogDescription>View task information</DialogDescription>
+            </DialogHeader>
+            {selectedTask && (() => {
+              const statusInfo = STATUS_CONFIG[selectedTask.status] || STATUS_CONFIG.todo;
+              const StatusIcon = statusInfo.icon;
+              const priorityInfo = PRIORITY_CONFIG[selectedTask.priority] || PRIORITY_CONFIG.normal;
+              return (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                      <CheckSquare className="w-5 h-5 text-teal-500" />
+                      {selectedTask.title}
+                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="bg-teal-500 text-white">Task</Badge>
+                      <Badge variant="outline" className={`${statusInfo.color} border-current`}>
+                        <StatusIcon className="w-3 h-3 mr-1" />
+                        {statusInfo.label}
+                      </Badge>
+                      <Badge className={`${priorityInfo.color} text-white`}>
+                        {priorityInfo.label}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {selectedTask.description && (
+                    <div>
+                      <Label>Description</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{selectedTask.description}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Due Date</Label>
+                      <p className="text-sm mt-1 flex items-center gap-1">
+                        <CalendarIcon className="w-3 h-3" />
+                        {format(new Date(selectedTask.dueDate), "PPP")}
+                      </p>
+                    </div>
+                    {selectedTask.estimatedHours && selectedTask.estimatedHours > 0 && (
+                      <div>
+                        <Label>Estimated Hours</Label>
+                        <p className="text-sm mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {selectedTask.estimatedHours}h
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedTask.completedAt && (
+                    <div>
+                      <Label>Completed</Label>
+                      <p className="text-sm mt-1 text-green-600">
+                        {format(new Date(selectedTask.completedAt), "PPp")}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedTask.status !== "completed" && selectedTask.dueDate && isPast(new Date(selectedTask.dueDate)) && (
+                    <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="font-semibold text-sm">Overdue</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between gap-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsTaskDialogOpen(false);
+                        window.location.href = "/tasks";
+                      }}
+                    >
+                      <ArrowUpRight className="w-4 h-4 mr-1" />
+                      Open in Tasks
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsTaskDialogOpen(false)}>
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
+
         {/* Enhanced Stats Cards with Dynamic Colors & Tooltips */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Tooltip>
             <TooltipTrigger asChild>
               <Card className={`hover-elevate transition-all duration-300 cursor-pointer ${
-                todayEvents.length > 0 ? 'border-emerald-500/50 bg-emerald-500/5' : ''
+                (todayEvents.length + todayTasks.length) > 0 ? 'border-emerald-500/50 bg-emerald-500/5' : ''
               }`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Today's Events</p>
-                      <p className={`text-2xl font-bold ${todayEvents.length > 0 ? 'text-emerald-600 dark:text-emerald-400' : ''}`}>
-                        {todayEvents.length}
+                      <p className="text-sm text-muted-foreground">Today</p>
+                      <p className={`text-2xl font-bold ${(todayEvents.length + todayTasks.length) > 0 ? 'text-emerald-600 dark:text-emerald-400' : ''}`}>
+                        {todayEvents.length + todayTasks.length}
                       </p>
-                      {todayEvents.length > 0 && (
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Active today 🎯</p>
-                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {todayEvents.length} event{todayEvents.length !== 1 ? "s" : ""}{todayTasks.length > 0 && ` + ${todayTasks.length} task${todayTasks.length !== 1 ? "s" : ""}`}
+                      </p>
                     </div>
-                    <div className={`p-3 rounded-lg ${todayEvents.length > 0 ? 'bg-emerald-500/20' : 'bg-blue-500/10'}`}>
-                      <CalendarIcon className={`w-6 h-6 ${todayEvents.length > 0 ? 'text-emerald-500' : 'text-blue-500'}`} />
+                    <div className={`p-3 rounded-lg ${(todayEvents.length + todayTasks.length) > 0 ? 'bg-emerald-500/20' : 'bg-blue-500/10'}`}>
+                      <CalendarIcon className={`w-6 h-6 ${(todayEvents.length + todayTasks.length) > 0 ? 'text-emerald-500' : 'text-blue-500'}`} />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Click to view today's full schedule</p>
+              <p>Events and tasks scheduled for today</p>
             </TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Card className="hover-elevate transition-all duration-300 cursor-pointer">
+              <Card className={`hover-elevate transition-all duration-300 cursor-pointer ${
+                calendarTasks.length > 0 && showTasks ? 'border-teal-500/50 bg-teal-500/5' : ''
+              }`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">This Month</p>
-                      <p className="text-2xl font-bold">{events.length}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Total events</p>
+                      <p className="text-sm text-muted-foreground">Tasks Due</p>
+                      <p className={`text-2xl font-bold ${calendarTasks.length > 0 && showTasks ? 'text-teal-600 dark:text-teal-400' : ''}`}>
+                        {calendarTasks.filter(t => t.status !== "completed").length}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {calendarTasks.filter(t => t.status === "completed").length} completed
+                      </p>
                     </div>
-                    <div className="p-3 bg-green-500/10 rounded-lg">
-                      <Clock className="w-6 h-6 text-green-500" />
+                    <div className={`p-3 rounded-lg ${calendarTasks.length > 0 && showTasks ? 'bg-teal-500/20' : 'bg-green-500/10'}`}>
+                      <CheckSquare className={`w-6 h-6 ${calendarTasks.length > 0 && showTasks ? 'text-teal-500' : 'text-green-500'}`} />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent>
-              <p>All events scheduled this month</p>
+              <p>Tasks with due dates shown on calendar</p>
             </TooltipContent>
           </Tooltip>
 
@@ -1082,11 +1277,14 @@ export default function CompanyCalendarPage() {
                 {/* Calendar Days */}
                 {calendarDays.map((day, idx) => {
                   const dayEvents = getEventsForDay(day);
+                  const dayTasks = getTasksForDay(day);
                   const isCurrentMonth = isSameMonth(day, currentDate);
                   const isSelected = selectedDate && isSameDay(day, selectedDate);
                   const isTodayDate = isToday(day);
-                  const hasEvents = dayEvents.length > 0;
-                  
+                  const totalItems = dayEvents.length + dayTasks.length;
+                  const hasItems = totalItems > 0;
+                  const maxVisible = 3;
+
                   return (
                     <Tooltip key={idx}>
                       <TooltipTrigger asChild>
@@ -1097,25 +1295,29 @@ export default function CompanyCalendarPage() {
                             ${!isCurrentMonth ? "bg-muted/30 text-muted-foreground" : "hover:bg-accent hover:shadow-md"}
                             ${isSelected ? "ring-1 md:ring-2 ring-primary shadow-lg" : ""}
                             ${isTodayDate ? "bg-primary/10 border-primary border-2 shadow-md" : ""}
-                            ${hasEvents && !isTodayDate ? "border-purple-500/30" : ""}
+                            ${hasItems && !isTodayDate ? "border-purple-500/30" : ""}
                           `}
                         >
                           <div className={`text-[10px] md:text-sm font-semibold mb-0.5 md:mb-1 flex items-center justify-between ${isTodayDate ? "text-primary" : ""}`}>
                             <span>{format(day, "d")}</span>
-                            {/* Event Indicator Dot */}
-                            {hasEvents && (
+                            {/* Indicator Dots */}
+                            {hasItems && (
                               <div className="flex gap-0.5">
-                                {dayEvents.slice(0, 3).map((event, i) => (
-                                  <div 
-                                    key={i}
+                                {dayEvents.slice(0, 2).map((event, i) => (
+                                  <div
+                                    key={`e-${i}`}
                                     className={`w-1.5 h-1.5 rounded-full ${getEventColor(event.type)}`}
                                   />
                                 ))}
+                                {dayTasks.length > 0 && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                                )}
                               </div>
                             )}
                           </div>
                           <div className="space-y-0.5 md:space-y-1 max-h-[80px] md:max-h-[120px] overflow-y-auto">
-                            {dayEvents.slice(0, 3).map((event, eventIdx) => (
+                            {/* Events */}
+                            {dayEvents.slice(0, maxVisible).map((event, eventIdx) => (
                               <Tooltip key={event.id}>
                                 <TooltipTrigger asChild>
                                   <div
@@ -1123,7 +1325,7 @@ export default function CompanyCalendarPage() {
                                     className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 ${getEventColor(event.type)} mb-0.5 shadow-sm`}
                                     style={{
                                       position: 'relative',
-                                      zIndex: dayEvents.length - eventIdx,
+                                      zIndex: totalItems - eventIdx,
                                     }}
                                   >
                                     <span className="mr-1">{getEventIcon(event.type)}</span>
@@ -1137,9 +1339,29 @@ export default function CompanyCalendarPage() {
                                 </TooltipContent>
                               </Tooltip>
                             ))}
-                            {dayEvents.length > 3 && (
+                            {/* Tasks */}
+                            {dayTasks.slice(0, Math.max(0, maxVisible - dayEvents.length)).map((task) => (
+                              <Tooltip key={`task-${task.id}`}>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    onClick={(e) => handleTaskClick(task, e)}
+                                    className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 bg-teal-500 mb-0.5 shadow-sm ${
+                                      task.status === "completed" ? "opacity-60 line-through" : ""
+                                    }`}
+                                  >
+                                    <span className="mr-1">✅</span>
+                                    {task.title}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-semibold">{task.title}</p>
+                                  <p className="text-xs capitalize">{task.status.replace("_", " ")} | {task.priority}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                            {totalItems > maxVisible && (
                               <div className="text-[8px] md:text-xs text-muted-foreground font-medium">
-                                +{dayEvents.length - 3} more
+                                +{totalItems - maxVisible} more
                               </div>
                             )}
                           </div>
@@ -1148,6 +1370,7 @@ export default function CompanyCalendarPage() {
                       <TooltipContent>
                         <p>{format(day, "EEEE, MMMM d")}</p>
                         {dayEvents.length > 0 && <p className="text-xs">{dayEvents.length} event(s)</p>}
+                        {dayTasks.length > 0 && <p className="text-xs">{dayTasks.length} task(s)</p>}
                       </TooltipContent>
                     </Tooltip>
                   );
@@ -1156,13 +1379,13 @@ export default function CompanyCalendarPage() {
             </CardContent>
           </Card>
 
-          {/* Enhanced Upcoming Events Sidebar */}
+          {/* Enhanced Upcoming Events & Tasks Sidebar */}
           <Card className="lg:col-span-4 shadow-xl border-0 glass-strong">
             <CardHeader className="border-b border-border/50 bg-gradient-to-r from-purple-500/5 via-transparent to-transparent">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Upcoming Events</CardTitle>
-                <Button 
-                  size="sm" 
+                <CardTitle className="text-lg">Upcoming</CardTitle>
+                <Button
+                  size="sm"
                   variant="ghost"
                   onClick={() => setIsCreateDialogOpen(true)}
                   className="h-8 w-8 p-0"
@@ -1170,7 +1393,7 @@ export default function CompanyCalendarPage() {
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
-              
+
               {/* Event Type Filter */}
               <div className="flex items-center gap-2 mt-3 flex-wrap">
                 <Button
@@ -1181,7 +1404,7 @@ export default function CompanyCalendarPage() {
                 >
                   All
                 </Button>
-                {Object.entries(EVENT_TYPE_CONFIG).map(([type, config]) => (
+                {Object.entries(EVENT_TYPE_CONFIG).filter(([type]) => type !== "task").map(([type, config]) => (
                   <Button
                     key={type}
                     size="sm"
@@ -1209,10 +1432,10 @@ export default function CompanyCalendarPage() {
                 <div className="text-center py-8 text-muted-foreground">
                   Loading events...
                 </div>
-              ) : filteredUpcomingEvents.length === 0 ? (
+              ) : filteredUpcomingEvents.length === 0 && upcomingTasks.length === 0 ? (
                 <div className="text-center py-12">
                   <CalendarIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <p className="text-muted-foreground mb-2">No upcoming events</p>
+                  <p className="text-muted-foreground mb-2">No upcoming events or tasks</p>
                   <p className="text-sm text-muted-foreground">
                     Create events or connect Outlook Calendar
                   </p>
@@ -1222,77 +1445,141 @@ export default function CompanyCalendarPage() {
                   </Button>
                 </div>
               ) : (
-                filteredUpcomingEvents.map((event) => {
-                  const config = EVENT_TYPE_CONFIG[event.type];
-                  const Icon = config.icon;
-                  const hoursUntil = differenceInHours(new Date(event.start), new Date());
-                  const isUrgent = hoursUntil <= 48;
-                  
-                  return (
-                    <Card 
-                      key={event.id} 
-                      className={`hover-elevate group cursor-pointer transition-all duration-300 ${
-                        isUrgent ? 'border-orange-500/50 bg-orange-500/5' : ''
-                      }`}
-                      onClick={(e) => handleEventClick(event, e)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className={`w-10 h-10 rounded-lg ${config.bgColor} flex items-center justify-center flex-shrink-0`}>
-                              <Icon className={`w-5 h-5 ${config.textColor}`} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors">
-                                {event.title}
-                              </h4>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {format(new Date(event.start), "MMM d, h:mm a")}
-                              </p>
-                              {isUrgent && (
-                                <Badge variant="secondary" className="mt-1 text-xs bg-orange-500/10 text-orange-600">
-                                  {hoursUntil < 24 ? 'Due today' : 'Due soon'}
-                                </Badge>
+                <>
+                  {/* Upcoming Events */}
+                  {filteredUpcomingEvents.length > 0 && (
+                    <>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Events</p>
+                      {filteredUpcomingEvents.map((event) => {
+                        const config = EVENT_TYPE_CONFIG[event.type];
+                        const Icon = config.icon;
+                        const hoursUntil = differenceInHours(new Date(event.start), new Date());
+                        const isUrgent = hoursUntil <= 48;
+
+                        return (
+                          <Card
+                            key={event.id}
+                            className={`hover-elevate group cursor-pointer transition-all duration-300 ${
+                              isUrgent ? 'border-orange-500/50 bg-orange-500/5' : ''
+                            }`}
+                            onClick={(e) => handleEventClick(event, e)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-start gap-3 flex-1">
+                                  <div className={`w-10 h-10 rounded-lg ${config.bgColor} flex items-center justify-center flex-shrink-0`}>
+                                    <Icon className={`w-5 h-5 ${config.textColor}`} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors">
+                                      {event.title}
+                                    </h4>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {format(new Date(event.start), "MMM d, h:mm a")}
+                                    </p>
+                                    {isUrgent && (
+                                      <Badge variant="secondary" className="mt-1 text-xs bg-orange-500/10 text-orange-600">
+                                        {hoursUntil < 24 ? 'Due today' : 'Due soon'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEventClick(event, e);
+                                      setIsEditMode(true);
+                                    }}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              {event.location && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                                  <MapPin className="w-3 h-3" />
+                                  {event.location}
+                                </div>
                               )}
-                            </div>
-                          </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEventClick(event, e);
-                                setIsEditMode(true);
-                              }}
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        {event.location && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-                            <MapPin className="w-3 h-3" />
-                            {event.location}
-                          </div>
-                        )}
-                        {event.description && (
-                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                            {event.description}
-                          </p>
-                        )}
-                        {event.meetLink && (
-                          <Button variant="link" size="sm" className="h-auto p-0 text-xs mt-2">
-                            <Video className="w-3 h-3 mr-1" />
-                            Join Meeting
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
+                              {event.description && (
+                                <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                                  {event.description}
+                                </p>
+                              )}
+                              {event.meetLink && (
+                                <Button variant="link" size="sm" className="h-auto p-0 text-xs mt-2">
+                                  <Video className="w-3 h-3 mr-1" />
+                                  Join Meeting
+                                </Button>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </>
+                  )}
+
+                  {/* Upcoming Tasks */}
+                  {showTasks && upcomingTasks.length > 0 && (
+                    <>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">Tasks Due</p>
+                      {upcomingTasks.map((task) => {
+                        const statusInfo = STATUS_CONFIG[task.status] || STATUS_CONFIG.todo;
+                        const StatusIcon = statusInfo.icon;
+                        const priorityInfo = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.normal;
+                        const hoursUntil = differenceInHours(new Date(task.dueDate), new Date());
+                        const isUrgent = hoursUntil <= 48;
+                        const isOverdue = isPast(new Date(task.dueDate));
+
+                        return (
+                          <Card
+                            key={`sidebar-task-${task.id}`}
+                            className={`hover-elevate group cursor-pointer transition-all duration-300 ${
+                              isOverdue ? 'border-red-500/50 bg-red-500/5' : isUrgent ? 'border-orange-500/50 bg-orange-500/5' : 'border-teal-500/30'
+                            }`}
+                            onClick={(e) => handleTaskClick(task, e)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+                                  <CheckSquare className="w-5 h-5 text-teal-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-sm mb-1 group-hover:text-teal-600 transition-colors">
+                                    {task.title}
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <CalendarIcon className="w-3 h-3" />
+                                    Due {format(new Date(task.dueDate), "MMM d")}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusInfo.color} border-current`}>
+                                      <StatusIcon className="w-2.5 h-2.5 mr-0.5" />
+                                      {statusInfo.label}
+                                    </Badge>
+                                    <Badge className={`text-[10px] px-1.5 py-0 text-white ${priorityInfo.color}`}>
+                                      {priorityInfo.label}
+                                    </Badge>
+                                    {isOverdue && (
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-red-500/10 text-red-600">
+                                        Overdue
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

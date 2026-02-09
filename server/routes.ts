@@ -1885,6 +1885,19 @@ Examples:
     }
   });
 
+  // Fetch tasks with due dates for calendar view
+  app.get("/api/calendar/tasks", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const allTasks = await storage.getTasks({ limit: 500, offset: 0 });
+      // Return only tasks that have a due date
+      const tasksWithDueDate = allTasks.filter((t: any) => t.dueDate != null);
+      res.json(tasksWithDueDate);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to fetch tasks for calendar" });
+    }
+  });
+
   app.post("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
