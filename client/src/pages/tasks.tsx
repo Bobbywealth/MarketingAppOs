@@ -135,6 +135,8 @@ export default function TasksPage() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
+  const [isRecurringMasterOpen, setIsRecurringMasterOpen] = useState(false);
+  const [editingRecurringTask, setEditingRecurringTask] = useState<Task | null>(null);
   // Load showCompleted preference from localStorage.
   // Default to FALSE to hide completed tasks by default.
   const [showCompleted, setShowCompleted] = useState(() => {
@@ -433,6 +435,41 @@ export default function TasksPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       setSelectedTaskIds(new Set());
       toast({ title: "Tasks deleted successfully" });
+    },
+  });
+
+  // Recurring task series mutations
+  const updateRecurringSeriesMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiRequest("PATCH", `/api/tasks/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Recurring task updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to update recurring task", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const deleteRecurringSeriesMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      return apiRequest("DELETE", `/api/tasks/${taskId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Recurring task series deleted" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete recurring task", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
     },
   });
 
@@ -1158,6 +1195,11 @@ export default function TasksPage() {
                   <DropdownMenuSeparator />
                 </>
               )}
+              <DropdownMenuItem onClick={() => setIsRecurringMasterOpen(true)}>
+                <List className="w-4 h-4 mr-2" />
+                Recurring Tasks Master
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
                 <LayoutGrid className="w-4 h-4 mr-2" />
                 All Spaces
@@ -1866,6 +1908,161 @@ export default function TasksPage() {
           setSelectedTask(null);
         }}
       />
+
+      {/* Recurring Task Master List Dialog */}
+      <Dialog open={isRecurringMasterOpen} onOpenChange={setIsRecurringMasterOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto glass-strong">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Repeat className="w-5 h-5 text-blue-500" />
+              Recurring Task Master List
+            </DialogTitle>
+            <DialogDescription>
+              Manage all your recurring tasks in one place. Edit patterns, intervals, or delete series.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Filter recurring tasks */}
+          <div className="flex items-center gap-3 pb-3 border-b">
+            <Input
+              placeholder="Search recurring tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1"
+            />
+            <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
+              Clear
+            </Button>
+          </div>
+          
+          {/* Recurring tasks list */}
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {(() => {
+              const recurringTasks = tasks.filter(t => (t as any).isRecurring);
+              const filteredRecurring = recurringTasks.filter(task =>
+                task.title.toLowerCase().includes(searchQuery.toLowerCase())
+              );
+              
+              if (filteredRecurring.length === 0) {
+                return (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Repeat className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">No recurring tasks found</p>
+                    <p className="text-sm mt-1">
+                      {recurringTasks.length === 0 
+                        ? "Create a task with recurring enabled to see it here"
+                        : "Try a different search term"}
+                    </p>
+                  </div>
+                );
+              }
+              
+              return filteredRecurring.map(task => {
+                const taskData = task as any;
+                return (
+                <Card key={task.id} className="hover:bg-muted/30 transition-colors">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium truncate">{task.title}</h4>
+                          <Badge variant="outline" className="text-xs">
+                            {taskData.recurringPattern || "weekly"}
+                          </Badge>
+                          {taskData.recurringInterval && taskData.recurringInterval > 1 && (
+                            <Badge variant="secondary" className="text-xs">
+                              Every {taskData.recurringInterval}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {task.description && (
+                          <p className="text-sm text-muted-foreground truncate mb-2">
+                            {task.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          {task.dueDate && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              Next: {toLocaleDateStringEST(task.dueDate)}
+                            </div>
+                          )}
+                          {task.assignedToId && (
+                            <div className="flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              {users.find(u => u.id === task.assignedToId)?.firstName || "Unassigned"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {/* Toggle recurring */}
+                        <Button
+                          variant={taskData.isRecurring ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => updateRecurringSeriesMutation.mutate({
+                            id: task.id,
+                            data: { isRecurring: !taskData.isRecurring }
+                          })}
+                          className="gap-2"
+                        >
+                          {taskData.isRecurring ? (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              Active
+                            </>
+                          ) : (
+                            <>
+                              <X className="w-4 h-4" />
+                              Paused
+                            </>
+                          )}
+                        </Button>
+                        
+                        {/* Edit button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            handleEditTask(task);
+                            setIsRecurringMasterOpen(false);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        
+                        {/* Delete button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            if (confirm(`Delete this recurring task and all future occurrences?`)) {
+                              deleteRecurringSeriesMutation.mutate(task.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                );
+              });
+            })()}
+          </div>
+          
+          <div className="flex justify-end pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsRecurringMasterOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Action Bar */}
       {selectedTaskIds.size > 0 && (
