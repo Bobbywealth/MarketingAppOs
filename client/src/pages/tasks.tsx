@@ -1865,10 +1865,6 @@ export default function TasksPage() {
           setIsDetailSidebarOpen(false);
           setSelectedTask(null);
         }}
-        onEdit={(task) => {
-          handleEditTask(task);
-          setIsDetailSidebarOpen(false);
-        }}
       />
 
       {/* Bulk Action Bar */}
