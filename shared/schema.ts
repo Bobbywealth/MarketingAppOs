@@ -1208,3 +1208,52 @@ export type MarketingSeriesEnrollment = typeof marketingSeriesEnrollments.$infer
 export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
 export type TaskTemplate = typeof taskTemplates.$inferSelect;
+
+// Telegram Subscribers table - tracks users who interact with the bot
+export const telegramSubscribers = pgTable("telegram_subscribers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  chatId: varchar("chat_id").notNull().unique(),
+  username: varchar("username"),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  isActive: boolean("is_active").notNull().default(true),
+  isBlocked: boolean("is_blocked").notNull().default(false),
+  leadId: varchar("lead_id").references(() => leads.id, { onDelete: "set null" }),
+  tags: jsonb("tags"), // Array of string tags for segmentation
+  lastInteraction: timestamp("last_interaction").defaultNow(),
+  subscribedAt: timestamp("subscribed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTelegramSubscriberSchema = createInsertSchema(telegramSubscribers).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertTelegramSubscriber = z.infer<typeof insertTelegramSubscriberSchema>;
+export type TelegramSubscriber = typeof telegramSubscribers.$inferSelect;
+
+// Telegram Automated Messages table - scheduled/recurring messages to subscribers
+export const telegramAutomatedMessages = pgTable("telegram_automated_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  content: text("content").notNull(),
+  audience: varchar("audience").notNull().default("all_subscribers"), // all_subscribers, tagged, individual
+  targetTags: jsonb("target_tags"), // Array of tag strings to filter subscribers
+  targetChatId: varchar("target_chat_id"), // For individual sends
+  status: varchar("status").notNull().default("active"), // active, paused, completed
+  isRecurring: boolean("is_recurring").notNull().default(false),
+  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly
+  recurringInterval: integer("recurring_interval").default(1),
+  scheduledAt: timestamp("scheduled_at"),
+  nextRunAt: timestamp("next_run_at"),
+  recurringEndDate: timestamp("recurring_end_date"),
+  lastRunAt: timestamp("last_run_at"),
+  totalSent: integer("total_sent").default(0),
+  totalFailed: integer("total_failed").default(0),
+  welcomeMessage: boolean("welcome_message").notNull().default(false), // Auto-send on /start
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTelegramAutomatedMessageSchema = createInsertSchema(telegramAutomatedMessages).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertTelegramAutomatedMessage = z.infer<typeof insertTelegramAutomatedMessageSchema>;
+export type TelegramAutomatedMessage = typeof telegramAutomatedMessages.$inferSelect;

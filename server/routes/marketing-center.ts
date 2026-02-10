@@ -7,7 +7,7 @@ import { insertMarketingBroadcastSchema } from "@shared/schema";
 import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
 import { sendSms, sendWhatsApp } from "../twilioService";
-import { sendTelegramMessage } from "../telegramService";
+import { sendTelegramMessage, sendTelegramBulk, handleTelegramWebhookUpdate, setupTelegramWebhook, getTelegramWebhookInfo, getTelegramBotInfo } from "../telegramService";
 import { listVapiAssistants, getVapiCall } from "../vapiService";
 import { generateMarketingContent, analyzeSmsSentiment, parseAiGroupQuery } from "../aiManager";
 import { upload } from "./common";
@@ -179,6 +179,51 @@ export async function ensureMarketingCenterSchema() {
     await pool.query(`ALTER TABLE marketing_series_enrollments ADD COLUMN IF NOT EXISTS recipient_id VARCHAR(255);`);
     await pool.query(`UPDATE marketing_series_enrollments SET recipient_id = COALESCE(lead_id, client_id) WHERE recipient_id IS NULL;`);
     await pool.query(`ALTER TABLE marketing_series_enrollments ALTER COLUMN recipient_id SET NOT NULL;`);
+
+    // Telegram Subscribers table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS telegram_subscribers (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        chat_id VARCHAR NOT NULL UNIQUE,
+        username VARCHAR,
+        first_name VARCHAR,
+        last_name VARCHAR,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        is_blocked BOOLEAN NOT NULL DEFAULT false,
+        lead_id VARCHAR REFERENCES leads(id) ON DELETE SET NULL,
+        tags JSONB,
+        last_interaction TIMESTAMP DEFAULT NOW(),
+        subscribed_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Telegram Automated Messages table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS telegram_automated_messages (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR NOT NULL,
+        content TEXT NOT NULL,
+        audience VARCHAR NOT NULL DEFAULT 'all_subscribers',
+        target_tags JSONB,
+        target_chat_id VARCHAR,
+        status VARCHAR NOT NULL DEFAULT 'active',
+        is_recurring BOOLEAN NOT NULL DEFAULT false,
+        recurring_pattern VARCHAR,
+        recurring_interval INTEGER DEFAULT 1,
+        scheduled_at TIMESTAMP,
+        next_run_at TIMESTAMP,
+        recurring_end_date TIMESTAMP,
+        last_run_at TIMESTAMP,
+        total_sent INTEGER DEFAULT 0,
+        total_failed INTEGER DEFAULT 0,
+        welcome_message BOOLEAN NOT NULL DEFAULT false,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
   })().catch((err) => {
     // Allow retry on next request if this fails.
     marketingSchemaEnsured = null;
@@ -585,6 +630,17 @@ router.post("/twilio/test-whatsapp", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error sending Twilio test WhatsApp:", error);
     return res.status(500).json({ message: error.message || "Failed to send test WhatsApp" });
+  }
+});
+
+// Telegram Bot Webhook (unauthenticated - called by Telegram servers)
+router.post("/telegram/webhook", async (req: Request, res: Response) => {
+  try {
+    await handleTelegramWebhookUpdate(req.body);
+    res.status(200).json({ ok: true });
+  } catch (error: any) {
+    console.error("Telegram webhook error:", error);
+    res.status(200).json({ ok: true }); // Always 200 to avoid Telegram retries
   }
 });
 
@@ -1016,6 +1072,285 @@ router.post("/series/:id/enroll", isAuthenticated, requireRole(UserRole.ADMIN), 
     }
 
     res.json({ message: `Enrolled ${enrollments.length} recipients`, count: enrollments.length });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ========================
+// Telegram Subscribers & Automated Messages
+// ========================
+
+// Get all Telegram subscribers
+router.get("/telegram/subscribers", async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM telegram_subscribers ORDER BY subscribed_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get Telegram subscriber stats
+router.get("/telegram/subscribers/stats", async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE is_active = true AND is_blocked = false)::int AS active,
+        COUNT(*) FILTER (WHERE is_blocked = true)::int AS blocked,
+        COUNT(*) FILTER (WHERE is_active = false AND is_blocked = false)::int AS unsubscribed
+      FROM telegram_subscribers
+    `);
+    res.json(result.rows[0] || { total: 0, active: 0, blocked: 0, unsubscribed: 0 });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete a Telegram subscriber
+router.delete("/telegram/subscribers/:id", async (req: Request, res: Response) => {
+  try {
+    await pool.query(`DELETE FROM telegram_subscribers WHERE id = $1`, [req.params.id]);
+    res.status(204).end();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update subscriber tags
+router.patch("/telegram/subscribers/:id", async (req: Request, res: Response) => {
+  try {
+    const { tags, isActive, leadId } = req.body;
+    const sets: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+
+    if (tags !== undefined) { sets.push(`tags = $${idx++}`); params.push(JSON.stringify(tags)); }
+    if (isActive !== undefined) { sets.push(`is_active = $${idx++}`); params.push(isActive); }
+    if (leadId !== undefined) { sets.push(`lead_id = $${idx++}`); params.push(leadId || null); }
+    sets.push(`updated_at = NOW()`);
+
+    params.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE telegram_subscribers SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+      params
+    );
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all Telegram automated messages
+router.get("/telegram/automated-messages", async (_req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM telegram_automated_messages ORDER BY created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create a Telegram automated message
+router.post("/telegram/automated-messages", async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const {
+      name, content, audience, targetTags, targetChatId, status,
+      isRecurring, recurringPattern, recurringInterval,
+      scheduledAt, recurringEndDate, welcomeMessage,
+    } = req.body;
+
+    if (!name || !content) {
+      return res.status(400).json({ message: "Name and content are required" });
+    }
+
+    let nextRunAt = null;
+    if (scheduledAt) {
+      nextRunAt = new Date(scheduledAt);
+    } else if (isRecurring) {
+      nextRunAt = new Date();
+    }
+
+    const result = await pool.query(
+      `INSERT INTO telegram_automated_messages
+       (id, name, content, audience, target_tags, target_chat_id, status,
+        is_recurring, recurring_pattern, recurring_interval, scheduled_at,
+        next_run_at, recurring_end_date, welcome_message, created_by)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING *`,
+      [
+        name, content, audience || "all_subscribers",
+        targetTags ? JSON.stringify(targetTags) : null,
+        targetChatId || null,
+        status || "active",
+        isRecurring || false,
+        recurringPattern || null,
+        recurringInterval || 1,
+        scheduledAt ? new Date(scheduledAt) : null,
+        nextRunAt,
+        recurringEndDate ? new Date(recurringEndDate) : null,
+        welcomeMessage || false,
+        user.id,
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update a Telegram automated message
+router.patch("/telegram/automated-messages/:id", async (req: Request, res: Response) => {
+  try {
+    const { name, content, audience, targetTags, targetChatId, status, isRecurring, recurringPattern, recurringInterval, scheduledAt, recurringEndDate, welcomeMessage } = req.body;
+    const sets: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+
+    if (name !== undefined) { sets.push(`name = $${idx++}`); params.push(name); }
+    if (content !== undefined) { sets.push(`content = $${idx++}`); params.push(content); }
+    if (audience !== undefined) { sets.push(`audience = $${idx++}`); params.push(audience); }
+    if (targetTags !== undefined) { sets.push(`target_tags = $${idx++}`); params.push(JSON.stringify(targetTags)); }
+    if (targetChatId !== undefined) { sets.push(`target_chat_id = $${idx++}`); params.push(targetChatId || null); }
+    if (status !== undefined) { sets.push(`status = $${idx++}`); params.push(status); }
+    if (isRecurring !== undefined) { sets.push(`is_recurring = $${idx++}`); params.push(isRecurring); }
+    if (recurringPattern !== undefined) { sets.push(`recurring_pattern = $${idx++}`); params.push(recurringPattern); }
+    if (recurringInterval !== undefined) { sets.push(`recurring_interval = $${idx++}`); params.push(recurringInterval); }
+    if (scheduledAt !== undefined) { sets.push(`scheduled_at = $${idx++}`); params.push(scheduledAt ? new Date(scheduledAt) : null); }
+    if (recurringEndDate !== undefined) { sets.push(`recurring_end_date = $${idx++}`); params.push(recurringEndDate ? new Date(recurringEndDate) : null); }
+    if (welcomeMessage !== undefined) { sets.push(`welcome_message = $${idx++}`); params.push(welcomeMessage); }
+    sets.push(`updated_at = NOW()`);
+
+    if (sets.length <= 1) return res.status(400).json({ message: "Nothing to update" });
+
+    params.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE telegram_automated_messages SET ${sets.join(", ")} WHERE id = $${idx} RETURNING *`,
+      params
+    );
+    if (result.rows.length === 0) return res.status(404).json({ message: "Not found" });
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete a Telegram automated message
+router.delete("/telegram/automated-messages/:id", async (req: Request, res: Response) => {
+  try {
+    await pool.query(`DELETE FROM telegram_automated_messages WHERE id = $1`, [req.params.id]);
+    res.status(204).end();
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Send a Telegram automated message immediately (manual trigger)
+router.post("/telegram/automated-messages/:id/send", async (req: Request, res: Response) => {
+  try {
+    const msg = await pool.query(`SELECT * FROM telegram_automated_messages WHERE id = $1`, [req.params.id]);
+    if (msg.rows.length === 0) return res.status(404).json({ message: "Not found" });
+
+    const autoMsg = msg.rows[0];
+    let subscribers;
+
+    if (autoMsg.audience === "individual" && autoMsg.target_chat_id) {
+      subscribers = [{ chat_id: autoMsg.target_chat_id }];
+    } else if (autoMsg.audience === "tagged" && autoMsg.target_tags) {
+      const tags = typeof autoMsg.target_tags === "string" ? JSON.parse(autoMsg.target_tags) : autoMsg.target_tags;
+      const tagResult = await pool.query(
+        `SELECT chat_id FROM telegram_subscribers WHERE is_active = true AND is_blocked = false AND tags ?| $1`,
+        [tags]
+      );
+      subscribers = tagResult.rows;
+    } else {
+      const allResult = await pool.query(
+        `SELECT chat_id FROM telegram_subscribers WHERE is_active = true AND is_blocked = false`
+      );
+      subscribers = allResult.rows;
+    }
+
+    const chatIds = subscribers.map((s: any) => s.chat_id);
+    if (chatIds.length === 0) {
+      return res.json({ sent: 0, failed: 0, message: "No active subscribers found" });
+    }
+
+    const results = await sendTelegramBulk(chatIds, autoMsg.content);
+    const sent = results.filter((r) => r.result.success).length;
+    const failed = results.filter((r) => !r.result.success).length;
+
+    await pool.query(
+      `UPDATE telegram_automated_messages SET total_sent = total_sent + $1, total_failed = total_failed + $2, last_run_at = NOW(), updated_at = NOW() WHERE id = $3`,
+      [sent, failed, req.params.id]
+    );
+
+    res.json({ sent, failed, total: chatIds.length });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Telegram bot setup & diagnostics
+router.get("/telegram/bot-info", async (_req: Request, res: Response) => {
+  try {
+    const [botInfo, webhookInfo] = await Promise.all([
+      getTelegramBotInfo(),
+      getTelegramWebhookInfo(),
+    ]);
+    res.json({ bot: botInfo, webhook: webhookInfo });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Set up Telegram webhook
+router.post("/telegram/setup-webhook", async (req: Request, res: Response) => {
+  try {
+    const appUrl = req.body.appUrl || process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+    const result = await setupTelegramWebhook(appUrl);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Send broadcast to all Telegram subscribers (from marketing center)
+router.post("/telegram/broadcast", async (req: Request, res: Response) => {
+  try {
+    const { content, audience, targetTags } = req.body;
+    if (!content) return res.status(400).json({ message: "Message content is required" });
+
+    let subscribers;
+    if (audience === "tagged" && targetTags?.length) {
+      const tagResult = await pool.query(
+        `SELECT chat_id FROM telegram_subscribers WHERE is_active = true AND is_blocked = false AND tags ?| $1`,
+        [targetTags]
+      );
+      subscribers = tagResult.rows;
+    } else {
+      const allResult = await pool.query(
+        `SELECT chat_id FROM telegram_subscribers WHERE is_active = true AND is_blocked = false`
+      );
+      subscribers = allResult.rows;
+    }
+
+    const chatIds = subscribers.map((s: any) => s.chat_id);
+    if (chatIds.length === 0) {
+      return res.json({ sent: 0, failed: 0, message: "No active subscribers found" });
+    }
+
+    const results = await sendTelegramBulk(chatIds, content);
+    const sent = results.filter((r) => r.result.success).length;
+    const failed = results.filter((r) => !r.result.success).length;
+
+    res.json({ sent, failed, total: chatIds.length });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

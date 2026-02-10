@@ -20,6 +20,7 @@ import { startSeriesProcessor } from "./marketingSeriesProcessor";
 import { startAiCommandScheduler } from "./aiCommandScheduler";
 import { startBackgroundJobs } from "./backgroundJobs";
 import { startLeadAutomationProcessor } from "./leadAutomationProcessor";
+import { startTelegramAutomatedScheduler } from "./telegramAutomatedScheduler";
 import { storage } from "./storage";
 import { ensureMinimumSchema } from "./ensureSchema";
 import path from "node:path";
@@ -254,6 +255,8 @@ app.use((req, res, next) => {
   startLeadAutomationProcessor();
   // Start scheduled AI commands (every minute)
   startAiCommandScheduler();
+  // Start Telegram automated messages scheduler (every minute)
+  startTelegramAutomatedScheduler();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

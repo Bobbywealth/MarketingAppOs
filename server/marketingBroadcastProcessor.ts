@@ -1,9 +1,10 @@
 import { storage } from "./storage";
 import { sendEmail, marketingTemplates } from "./emailService";
 import { sendSms, sendWhatsApp } from "./twilioService";
-import { sendTelegramMessage } from "./telegramService";
+import { sendTelegramMessage, sendTelegramBulk } from "./telegramService";
 import { startVapiCall } from "./vapiService";
 import { generatePersonalizedHook } from "./aiManager";
+import { pool } from "./db";
 
 /**
  * Background process to handle bulk sending for a marketing broadcast.
@@ -14,34 +15,92 @@ export async function processMarketingBroadcast(broadcastId: string) {
   if (!broadcast) return;
 
   try {
-    // Telegram is a single-destination broadcast (group/channel chat_id), not per-lead/client.
+    // Telegram broadcasts
     if (broadcast.type === "telegram") {
-      await storage.updateMarketingBroadcast(broadcastId, { totalRecipients: 1 });
+      // If audience is "individual" with a custom chat_id, send to that single destination
+      if (broadcast.audience === "individual" && broadcast.customRecipient) {
+        await storage.updateMarketingBroadcast(broadcastId, { totalRecipients: 1 });
 
+        let successCount = 0;
+        let failedCount = 0;
+
+        const result = await sendTelegramMessage(broadcast.customRecipient, broadcast.content);
+        if (result.success) {
+          successCount = 1;
+          await storage.createMarketingBroadcastRecipient({
+            broadcastId,
+            leadId: null,
+            clientId: null,
+            customRecipient: broadcast.customRecipient,
+            status: "sent",
+            sentAt: new Date(),
+          });
+        } else {
+          failedCount = 1;
+          await storage.createMarketingBroadcastRecipient({
+            broadcastId,
+            leadId: null,
+            clientId: null,
+            customRecipient: broadcast.customRecipient,
+            status: "failed",
+            errorMessage: result.error,
+          });
+        }
+
+        await storage.updateMarketingBroadcast(broadcastId, {
+          successCount,
+          failedCount,
+          status: "completed",
+          completedAt: new Date(),
+        });
+        return;
+      }
+
+      // Bulk Telegram: send to all active subscribers
+      const subscribersResult = await pool.query(
+        `SELECT chat_id FROM telegram_subscribers WHERE is_active = true AND is_blocked = false`
+      );
+      const chatIds = subscribersResult.rows.map((r: any) => r.chat_id);
+
+      await storage.updateMarketingBroadcast(broadcastId, { totalRecipients: chatIds.length });
+
+      if (chatIds.length === 0) {
+        await storage.updateMarketingBroadcast(broadcastId, {
+          successCount: 0,
+          failedCount: 0,
+          status: "completed",
+          completedAt: new Date(),
+        });
+        return;
+      }
+
+      const results = await sendTelegramBulk(chatIds, broadcast.content);
       let successCount = 0;
       let failedCount = 0;
 
-      const result = await sendTelegramMessage(broadcast.customRecipient ?? null, broadcast.content);
-      if (result.success) {
-        successCount = 1;
-        await storage.createMarketingBroadcastRecipient({
-          broadcastId,
-          leadId: null,
-          clientId: null,
-          customRecipient: broadcast.customRecipient ?? null,
-          status: "sent",
-          sentAt: new Date(),
-        });
-      } else {
-        failedCount = 1;
-        await storage.createMarketingBroadcastRecipient({
-          broadcastId,
-          leadId: null,
-          clientId: null,
-          customRecipient: broadcast.customRecipient ?? null,
-          status: "failed",
-          errorMessage: result.error,
-        });
+      for (const { chatId, result } of results) {
+        if (result.success) {
+          successCount++;
+          await storage.createMarketingBroadcastRecipient({
+            broadcastId,
+            leadId: null,
+            clientId: null,
+            customRecipient: chatId,
+            status: "sent",
+            sentAt: new Date(),
+          });
+        } else {
+          failedCount++;
+          await storage.createMarketingBroadcastRecipient({
+            broadcastId,
+            leadId: null,
+            clientId: null,
+            customRecipient: chatId,
+            status: "failed",
+            errorMessage: result.error,
+          });
+        }
+        await storage.updateMarketingBroadcast(broadcastId, { successCount, failedCount });
       }
 
       await storage.updateMarketingBroadcast(broadcastId, {

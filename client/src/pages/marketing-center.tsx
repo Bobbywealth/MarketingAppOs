@@ -165,6 +165,78 @@ export default function MarketingCenter() {
   const [isStepDialogOpen, setIsStepDialogOpen] = useState(false);
   const [editingStep, setEditingStep] = useState<any>(null);
 
+  // Telegram Bot State
+  const [isTgAutoMsgDialogOpen, setIsTgAutoMsgDialogOpen] = useState(false);
+  const [tgAutoMsgName, setTgAutoMsgName] = useState("");
+  const [tgAutoMsgContent, setTgAutoMsgContent] = useState("");
+  const [tgAutoMsgAudience, setTgAutoMsgAudience] = useState("all_subscribers");
+  const [tgAutoMsgIsRecurring, setTgAutoMsgIsRecurring] = useState(false);
+  const [tgAutoMsgPattern, setTgAutoMsgPattern] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [tgAutoMsgInterval, setTgAutoMsgInterval] = useState(1);
+  const [tgAutoMsgScheduledAt, setTgAutoMsgScheduledAt] = useState("");
+  const [tgAutoMsgWelcome, setTgAutoMsgWelcome] = useState(false);
+  const [tgSendingAutoMsg, setTgSendingAutoMsg] = useState<string | null>(null);
+
+  // Telegram Bot Queries
+  const { data: tgSubscribers = [], isLoading: tgSubsLoading } = useQuery<any[]>({
+    queryKey: ["/api/marketing-center/telegram/subscribers"],
+    enabled: activeTab === "telegram-bot",
+  });
+
+  const { data: tgSubStats } = useQuery<any>({
+    queryKey: ["/api/marketing-center/telegram/subscribers/stats"],
+    enabled: activeTab === "telegram-bot",
+  });
+
+  const { data: tgAutoMessages = [], isLoading: tgAutoMsgLoading } = useQuery<any[]>({
+    queryKey: ["/api/marketing-center/telegram/automated-messages"],
+    enabled: activeTab === "telegram-bot",
+  });
+
+  const { data: tgBotInfo } = useQuery<any>({
+    queryKey: ["/api/marketing-center/telegram/bot-info"],
+    enabled: activeTab === "telegram-bot",
+  });
+
+  const createTgAutoMsgMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/marketing-center/telegram/automated-messages", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/telegram/automated-messages"] });
+      toast({ title: "Automated message created" });
+      setIsTgAutoMsgDialogOpen(false);
+      setTgAutoMsgName("");
+      setTgAutoMsgContent("");
+      setTgAutoMsgAudience("all_subscribers");
+      setTgAutoMsgIsRecurring(false);
+      setTgAutoMsgWelcome(false);
+      setTgAutoMsgScheduledAt("");
+    },
+  });
+
+  const deleteTgAutoMsgMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/marketing-center/telegram/automated-messages/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/telegram/automated-messages"] });
+      toast({ title: "Automated message deleted" });
+    },
+  });
+
+  const deleteTgSubscriberMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/marketing-center/telegram/subscribers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/telegram/subscribers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/telegram/subscribers/stats"] });
+      toast({ title: "Subscriber removed" });
+    },
+  });
+
   // Marketing Series Queries
   const { data: seriesList = [], isLoading: seriesLoading } = useQuery<any[]>({
     queryKey: ["/api/marketing-center/series"],
@@ -691,9 +763,9 @@ export default function MarketingCenter() {
       });
       return;
     }
-    // Telegram broadcasts only support "Send to Individual" (a single group/channel chat_id)
-    if (broadcastType === "telegram" && audience !== "individual") {
-      toast({ title: "Telegram Target Required", description: "For Telegram, choose 'Send to Individual' and paste the group/channel chat_id.", variant: "destructive" });
+    // Telegram: allow "all" (sends to all bot subscribers) or "individual" (single chat_id)
+    if (broadcastType === "telegram" && audience !== "individual" && audience !== "all") {
+      toast({ title: "Telegram Target Required", description: "For Telegram, choose 'All Subscribers' or 'Send to Individual' with a chat_id.", variant: "destructive" });
       return;
     }
 
@@ -866,6 +938,9 @@ export default function MarketingCenter() {
             <TabsTrigger value="series" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
               <RefreshCw className="w-4 h-4 mr-2" /> Automated Series
             </TabsTrigger>
+            <TabsTrigger value="telegram-bot" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
+              <Send className="w-4 h-4 mr-2 text-sky-500" /> Telegram Bot
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -935,11 +1010,11 @@ export default function MarketingCenter() {
                           <SelectValue placeholder="Target Audience" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Customers (Leads + Clients)</SelectItem>
-                          <SelectItem value="leads">Leads Only</SelectItem>
-                          <SelectItem value="clients">Clients Only</SelectItem>
-                          <SelectItem value="group">Custom Group</SelectItem>
-                          <SelectItem value="individual">Send to Individual</SelectItem>
+                          <SelectItem value="all">{broadcastType === 'telegram' ? 'All Telegram Subscribers' : 'All Customers (Leads + Clients)'}</SelectItem>
+                          {broadcastType !== 'telegram' && <SelectItem value="leads">Leads Only</SelectItem>}
+                          {broadcastType !== 'telegram' && <SelectItem value="clients">Clients Only</SelectItem>}
+                          {broadcastType !== 'telegram' && <SelectItem value="group">Custom Group</SelectItem>}
+                          <SelectItem value="individual">{broadcastType === 'telegram' ? 'Individual Chat ID' : 'Send to Individual'}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2364,7 +2439,407 @@ export default function MarketingCenter() {
             </div>
           </div>
         </TabsContent>
+
+        {/* ===================== TELEGRAM BOT TAB ===================== */}
+        <TabsContent value="telegram-bot" className="animate-in fade-in duration-500">
+          <div className="space-y-6">
+            {/* Bot Info & Setup */}
+            <Card className="glass border-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="w-5 h-5 text-sky-500" />
+                  Telegram Bot Setup
+                </CardTitle>
+                <CardDescription>
+                  Connect your Telegram bot to receive subscribers and send automated messages.
+                  Users who message your bot with /start are automatically subscribed.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl border bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/30 dark:to-blue-950/30">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Bot Username</p>
+                    <p className="text-lg font-black text-primary">
+                      {tgBotInfo?.bot ? `@${tgBotInfo.bot.username}` : "Not configured"}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl border bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Webhook Status</p>
+                    <p className="text-lg font-black">
+                      {tgBotInfo?.webhook?.url ? (
+                        <span className="text-green-600">Active</span>
+                      ) : (
+                        <span className="text-orange-500">Not Set</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl border bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Active Subscribers</p>
+                    <p className="text-lg font-black text-primary">
+                      {tgSubStats?.active ?? 0}
+                    </p>
+                  </div>
+                </div>
+
+                {!tgBotInfo?.webhook?.url && tgBotInfo?.bot && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="font-bold"
+                    onClick={async () => {
+                      try {
+                        const res = await apiRequest("POST", "/api/marketing-center/telegram/setup-webhook", {});
+                        const data = await res.json();
+                        if (data.success) {
+                          toast({ title: "Webhook Set", description: "Telegram webhook configured successfully." });
+                          queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/telegram/bot-info"] });
+                        } else {
+                          toast({ title: "Failed", description: data.error || "Could not set webhook.", variant: "destructive" });
+                        }
+                      } catch (err: any) {
+                        toast({ title: "Error", description: err.message, variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Settings className="w-4 h-4 mr-2" /> Setup Webhook
+                  </Button>
+                )}
+
+                {tgBotInfo?.bot && (
+                  <p className="text-xs text-muted-foreground">
+                    Share this link for people to subscribe: <code className="bg-muted px-2 py-0.5 rounded font-bold">https://t.me/{tgBotInfo.bot.username}</code>
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Subscriber Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="glass">
+                <CardContent className="p-4 text-center">
+                  <p className="text-3xl font-black text-primary">{tgSubStats?.total ?? 0}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Total</p>
+                </CardContent>
+              </Card>
+              <Card className="glass">
+                <CardContent className="p-4 text-center">
+                  <p className="text-3xl font-black text-green-600">{tgSubStats?.active ?? 0}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Active</p>
+                </CardContent>
+              </Card>
+              <Card className="glass">
+                <CardContent className="p-4 text-center">
+                  <p className="text-3xl font-black text-orange-500">{tgSubStats?.unsubscribed ?? 0}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Unsubscribed</p>
+                </CardContent>
+              </Card>
+              <Card className="glass">
+                <CardContent className="p-4 text-center">
+                  <p className="text-3xl font-black text-red-500">{tgSubStats?.blocked ?? 0}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Blocked</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Automated Messages */}
+            <Card className="glass border-2">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg font-black">Automated Messages</CardTitle>
+                  <CardDescription>Schedule recurring or one-time messages to your Telegram subscribers.</CardDescription>
+                </div>
+                <Button size="sm" className="font-bold" onClick={() => setIsTgAutoMsgDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" /> New Message
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {tgAutoMsgLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : tgAutoMessages.length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed rounded-xl">
+                    <Send className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground font-medium">No automated messages yet.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Create one to start sending scheduled Telegram messages.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {tgAutoMessages.map((msg: any) => (
+                      <div key={msg.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-muted/50 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-sm truncate">{msg.name}</span>
+                            {msg.welcome_message && (
+                              <Badge variant="outline" className="text-[10px] font-bold bg-sky-50 text-sky-600 border-sky-200">Welcome</Badge>
+                            )}
+                            {msg.is_recurring && (
+                              <Badge variant="outline" className="text-[10px] font-bold bg-purple-50 text-purple-600 border-purple-200">
+                                <Repeat className="w-3 h-3 mr-1" />
+                                {msg.recurring_pattern || "recurring"}
+                              </Badge>
+                            )}
+                            <Badge variant={msg.status === "active" ? "default" : "secondary"} className="text-[10px] font-bold uppercase">
+                              {msg.status}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{msg.content?.substring(0, 100)}</p>
+                          <div className="flex gap-4 mt-1">
+                            <span className="text-[10px] text-muted-foreground">Sent: {msg.total_sent || 0}</span>
+                            <span className="text-[10px] text-muted-foreground">Failed: {msg.total_failed || 0}</span>
+                            {msg.last_run_at && (
+                              <span className="text-[10px] text-muted-foreground">Last run: {formatDistanceToNow(new Date(msg.last_run_at), { addSuffix: true })}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-[10px] font-bold"
+                            disabled={tgSendingAutoMsg === msg.id}
+                            onClick={async () => {
+                              setTgSendingAutoMsg(msg.id);
+                              try {
+                                const res = await apiRequest("POST", `/api/marketing-center/telegram/automated-messages/${msg.id}/send`);
+                                const data = await res.json();
+                                toast({ title: "Sent", description: `${data.sent} sent, ${data.failed} failed out of ${data.total} subscribers.` });
+                                queryClient.invalidateQueries({ queryKey: ["/api/marketing-center/telegram/automated-messages"] });
+                              } catch (err: any) {
+                                toast({ title: "Error", description: err.message, variant: "destructive" });
+                              } finally {
+                                setTgSendingAutoMsg(null);
+                              }
+                            }}
+                          >
+                            {tgSendingAutoMsg === msg.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                            Send Now
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                            onClick={() => deleteTgAutoMsgMutation.mutate(msg.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Subscribers List */}
+            <Card className="glass border-2">
+              <CardHeader>
+                <CardTitle className="text-lg font-black">Subscribers</CardTitle>
+                <CardDescription>Users who have messaged your bot with /start.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {tgSubsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : tgSubscribers.length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed rounded-xl">
+                    <Users className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground font-medium">No subscribers yet.</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {tgBotInfo?.bot ? (
+                        <>Share <code className="bg-muted px-1 py-0.5 rounded">https://t.me/{tgBotInfo.bot.username}</code> to get subscribers.</>
+                      ) : (
+                        "Configure your Telegram bot token to get started."
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left">
+                          <th className="pb-2 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">User</th>
+                          <th className="pb-2 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Chat ID</th>
+                          <th className="pb-2 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Status</th>
+                          <th className="pb-2 font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Subscribed</th>
+                          <th className="pb-2 font-bold text-[10px] uppercase tracking-widest text-muted-foreground"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tgSubscribers.map((sub: any) => (
+                          <tr key={sub.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3">
+                              <div>
+                                <span className="font-bold">{sub.first_name || ""} {sub.last_name || ""}</span>
+                                {sub.username && <span className="text-xs text-muted-foreground ml-1">@{sub.username}</span>}
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              <code className="text-xs bg-muted px-2 py-0.5 rounded">{sub.chat_id}</code>
+                            </td>
+                            <td className="py-3">
+                              {sub.is_blocked ? (
+                                <Badge variant="destructive" className="text-[10px]">Blocked</Badge>
+                              ) : sub.is_active ? (
+                                <Badge variant="default" className="text-[10px] bg-green-600">Active</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px]">Unsubscribed</Badge>
+                              )}
+                            </td>
+                            <td className="py-3 text-xs text-muted-foreground">
+                              {sub.subscribed_at ? formatDistanceToNow(new Date(sub.subscribed_at), { addSuffix: true }) : "-"}
+                            </td>
+                            <td className="py-3">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
+                                onClick={() => deleteTgSubscriberMutation.mutate(sub.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      {/* Telegram Automated Message Dialog */}
+      <Dialog open={isTgAutoMsgDialogOpen} onOpenChange={setIsTgAutoMsgDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-sky-500" /> New Telegram Automated Message
+            </DialogTitle>
+            <DialogDescription>
+              Create a scheduled or recurring message for your Telegram subscribers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-xs font-bold uppercase tracking-wider">Name</Label>
+              <Input
+                placeholder="e.g. Weekly Tips"
+                value={tgAutoMsgName}
+                onChange={(e) => setTgAutoMsgName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-bold uppercase tracking-wider">Message Content</Label>
+              <Textarea
+                placeholder="Write your Telegram message here..."
+                rows={4}
+                value={tgAutoMsgContent}
+                onChange={(e) => setTgAutoMsgContent(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-bold uppercase tracking-wider">Audience</Label>
+              <Select value={tgAutoMsgAudience} onValueChange={setTgAutoMsgAudience}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all_subscribers">All Subscribers</SelectItem>
+                  <SelectItem value="individual">Individual Chat ID</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="tg-welcome"
+                checked={tgAutoMsgWelcome}
+                onCheckedChange={(v) => setTgAutoMsgWelcome(!!v)}
+              />
+              <Label htmlFor="tg-welcome" className="text-xs font-bold cursor-pointer">
+                Use as welcome message (sent on /start)
+              </Label>
+            </div>
+            {!tgAutoMsgWelcome && (
+              <>
+                <div>
+                  <Label className="text-xs font-bold uppercase tracking-wider">Schedule (optional)</Label>
+                  <Input
+                    type="datetime-local"
+                    value={tgAutoMsgScheduledAt}
+                    onChange={(e) => setTgAutoMsgScheduledAt(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="tg-recurring"
+                    checked={tgAutoMsgIsRecurring}
+                    onCheckedChange={(v) => setTgAutoMsgIsRecurring(!!v)}
+                  />
+                  <Label htmlFor="tg-recurring" className="text-xs font-bold cursor-pointer">
+                    Recurring message
+                  </Label>
+                </div>
+                {tgAutoMsgIsRecurring && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-bold uppercase tracking-wider">Pattern</Label>
+                      <Select value={tgAutoMsgPattern} onValueChange={(v: any) => setTgAutoMsgPattern(v)}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-bold uppercase tracking-wider">Every N</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={tgAutoMsgInterval}
+                        onChange={(e) => setTgAutoMsgInterval(parseInt(e.target.value) || 1)}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTgAutoMsgDialogOpen(false)}>Cancel</Button>
+            <Button
+              className="font-bold"
+              disabled={!tgAutoMsgName.trim() || !tgAutoMsgContent.trim() || createTgAutoMsgMutation.isPending}
+              onClick={() => {
+                createTgAutoMsgMutation.mutate({
+                  name: tgAutoMsgName,
+                  content: tgAutoMsgContent,
+                  audience: tgAutoMsgAudience,
+                  welcomeMessage: tgAutoMsgWelcome,
+                  isRecurring: tgAutoMsgIsRecurring,
+                  recurringPattern: tgAutoMsgIsRecurring ? tgAutoMsgPattern : null,
+                  recurringInterval: tgAutoMsgIsRecurring ? tgAutoMsgInterval : null,
+                  scheduledAt: tgAutoMsgScheduledAt ? new Date(tgAutoMsgScheduledAt).toISOString() : null,
+                });
+              }}
+            >
+              {createTgAutoMsgMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!selectedBroadcastId} onOpenChange={(open) => !open && setSelectedBroadcastId(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
