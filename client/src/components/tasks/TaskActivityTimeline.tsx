@@ -74,6 +74,7 @@ export function TaskActivityTimeline({
       const res = await apiRequest("GET", `/api/tasks/${taskId}/activity?limit=${limit}`);
       return res.json();
     },
+    refetchInterval: 5000, // Poll every 5 seconds for real-time updates
   });
 
   if (isLoading) {

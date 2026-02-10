@@ -26,6 +26,7 @@ export function TaskSpacesSidebar({ onSpaceSelect, selectedSpaceId }: {
 
   const { data: spaces = [], isLoading } = useQuery<TaskSpace[]>({
     queryKey: ["/api/task-spaces"],
+    refetchInterval: 10000, // Poll every 10 seconds for real-time updates
   });
 
   const getChildren = (parentId: string | null) =>
