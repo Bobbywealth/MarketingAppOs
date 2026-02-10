@@ -237,6 +237,31 @@ export default function MarketingCenter() {
     },
   });
 
+  // Quick Send to individual subscriber
+  const [tgQuickSendChatId, setTgQuickSendChatId] = useState("");
+  const [tgQuickSendMessage, setTgQuickSendMessage] = useState("");
+  const [tgQuickSendingTo, setTgQuickSendingTo] = useState<string | null>(null);
+
+  const tgQuickSendMutation = useMutation({
+    mutationFn: async ({ chatId, message }: { chatId: string; message: string }) => {
+      const res = await apiRequest("POST", "/api/marketing-center/telegram/test", { chatId, text: message });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.success) {
+        toast({ title: "Message Sent", description: "Your Telegram message was delivered." });
+        setTgQuickSendMessage("");
+      } else {
+        toast({ title: "Send Failed", description: data.error || "Could not send message.", variant: "destructive" });
+      }
+      setTgQuickSendingTo(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+      setTgQuickSendingTo(null);
+    },
+  });
+
   // Marketing Series Queries
   const { data: seriesList = [], isLoading: seriesLoading } = useQuery<any[]>({
     queryKey: ["/api/marketing-center/series"],
@@ -2451,8 +2476,9 @@ export default function MarketingCenter() {
                   Telegram Bot Setup
                 </CardTitle>
                 <CardDescription>
-                  Connect your Telegram bot to receive subscribers and send automated messages.
-                  Users who message your bot with /start are automatically subscribed.
+                  Send messages through your Telegram bot to anyone who subscribes.
+                  Step 1: Open your bot in Telegram and send /start (you too, @bobbywealthy!).
+                  Step 2: Use Quick Send below to message any subscriber directly, or set up automated messages.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -2540,6 +2566,79 @@ export default function MarketingCenter() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Quick Send - Direct Message */}
+            <Card className="glass border-2 border-sky-200 dark:border-sky-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg font-black">
+                  <MessageSquare className="w-5 h-5 text-sky-500" />
+                  Quick Send Message
+                </CardTitle>
+                <CardDescription>
+                  Send a direct message through your bot to a subscriber or any chat ID. Pick a subscriber below or enter a chat ID manually.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recipient</Label>
+                    {tgSubscribers.length > 0 ? (
+                      <Select value={tgQuickSendChatId} onValueChange={setTgQuickSendChatId}>
+                        <SelectTrigger className="h-12 glass border-2">
+                          <SelectValue placeholder="Select a subscriber..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tgSubscribers.filter((s: any) => s.is_active && !s.is_blocked).map((sub: any) => (
+                            <SelectItem key={sub.chat_id} value={sub.chat_id}>
+                              {sub.first_name || sub.username || "Unknown"} {sub.last_name || ""} {sub.username ? `(@${sub.username})` : ""} - {sub.chat_id}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        placeholder="Enter Telegram chat_id..."
+                        value={tgQuickSendChatId}
+                        onChange={(e) => setTgQuickSendChatId(e.target.value)}
+                        className="h-12 glass border-2"
+                      />
+                    )}
+                    {tgSubscribers.length > 0 && (
+                      <p className="text-[10px] text-muted-foreground">Or type a chat ID directly:</p>
+                    )}
+                    {tgSubscribers.length > 0 && (
+                      <Input
+                        placeholder="Or enter a chat_id manually..."
+                        value={tgQuickSendChatId}
+                        onChange={(e) => setTgQuickSendChatId(e.target.value)}
+                        className="h-10 glass border"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Message</Label>
+                    <Textarea
+                      placeholder="Type your message here..."
+                      rows={3}
+                      value={tgQuickSendMessage}
+                      onChange={(e) => setTgQuickSendMessage(e.target.value)}
+                      className="glass border-2"
+                    />
+                  </div>
+                </div>
+                <Button
+                  className="font-bold w-full md:w-auto"
+                  disabled={!tgQuickSendChatId.trim() || !tgQuickSendMessage.trim() || tgQuickSendMutation.isPending}
+                  onClick={() => {
+                    setTgQuickSendingTo(tgQuickSendChatId);
+                    tgQuickSendMutation.mutate({ chatId: tgQuickSendChatId, message: tgQuickSendMessage });
+                  }}
+                >
+                  {tgQuickSendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                  Send Message
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Automated Messages */}
             <Card className="glass border-2">
@@ -2691,14 +2790,27 @@ export default function MarketingCenter() {
                               {sub.subscribed_at ? formatDistanceToNow(new Date(sub.subscribed_at), { addSuffix: true }) : "-"}
                             </td>
                             <td className="py-3">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
-                                onClick={() => deleteTgSubscriberMutation.mutate(sub.id)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[10px] font-bold"
+                                  onClick={() => {
+                                    setTgQuickSendChatId(sub.chat_id);
+                                    window.scrollTo({ top: 0, behavior: "smooth" });
+                                  }}
+                                >
+                                  <Send className="w-3 h-3 mr-1" /> Message
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
+                                  onClick={() => deleteTgSubscriberMutation.mutate(sub.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
