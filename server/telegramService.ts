@@ -217,3 +217,36 @@ export async function getTelegramBotInfo(): Promise<any> {
     return null;
   }
 }
+
+/**
+ * Send a message with sender attribution (e.g. "Bobby:\nYour message").
+ * Used when the user wants their personal identity on bot-sent messages.
+ */
+export async function sendTelegramAsUser(
+  chatId: string,
+  text: string,
+  senderName?: string
+): Promise<TelegramSendResult> {
+  const formattedText = senderName
+    ? `${senderName}:\n${text}`
+    : text;
+  return sendTelegramMessage(chatId, formattedText);
+}
+
+/**
+ * Resolve a Telegram username to a chat_id from our subscriber database.
+ * Returns null if not found (the user needs to /start the bot first).
+ */
+export async function resolveUsernameToChatId(username: string): Promise<string | null> {
+  const clean = username.replace(/^@/, "").trim().toLowerCase();
+  if (!clean) return null;
+  try {
+    const result = await pool.query(
+      `SELECT chat_id FROM telegram_subscribers WHERE LOWER(username) = $1 AND is_active = true LIMIT 1`,
+      [clean]
+    );
+    return result.rows[0]?.chat_id || null;
+  } catch {
+    return null;
+  }
+}

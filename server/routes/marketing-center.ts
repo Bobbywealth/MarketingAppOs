@@ -7,7 +7,7 @@ import { insertMarketingBroadcastSchema } from "@shared/schema";
 import { processMarketingBroadcast } from "../marketingBroadcastProcessor";
 import { pool } from "../db";
 import { sendSms, sendWhatsApp } from "../twilioService";
-import { sendTelegramMessage, sendTelegramBulk, handleTelegramWebhookUpdate, setupTelegramWebhook, getTelegramWebhookInfo, getTelegramBotInfo } from "../telegramService";
+import { sendTelegramMessage, sendTelegramBulk, sendTelegramAsUser, resolveUsernameToChatId, handleTelegramWebhookUpdate, setupTelegramWebhook, getTelegramWebhookInfo, getTelegramBotInfo } from "../telegramService";
 import { listVapiAssistants, getVapiCall } from "../vapiService";
 import { generateMarketingContent, analyzeSmsSentiment, parseAiGroupQuery } from "../aiManager";
 import { upload } from "./common";
@@ -644,19 +644,48 @@ router.post("/telegram/webhook", async (req: Request, res: Response) => {
   }
 });
 
-// Telegram outbound diagnostics (admin-only)
+// Telegram send message (supports chat_id or @username, with optional sender name)
 router.post("/telegram/test", async (req: Request, res: Response) => {
   try {
-    const chatId = String((req.body as any)?.chatId ?? (req.body as any)?.to ?? "").trim();
-    const text = String((req.body as any)?.text ?? (req.body as any)?.body ?? "Test Telegram message from Marketing Center").trim();
-    if (!chatId) return res.status(400).json({ message: "Missing 'chatId' (Telegram group/channel chat_id)" });
+    let chatId = String((req.body as any)?.chatId ?? (req.body as any)?.to ?? "").trim();
+    const text = String((req.body as any)?.text ?? (req.body as any)?.body ?? "").trim();
+    const senderName = String((req.body as any)?.senderName ?? "").trim();
+
+    // If chatId looks like a @username, resolve it from subscriber DB
+    if (chatId.startsWith("@")) {
+      const resolved = await resolveUsernameToChatId(chatId);
+      if (!resolved) {
+        return res.status(400).json({
+          success: false,
+          error: `Username ${chatId} not found. They need to send /start to your bot first.`
+        });
+      }
+      chatId = resolved;
+    }
+
+    if (!chatId) return res.status(400).json({ message: "Missing 'chatId' or '@username'" });
     if (!text) return res.status(400).json({ message: "Missing 'text' message" });
 
-    const result = await sendTelegramMessage(chatId, text);
+    const result = await sendTelegramAsUser(chatId, text, senderName || undefined);
     return res.json(result);
   } catch (error: any) {
-    console.error("Error sending Telegram test message:", error);
-    return res.status(500).json({ message: error.message || "Failed to send Telegram test message" });
+    console.error("Error sending Telegram message:", error);
+    return res.status(500).json({ message: error.message || "Failed to send Telegram message" });
+  }
+});
+
+// Resolve a @username to a chat_id
+router.get("/telegram/resolve-username/:username", async (req: Request, res: Response) => {
+  try {
+    const username = req.params.username;
+    const chatId = await resolveUsernameToChatId(username);
+    if (chatId) {
+      res.json({ found: true, chatId, username });
+    } else {
+      res.json({ found: false, username, message: "User not found. They need to send /start to your bot first." });
+    }
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

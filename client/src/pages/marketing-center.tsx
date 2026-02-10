@@ -241,10 +241,11 @@ export default function MarketingCenter() {
   const [tgQuickSendChatId, setTgQuickSendChatId] = useState("");
   const [tgQuickSendMessage, setTgQuickSendMessage] = useState("");
   const [tgQuickSendingTo, setTgQuickSendingTo] = useState<string | null>(null);
+  const [tgSenderName, setTgSenderName] = useState("Bobby");
 
   const tgQuickSendMutation = useMutation({
-    mutationFn: async ({ chatId, message }: { chatId: string; message: string }) => {
-      const res = await apiRequest("POST", "/api/marketing-center/telegram/test", { chatId, text: message });
+    mutationFn: async ({ chatId, message, senderName }: { chatId: string; message: string; senderName?: string }) => {
+      const res = await apiRequest("POST", "/api/marketing-center/telegram/test", { chatId, text: message, senderName });
       return res.json();
     },
     onSuccess: (data: any) => {
@@ -964,7 +965,7 @@ export default function MarketingCenter() {
               <RefreshCw className="w-4 h-4 mr-2" /> Automated Series
             </TabsTrigger>
             <TabsTrigger value="telegram-bot" className="h-10 px-6 font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:shadow-md">
-              <Send className="w-4 h-4 mr-2 text-sky-500" /> Telegram Bot
+              <Send className="w-4 h-4 mr-2 text-sky-500" /> Telegram Messages
             </TabsTrigger>
           </TabsList>
         </div>
@@ -2476,9 +2477,9 @@ export default function MarketingCenter() {
                   Telegram Bot Setup
                 </CardTitle>
                 <CardDescription>
-                  Send messages through your Telegram bot to anyone who subscribes.
-                  Step 1: Open your bot in Telegram and send /start (you too, @bobbywealthy!).
-                  Step 2: Use Quick Send below to message any subscriber directly, or set up automated messages.
+                  Send Telegram messages as @bobbywealthy through your bot.
+                  <strong>Step 1:</strong> Open @Bobbymemubot in Telegram and send /start (do this for each person you want to message).
+                  <strong>Step 2:</strong> Use Quick Send below to message anyone, or set up automated scheduled messages.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -2572,47 +2573,48 @@ export default function MarketingCenter() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-black">
                   <MessageSquare className="w-5 h-5 text-sky-500" />
-                  Quick Send Message
+                  Send Message as @bobbywealthy
                 </CardTitle>
                 <CardDescription>
-                  Send a direct message through your bot to a subscriber or any chat ID. Pick a subscriber below or enter a chat ID manually.
+                  Send a personal message to any Telegram user through your bot.
+                  Type a @username or pick a subscriber. Messages appear with your name.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recipient</Label>
-                    {tgSubscribers.length > 0 ? (
-                      <Select value={tgQuickSendChatId} onValueChange={setTgQuickSendChatId}>
-                        <SelectTrigger className="h-12 glass border-2">
-                          <SelectValue placeholder="Select a subscriber..." />
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Display Name</Label>
+                    <Input
+                      placeholder="Bobby"
+                      value={tgSenderName}
+                      onChange={(e) => setTgSenderName(e.target.value)}
+                      className="h-12 glass border-2 font-bold"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Shown as "<strong>{tgSenderName || "You"}:</strong> your message"
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Send To</Label>
+                    <Input
+                      placeholder="@username or chat_id..."
+                      value={tgQuickSendChatId}
+                      onChange={(e) => setTgQuickSendChatId(e.target.value)}
+                      className="h-12 glass border-2"
+                    />
+                    {tgSubscribers.length > 0 && (
+                      <Select value="" onValueChange={(v) => setTgQuickSendChatId(v)}>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Or pick a subscriber..." />
                         </SelectTrigger>
                         <SelectContent>
                           {tgSubscribers.filter((s: any) => s.is_active && !s.is_blocked).map((sub: any) => (
                             <SelectItem key={sub.chat_id} value={sub.chat_id}>
-                              {sub.first_name || sub.username || "Unknown"} {sub.last_name || ""} {sub.username ? `(@${sub.username})` : ""} - {sub.chat_id}
+                              {sub.first_name || "Unknown"} {sub.last_name || ""} {sub.username ? `(@${sub.username})` : `(${sub.chat_id})`}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    ) : (
-                      <Input
-                        placeholder="Enter Telegram chat_id..."
-                        value={tgQuickSendChatId}
-                        onChange={(e) => setTgQuickSendChatId(e.target.value)}
-                        className="h-12 glass border-2"
-                      />
-                    )}
-                    {tgSubscribers.length > 0 && (
-                      <p className="text-[10px] text-muted-foreground">Or type a chat ID directly:</p>
-                    )}
-                    {tgSubscribers.length > 0 && (
-                      <Input
-                        placeholder="Or enter a chat_id manually..."
-                        value={tgQuickSendChatId}
-                        onChange={(e) => setTgQuickSendChatId(e.target.value)}
-                        className="h-10 glass border"
-                      />
                     )}
                   </div>
                   <div className="space-y-2">
@@ -2626,16 +2628,32 @@ export default function MarketingCenter() {
                     />
                   </div>
                 </div>
+
+                {/* Message Preview */}
+                {tgQuickSendMessage.trim() && (
+                  <div className="p-3 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Preview</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {tgSenderName && <strong>{tgSenderName}:{"\n"}</strong>}
+                      {tgQuickSendMessage}
+                    </p>
+                  </div>
+                )}
+
                 <Button
                   className="font-bold w-full md:w-auto"
                   disabled={!tgQuickSendChatId.trim() || !tgQuickSendMessage.trim() || tgQuickSendMutation.isPending}
                   onClick={() => {
                     setTgQuickSendingTo(tgQuickSendChatId);
-                    tgQuickSendMutation.mutate({ chatId: tgQuickSendChatId, message: tgQuickSendMessage });
+                    tgQuickSendMutation.mutate({
+                      chatId: tgQuickSendChatId,
+                      message: tgQuickSendMessage,
+                      senderName: tgSenderName || undefined,
+                    });
                   }}
                 >
                   {tgQuickSendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                  Send Message
+                  Send as {tgSenderName || "Anonymous"}
                 </Button>
               </CardContent>
             </Card>
