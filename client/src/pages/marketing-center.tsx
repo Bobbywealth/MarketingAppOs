@@ -58,6 +58,29 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, format } from "date-fns";
 import type { MarketingBroadcast, MarketingGroup, MarketingGroupMember } from "@shared/schema";
 
+// Safe date formatting helper - prevents "Invalid time value" errors
+function safeFormatDate(value: string | Date | null | undefined, dateFormat: string): string {
+  if (!value) return "—";
+  try {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return "—";
+    return format(date, dateFormat);
+  } catch {
+    return "—";
+  }
+}
+
+function safeFormatDistanceToNow(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  try {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return "—";
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch {
+    return "—";
+  }
+}
+
 type MarketingCenterStats = {
   leads: {
     total: number;
@@ -1077,7 +1100,7 @@ export default function MarketingCenter() {
                       />
                       {sendMode === "scheduled" && scheduledAtLocal && !Number.isNaN(new Date(scheduledAtLocal).getTime()) && (
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
-                          Will send: {format(new Date(scheduledAtLocal), "PPpp")}
+                          Will send: {safeFormatDate(scheduledAtLocal, "PPpp")}
                         </p>
                       )}
                     </div>
@@ -1386,7 +1409,7 @@ export default function MarketingCenter() {
                       <div className="text-right">
                         <span className="font-black block">
                           {sendMode === "scheduled" && scheduledAtLocal
-                            ? format(new Date(scheduledAtLocal), "PPpp")
+                            ? safeFormatDate(scheduledAtLocal, "PPpp")
                             : "Now (Instant)"}
                         </span>
                         {isRecurring && (
@@ -1596,8 +1619,8 @@ export default function MarketingCenter() {
                         <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
                           <Zap className="w-3 h-3" />{" "}
                           {broadcast.status === "pending" && (broadcast as any).scheduledAt
-                            ? `Scheduled for ${format(new Date((broadcast as any).scheduledAt), "PPpp")}`
-                            : `Sent ${formatDistanceToNow(new Date((broadcast as any).createdAt!), { addSuffix: true })}`}
+                            ? `Scheduled for ${safeFormatDate((broadcast as any).scheduledAt, "PPpp")}`
+                            : `Sent ${safeFormatDistanceToNow((broadcast as any).createdAt)}`}
                         </p>
                       </div>
 
@@ -1745,7 +1768,7 @@ export default function MarketingCenter() {
                             <p className="text-sm text-muted-foreground">{group.description || "No description provided"}</p>
                             <div className="flex items-center gap-4 mt-2">
                               <Badge variant="secondary" className="font-bold text-[10px] tracking-widest uppercase">
-                                {format(new Date(group.createdAt!), "MMM d, yyyy")}
+                                {safeFormatDate(group.createdAt, "MMM d, yyyy")}
                               </Badge>
                               <Badge variant="outline" className="font-bold text-[10px] tracking-widest uppercase bg-primary/5 text-primary border-primary/20">
                                 {stats?.groups.find(g => g.id === group.id)?.memberCount || 0} Members
@@ -2108,7 +2131,7 @@ export default function MarketingCenter() {
                       </div>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.text}</p>
                       <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                        <Zap className="w-3 h-3" /> {formatDistanceToNow(new Date(m.timestamp), { addSuffix: true })}
+                        <Zap className="w-3 h-3" /> {safeFormatDistanceToNow(m.timestamp)}
                       </p>
                       
                       {smsAnalyses[m.id] && (
@@ -2439,7 +2462,7 @@ export default function MarketingCenter() {
                           )}
                         </td>
                         <td className="p-3 text-muted-foreground tabular-nums">
-                          {r.sent_at ? format(new Date(r.sent_at), "MMM d, HH:mm") : "—"}
+                          {safeFormatDate(r.sent_at, "MMM d, HH:mm")}
                         </td>
                         <td className="p-3 text-right">
                           {r.provider_call_id && (
