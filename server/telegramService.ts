@@ -1,6 +1,6 @@
 import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
-import { Api } from 'telegram/tl';
+import { Api } from 'telegram/tl/index.js';
 
 type TelegramSendResult =
   | { success: true; messageId?: number }
