@@ -170,6 +170,7 @@ export default function TasksPage() {
 
   const { data: tasks = [], isLoading, error: tasksError } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    refetchInterval: 3000, // Poll every 3 seconds for real-time updates
   });
 
   const isAdminOrManager = (user as any)?.role === "admin" || (user as any)?.role === "manager";
@@ -217,6 +218,7 @@ export default function TasksPage() {
 
   const { data: spaces = [] } = useQuery<TaskSpace[]>({
     queryKey: ["/api/task-spaces"],
+    refetchInterval: 10000, // Poll every 10 seconds for real-time updates
     retry: false,
     meta: { returnNull: true }, // Don't throw error if forbidden
   });
