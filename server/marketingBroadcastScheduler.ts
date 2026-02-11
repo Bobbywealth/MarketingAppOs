@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { and, eq, isNotNull, lte, or } from "drizzle-orm";
+import { and, eq, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { marketingBroadcasts } from "@shared/schema";
 import { processMarketingBroadcast } from "./marketingBroadcastProcessor";
@@ -54,10 +54,7 @@ export function startMarketingBroadcastScheduler() {
             eq(marketingBroadcasts.isRecurring, true),
             isNotNull(marketingBroadcasts.nextRunAt),
             lte(marketingBroadcasts.nextRunAt, now),
-            or(
-              isNotNull(marketingBroadcasts.recurringEndDate),
-              lte(marketingBroadcasts.nextRunAt, marketingBroadcasts.recurringEndDate)
-            )
+            sql`(marketing_broadcasts.recurring_end_date IS NULL OR marketing_broadcasts.next_run_at <= marketing_broadcasts.recurring_end_date)`
           )
         )
         .limit(10);
