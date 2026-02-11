@@ -13,7 +13,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "db:push": "drizzle-kit push",
-    "add-sample-data": "node --env-file=.env --import tsx add-sample-data.ts"
+    "add-sample-data": "node --env-file=.env --import tsx add-sample-data.ts",
+    "telegram:auth": "node scripts/telegram-auth.js"
   },
   "dependencies": {
     "@azure/msal-node": "^3.8.0",
