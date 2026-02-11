@@ -1,8 +1,6 @@
-import { TelegramClient } from 'telegram';
-import { StringSession } from 'telegram/sessions';
-import { Api } from 'telegram/tl';
-import { EntityLike } from 'telegram/define';
-import { BigInteger } from 'big-integer';
+import { TelegramClient, Api } from 'telegram';
+import { StringSession } from 'telegram/sessions/index.js';
+import bigInt from 'big-integer';
 
 type TelegramSendResult =
   | { success: true; messageId?: number }
@@ -133,26 +131,10 @@ async function sendViaMTProto(chatId: string | number, text: string): Promise<Te
 
   try {
     // Handle different ID formats
-    let peerId: EntityLike = chatId;
-
-    // If chatId is a username (starts with @), resolve it
-    if (typeof chatId === 'string' && chatId.startsWith('@')) {
-      const username = chatId.slice(1);
-      // For username, we need to use inputPeer format
-      const result = await mtprotoClient.invoke(
-        new Api.contacts.ResolveUsername({ username })
-      );
-      peerId = result.peer;
-    } else {
-      // Use the numeric ID directly
-      peerId = chatId.toString();
-    }
-
-    // Use the correct API call for sending messages in telegram library
-    const randomId = Math.floor(Math.random() * 1e16);
+    const randomId = bigInt(Math.floor(Math.random() * 1e16));
     await mtprotoClient.invoke(
       new Api.messages.SendMessage({
-        peer: peerId,
+        peer: chatId.toString(),
         message: text,
         randomId: randomId,
       })
