@@ -124,7 +124,7 @@ import {
   type MarketingBroadcastRecipient,
   type InsertMarketingBroadcastRecipient,
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, desc, or, and, gte, count, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -352,6 +352,36 @@ export interface IStorage {
   createMarketingBroadcastRecipient(recipient: InsertMarketingBroadcastRecipient): Promise<MarketingBroadcastRecipient>;
   updateMarketingBroadcastRecipient(id: string, data: Partial<InsertMarketingBroadcastRecipient>): Promise<MarketingBroadcastRecipient>;
   getMarketingBroadcastRecipientByProviderCallId(providerCallId: string): Promise<MarketingBroadcastRecipient | undefined>;
+
+  // Marketing Groups operations (legacy raw SQL tables)
+  getMarketingGroups(): Promise<any[]>;
+  getMarketingGroupMembers(groupId: string): Promise<any[]>;
+  createMarketingGroup(group: { name: string; description?: string; createdBy: number }): Promise<any>;
+  addMarketingGroupMember(data: { groupId: string; leadId?: string; clientId?: string; customRecipient?: string }): Promise<any>;
+  removeMarketingGroupMember(id: number): Promise<void>;
+  deleteMarketingGroup(id: string): Promise<void>;
+  
+  // Marketing Templates operations (legacy raw SQL tables)
+  getMarketingTemplates(): Promise<any[]>;
+  createMarketingTemplate(template: { name: string; type: string; subject?: string; content: string; createdBy: number }): Promise<any>;
+  updateMarketingTemplate(id: string, data: Partial<{ name: string; type: string; subject: string; content: string }>): Promise<any>;
+  deleteMarketingTemplate(id: string): Promise<void>;
+  
+  // Marketing Series operations
+  getMarketingSeries(): Promise<any[]>;
+  getMarketingSeriesSteps(seriesId: string): Promise<any[]>;
+  updateMarketingSeries(id: string, data: Partial<{ name: string; description: string; isActive: boolean }>): Promise<any>;
+  deleteMarketingSeries(id: string): Promise<void>;
+  updateMarketingSeriesStep(id: string, data: Partial<{ subject: string; content: string; delayDays: number }>): Promise<any>;
+  deleteMarketingSeriesStep(id: string): Promise<void>;
+  
+  getMarketingStats(): Promise<{
+    totalBroadcasts: number;
+    totalGroups: number;
+    totalTemplates: number;
+    totalSeries: number;
+    recentBroadcasts: any[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1784,6 +1814,231 @@ export class DatabaseStorage implements IStorage {
       .from(marketingBroadcastRecipients)
       .where(eq(marketingBroadcastRecipients.providerCallId, providerCallId));
     return recipient;
+  }
+
+  // Marketing Groups operations (legacy raw SQL tables)
+  async getMarketingGroups(): Promise<any[]> {
+    const result = await pool.query(`
+      SELECT g.*, 
+        (SELECT COUNT(*) FROM marketing_group_members WHERE group_id = g.id) as member_count
+      FROM marketing_groups g
+      ORDER BY g.created_at DESC
+    `);
+    return result.rows;
+  }
+
+  async getMarketingTemplates(): Promise<any[]> {
+    const result = await pool.query(`
+      SELECT * FROM marketing_templates
+      ORDER BY created_at DESC
+    `);
+    return result.rows;
+  }
+
+  async getMarketingSeries(): Promise<any[]> {
+    const result = await pool.query(`
+      SELECT * FROM marketing_series
+      ORDER BY created_at DESC
+    `);
+    return result.rows;
+  }
+
+  async getMarketingStats(): Promise<{
+    totalBroadcasts: number;
+    totalGroups: number;
+    totalTemplates: number;
+    totalSeries: number;
+    recentBroadcasts: any[];
+  }> {
+    const [broadcastsResult] = await db.select({ count: count() }).from(marketingBroadcasts);
+    const groupsResult = await pool.query(`SELECT COUNT(*) as count FROM marketing_groups`);
+    const templatesResult = await pool.query(`SELECT COUNT(*) as count FROM marketing_templates`);
+    const seriesResult = await pool.query(`SELECT COUNT(*) as count FROM marketing_series`);
+    const recentBroadcasts = await db
+      .select()
+      .from(marketingBroadcasts)
+      .orderBy(desc(marketingBroadcasts.createdAt))
+      .limit(5);
+    
+    return {
+      totalBroadcasts: Number(broadcastsResult.count) || 0,
+      totalGroups: parseInt(groupsResult.rows[0]?.count || '0'),
+      totalTemplates: parseInt(templatesResult.rows[0]?.count || '0'),
+      totalSeries: parseInt(seriesResult.rows[0]?.count || '0'),
+      recentBroadcasts,
+    };
+  }
+
+  // Marketing Group Members operations
+  async getMarketingGroupMembers(groupId: string): Promise<any[]> {
+    const result = await pool.query(`
+      SELECT m.*, 
+        CASE 
+          WHEN m.lead_id IS NOT NULL THEN l.name
+          WHEN m.client_id IS NOT NULL THEN c.name
+          ELSE m.custom_recipient
+        END as member_name,
+        l.email as lead_email, l.phone as lead_phone,
+        c.email as client_email, c.phone as client_phone
+      FROM marketing_group_members m
+      LEFT JOIN leads l ON m.lead_id = l.id
+      LEFT JOIN clients c ON m.client_id = c.id
+      WHERE m.group_id = $1
+      ORDER BY m.created_at DESC
+    `, [groupId]);
+    return result.rows;
+  }
+
+  async createMarketingGroup(group: { name: string; description?: string; createdBy: number }): Promise<any> {
+    const result = await pool.query(`
+      INSERT INTO marketing_groups (name, description, created_by)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [group.name, group.description, group.createdBy]);
+    return result.rows[0];
+  }
+
+  async addMarketingGroupMember(data: { groupId: string; leadId?: string; clientId?: string; customRecipient?: string }): Promise<any> {
+    const result = await pool.query(`
+      INSERT INTO marketing_group_members (group_id, lead_id, client_id, custom_recipient)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [data.groupId, data.leadId, data.clientId, data.customRecipient]);
+    return result.rows[0];
+  }
+
+  async removeMarketingGroupMember(id: number): Promise<void> {
+    await pool.query(`DELETE FROM marketing_group_members WHERE id = $1`, [id]);
+  }
+
+  async deleteMarketingGroup(id: string): Promise<void> {
+    await pool.query(`DELETE FROM marketing_groups WHERE id = $1`, [id]);
+  }
+
+  // Marketing Template operations
+  async createMarketingTemplate(template: { name: string; type: string; subject?: string; content: string; createdBy: number }): Promise<any> {
+    const result = await pool.query(`
+      INSERT INTO marketing_templates (name, type, subject, content, created_by)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [template.name, template.type, template.subject, template.content, template.createdBy]);
+    return result.rows[0];
+  }
+
+  async updateMarketingTemplate(id: string, data: Partial<{ name: string; type: string; subject: string; content: string }>): Promise<any> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    if (data.name !== undefined) {
+      updates.push(`name = ${paramIndex++}`);
+      values.push(data.name);
+    }
+    if (data.type !== undefined) {
+      updates.push(`type = ${paramIndex++}`);
+      values.push(data.type);
+    }
+    if (data.subject !== undefined) {
+      updates.push(`subject = ${paramIndex++}`);
+      values.push(data.subject);
+    }
+    if (data.content !== undefined) {
+      updates.push(`content = ${paramIndex++}`);
+      values.push(data.content);
+    }
+    
+    if (updates.length === 0) return { id };
+    
+    values.push(id);
+    const result = await pool.query(`
+      UPDATE marketing_templates
+      SET ${updates.join(', ')}, updated_at = NOW()
+      WHERE id = ${paramIndex}
+      RETURNING *
+    `, values);
+    return result.rows[0];
+  }
+
+  async deleteMarketingTemplate(id: string): Promise<void> {
+    await pool.query(`DELETE FROM marketing_templates WHERE id = $1`, [id]);
+  }
+
+  // Marketing Series operations
+  async getMarketingSeriesSteps(seriesId: string): Promise<any[]> {
+    const result = await pool.query(`
+      SELECT * FROM marketing_series_steps
+      WHERE series_id = $1
+      ORDER BY step_order ASC
+    `, [seriesId]);
+    return result.rows;
+  }
+
+  async updateMarketingSeries(id: string, data: Partial<{ name: string; description: string; isActive: boolean }>): Promise<any> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    if (data.name !== undefined) {
+      updates.push(`name = ${paramIndex++}`);
+      values.push(data.name);
+    }
+    if (data.description !== undefined) {
+      updates.push(`description = ${paramIndex++}`);
+      values.push(data.description);
+    }
+    if (data.isActive !== undefined) {
+      updates.push(`is_active = ${paramIndex++}`);
+      values.push(data.isActive);
+    }
+    
+    if (updates.length === 0) return { id };
+    
+    values.push(id);
+    const result = await pool.query(`
+      UPDATE marketing_series
+      SET ${updates.join(', ')}, updated_at = NOW()
+      WHERE id = ${paramIndex}
+      RETURNING *
+    `, values);
+    return result.rows[0];
+  }
+
+  async deleteMarketingSeries(id: string): Promise<void> {
+    await pool.query(`DELETE FROM marketing_series WHERE id = $1`, [id]);
+  }
+
+  async updateMarketingSeriesStep(id: string, data: Partial<{ subject: string; content: string; delayDays: number }>): Promise<any> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    if (data.subject !== undefined) {
+      updates.push(`subject = ${paramIndex++}`);
+      values.push(data.subject);
+    }
+    if (data.content !== undefined) {
+      updates.push(`content = ${paramIndex++}`);
+      values.push(data.content);
+    }
+    if (data.delayDays !== undefined) {
+      updates.push(`delay_days = ${paramIndex++}`);
+      values.push(data.delayDays);
+    }
+    
+    if (updates.length === 0) return { id };
+    
+    values.push(id);
+    const result = await pool.query(`
+      UPDATE marketing_series_steps
+      SET ${updates.join(', ')}
+      WHERE id = ${paramIndex}
+      RETURNING *
+    `, values);
+    return result.rows[0];
+  }
+
+  async deleteMarketingSeriesStep(id: string): Promise<void> {
+    await pool.query(`DELETE FROM marketing_series_steps WHERE id = $1`, [id]);
   }
 }
 
