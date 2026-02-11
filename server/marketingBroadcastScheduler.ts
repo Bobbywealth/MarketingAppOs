@@ -46,18 +46,24 @@ export function startMarketingBroadcastScheduler() {
       }
 
       // 2. Pick up recurring broadcasts
-      const recurringDue = await db
-        .select()
-        .from(marketingBroadcasts)
-        .where(
-          and(
-            eq(marketingBroadcasts.isRecurring, true),
-            isNotNull(marketingBroadcasts.nextRunAt),
-            lte(marketingBroadcasts.nextRunAt, now),
-            sql`(marketing_broadcasts.recurring_end_date IS NULL OR marketing_broadcasts.next_run_at <= marketing_broadcasts.recurring_end_date)`
+      console.log("🔍 Querying recurring broadcasts...");
+      try {
+        const recurringDue = await db
+          .select()
+          .from(marketingBroadcasts)
+          .where(
+            and(
+              eq(marketingBroadcasts.isRecurring, true),
+              isNotNull(marketingBroadcasts.nextRunAt),
+              lte(marketingBroadcasts.nextRunAt, now),
+              sql`coalesce(marketing_broadcasts.recurring_end_date, '9999-12-31') >= ${now}`
+            )
           )
-        )
-        .limit(10);
+          .limit(10);
+      } catch (queryError) {
+        console.error("❌ Error in recurring broadcasts query:", queryError);
+        throw queryError;
+      }
 
       for (const template of recurringDue) {
         // Calculate next run date
