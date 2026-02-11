@@ -12,7 +12,12 @@ const defaultChatId = process.env.TELEGRAM_DEFAULT_CHAT_ID?.trim();
 const apiId = process.env.TELEGRAM_API_ID;
 const apiHash = process.env.TELEGRAM_API_HASH;
 const phoneNumber = process.env.TELEGRAM_PHONE_NUMBER;
-const sessionString = process.env.TELEGRAM_SESSION_STRING;
+let sessionString = process.env.TELEGRAM_SESSION_STRING?.trim();
+
+// Clean up session string if it has line breaks or formatting issues
+if (sessionString && (sessionString.includes('\n') || sessionString.includes('\r'))) {
+  sessionString = sessionString.replace(/[\n\r]/g, '');
+}
 
 // MTProto client instance
 let mtprotoClient: TelegramClient | null = null;
@@ -153,7 +158,7 @@ async function sendViaMTProto(chatId: string | number, text: string): Promise<Te
   try {
     // Handle different ID formats
     let peerId: string | number = chatId;
-    
+
     // If chatId is a username (starts with @), resolve it
     if (typeof chatId === 'string' && chatId.startsWith('@')) {
       const username = chatId.slice(1);
@@ -166,11 +171,13 @@ async function sendViaMTProto(chatId: string | number, text: string): Promise<Te
       peerId = parseInt(chatId.toString().replace('-', ''), 10);
     }
 
-    await mtprotoClient.sendMessage(peerId, {
+    // Use the correct API call for sending messages in @mtproto/core v6.3.0
+    await mtprotoClient.call('messages.sendMessage', {
+      peer: peerId,
       message: text,
-      parseMode: 'html',
+      parse_mode: 'html',
     });
-    
+
     return { success: true };
   } catch (err: any) {
     console.error('MTProto send error:', err);
