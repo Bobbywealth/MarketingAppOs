@@ -10,7 +10,7 @@ type TelegramSendResult =
 const apiIdStr = process.env.TELEGRAM_API_ID;
 const apiHash = process.env.TELEGRAM_API_HASH;
 const phoneNumber = process.env.TELEGRAM_PHONE_NUMBER;
-let sessionString = process.env.TELEGRAM_SESSION_STRING?.trim();
+let sessionString = process.env.TELEGRAM_SESSION_STRING || '';
 
 const apiId = apiIdStr ? parseInt(apiIdStr) : 0;
 
@@ -21,6 +21,7 @@ if (sessionString && (sessionString.includes('\n') || sessionString.includes('\r
 
 // MTProto client instance
 let mtprotoClient: TelegramClient | null = null;
+let clientInitializing: Promise<TelegramClient | null> | null = null;
 
 // Initialize MTProto client
 async function initializeMTProto(): Promise<TelegramClient | null> {
@@ -29,27 +30,53 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
     return null;
   }
 
-  try {
-    console.log('🔍 Debug: Creating TelegramClient with apiId:', apiId, 'apiHash:', apiHash.substring(0, 8) + '...');
-    
-    const session = new StringSession(sessionString || '');
-    
-    const client = new TelegramClient(session, apiId, apiHash, {
-      connectionRetries: 5,
-    });
-
-    console.log('🔄 Connecting to Telegram MTProto...');
-    await client.connect();
-    
-    console.log('✅ Telegram MTProto client connected and ready');
-    
-    mtprotoClient = client;
-    return client;
-  } catch (err: any) {
-    console.error('❌ Failed to initialize MTProto:', err.message);
-    console.error('🔍 Error stack:', err.stack);
-    return null;
+  // Return existing client if already initialized
+  if (mtprotoClient) {
+    return mtprotoClient;
   }
+
+  // Prevent multiple simultaneous initializations
+  if (clientInitializing) {
+    return clientInitializing;
+  }
+
+  clientInitializing = (async () => {
+    try {
+      console.log('🔍 Debug: Creating TelegramClient with apiId:', apiId, 'apiHash:', apiHash.substring(0, 8) + '...');
+      console.log('📝 Session string present:', sessionString.length > 0 ? 'Yes (' + sessionString.length + ' chars)' : 'No');
+      
+      // Properly deserialize the session string using StringSession
+      const session = new StringSession(sessionString);
+      console.log('✅ StringSession created from saved session');
+      
+      const client = new TelegramClient(session, apiId, apiHash, {
+        connectionRetries: 5,
+        useTestDC: false,
+        retryDelay: 1000,
+      });
+
+      console.log('🔄 Connecting to Telegram MTProto...');
+      await client.connect();
+      console.log('✅ Telegram MTProto client connected successfully');
+      
+      // Test the connection by getting self
+      const me = await client.getMe();
+      console.log('✅ Authenticated as:', me.username || me.phone || me.id);
+      
+      mtprotoClient = client;
+      clientInitializing = null;
+      return client;
+    } catch (err: any) {
+      console.error('❌ Failed to initialize MTProto:', err.message);
+      if (err.message.includes('AUTH_KEY_UNREGISTERED')) {
+        console.error('🔧 Session expired. Run authentication script again: npm run telegram:auth');
+      }
+      clientInitializing = null;
+      return null;
+    }
+  })();
+
+  return clientInitializing;
 }
 
 // Send message via MTProto (Personal Account)
@@ -120,6 +147,7 @@ export async function authorizeTelegramAccount(code: string, twoFA?: string): Pr
   }
 
   try {
+    // Create new session for fresh authentication
     const session = new StringSession('');
     const client = new TelegramClient(session, apiId, apiHash, {
       connectionRetries: 5,
@@ -132,7 +160,7 @@ export async function authorizeTelegramAccount(code: string, twoFA?: string): Pr
     
     const savedSession = client.session.save();
     if (typeof savedSession === 'string') {
-      console.log(savedSession);
+      console.log('Session length:', savedSession.length, 'characters');
       return { success: true, sessionString: savedSession };
     }
     
