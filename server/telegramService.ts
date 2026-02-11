@@ -25,11 +25,14 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
     return null;
   }
 
+  // Determine storage path - use env var or default to data directory
+  const storagePath = process.env.TELEGRAM_SESSION_PATH || './data';
+  
   try {
     const client = new TelegramClient({
       apiId: Number(apiId),
       apiHash,
-      storageOptions: { sessionName: 'telegram_mtproto' },
+      storageOptions: { path: storagePath, sessionName: 'telegram_mtproto' },
     });
 
     await client.connect();
