@@ -29,18 +29,35 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
   const storagePath = process.env.TELEGRAM_SESSION_PATH || './data';
   
   try {
+    console.log('🔍 Debug: Creating TelegramClient with apiId:', apiId, 'apiHash:', apiHash.substring(0, 8) + '...');
+    
     const client = new TelegramClient({
       apiId: Number(apiId),
       apiHash,
       storageOptions: { path: storagePath, sessionName: 'telegram_mtproto' },
     });
 
+    console.log('🔍 Debug: Client created. Checking for methods...');
+    console.log('🔍 Debug: client object:', typeof client);
+    console.log('🔍 Debug: client.connect:', typeof client.connect);
+    console.log('🔍 Debug: client.start:', typeof client.start);
+    console.log('🔍 Debug: client.isConnected:', typeof client.isConnected);
+    
+    // Check if client has connect method
+    if (typeof client.connect !== 'function') {
+      console.error('❌ ERROR: client.connect is not a function!');
+      console.error('🔍 Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(client)));
+      return null;
+    }
+
+    console.log('🔍 Debug: Calling client.connect()...');
     await client.connect();
     console.log('✅ MTProto client connected');
 
     return client;
   } catch (err: any) {
     console.error('❌ Failed to initialize MTProto:', err.message);
+    console.error('🔍 Error stack:', err.stack);
     return null;
   }
 }
