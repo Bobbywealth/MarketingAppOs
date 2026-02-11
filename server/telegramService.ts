@@ -1,6 +1,6 @@
-import { TelegramClient, Api } from 'telegram';
+import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
-import bigInt from 'big-integer';
+import { Api } from 'telegram/tl';
 
 type TelegramSendResult =
   | { success: true; messageId?: number }
@@ -11,10 +11,12 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
 const defaultChatId = process.env.TELEGRAM_DEFAULT_CHAT_ID?.trim();
 
 // MTProto Configuration (Personal Account)
-const apiId = process.env.TELEGRAM_API_ID;
+const apiIdStr = process.env.TELEGRAM_API_ID;
 const apiHash = process.env.TELEGRAM_API_HASH;
 const phoneNumber = process.env.TELEGRAM_PHONE_NUMBER;
 let sessionString = process.env.TELEGRAM_SESSION_STRING?.trim();
+
+const apiId = apiIdStr ? parseInt(apiIdStr) : 0;
 
 // Clean up session string if it has line breaks or formatting issues
 if (sessionString && (sessionString.includes('\n') || sessionString.includes('\r'))) {
@@ -36,15 +38,16 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
     console.log('🔍 Debug: Creating TelegramClient with apiId:', apiId, 'apiHash:', apiHash.substring(0, 8) + '...');
     
     const session = new StringSession(sessionString || '');
-    const client = new TelegramClient(session, Number(apiId), apiHash, {
+    
+    const client = new TelegramClient(session, apiId, apiHash, {
       connectionRetries: 5,
     });
 
-    console.log('🔍 The client uses "call()" method for Telegram API interactions');
-    
-    // Connect and start the client
+    console.log('🔄 Connecting to Telegram...');
+
     await client.connect();
-    console.log('✅ Telegram MTProto client initialized and ready');
+    
+    console.log('✅ Telegram client connected and ready');
     
     mtprotoClient = client;
     mtprotoReady = true;
@@ -130,16 +133,22 @@ async function sendViaMTProto(chatId: string | number, text: string): Promise<Te
   }
 
   try {
-    // Handle different ID formats
-    const randomId = bigInt(Math.floor(Math.random() * 1e16));
-    await mtprotoClient.invoke(
-      new Api.messages.SendMessage({
-        peer: chatId.toString(),
-        message: text,
-        randomId: randomId,
-      })
-    );
+    // Support both username and numeric ID
+    let peer;
+    
+    if (typeof chatId === 'string' && (isNaN(Number(chatId)) || chatId.startsWith('@'))) {
+      // Username format
+      const username = chatId.replace('@', '');
+      const result = await mtprotoClient.invoke(
+        new Api.contacts.ResolveUsername({ username })
+      );
+      peer = result.peer;
+    } else {
+      // Numeric ID
+      peer = chatId.toString();
+    }
 
+    await mtprotoClient.sendMessage(peer, { message: text });
     return { success: true };
   } catch (err: any) {
     console.error('MTProto send error:', err);
