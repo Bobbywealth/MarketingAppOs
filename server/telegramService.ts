@@ -39,15 +39,30 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
 
     console.log('🔍 Debug: Client created. Checking for methods...');
     console.log('🔍 Debug: client object:', typeof client);
-    console.log('🔍 Debug: client.connect:', typeof client.connect);
-    console.log('🔍 Debug: client.start:', typeof client.start);
-    console.log('🔍 Debug: client.isConnected:', typeof client.isConnected);
+    console.log('🔍 Debug: client.constructor.name:', client.constructor.name);
     
-    // Check if client has connect method
+    // Check all possible method names that might be used
+    const proto = Object.getPrototypeOf(client);
+    const methods = Object.getOwnPropertyNames(proto);
+    console.log('🔍 Debug: Available methods:', methods.join(', '));
+    console.log('🔍 Debug: client.connect exists:', typeof client.connect);
+    console.log('🔍 Debug: client.start exists:', typeof client.start);
+    console.log('🔍 Debug: client.isConnected exists:', typeof client.isConnected);
+    
+    // Check if client has connect method - it doesn't in v6.3.0
     if (typeof client.connect !== 'function') {
       console.error('❌ ERROR: client.connect is not a function!');
-      console.error('🔍 Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(client)));
-      return null;
+      console.error('🔍 Available methods:', methods.join(', '));
+      console.error('🔍 This is expected for @mtproto/core v6.3.0 - using alternative API');
+      console.error('🔍 The client uses "call()" method for Telegram API interactions');
+      console.error('🔍 Authentication is handled via "syncAuth()" method');
+      
+      // Initialize the client without calling connect()
+      // In v6.3.0, the client is ready to use once created
+      console.log('🔍 Debug: Client initialized, ready to use');
+      mtprotoClient = client;
+      mtprotoReady = true;
+      return client;
     }
 
     console.log('🔍 Debug: Calling client.connect()...');

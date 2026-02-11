@@ -47,8 +47,9 @@ export function startMarketingBroadcastScheduler() {
 
       // 2. Pick up recurring broadcasts
       console.log("🔍 Querying recurring broadcasts...");
+      let recurringDue: any[] = [];
       try {
-        const recurringDue = await db
+        recurringDue = await db
           .select()
           .from(marketingBroadcasts)
           .where(
@@ -60,9 +61,15 @@ export function startMarketingBroadcastScheduler() {
             )
           )
           .limit(10);
+        console.log(`✅ Found ${recurringDue.length} recurring broadcasts due`);
       } catch (queryError) {
         console.error("❌ Error in recurring broadcasts query:", queryError);
+        console.error("🔍 Query error details:", JSON.stringify(queryError, null, 2));
         throw queryError;
+      }
+
+      if (recurringDue.length === 0) {
+        console.log("ℹ️ No recurring broadcasts due to run");
       }
 
       for (const template of recurringDue) {
