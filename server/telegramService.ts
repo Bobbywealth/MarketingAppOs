@@ -82,6 +82,12 @@ function normalizeChatId(input: string | undefined | null): { ok: true; value: s
   let raw = String(input ?? "").trim();
   if (!raw) return { ok: false, error: "Missing Telegram chat_id" };
 
+  // Support bot usernames (starting with @)
+  if (raw.startsWith('@')) {
+    // Bot usernames are valid chat IDs for Bot API
+    return { ok: true, value: raw };
+  }
+
   // Common user mistake: forgetting the '-' or '-100' prefix for groups/channels.
   // Channel IDs from some sources are 13 digits starting with 100...
   if (/^100\d{10}$/.test(raw)) {
