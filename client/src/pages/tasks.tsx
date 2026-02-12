@@ -170,7 +170,9 @@ export default function TasksPage() {
 
   const { data: tasks = [], isLoading, error: tasksError } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
-    refetchInterval: 3000, // Poll every 3 seconds for real-time updates
+    refetchInterval: 15000, // Poll every 15 seconds for real-time updates (optimized)
+    refetchIntervalInBackground: false, // Stop polling when tab is hidden
+    refetchOnWindowFocus: true, // Only refresh when user returns to tab
   });
 
   const isAdminOrManager = (user as any)?.role === "admin" || (user as any)?.role === "manager";
@@ -601,12 +603,31 @@ export default function TasksPage() {
         status,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "✅ Task moved successfully" });
+    onMutate: async ({ id, status }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/tasks"] });
+      
+      // Snapshot previous value
+      const previousTasks = queryClient.getQueryData<Task[]>("/api/tasks");
+      
+      // Optimistically update
+      queryClient.setQueryData<Task[]>("/api/tasks", (old: Task[] | undefined) => {
+        if (!old) return old;
+        return old.map(t => t.id === id ? { ...t, status } : t);
+      });
+      
+      return { previousTasks };
     },
-    onError: () => {
+    onError: (err, { id, status }, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData<Task[]>("/api/tasks", context.previousTasks);
+      }
       toast({ title: "Failed to update task", variant: "destructive" });
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     },
   });
 
