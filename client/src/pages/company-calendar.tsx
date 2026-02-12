@@ -43,7 +43,28 @@ import {
   CheckCircle2,
   ListTodo,
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, differenceInHours, isPast } from "date-fns";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isSameDay,
+  addMonths,
+  subMonths,
+  startOfWeek,
+  endOfWeek,
+  isToday,
+  differenceInHours,
+  isPast,
+  addWeeks,
+  subWeeks,
+  addDays,
+  subDays,
+  setHours,
+  setMinutes,
+  setSeconds
+} from "date-fns";
 
 interface CalendarEvent {
   id: string;
@@ -167,10 +188,20 @@ export default function CompanyCalendarPage() {
   const [selectedTask, setSelectedTask] = useState<CalendarTask | null>(null);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
+  
+  // Calculate dates based on current view
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
+  
+  // Week view dates
+  const weekStart = startOfWeek(currentDate);
+  const weekEnd = endOfWeek(currentDate);
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  
+  // Day view date
+  const dayDate = currentDate;
   const eventsQueryUrl = `/api/calendar/events?start=${encodeURIComponent(
     calendarStart.toISOString()
   )}&end=${encodeURIComponent(calendarEnd.toISOString())}`;
@@ -325,7 +356,44 @@ export default function CompanyCalendarPage() {
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
+  const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+  const prevDay = () => setCurrentDate(subDays(currentDate, 1));
+  const nextDay = () => setCurrentDate(addDays(currentDate, 1));
   const goToToday = () => setCurrentDate(new Date());
+  
+  // Get dates for current view
+  const calendarDays = view === "month"
+    ? eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+    : view === "week"
+    ? weekDays
+    : [dayDate];
+  
+  // Get events for current view dates
+  const getEventsForView = (day: Date) => {
+    const dayEvents = events.filter(event =>
+      isSameDay(new Date(event.start), day)
+    );
+    
+    if (eventTypeFilter === "all") return dayEvents;
+    if (eventTypeFilter === "task") return [];
+    return dayEvents.filter(event => event.type === eventTypeFilter);
+  };
+  
+  // Get tasks for current view dates
+  const getTasksForView = (day: Date): CalendarTask[] => {
+    if (!showTasks) return [];
+    return calendarTasks.filter(task =>
+      task.dueDate && isSameDay(new Date(task.dueDate), day)
+    );
+  };
+  
+  // Get current view title
+  const viewTitle = view === "month"
+    ? format(currentDate, "MMMM yyyy")
+    : view === "week"
+    ? `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`
+    : format(dayDate, "EEEE, MMMM d, yyyy");
 
   // Get tasks for a specific day
   const getTasksForDay = (day: Date): CalendarTask[] => {
@@ -1261,121 +1329,352 @@ export default function CompanyCalendarPage() {
                     <TabsTrigger value="day" className="text-xs sm:text-sm">Day</TabsTrigger>
                   </TabsList>
                 </Tabs>
+                
+                {/* View-specific navigation */}
+                {view === "month" && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={prevMonth} className="h-8 w-8">
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h2 className="text-lg font-semibold">{viewTitle}</h2>
+                    <Button variant="outline" size="icon" onClick={nextMonth} className="h-8 w-8">
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+                
+                {view === "week" && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={prevWeek} className="h-8 w-8">
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h2 className="text-lg font-semibold">{viewTitle}</h2>
+                    <Button variant="outline" size="icon" onClick={nextWeek} className="h-8 w-8">
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+                
+                {view === "day" && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={prevDay} className="h-8 w-8">
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h2 className="text-lg font-semibold">{viewTitle}</h2>
+                    <Button variant="outline" size="icon" onClick={nextDay} className="h-8 w-8">
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1 md:gap-2">
-                {/* Day Headers */}
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
-                  <div key={day} className="text-center text-[10px] md:text-sm font-semibold text-muted-foreground py-1 md:py-2">
-                    <span className="hidden sm:inline">{day}</span>
-                    <span className="sm:hidden">{day.slice(0, 1)}</span>
-                  </div>
-                ))}
-                
-                {/* Calendar Days */}
-                {calendarDays.map((day, idx) => {
-                  const dayEvents = getEventsForDay(day);
-                  const dayTasks = getTasksForDay(day);
-                  const isCurrentMonth = isSameMonth(day, currentDate);
-                  const isSelected = selectedDate && isSameDay(day, selectedDate);
-                  const isTodayDate = isToday(day);
-                  const totalItems = dayEvents.length + dayTasks.length;
-                  const hasItems = totalItems > 0;
-                  const maxVisible = 3;
+              {view === "month" ? (
+                <div className="grid grid-cols-7 gap-1 md:gap-2">
+                  {/* Day Headers */}
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
+                    <div key={day} className="text-center text-[10px] md:text-sm font-semibold text-muted-foreground py-1 md:py-2">
+                      <span className="hidden sm:inline">{day}</span>
+                      <span className="sm:hidden">{day.slice(0, 1)}</span>
+                    </div>
+                  ))}
+                  
+                  {/* Calendar Days */}
+                  {calendarDays.map((day, idx) => {
+                    const dayEvents = getEventsForView(day);
+                    const dayTasks = getTasksForView(day);
+                    const isCurrentMonth = isSameMonth(day, currentDate);
+                    const isSelected = selectedDate && isSameDay(day, selectedDate);
+                    const isTodayDate = isToday(day);
+                    const totalItems = dayEvents.length + dayTasks.length;
+                    const hasItems = totalItems > 0;
+                    const maxVisible = 3;
 
-                  return (
-                    <Tooltip key={idx}>
-                      <TooltipTrigger asChild>
-                        <div
-                          onClick={() => setSelectedDate(day)}
-                          className={`
-                            min-h-[60px] md:min-h-[100px] p-1 md:p-2 border rounded-md md:rounded-lg cursor-pointer transition-all duration-300
-                            ${!isCurrentMonth ? "bg-muted/30 text-muted-foreground" : "hover:bg-accent hover:shadow-md"}
-                            ${isSelected ? "ring-1 md:ring-2 ring-primary shadow-lg" : ""}
-                            ${isTodayDate ? "bg-primary/10 border-primary border-2 shadow-md" : ""}
-                            ${hasItems && !isTodayDate ? "border-purple-500/30" : ""}
-                          `}
-                        >
-                          <div className={`text-[10px] md:text-sm font-semibold mb-0.5 md:mb-1 flex items-center justify-between ${isTodayDate ? "text-primary" : ""}`}>
-                            <span>{format(day, "d")}</span>
-                            {/* Indicator Dots */}
-                            {hasItems && (
-                              <div className="flex gap-0.5">
-                                {dayEvents.slice(0, 2).map((event, i) => (
-                                  <div
-                                    key={`e-${i}`}
-                                    className={`w-1.5 h-1.5 rounded-full ${getEventColor(event.type)}`}
-                                  />
+                    return (
+                      <Tooltip key={idx}>
+                        <TooltipTrigger asChild>
+                          <div
+                            onClick={() => setSelectedDate(day)}
+                            className={`
+                              min-h-[60px] md:min-h-[100px] p-1 md:p-2 border rounded-md md:rounded-lg cursor-pointer transition-all duration-300
+                              ${!isCurrentMonth ? "bg-muted/30 text-muted-foreground" : "hover:bg-accent hover:shadow-md"}
+                              ${isSelected ? "ring-1 md:ring-2 ring-primary shadow-lg" : ""}
+                              ${isTodayDate ? "bg-primary/10 border-primary border-2 shadow-md" : ""}
+                              ${hasItems && !isTodayDate ? "border-purple-500/30" : ""}
+                            `}
+                          >
+                            <div className={`text-[10px] md:text-sm font-semibold mb-0.5 md:mb-1 flex items-center justify-between ${isTodayDate ? "text-primary" : ""}`}>
+                              <span>{format(day, "d")}</span>
+                              {/* Indicator Dots */}
+                              {hasItems && (
+                                <div className="flex gap-0.5">
+                                  {dayEvents.slice(0, 2).map((event, i) => (
+                                    <div
+                                      key={`e-${i}`}
+                                      className={`w-1.5 h-1.5 rounded-full ${getEventColor(event.type)}`}
+                                    />
+                                  ))}
+                                  {dayTasks.length > 0 && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-0.5 md:space-y-1 max-h-[80px] md:max-h-[120px] overflow-y-auto">
+                              {/* Events */}
+                              {dayEvents.slice(0, maxVisible).map((event, eventIdx) => (
+                                <Tooltip key={event.id}>
+                                  <TooltipTrigger asChild>
+                                    <div
+                                      onClick={(e) => handleEventClick(event, e)}
+                                      className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 ${getEventColor(event.type)} mb-0.5 shadow-sm`}
+                                      style={{
+                                        position: 'relative',
+                                        zIndex: totalItems - eventIdx,
+                                      }}
+                                    >
+                                      <span className="mr-1">{getEventIcon(event.type)}</span>
+                                      {event.title}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="font-semibold">{event.title}</p>
+                                    <p className="text-xs">{format(new Date(event.start), "h:mm a")}</p>
+                                    {event.location && <p className="text-xs">📍 {event.location}</p>}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ))}
+                              {/* Tasks */}
+                              {dayTasks.slice(0, Math.max(0, maxVisible - dayEvents.length)).map((task) => (
+                                <Tooltip key={`task-${task.id}`}>
+                                  <TooltipTrigger asChild>
+                                    <div
+                                      onClick={(e) => handleTaskClick(task, e)}
+                                      className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 bg-teal-500 mb-0.5 shadow-sm ${
+                                        task.status === "completed" ? "opacity-60 line-through" : ""
+                                      }`}
+                                    >
+                                      <span className="mr-1">✅</span>
+                                      {task.title}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="font-semibold">{task.title}</p>
+                                    <p className="text-xs capitalize">{task.status.replace("_", " ")} | {task.priority}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ))}
+                              {totalItems > maxVisible && (
+                                <div className="text-[8px] md:text-xs text-muted-foreground font-medium">
+                                  +{totalItems - maxVisible} more
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{format(day, "EEEE, MMMM d")}</p>
+                          {dayEvents.length > 0 && <p className="text-xs">{dayEvents.length} event(s)</p>}
+                          {dayTasks.length > 0 && <p className="text-xs">{dayTasks.length} task(s)</p>}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              ) : view === "week" ? (
+                <div className="space-y-4">
+                  {/* Week Header */}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={prevWeek}
+                      className="h-8 w-8 hover:scale-110 transition-transform"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h2 className="text-lg font-semibold">{viewTitle}</h2>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={nextWeek}
+                      className="h-8 w-8 hover:scale-110 transition-transform"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Week Days */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {weekDays.map((day) => {
+                      const dayEvents = getEventsForView(day);
+                      const dayTasks = getTasksForView(day);
+                      const isSelected = selectedDate && isSameDay(day, selectedDate);
+                      const isTodayDate = isToday(day);
+                      const totalItems = dayEvents.length + dayTasks.length;
+                      const hasItems = totalItems > 0;
+                      const maxVisible = 3;
+
+                      return (
+                        <Tooltip key={day.toISOString()}>
+                          <TooltipTrigger asChild>
+                            <div
+                              onClick={() => setSelectedDate(day)}
+                              className={`
+                                min-h-[80px] md:min-h-[100px] p-2 border rounded-lg cursor-pointer transition-all duration-300
+                                ${isSelected ? "ring-2 ring-primary shadow-lg" : ""}
+                                ${isTodayDate ? "bg-primary/10 border-primary border-2" : "hover:bg-accent"}
+                                ${hasItems ? "border-purple-500/30" : ""}
+                              `}
+                            >
+                              <div className={`text-sm font-semibold mb-2 flex items-center justify-between ${isTodayDate ? "text-primary" : ""}`}>
+                                <span>{format(day, "EEE")}</span>
+                                <span className={`text-sm ${isTodayDate ? "bg-primary text-white px-2 py-0.5 rounded-full" : ""}`}>
+                                  {format(day, "d")}
+                                </span>
+                              </div>
+                              <div className="space-y-1 max-h-[60px] overflow-y-auto">
+                                {dayEvents.slice(0, maxVisible).map((event) => (
+                                  <Tooltip key={event.id}>
+                                    <TooltipTrigger asChild>
+                                      <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEventClick(event, e);
+                                        }}
+                                        className={`text-xs p-1.5 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 ${getEventColor(event.type)} shadow-sm`}
+                                      >
+                                        <span className="mr-1">{getEventIcon(event.type)}</span>
+                                        {event.title}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="font-semibold">{event.title}</p>
+                                      <p className="text-xs">{format(new Date(event.start), "h:mm a")}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                 ))}
-                                {dayTasks.length > 0 && (
-                                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                                {dayTasks.slice(0, Math.max(0, maxVisible - dayEvents.length)).map((task) => (
+                                  <Tooltip key={`task-${task.id}`}>
+                                    <TooltipTrigger asChild>
+                                      <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleTaskClick(task, e);
+                                        }}
+                                        className={`text-xs p-1.5 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 bg-teal-500 shadow-sm ${
+                                          task.status === "completed" ? "opacity-60 line-through" : ""
+                                        }`}
+                                      >
+                                        <span className="mr-1">✅</span>
+                                        {task.title}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="font-semibold">{task.title}</p>
+                                      <p className="text-xs capitalize">{task.status.replace("_", " ")} | {task.priority}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))}
+                                {totalItems > maxVisible && (
+                                  <div className="text-xs text-muted-foreground font-medium">
+                                    +{totalItems - maxVisible} more
+                                  </div>
                                 )}
                               </div>
-                            )}
-                          </div>
-                          <div className="space-y-0.5 md:space-y-1 max-h-[80px] md:max-h-[120px] overflow-y-auto">
-                            {/* Events */}
-                            {dayEvents.slice(0, maxVisible).map((event, eventIdx) => (
-                              <Tooltip key={event.id}>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    onClick={(e) => handleEventClick(event, e)}
-                                    className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 ${getEventColor(event.type)} mb-0.5 shadow-sm`}
-                                    style={{
-                                      position: 'relative',
-                                      zIndex: totalItems - eventIdx,
-                                    }}
-                                  >
-                                    <span className="mr-1">{getEventIcon(event.type)}</span>
-                                    {event.title}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-semibold">{event.title}</p>
-                                  <p className="text-xs">{format(new Date(event.start), "h:mm a")}</p>
-                                  {event.location && <p className="text-xs">📍 {event.location}</p>}
-                                </TooltipContent>
-                              </Tooltip>
-                            ))}
-                            {/* Tasks */}
-                            {dayTasks.slice(0, Math.max(0, maxVisible - dayEvents.length)).map((task) => (
-                              <Tooltip key={`task-${task.id}`}>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    onClick={(e) => handleTaskClick(task, e)}
-                                    className={`text-[8px] md:text-xs p-0.5 md:p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 bg-teal-500 mb-0.5 shadow-sm ${
-                                      task.status === "completed" ? "opacity-60 line-through" : ""
-                                    }`}
-                                  >
-                                    <span className="mr-1">✅</span>
-                                    {task.title}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-semibold">{task.title}</p>
-                                  <p className="text-xs capitalize">{task.status.replace("_", " ")} | {task.priority}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ))}
-                            {totalItems > maxVisible && (
-                              <div className="text-[8px] md:text-xs text-muted-foreground font-medium">
-                                +{totalItems - maxVisible} more
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{format(day, "EEEE, MMMM d, yyyy")}</p>
+                            {dayEvents.length > 0 && <p className="text-xs">{dayEvents.length} event(s)</p>}
+                            {dayTasks.length > 0 && <p className="text-xs">{dayTasks.length} task(s)</p>}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : view === "day" ? (
+                <div className="space-y-4">
+                  {/* Day Header */}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={prevDay}
+                      className="h-8 w-8 hover:scale-110 transition-transform"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h2 className="text-lg font-semibold">{viewTitle}</h2>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={nextDay}
+                      className="h-8 w-8 hover:scale-110 transition-transform"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Day Events Timeline */}
+                  <div className="space-y-2">
+                    {dayDate && (
+                      <div className="border rounded-lg p-4">
+                        <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
+                          {format(dayDate, "EEEE, MMMM d, yyyy")}
+                        </h3>
+                        
+                        {/* Time Grid */}
+                        <div className="space-y-1">
+                          {Array.from({ length: 24 }, (_, hour) => {
+                            const hourStart = setHours(dayDate, hour);
+                            const hourEnd = setHours(dayDate, hour + 1);
+                            const hourEvents = events.filter(event => {
+                              const eventStart = new Date(event.start);
+                              const eventEnd = new Date(event.end);
+                              return eventStart < hourEnd && eventEnd > hourStart;
+                            });
+                            
+                            return (
+                              <div key={hour} className="flex gap-2">
+                                <div className="w-16 text-xs text-muted-foreground text-right pr-2">
+                                  {format(hourStart, "h:mm a")}
+                                </div>
+                                <div className="flex-1 border-t border-border/50 relative min-h-[40px]">
+                                  {hourEvents.map((event) => (
+                                    <Tooltip key={event.id}>
+                                      <TooltipTrigger asChild>
+                                        <div
+                                          onClick={(e) => handleEventClick(event, e)}
+                                          className={`absolute left-0 right-0 p-2 rounded text-white truncate cursor-pointer hover:opacity-80 transition-all hover:scale-105 ${getEventColor(event.type)} shadow-sm`}
+                                          style={{
+                                            top: `${(eventStart.getTime() - hourStart.getTime()) / (hourEnd.getTime() - hourStart.getTime()) * 100}%`,
+                                            height: `${Math.max(30, (eventEnd.getTime() - eventStart.getTime()) / (hourEnd.getTime() - hourStart.getTime()) * 100)}%`,
+                                          }}
+                                        >
+                                          <span className="mr-1">{getEventIcon(event.type)}</span>
+                                          {event.title}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="font-semibold">{event.title}</p>
+                                        <p className="text-xs">{format(new Date(event.start), "h:mm a")} - {format(new Date(event.end), "h:mm a")}</p>
+                                        {event.location && <p className="text-xs">📍 {event.location}</p>}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ))}
+                                </div>
                               </div>
-                            )}
-                          </div>
+                            );
+                          })}
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{format(day, "EEEE, MMMM d")}</p>
-                        {dayEvents.length > 0 && <p className="text-xs">{dayEvents.length} event(s)</p>}
-                        {dayTasks.length > 0 && <p className="text-xs">{dayTasks.length} task(s)</p>}
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
