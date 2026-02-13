@@ -855,6 +855,144 @@ router.delete("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRol
   }
 });
 
+// ============================================
+// BULK OPERATIONS
+// ============================================
+
+// Bulk update tasks
+router.patch("/tasks/bulk", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  try {
+    const { taskIds, updates } = req.body;
+    
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({ message: "taskIds must be a non-empty array" });
+    }
+    
+    if (!updates || typeof updates !== "object") {
+      return res.status(400).json({ message: "updates object is required" });
+    }
+    
+    // Validate updates against schema
+    const validatedUpdates = insertTaskSchema.partial().strip().parse(updates) as any;
+    
+    // Handle status changes
+    if (validatedUpdates.status === "completed") {
+      validatedUpdates.completedAt = new Date();
+    } else if (validatedUpdates.status && validatedUpdates.status !== "completed") {
+      validatedUpdates.completedAt = null;
+    }
+    
+    // Add updated timestamp
+    validatedUpdates.updatedAt = new Date();
+    
+    // Perform bulk update
+    const results = await db
+      .update(tasks)
+      .set(validatedUpdates)
+      .where(sql`${tasks.id} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`)
+      .returning();
+    
+    res.json({
+      success: true,
+      updated: results.length,
+      tasks: results,
+    });
+  } catch (error: any) {
+    console.error("Bulk update error:", error);
+    handleValidationError(error, res);
+  }
+});
+
+// Bulk delete tasks
+router.delete("/tasks/bulk", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  try {
+    const { taskIds } = req.body;
+    
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({ message: "taskIds must be a non-empty array" });
+    }
+    
+    // Delete task comments first (cascade)
+    await db.delete(taskComments).where(sql`${taskComments.taskId} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+    
+    // Delete task dependencies
+    await db.delete(taskDependencies).where(sql`${taskDependencies.taskId} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+    
+    // Delete task attachments
+    await db.delete(taskAttachments).where(sql`${taskAttachments.taskId} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+    
+    // Delete the tasks
+    const result = await db
+      .delete(tasks)
+      .where(sql`${tasks.id} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`)
+      .returning({ id: tasks.id });
+    
+    res.json({
+      success: true,
+      deleted: result.length,
+    });
+  } catch (error: any) {
+    console.error("Bulk delete error:", error);
+    res.status(500).json({ message: "Failed to delete tasks", error: error.message });
+  }
+});
+
+// Duplicate tasks
+router.post("/tasks/duplicate", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+  try {
+    const { taskIds } = req.body;
+    const user = req.user as any;
+    const userId = user?.id ? Number(user.id) : null;
+    
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({ message: "taskIds must be a non-empty array" });
+    }
+    
+    // Fetch original tasks
+    const originalTasks = await db
+      .select()
+      .from(tasks)
+      .where(sql`${tasks.id} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+    
+    if (originalTasks.length === 0) {
+      return res.status(404).json({ message: "No tasks found" });
+    }
+    
+    // Create duplicates
+    const duplicatedTasks = originalTasks.map(original => ({
+      campaignId: original.campaignId,
+      clientId: original.clientId,
+      assignedToId: original.assignedToId,
+      spaceId: original.spaceId,
+      title: `${original.title} (Copy)`,
+      description: original.description,
+      status: "todo" as const, // Reset to todo
+      priority: original.priority,
+      dueDate: original.dueDate,
+      checklist: original.checklist || [],
+      tags: original.tags || [],
+      isRecurring: false, // Don't duplicate recurring settings
+      recurringPattern: null,
+      recurringInterval: null,
+      recurringEndDate: null,
+      scheduleFrom: null,
+      createdBy: userId,
+    }));
+    
+    // Insert duplicates
+    const inserted = await db.insert(tasks).values(duplicatedTasks).returning();
+    
+    res.json({
+      success: true,
+      count: inserted.length,
+      tasks: inserted,
+    });
+  } catch (error: any) {
+    console.error("Duplicate tasks error:", error);
+    res.status(500).json({ message: "Failed to duplicate tasks", error: error.message });
+  }
+});
+
 // Task comments routes
 router.get("/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
   try {

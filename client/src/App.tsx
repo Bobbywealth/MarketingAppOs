@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationsCenter } from "@/components/NotificationsCenter";
+import { CommandPalette } from "@/components/CommandPalette";
 import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { usePageTracking } from "@/hooks/usePageTracking";
@@ -168,12 +169,19 @@ function AppContent() {
   return (
     <TooltipProvider>
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        {/* Skip to main content link for accessibility */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:outline-none"
+        >
+          Skip to main content
+        </a>
         <div className="flex h-screen w-full">
           <AppSidebar />
           <div className="flex flex-col flex-1 overflow-hidden">
             <header className="flex items-center gap-4 px-4 py-3 border-b bg-background">
               <div className="flex items-center gap-2 flex-1">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <SidebarTrigger data-testid="button-sidebar-toggle" aria-label="Toggle sidebar" />
               </div>
               <div className="flex items-center justify-center flex-1">
                 <GlobalSearch />
@@ -183,13 +191,14 @@ function AppContent() {
                 <ThemeToggle />
               </div>
             </header>
-            <main className="flex-1 overflow-auto">
+            <main id="main-content" className="flex-1 overflow-auto" tabIndex={-1}>
               <Router />
             </main>
           </div>
         </div>
       </SidebarProvider>
       <Toaster />
+      <CommandPalette />
     </TooltipProvider>
   );
 }

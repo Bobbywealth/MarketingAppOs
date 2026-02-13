@@ -1005,6 +1005,13 @@ export function AppSidebar() {
   
   const logoutUrl = resolveApiUrl(isPWA ? '/api/logout?pwa=true' : '/api/logout');
 
+  // Auto-close sidebar on mobile when location changes
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [location, isMobile, setOpenMobile]);
+
   const handleLinkClick = () => {
     setOpenMobile(false);
   };

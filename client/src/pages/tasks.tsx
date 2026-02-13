@@ -34,7 +34,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useTaskKeyboardShortcuts } from "@/hooks/useTaskKeyboardShortcuts";
 import { useBulkTasks } from "@/hooks/useBulkTasks";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag, Building2, Clock, AlertTriangle, Archive } from "lucide-react";
+import { useTaskMutations } from "@/hooks/useTaskMutations";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag, Building2, Clock, AlertTriangle, Archive, BarChart3 } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace, TaskTemplate } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -42,7 +43,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
-import { TaskFiltersPanel, TaskRecurringConfig, TaskTagsInput, TaskBulkActions } from "@/components/tasks";
+import {
+  TaskFiltersPanel,
+  TaskRecurringConfig,
+  TaskTagsInput,
+  TaskBulkActions,
+  TaskFilterChips,
+  TaskQuickActions,
+  TaskInsightsPanel,
+  TaskKanbanBoard,
+  TaskCompactView
+} from "@/components/tasks";
 import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
 
 function getNextWeekday(): string {
@@ -2156,8 +2167,98 @@ export default function TasksPage() {
         </div>
       </div>
 
+      {/* Task Insights Panel */}
+      <TaskInsightsPanel
+        tasks={tasks}
+        users={users}
+        filteredTasks={filteredTasks}
+      />
+
+      {/* Filter Chips */}
+      <TaskFilterChips
+        filterStatus={filterStatus}
+        filterPriority={filterPriority}
+        searchQuery={searchQuery}
+        filterClientId={filterClientId}
+        filterAssigneeId={filterAssigneeId}
+        filterDueDateRange={filterDueDateRange}
+        selectedSpaceId={selectedSpaceId}
+        showCompleted={showCompleted}
+        clients={clients}
+        users={users}
+        onClearStatus={() => setFilterStatus("all")}
+        onClearPriority={() => setFilterPriority("all")}
+        onClearSearch={() => setSearchQuery('')}
+        onClearClient={() => setFilterClientId(null)}
+        onClearAssignee={() => setFilterAssigneeId(null)}
+        onClearDueDate={() => setFilterDueDateRange(null)}
+        onClearSpace={() => setSelectedSpaceId(null)}
+        onToggleCompleted={() => setShowCompleted(!showCompleted)}
+        onClearAll={() => {
+          setFilterStatus("all");
+          setFilterPriority("all");
+          setSearchQuery('');
+          setFilterClientId(null);
+          setFilterAssigneeId(null);
+          setFilterDueDateRange(null);
+          setSelectedSpaceId(null);
+        }}
+      />
+
       <div className="flex-1 overflow-auto">
-        {viewMode === "kanban" ? renderKanbanView() : viewMode === "compact" ? renderCompactView() : renderListView()}
+        {viewMode === "kanban" ? (
+          <TaskKanbanBoard
+            tasks={filteredTasks}
+            users={users}
+            draggedTask={draggedTask}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onTaskClick={(task) => {
+              setSelectedTask(task);
+              setIsDetailSidebarOpen(true);
+            }}
+            onTaskDelete={(taskId) => deleteTaskMutation.mutate(taskId)}
+            onTaskDuplicate={(taskId) => {
+              // Use the new duplicate endpoint
+              apiRequest("POST", "/api/tasks/duplicate", { taskIds: [taskId] })
+                .then(() => {
+                  queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+                  toast({ title: "Task duplicated" });
+                })
+                .catch(() => {
+                  toast({ title: "Failed to duplicate task", variant: "destructive" });
+                });
+            }}
+          />
+        ) : viewMode === "compact" ? (
+          <TaskCompactView
+            tasks={filteredTasks}
+            users={users}
+            selectedTaskIds={selectedTaskIds}
+            expandedTaskId={expandedTaskId}
+            onToggleTaskSelection={toggleTaskSelection}
+            onSelectAll={selectAllTasks}
+            onTaskClick={(task) => {
+              setSelectedTask(task);
+              setIsDetailSidebarOpen(true);
+            }}
+            onTaskDelete={(taskId) => deleteTaskMutation.mutate(taskId)}
+            onTaskDuplicate={(taskId) => {
+              apiRequest("POST", "/api/tasks/duplicate", { taskIds: [taskId] })
+                .then(() => {
+                  queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+                  toast({ title: "Task duplicated" });
+                })
+                .catch(() => {
+                  toast({ title: "Failed to duplicate task", variant: "destructive" });
+                });
+            }}
+          />
+        ) : (
+          renderListView()
+        )}
       </div>
         </div>
       </div>
@@ -2323,81 +2424,37 @@ export default function TasksPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Action Bar */}
-      {selectedTaskIds.size > 0 && (
-        <div className="fixed bottom-[85px] md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-3 border-r pr-6">
-            <span className="text-sm font-bold text-primary">{selectedTaskIds.size} selected</span>
-            <Button variant="ghost" size="sm" onClick={() => setSelectedTaskIds(new Set())} className="h-7 text-xs">
-              Clear
-            </Button>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {selectedTaskIds.size >= 1 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 rounded-full text-xs"
-                onClick={() => {
-                  const selectedId = Array.from(selectedTaskIds)[0];
-                  const task = tasks.find((t) => t.id === selectedId);
-                  if (!task) {
-                    toast({
-                      title: "Couldn't find that task",
-                      description: "Please refresh and try again.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  handleEditTask(task);
-                }}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Name
-              </Button>
-            )}
-
-            <Select onValueChange={(status) => bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { status } })}>
-              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
-                <SelectValue placeholder="Update Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="review">Review</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select onValueChange={(priority) => bulkTasks.bulkSetPriority({ taskIds: Array.from(selectedTaskIds), priority })}>
-              <SelectTrigger className="h-9 w-32 rounded-full text-xs">
-                <SelectValue placeholder="Update Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10"
-              onClick={() => {
-                if (confirm(`Delete ${selectedTaskIds.size} tasks?`)) {
-                  bulkTasks.bulkDelete(Array.from(selectedTaskIds));
-                  setSelectedTaskIds(new Set());
-                }
-              }}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Quick Actions Toolbar - New Component */}
+      <TaskQuickActions
+        selectedTaskIds={selectedTaskIds}
+        tasks={tasks}
+        users={users}
+        onClearSelection={() => setSelectedTaskIds(new Set())}
+        onBulkStatusChange={(status) => {
+          bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { status } });
+        }}
+        onBulkAssigneeChange={(assigneeId) => {
+          bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { assignedToId: assigneeId } });
+        }}
+        onBulkDelete={() => {
+          bulkTasks.bulkDelete(Array.from(selectedTaskIds));
+          setSelectedTaskIds(new Set());
+        }}
+        onBulkArchive={() => {
+          bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { archived: true } });
+          setSelectedTaskIds(new Set());
+        }}
+        onDuplicateTasks={(taskIds) => {
+          apiRequest("POST", "/api/tasks/duplicate", { taskIds })
+            .then(() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+              setSelectedTaskIds(new Set());
+            })
+            .catch((err) => {
+              toast({ title: "Failed to duplicate tasks", variant: "destructive" });
+            });
+        }}
+      />
     </div>
   );
 }

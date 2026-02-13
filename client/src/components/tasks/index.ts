@@ -10,3 +10,10 @@ export { WorkloadIndicator } from './WorkloadIndicator';
 export { TaskFiltersPanel } from './TaskFiltersPanel';
 export { TaskRecurringConfig } from './TaskRecurringConfig';
 export { TaskTagsInput } from './TaskTagsInput';
+
+// New components for task management improvements
+export { TaskFilterChips } from './TaskFilterChips';
+export { TaskQuickActions } from './TaskQuickActions';
+export { TaskInsightsPanel } from './TaskInsightsPanel';
+export { TaskKanbanBoard } from './TaskKanbanBoard';
+export { TaskCompactView } from './TaskCompactView';
