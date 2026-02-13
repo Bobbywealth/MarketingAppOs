@@ -162,6 +162,7 @@ export const tasks = pgTable("tasks", {
   completedAt: timestamp("completed_at"),
   checklist: jsonb("checklist"), // Array of checklist items with id, text, completed
   estimatedHours: integer("estimated_hours").default(0),
+  tags: text("tags").array(), // Array of tag strings for flexible categorization
   // Recurring task fields
   isRecurring: boolean("is_recurring").default(false),
   recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, yearly

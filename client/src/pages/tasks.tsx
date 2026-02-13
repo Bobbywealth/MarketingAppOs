@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search } from "lucide-react";
+import { useTaskKeyboardShortcuts } from "@/hooks/useTaskKeyboardShortcuts";
+import { useBulkTasks } from "@/hooks/useBulkTasks";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace, TaskTemplate } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -39,6 +41,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
 import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
+import { TaskFiltersPanel, TaskRecurringConfig, TaskTagsInput, TaskBulkActions } from "@/components/tasks";
 import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
 
 function getNextWeekday(): string {
@@ -110,6 +113,7 @@ const taskFormSchema = z.object({
     text: z.string(),
     completed: z.boolean(),
   })).optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -224,6 +228,12 @@ export default function TasksPage() {
     retry: false,
     meta: { returnNull: true }, // Don't throw error if forbidden
   });
+
+  // Bulk operations hook
+  const bulkTasks = useBulkTasks();
+
+  // Search input ref for keyboard shortcuts
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { data: templates = [] } = useQuery<TaskTemplate[]>({
     queryKey: ["/api/tasks/templates"],
@@ -421,29 +431,8 @@ export default function TasksPage() {
     },
   });
 
-  const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ ids, data }: { ids: string[], data: any }) => {
-      // For now, update tasks one by one as we don't have a bulk endpoint
-      // In a real app, you'd want a POST /api/tasks/bulk-update
-      return Promise.all(ids.map(id => apiRequest("PATCH", `/api/tasks/${id}`, data)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      setSelectedTaskIds(new Set());
-      toast({ title: "Tasks updated successfully" });
-    },
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      return Promise.all(ids.map(id => apiRequest("DELETE", `/api/tasks/${id}`)));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      setSelectedTaskIds(new Set());
-      toast({ title: "Tasks deleted successfully" });
-    },
-  });
+  // Bulk operations now use the bulkTasks hook defined above
+  // The old inline mutations have been replaced with the useBulkTasks hook
 
   // Recurring task series mutations
   const updateRecurringSeriesMutation = useMutation({
@@ -653,6 +642,37 @@ export default function TasksPage() {
       return true;
     });
   }, [tasks, filterStatus, filterPriority, selectedSpaceId, showCompleted]);
+
+  // Keyboard shortcuts - defined after filteredTasks to avoid reference errors
+  const cycleViewMode = useCallback(() => {
+    setViewMode(current => {
+      if (current === "kanban") return "list";
+      if (current === "list") return "compact";
+      return "kanban";
+    });
+  }, []);
+
+  useTaskKeyboardShortcuts({
+    onCreateTask: () => setIsCreateDialogOpen(true),
+    onSearch: () => searchInputRef.current?.focus(),
+    onToggleFilters: () => setIsFilterPanelOpen(prev => !prev),
+    onToggleView: cycleViewMode,
+    onSelectAll: () => {
+      if (selectedTaskIds.size === filteredTasks.length) {
+        setSelectedTaskIds(new Set());
+      } else {
+        setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)));
+      }
+    },
+    onEscape: () => {
+      if (isDetailSidebarOpen) {
+        setIsDetailSidebarOpen(false);
+      } else if (selectedTaskIds.size > 0) {
+        setSelectedTaskIds(new Set());
+      }
+    },
+    enabled: true,
+  });
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -1062,7 +1082,8 @@ export default function TasksPage() {
             {/* Search Input */}
             <div className="relative w-full lg:w-72">
               <Input
-                placeholder="Search tasks..."
+                ref={searchInputRef}
+                placeholder="Search tasks... (⌘F)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"

@@ -1874,6 +1874,50 @@ Examples:
     }
   });
 
+  // Bulk task operations
+  app.patch("/api/tasks/bulk", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { taskIds, updates } = req.body;
+      
+      if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
+        return res.status(400).json({ message: "taskIds array is required" });
+      }
+      
+      if (!updates || typeof updates !== 'object') {
+        return res.status(400).json({ message: "updates object is required" });
+      }
+      
+      const results = await storage.bulkUpdateTasks(taskIds, updates);
+      res.json({
+        success: true,
+        updated: results.length,
+        tasks: results,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to bulk update tasks" });
+    }
+  });
+
+  app.delete("/api/tasks/bulk", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { taskIds } = req.body;
+      
+      if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
+        return res.status(400).json({ message: "taskIds array is required" });
+      }
+      
+      const deletedCount = await storage.bulkDeleteTasks(taskIds);
+      res.json({
+        success: true,
+        deleted: deletedCount,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to bulk delete tasks" });
+    }
+  });
+
   // Calendar Events routes
   app.get("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
     try {

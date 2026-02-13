@@ -164,6 +164,8 @@ export interface IStorage {
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, data: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
+  bulkUpdateTasks(taskIds: string[], data: Partial<InsertTask>): Promise<Task[]>;
+  bulkDeleteTasks(taskIds: string[]): Promise<number>;
   
   // Task comment operations
   getTaskComments(taskId: string): Promise<TaskComment[]>;
@@ -616,6 +618,25 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTask(id: string): Promise<void> {
     await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async bulkUpdateTasks(taskIds: string[], data: Partial<InsertTask>): Promise<Task[]> {
+    const { inArray } = await import('drizzle-orm');
+    const results = await db
+      .update(tasks)
+      .set({ ...data, updatedAt: new Date() })
+      .where(inArray(tasks.id, taskIds))
+      .returning();
+    return results;
+  }
+
+  async bulkDeleteTasks(taskIds: string[]): Promise<number> {
+    const { inArray } = await import('drizzle-orm');
+    const results = await db
+      .delete(tasks)
+      .where(inArray(tasks.id, taskIds))
+      .returning();
+    return results.length;
   }
 
   // Task comment operations
