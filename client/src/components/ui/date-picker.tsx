@@ -25,16 +25,39 @@ export function DatePicker({
   "data-testid": testId,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [inputValue, setInputValue] = React.useState(value ? format(new Date(value), "MM/dd/yyyy") : "");
+  const [inputValue, setInputValue] = React.useState(() => {
+    try {
+      return value ? format(new Date(value), "MM/dd/yyyy") : "";
+    } catch {
+      return "";
+    }
+  });
 
-  // Parse date from value prop
-  const selectedDate = value ? new Date(value) : undefined;
+  // Parse date from value prop safely
+  const selectedDate = React.useMemo(() => {
+    if (!value) return undefined;
+    try {
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? undefined : date;
+    } catch {
+      return undefined;
+    }
+  }, [value]);
 
   // Sync input value when external value changes
   React.useEffect(() => {
-    if (value) {
-      setInputValue(format(new Date(value), "MM/dd/yyyy"));
-    } else {
+    try {
+      if (value) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          setInputValue(format(date, "MM/dd/yyyy"));
+        } else {
+          setInputValue("");
+        }
+      } else {
+        setInputValue("");
+      }
+    } catch {
       setInputValue("");
     }
   }, [value]);
