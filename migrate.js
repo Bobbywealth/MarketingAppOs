@@ -407,6 +407,53 @@ async function runMigrations() {
         console.log('⚠️ schedule_from column already exists or error:', e.message);
       }
 
+      // Add archived_at column to tasks for auto-archive functionality
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;`);
+        console.log('✅ Added archived_at column to tasks');
+      } catch (e) {
+        console.log('⚠️ archived_at column already exists or error:', e.message);
+      }
+
+      // Add estimated_hours column to tasks
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimated_hours INTEGER DEFAULT 0;`);
+        console.log('✅ Added estimated_hours column to tasks');
+      } catch (e) {
+        console.log('⚠️ estimated_hours column already exists or error:', e.message);
+      }
+
+      // Add tags column to tasks
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS tags TEXT[];`);
+        console.log('✅ Added tags column to tasks');
+      } catch (e) {
+        console.log('⚠️ tags column already exists or error:', e.message);
+      }
+
+      // Add checklist column to tasks
+      try {
+        await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS checklist JSONB;`);
+        console.log('✅ Added checklist column to tasks');
+      } catch (e) {
+        console.log('⚠️ checklist column already exists or error:', e.message);
+      }
+
+      // Create indexes for tasks table
+      try {
+        await client.query(`CREATE INDEX IF NOT EXISTS IDX_tasks_archived_at ON tasks(archived_at) WHERE archived_at IS NOT NULL;`);
+        console.log('✅ Created IDX_tasks_archived_at index');
+      } catch (e) {
+        console.log('⚠️ IDX_tasks_archived_at index already exists or error:', e.message);
+      }
+
+      try {
+        await client.query(`CREATE INDEX IF NOT EXISTS IDX_tasks_tags ON tasks USING GIN(tags) WHERE tags IS NOT NULL;`);
+        console.log('✅ Created IDX_tasks_tags index');
+      } catch (e) {
+        console.log('⚠️ IDX_tasks_tags index already exists or error:', e.message);
+      }
+
       // Create user notification preferences table
       try {
         await client.query(`
