@@ -160,6 +160,7 @@ export const tasks = pgTable("tasks", {
   priority: varchar("priority").notNull().default("normal"), // low, normal, high, urgent
   dueDate: timestamp("due_date"),
   completedAt: timestamp("completed_at"),
+  archivedAt: timestamp("archived_at"), // When task was archived (auto-archive old completed tasks)
   checklist: jsonb("checklist"), // Array of checklist items with id, text, completed
   estimatedHours: integer("estimated_hours").default(0),
   tags: text("tags").array(), // Array of tag strings for flexible categorization

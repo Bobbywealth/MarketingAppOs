@@ -182,6 +182,29 @@ export function useBulkTasks() {
     },
   });
 
+  const archiveCompleted = useMutation({
+    mutationFn: async (daysOld: number = 30) => {
+      const res = await apiRequest("POST", "/api/tasks/archive-completed", {
+        daysOld,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Tasks archived",
+        description: data.message || `Archived ${data.archived} completed task(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to archive tasks",
+        description: error?.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     bulkUpdate: bulkUpdate.mutate,
     bulkDelete: bulkDelete.mutate,
@@ -189,13 +212,15 @@ export function useBulkTasks() {
     bulkMarkIncomplete: bulkMarkIncomplete.mutate,
     bulkAssign: bulkAssign.mutate,
     bulkSetPriority: bulkSetPriority.mutate,
-    isPending: 
-      bulkUpdate.isPending || 
-      bulkDelete.isPending || 
-      bulkMarkComplete.isPending || 
+    archiveCompleted: archiveCompleted.mutate,
+    isPending:
+      bulkUpdate.isPending ||
+      bulkDelete.isPending ||
+      bulkMarkComplete.isPending ||
       bulkMarkIncomplete.isPending ||
       bulkAssign.isPending ||
-      bulkSetPriority.isPending,
+      bulkSetPriority.isPending ||
+      archiveCompleted.isPending,
   };
 }
 

@@ -1918,6 +1918,46 @@ Examples:
     }
   });
 
+  // Archive old completed tasks (auto-archive tasks completed more than 30 days ago)
+  app.post("/api/tasks/archive-completed", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.STAFF), async (req: Request, res: Response) => {
+    try {
+      const { daysOld = 30 } = req.body;
+      
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+      
+      // Get all completed tasks older than the cutoff
+      const allTasks = await storage.getTasks();
+      const tasksToArchive = allTasks.filter(task =>
+        task.status === "completed" &&
+        task.completedAt &&
+        new Date(task.completedAt) < cutoffDate &&
+        !task.archivedAt
+      );
+      
+      if (tasksToArchive.length === 0) {
+        return res.json({
+          success: true,
+          archived: 0,
+          message: "No tasks to archive"
+        });
+      }
+      
+      // Archive the tasks
+      const taskIds = tasksToArchive.map(t => t.id);
+      await storage.bulkUpdateTasks(taskIds, { archivedAt: new Date() } as any);
+      
+      res.json({
+        success: true,
+        archived: tasksToArchive.length,
+        message: `Archived ${tasksToArchive.length} completed task(s)`
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to archive tasks" });
+    }
+  });
+
   // Calendar Events routes
   app.get("/api/calendar/events", isAuthenticated, async (req: Request, res: Response) => {
     try {

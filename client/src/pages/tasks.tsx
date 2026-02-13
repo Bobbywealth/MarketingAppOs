@@ -34,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useTaskKeyboardShortcuts } from "@/hooks/useTaskKeyboardShortcuts";
 import { useBulkTasks } from "@/hooks/useBulkTasks";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag, Building2, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag, Building2, Clock, AlertTriangle, Archive } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace, TaskTemplate } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -1433,6 +1433,18 @@ export default function TasksPage() {
                 Recurring Tasks Master
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  if (confirm("Archive all completed tasks older than 30 days? This will hide them from view.")) {
+                    bulkTasks.archiveCompleted(30);
+                  }
+                }}
+                disabled={bulkTasks.isPending}
+              >
+                <Archive className="w-4 h-4 mr-2" />
+                Archive Old Completed
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
                 <LayoutGrid className="w-4 h-4 mr-2" />
                 All Spaces
@@ -2346,7 +2358,7 @@ export default function TasksPage() {
               </Button>
             )}
 
-            <Select onValueChange={(status) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { status } })}>
+            <Select onValueChange={(status) => bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { status } })}>
               <SelectTrigger className="h-9 w-32 rounded-full text-xs">
                 <SelectValue placeholder="Update Status" />
               </SelectTrigger>
@@ -2358,7 +2370,7 @@ export default function TasksPage() {
               </SelectContent>
             </Select>
 
-            <Select onValueChange={(priority) => bulkUpdateMutation.mutate({ ids: Array.from(selectedTaskIds), data: { priority } })}>
+            <Select onValueChange={(priority) => bulkTasks.bulkSetPriority({ taskIds: Array.from(selectedTaskIds), priority })}>
               <SelectTrigger className="h-9 w-32 rounded-full text-xs">
                 <SelectValue placeholder="Update Priority" />
               </SelectTrigger>
@@ -2370,13 +2382,14 @@ export default function TasksPage() {
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10"
               onClick={() => {
                 if (confirm(`Delete ${selectedTaskIds.size} tasks?`)) {
-                  bulkDeleteMutation.mutate(Array.from(selectedTaskIds));
+                  bulkTasks.bulkDelete(Array.from(selectedTaskIds));
+                  setSelectedTaskIds(new Set());
                 }
               }}
             >
