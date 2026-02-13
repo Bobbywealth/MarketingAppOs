@@ -352,8 +352,6 @@ export default function CompanyCalendarPage() {
     });
   };
 
-  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
