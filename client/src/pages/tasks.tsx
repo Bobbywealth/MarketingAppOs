@@ -33,7 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useTaskKeyboardShortcuts } from "@/hooks/useTaskKeyboardShortcuts";
 import { useBulkTasks } from "@/hooks/useBulkTasks";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag } from "lucide-react";
+import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag, Building2, Clock, AlertTriangle } from "lucide-react";
 import type { Task, InsertTask, Client, User as UserType, TaskSpace, TaskTemplate } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -127,6 +127,10 @@ export default function TasksPage() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // New advanced filter states
+  const [filterClientId, setFilterClientId] = useState<string | null>(null);
+  const [filterAssigneeId, setFilterAssigneeId] = useState<string | null>(null);
+  const [filterDueDateRange, setFilterDueDateRange] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -625,6 +629,61 @@ export default function TasksPage() {
     if (filterPriority !== "all" && task.priority !== filterPriority) return false;
     if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
     if (searchQuery.trim() !== '' && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) && !task.description?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    
+    // Advanced filters
+    if (filterClientId !== null && task.clientId !== filterClientId) return false;
+    if (filterAssigneeId !== null) {
+      if (filterAssigneeId === "unassigned" && task.assignedToId) return false;
+      if (filterAssigneeId !== "unassigned" && task.assignedToId?.toString() !== filterAssigneeId) return false;
+    }
+    
+    // Due date range filter
+    if (filterDueDateRange !== null) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
+      
+      switch (filterDueDateRange) {
+        case "overdue":
+          if (!taskDueDate || taskDueDate >= today) return false;
+          break;
+        case "today":
+          if (!taskDueDate || taskDueDate.toDateString() !== today.toDateString()) return false;
+          break;
+        case "tomorrow": {
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          if (!taskDueDate || taskDueDate.toDateString() !== tomorrow.toDateString()) return false;
+          break;
+        }
+        case "this_week": {
+          if (!taskDueDate) return false;
+          const weekEnd = new Date(today);
+          weekEnd.setDate(weekEnd.getDate() + (6 - today.getDay()));
+          if (taskDueDate < today || taskDueDate > weekEnd) return false;
+          break;
+        }
+        case "next_week": {
+          if (!taskDueDate) return false;
+          const nextWeekStart = new Date(today);
+          nextWeekStart.setDate(nextWeekStart.getDate() + (7 - today.getDay()));
+          const nextWeekEnd = new Date(nextWeekStart);
+          nextWeekEnd.setDate(nextWeekEnd.getDate() + 6);
+          if (taskDueDate < nextWeekStart || taskDueDate > nextWeekEnd) return false;
+          break;
+        }
+        case "this_month": {
+          if (!taskDueDate) return false;
+          const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+          if (taskDueDate < today || taskDueDate > monthEnd) return false;
+          break;
+        }
+        case "no_date":
+          if (taskDueDate) return false;
+          break;
+      }
+    }
+    
     return true;
   };
 
@@ -641,7 +700,7 @@ export default function TasksPage() {
       if (!showCompleted && task.status === "completed") return false;
       return true;
     });
-  }, [tasks, filterStatus, filterPriority, selectedSpaceId, showCompleted]);
+  }, [tasks, filterStatus, filterPriority, selectedSpaceId, showCompleted, filterClientId, filterAssigneeId, filterDueDateRange, searchQuery]);
 
   // Keyboard shortcuts - defined after filteredTasks to avoid reference errors
   const cycleViewMode = useCallback(() => {
@@ -1159,85 +1218,166 @@ export default function TasksPage() {
           >
             <Filter className="w-4 h-4" />
             Filter
-            {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null) && (
+            {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || filterClientId !== null || filterAssigneeId !== null || filterDueDateRange !== null) && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0)}
+                {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0) + (filterClientId !== null ? 1 : 0) + (filterAssigneeId !== null ? 1 : 0) + (filterDueDateRange !== null ? 1 : 0)}
               </Badge>
             )}
           </Button>
 
           {/* Collapsible Filter Panel */}
           {isFilterPanelOpen && (
-            <div className="w-full flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-36" data-testid="select-filter-status">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="w-full space-y-3 p-4 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+              {/* Row 1: Basic Filters */}
+              <div className="flex flex-wrap items-center gap-3">
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-36" data-testid="select-filter-status">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select value={filterPriority} onValueChange={setFilterPriority}>
-                <SelectTrigger className="w-36" data-testid="select-filter-priority">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select value={filterPriority} onValueChange={setFilterPriority}>
+                  <SelectTrigger className="w-36" data-testid="select-filter-priority">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select
-                value={selectedSpaceId || ""}
-                onValueChange={(val) => setSelectedSpaceId(val || null)}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Spaces" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Spaces</SelectItem>
-                  {buildSpaceOptions().map((space) => (
-                    <SelectItem key={space.id} value={space.id}>
-                      {space.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant={showCompleted ? "outline" : "secondary"}
-                size="sm"
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="gap-2"
-              >
-                {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showCompleted ? "Hide Completed" : "Show Completed"}
-              </Button>
-
-              {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFilterStatus("all");
-                    setFilterPriority("all");
-                    setSelectedSpaceId(null);
-                    setShowCompleted(true);
-                    setSearchQuery('');
-                  }}
-                  className="text-muted-foreground"
+                <Select
+                  value={selectedSpaceId || ""}
+                  onValueChange={(val) => setSelectedSpaceId(val || null)}
                 >
-                  Clear filters
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="All Spaces" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Spaces</SelectItem>
+                    {buildSpaceOptions().map((space) => (
+                      <SelectItem key={space.id} value={space.id}>
+                        {space.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Row 2: Advanced Filters */}
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-muted">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Filter className="w-3 h-3" />
+                  Advanced Filters
+                </span>
+
+                {/* Client Filter */}
+                <Select
+                  value={filterClientId || ""}
+                  onValueChange={(val) => setFilterClientId(val || null)}
+                >
+                  <SelectTrigger className="w-44" data-testid="select-filter-client">
+                    <Building2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                    <SelectValue placeholder="All Clients" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Clients</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Assignee Filter */}
+                <Select
+                  value={filterAssigneeId || ""}
+                  onValueChange={(val) => setFilterAssigneeId(val || null)}
+                >
+                  <SelectTrigger className="w-44" data-testid="select-filter-assignee">
+                    <User className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                    <SelectValue placeholder="All Assignees" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Assignees</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.firstName && user.lastName
+                          ? `${user.firstName} ${user.lastName}`
+                          : user.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Due Date Range Filter */}
+                <Select
+                  value={filterDueDateRange || ""}
+                  onValueChange={(val) => setFilterDueDateRange(val || null)}
+                >
+                  <SelectTrigger className="w-44" data-testid="select-filter-due-date">
+                    <Calendar className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                    <SelectValue placeholder="Any Due Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Any Due Date</SelectItem>
+                    <SelectItem value="overdue">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-3 h-3 text-red-500" />
+                        Overdue
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                    <SelectItem value="this_week">This Week</SelectItem>
+                    <SelectItem value="next_week">Next Week</SelectItem>
+                    <SelectItem value="this_month">This Month</SelectItem>
+                    <SelectItem value="no_date">No Due Date</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant={showCompleted ? "outline" : "secondary"}
+                  size="sm"
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="gap-2"
+                >
+                  {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showCompleted ? "Hide Completed" : "Show Completed"}
                 </Button>
-              )}
+
+                {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted || filterClientId !== null || filterAssigneeId !== null || filterDueDateRange !== null) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFilterStatus("all");
+                      setFilterPriority("all");
+                      setSelectedSpaceId(null);
+                      setShowCompleted(true);
+                      setSearchQuery('');
+                      setFilterClientId(null);
+                      setFilterAssigneeId(null);
+                      setFilterDueDateRange(null);
+                    }}
+                    className="text-muted-foreground"
+                  >
+                    Clear all filters
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
