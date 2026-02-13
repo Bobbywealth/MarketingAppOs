@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -1577,19 +1578,12 @@ export default function TasksPage() {
                         <FormItem>
                           <FormLabel>Due Date (Optional)</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <Input type="date" {...field} data-testid="input-task-due-date" />
-                              {field.value && (
-                                <button
-                                  type="button"
-                                  onClick={() => field.onChange("")}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground"
-                                  title="Clear due date"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
+                            <DatePicker
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Select due date"
+                              data-testid="input-task-due-date"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1811,7 +1805,11 @@ export default function TasksPage() {
                             <FormItem>
                               <FormLabel>End Date (Optional)</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} />
+                                <DatePicker
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  placeholder="Select end date"
+                                />
                               </FormControl>
                               <p className="text-xs text-muted-foreground">
                                 Leave empty to repeat indefinitely
@@ -1936,19 +1934,11 @@ export default function TasksPage() {
                       <FormItem>
                         <FormLabel>Due Date (Optional)</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input type="date" {...field} />
-                            {field.value && (
-                              <button
-                                type="button"
-                                onClick={() => field.onChange("")}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground"
-                                title="Clear due date"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
+                          <DatePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select due date"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -2115,7 +2105,11 @@ export default function TasksPage() {
                             <FormItem>
                               <FormLabel>End Date (Optional)</FormLabel>
                               <FormControl>
-                                <Input type="date" {...field} />
+                                <DatePicker
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  placeholder="Select end date"
+                                />
                               </FormControl>
                               <p className="text-xs text-muted-foreground">
                                 Leave empty to repeat indefinitely
