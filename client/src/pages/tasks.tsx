@@ -158,13 +158,13 @@ export default function TasksPage() {
   const [isRecurringMasterOpen, setIsRecurringMasterOpen] = useState(false);
   const [editingRecurringTask, setEditingRecurringTask] = useState<Task | null>(null);
   // Load showCompleted preference from localStorage.
-  // Default to FALSE to hide completed tasks by default.
+  // Default to TRUE so completed tasks remain visible unless users opt to hide them.
   const [showCompleted, setShowCompleted] = useState(() => {
     const saved = localStorage.getItem('tasks-show-completed');
     try {
-      return saved !== null ? JSON.parse(saved) : false;
+      return saved !== null ? JSON.parse(saved) : true;
     } catch {
-      return false;
+      return true;
     }
   });
 
