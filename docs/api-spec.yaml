@@ -1,64 +1,88 @@
 openapi: 3.0.0
 info:
   title: MarketingAppOs API
-  version: 1.0.0
-  description: CRM and operations platform API for MarketingAppOs
+  version: 2.0.0
+  description: |
+    Full CRM and Marketing Operations API for MarketingTeam.app.
+
+    ## Authentication
+
+    All protected endpoints accept **either**:
+    - **Session cookie** — after logging in via `POST /auth/login`
+    - **Bearer API key** — `Authorization: Bearer mta_xxxxxxxxx`
+      Generate API keys at `POST /api/api-keys` (admin only).
+
+    ## Base URL
+    - Production: `https://www.marketingteam.app/api`
+    - Local dev: `http://localhost:5000/api`
+
+    ## Response format
+    All list responses include a `data` array and a `meta` object with pagination info.
+    Single-resource responses return the resource object directly.
+
   contact:
-    name: MarketingAppOs Support
+    name: MarketingTeam.app Support
     email: support@marketingteam.app
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: http://localhost:5000/api
-    description: Local development server
   - url: https://www.marketingteam.app/api
-    description: Production server
+    description: Production
+  - url: http://localhost:5000/api
+    description: Local development
 
 tags:
   - name: Authentication
-    description: User authentication and session management
+    description: Login, logout, session management
+  - name: API Keys
+    description: Generate and revoke API keys for programmatic access
   - name: Users
-    description: User management operations
+    description: User account management
   - name: Clients
-    description: Client management operations
+    description: Client account management
   - name: Campaigns
-    description: Campaign management operations
+    description: Marketing campaign management
   - name: Tasks
-    description: Task management operations
+    description: Task and project management
   - name: Leads
-    description: Lead management operations
+    description: Lead/sales pipeline management
+  - name: Content
+    description: Content posts and editorial calendar
+  - name: Social
+    description: Social media accounts and metrics
+  - name: Automation
+    description: Marketing automation — lead workflows, drip series, and broadcasts
+  - name: AI Suite
+    description: AI content generation, assistant chat, and scheduled AI commands
+  - name: Marketing Center
+    description: Marketing groups, templates, and SMS inbox (legacy internal routes)
   - name: Calendar
     description: Calendar event management
   - name: Emails
-    description: Email operations
-  - name: SMS
-    description: SMS messaging operations
-  - name: Payments
-    description: Payment and billing operations
+    description: Email sending and inbox
   - name: Analytics
-    description: Analytics and reporting operations
+    description: Analytics and reporting
+
+# ─── Authentication ───────────────────────────────────────────────────────────
 
 paths:
   /auth/login:
     post:
-      tags:
-        - Authentication
-      summary: User login
+      tags: [Authentication]
+      summary: Log in and get a session cookie
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - username
-                - password
+              required: [username, password]
               properties:
                 username:
                   type: string
-                  example: user@example.com
+                  example: admin@marketingteam.app
                 password:
                   type: string
                   format: password
@@ -71,1309 +95,1890 @@ paths:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                    example: true
-                  user:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                        example: 1
-                      username:
-                        type: string
-                        example: user@example.com
-                      role:
-                        type: string
-                        enum: [admin, manager, staff, sales_agent, creator, client]
-                        example: admin
+                  success: { type: boolean, example: true }
+                  user: { $ref: '#/components/schemas/User' }
         '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/Unauthorized'
 
   /auth/logout:
     post:
-      tags:
-        - Authentication
-      summary: User logout
-      security:
-        - bearerAuth
+      tags: [Authentication]
+      summary: Log out and invalidate the session
+      security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Logout successful
+          description: Logged out
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                    example: true
+                  success: { type: boolean, example: true }
 
-  /users:
+# ─── API Keys ─────────────────────────────────────────────────────────────────
+
+  /api-keys:
     get:
-      tags:
-        - Users
-      summary: Get all users
-      security:
-        - bearerAuth
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
+      tags: [API Keys]
+      summary: List your API keys
+      security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: List of users
+          description: List of API keys (plaintext never returned after creation)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  users:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/User'
-                  total:
-                    type: integer
-                    example: 100
+                type: array
+                items: { $ref: '#/components/schemas/ApiKey' }
 
-  /users/{userId}:
-    get:
-      tags:
-        - Users
-      summary: Get user by ID
-      security:
-        - bearerAuth
+    post:
+      tags: [API Keys]
+      summary: Create a new API key
+      description: |
+        The full key is returned **only once** in the response. Store it securely.
+        All subsequent calls authenticate using `Authorization: Bearer <key>`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                  example: Zapier Integration
+                expiresInDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 365
+                  example: 90
+                scopes:
+                  type: array
+                  items: { type: string }
+                  example: ["api:full"]
+      responses:
+        '201':
+          description: API key created — copy the `apiKey` field now
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiKey'
+                  - type: object
+                    properties:
+                      apiKey:
+                        type: string
+                        example: mta_live_xxxxxxxxxxxxxxxxxxxx
+                      warning:
+                        type: string
+                        example: Store this API key now. It will not be shown again.
+
+  /api-keys/{id}:
+    delete:
+      tags: [API Keys]
+      summary: Revoke an API key
+      security: [{ bearerAuth: [] }]
       parameters:
-        - name: userId
+        - name: id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: string }
       responses:
         '200':
-          description: User details
+          description: Key revoked
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                    example: true
-                  user:
-                    $ref: '#/components/schemas/User'
+                  success: { type: boolean, example: true }
         '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/NotFound'
 
-    patch:
-      tags:
-        - Users
-      summary: Update user
-      security:
-        - bearerAuth
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                role:
-                  type: string
-                  enum: [admin, manager, staff, sales_agent, creator, client]
-                email:
-                  type: string
-                  format: email
-      responses:
-        '200':
-          description: User updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  user:
-                    $ref: '#/components/schemas/User'
+# ─── Content ──────────────────────────────────────────────────────────────────
 
-  /clients:
+  /content/posts:
     get:
-      tags:
-        - Clients
-      summary: Get all clients
-      security:
-        - bearerAuth
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-        - name: offset
-          in: query
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: List of clients
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  clients:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Client'
-
-    post:
-      tags:
-        - Clients
-      summary: Create new client
-      security:
-        - bearerAuth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateClient'
-      responses:
-        '201':
-          description: Client created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  client:
-                    $ref: '#/components/schemas/Client'
-
-  /clients/{clientId}:
-    get:
-      tags:
-        - Clients
-      summary: Get client by ID
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: List content posts
+      description: Filter by client, approval status, platform, or date range.
+      security: [{ bearerAuth: [] }]
       parameters:
         - name: clientId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Client details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  client:
-                    $ref: '#/components/schemas/Client'
-
-    patch:
-      tags:
-        - Clients
-      summary: Update client
-      security:
-        - bearerAuth
-      parameters:
-        - name: clientId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateClient'
-      responses:
-        '200':
-          description: Client updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  client:
-                    $ref: '#/components/schemas/Client'
-
-    delete:
-      tags:
-        - Clients
-      summary: Delete client
-      security:
-        - bearerAuth
-      parameters:
-        - name: clientId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Client deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-
-  /tasks:
-    get:
-      tags:
-        - Tasks
-      summary: Get all tasks
-      security:
-        - bearerAuth
-      parameters:
-        - name: limit
           in: query
-          schema:
-            type: integer
-        - name: offset
-          in: query
-          schema:
-            type: integer
+          schema: { type: string }
+          description: Filter by client UUID
         - name: status
           in: query
           schema:
             type: string
-            enum: [todo, in-progress, review, completed]
-        - name: priority
+            enum: [draft, pending, approved, rejected, published]
+        - name: platform
           in: query
           schema:
             type: string
-            enum: [low, medium, high, urgent]
+            enum: [facebook, instagram, twitter, linkedin, tiktok, youtube]
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+          description: Only posts scheduled on or after this datetime
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+          description: Only posts scheduled on or before this datetime
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
       responses:
         '200':
-          description: List of tasks
+          description: Paginated list of content posts
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  tasks:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Task'
+                $ref: '#/components/schemas/PaginatedContentPosts'
 
     post:
-      tags:
-        - Tasks
-      summary: Create new task
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: Create a content post
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTask'
+            schema: { $ref: '#/components/schemas/CreateContentPost' }
       responses:
         '201':
-          description: Task created
+          description: Post created
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  task:
-                    $ref: '#/components/schemas/Task'
+              schema: { $ref: '#/components/schemas/ContentPost' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
-  /tasks/{taskId}:
+  /content/posts/{id}:
     get:
-      tags:
-        - Tasks
-      summary: Get task by ID
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: Get a single content post
+      security: [{ bearerAuth: [] }]
       parameters:
-        - name: taskId
+        - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         '200':
-          description: Task details
+          description: Content post
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  task:
-                    $ref: '#/components/schemas/Task'
+              schema: { $ref: '#/components/schemas/ContentPost' }
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     patch:
-      tags:
-        - Tasks
-      summary: Update task
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: Update a content post
+      security: [{ bearerAuth: [] }]
       parameters:
-        - name: taskId
+        - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTask'
+            schema: { $ref: '#/components/schemas/CreateContentPost' }
       responses:
         '200':
-          description: Task updated
+          description: Updated post
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  task:
-                    $ref: '#/components/schemas/Task'
+              schema: { $ref: '#/components/schemas/ContentPost' }
 
     delete:
-      tags:
-        - Tasks
-      summary: Delete task
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: Delete a content post
+      security: [{ bearerAuth: [] }]
       parameters:
-        - name: taskId
+        - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
-        '200':
-          description: Task deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
+        '204':
+          description: Deleted
 
-  /tasks/{taskId}/comments:
+  /content/calendar:
     get:
-      tags:
-        - Tasks
-      summary: Get task comments
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: List calendar events
+      security: [{ bearerAuth: [] }]
       parameters:
-        - name: taskId
-          in: path
-          required: true
+        - name: type
+          in: query
           schema:
             type: string
-      responses:
-        '200':
-          description: List of comments
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  comments:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/TaskComment'
-
-    post:
-      tags:
-        - Tasks
-      summary: Add comment to task
-      security:
-        - bearerAuth
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - content
-              properties:
-                content:
-                  type: string
-                  example: This looks great!
-      responses:
-        '201':
-          description: Comment added
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  comment:
-                    $ref: '#/components/schemas/TaskComment'
-
-  /leads:
-    get:
-      tags:
-        - Leads
-      summary: Get all leads
-      security:
-        - bearerAuth
-      parameters:
+            enum: [meeting, call, deadline, reminder, event]
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
         - name: limit
           in: query
-          schema:
-            type: integer
+          schema: { type: integer, default: 200 }
         - name: offset
           in: query
-          schema:
-            type: integer
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [new, contacted, qualified, converted, lost]
+          schema: { type: integer, default: 0 }
       responses:
         '200':
-          description: List of leads
+          description: Paginated list of calendar events
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  leads:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Lead'
+                $ref: '#/components/schemas/PaginatedCalendarEvents'
 
     post:
-      tags:
-        - Leads
-      summary: Create new lead
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: Create a calendar event
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CreateLead'
-      responses:
-        '201':
-          description: Lead created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  lead:
-                    $ref: '#/components/schemas/Lead'
-
-  /leads/{leadId}:
-    get:
-      tags:
-        - Leads
-      summary: Get lead by ID
-      security:
-        - bearerAuth
-      parameters:
-        - name: leadId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Lead details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  lead:
-                    $ref: '#/components/schemas/Lead'
-
-    patch:
-      tags:
-        - Leads
-      summary: Update lead
-      security:
-        - bearerAuth
-      parameters:
-        - name: leadId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateLead'
-      responses:
-        '200':
-          description: Lead updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  lead:
-                    $ref: '#/components/schemas/Lead'
-
-  /campaigns:
-    get:
-      tags:
-        - Campaigns
-      summary: Get all campaigns
-      security:
-        - bearerAuth
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-        - name: offset
-          in: query
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: List of campaigns
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  campaigns:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Campaign'
-
-    post:
-      tags:
-        - Campaigns
-      summary: Create new campaign
-      security:
-        - bearerAuth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCampaign'
-      responses:
-        '201':
-          description: Campaign created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  campaign:
-                    $ref: '#/components/schemas/Campaign'
-
-  /campaigns/{campaignId}:
-    get:
-      tags:
-        - Campaigns
-      summary: Get campaign by ID
-      security:
-        - bearerAuth
-      parameters:
-        - name: campaignId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Campaign details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  campaign:
-                    $ref: '#/components/schemas/Campaign'
-
-  /emails/send:
-    post:
-      tags:
-        - Emails
-      summary: Send an email
-      security:
-        - bearerAuth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - to
-                - subject
-                - html
-              properties:
-                to:
-                  type: string
-                  format: email
-                  example: recipient@example.com
-                subject:
-                  type: string
-                  example: Welcome to MarketingAppOs
-                html:
-                  type: string
-                  example: <p>Welcome!</p>
-      responses:
-        '200':
-          description: Email sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  messageId:
-                    type: string
-                    example: msg_123456
-        '429':
-          description: Rate limit exceeded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '502':
-          description: Email service unavailable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /calendar/events:
-    get:
-      tags:
-        - Calendar
-      summary: Get calendar events
-      security:
-        - bearerAuth
-      parameters:
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: List of events
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  events:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/CalendarEvent'
-
-    post:
-      tags:
-        - Calendar
-      summary: Create calendar event
-      security:
-        - bearerAuth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCalendarEvent'
+            schema: { $ref: '#/components/schemas/CreateCalendarEvent' }
       responses:
         '201':
           description: Event created
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  event:
-                    $ref: '#/components/schemas/CalendarEvent'
+              schema: { $ref: '#/components/schemas/CalendarEvent' }
 
-  /analytics/metrics:
+  /content/calendar/{id}:
     get:
-      tags:
-        - Analytics
-      summary: Get analytics metrics
-      security:
-        - bearerAuth
+      tags: [Content]
+      summary: Get a calendar event
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Calendar event
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CalendarEvent' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Content]
+      summary: Update a calendar event
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCalendarEvent' }
+      responses:
+        '200':
+          description: Updated event
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CalendarEvent' }
+
+    delete:
+      tags: [Content]
+      summary: Delete a calendar event
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+# ─── Social ───────────────────────────────────────────────────────────────────
+
+  /social/accounts:
+    get:
+      tags: [Social]
+      summary: List social accounts
+      description: Admins see all accounts. Clients see only their own.
+      security: [{ bearerAuth: [] }]
       parameters:
         - name: clientId
           in: query
-          schema:
-            type: string
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date
+          schema: { type: string }
+          description: Filter by client (admin only)
       responses:
         '200':
-          description: Analytics metrics
+          description: List of social accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SocialAccount' }
+
+    post:
+      tags: [Social]
+      summary: Add a social account
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSocialAccount' }
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialAccount' }
+
+  /social/accounts/{id}:
+    patch:
+      tags: [Social]
+      summary: Update a social account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [active, inactive, error]
+      responses:
+        '200':
+          description: Updated account
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialAccount' }
+
+    delete:
+      tags: [Social]
+      summary: Delete a social account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+  /social/accounts/{id}/refresh:
+    post:
+      tags: [Social]
+      summary: Refresh live metrics for an account
+      description: Triggers a live scrape of follower/engagement stats. Rate-limited to once every 30 minutes per account.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Updated account with latest metrics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SocialAccount' }
+        '429':
+          description: Cooldown active — try again later
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                  metrics:
+                  message: { type: string }
+                  cooldownRemaining: { type: integer, description: Minutes remaining }
+
+  /social/metrics:
+    get:
+      tags: [Social]
+      summary: Get metric snapshots for a social account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: accountId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        '200':
+          description: Account and its metric snapshots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account: { $ref: '#/components/schemas/SocialAccount' }
+                  snapshots:
+                    type: array
+                    items: { $ref: '#/components/schemas/SocialMetricSnapshot' }
+
+# ─── Automation ───────────────────────────────────────────────────────────────
+
+  /automation/workflows:
+    get:
+      tags: [Automation]
+      summary: List lead automation workflows
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: leadId
+          in: query
+          schema: { type: string }
+          description: Filter by lead (omit to get all)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, sent, failed]
+      responses:
+        '200':
+          description: Paginated list of workflows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/LeadAutomation' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+
+    post:
+      tags: [Automation]
+      summary: Create a lead automation workflow
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateLeadAutomation' }
+      responses:
+        '201':
+          description: Workflow created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeadAutomation' }
+
+  /automation/workflows/{id}:
+    get:
+      tags: [Automation]
+      summary: Get a single workflow
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Workflow
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeadAutomation' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Automation]
+      summary: Update a workflow
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateLeadAutomation' }
+      responses:
+        '200':
+          description: Updated workflow
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeadAutomation' }
+
+    delete:
+      tags: [Automation]
+      summary: Delete a workflow
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+  /automation/series:
+    get:
+      tags: [Automation]
+      summary: List drip series
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [email, sms, whatsapp, telegram]
+        - name: isActive
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: List of series
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MarketingSeries' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+
+    post:
+      tags: [Automation]
+      summary: Create a drip series
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingSeries' }
+      responses:
+        '201':
+          description: Series created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingSeries' }
+
+  /automation/series/{id}:
+    get:
+      tags: [Automation]
+      summary: Get a series with all its steps
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Series with steps
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/MarketingSeries'
+                  - type: object
+                    properties:
+                      steps:
+                        type: array
+                        items: { $ref: '#/components/schemas/MarketingSeriesStep' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Automation]
+      summary: Update a series
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingSeries' }
+      responses:
+        '200':
+          description: Updated series
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingSeries' }
+
+    delete:
+      tags: [Automation]
+      summary: Delete a series
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+  /automation/series/{id}/steps:
+    post:
+      tags: [Automation]
+      summary: Add a step to a series
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingSeriesStep' }
+      responses:
+        '201':
+          description: Step created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingSeriesStep' }
+
+  /automation/series-steps/{id}:
+    patch:
+      tags: [Automation]
+      summary: Update a series step
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingSeriesStep' }
+      responses:
+        '200':
+          description: Updated step
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingSeriesStep' }
+
+    delete:
+      tags: [Automation]
+      summary: Delete a series step
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+  /automation/series/{id}/enroll:
+    post:
+      tags: [Automation]
+      summary: Enroll recipients in a series
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                leadIds:
+                  type: array
+                  items: { type: string }
+                  example: ["lead-uuid-1", "lead-uuid-2"]
+                clientIds:
+                  type: array
+                  items: { type: string }
+                groupIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Enrollment result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Enrolled 12 recipients" }
+                  count: { type: integer, example: 12 }
+
+  /automation/broadcasts:
+    get:
+      tags: [Automation]
+      summary: List marketing broadcasts
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, scheduled, sending, sent, completed, failed]
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [email, sms, whatsapp, telegram, voice]
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Paginated broadcasts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MarketingBroadcast' }
+                  meta: { $ref: '#/components/schemas/Meta' }
+
+    post:
+      tags: [Automation]
+      summary: Create and trigger a broadcast
+      description: |
+        Creates a broadcast. If `scheduledAt` is in the past or omitted, sending begins immediately.
+        Set `isRecurring: true` and supply `recurringPattern` for recurring broadcasts.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingBroadcast' }
+            examples:
+              immediate_sms:
+                summary: Immediate SMS to all leads
+                value:
+                  channel: sms
+                  type: sms
+                  content: "Hi {{name}}! Check out our latest offer 🎉"
+                  audience: leads
+              scheduled_email:
+                summary: Scheduled email campaign
+                value:
+                  channel: email
+                  type: email
+                  subject: "Your weekly update"
+                  content: "<p>Hello {{name}},</p><p>Here's what's new...</p>"
+                  audience: all
+                  scheduledAt: "2026-03-01T09:00:00Z"
+      responses:
+        '202':
+          description: Broadcast accepted (sending may be in progress)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingBroadcast' }
+
+  /automation/broadcasts/{id}:
+    get:
+      tags: [Automation]
+      summary: Get a broadcast with recipient summary
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Broadcast with recipient counts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/MarketingBroadcast'
+                  - type: object
+                    properties:
+                      recipients:
+                        type: object
+                        properties:
+                          total: { type: integer }
+                          pending: { type: integer }
+                          sent: { type: integer }
+                          failed: { type: integer }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Automation]
+      summary: Delete a broadcast
+      description: Cannot delete broadcasts with status `sending`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          description: Cannot delete a broadcast that is currently sending
+
+# ─── AI Suite ─────────────────────────────────────────────────────────────────
+
+  /ai-suite/generate-content:
+    post:
+      tags: [AI Suite]
+      summary: Generate marketing content with AI
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt, channel]
+              properties:
+                prompt:
+                  type: string
+                  example: Write a Black Friday SMS promotion for a fitness brand
+                channel:
+                  type: string
+                  enum: [sms, email, whatsapp, telegram, social]
+                  example: sms
+                audience:
+                  type: string
+                  example: leads aged 25-40 interested in fitness
+                context:
+                  type: string
+                  example: Brand name is FitLife. Tone is energetic and friendly.
+      responses:
+        '200':
+          description: Generated content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  content: { type: string, example: "🏋️ FitLife Black Friday — 40% off all plans! Use code BLACKFIT. 48h only. Reply STOP to opt out." }
+
+  /ai-suite/chat:
+    post:
+      tags: [AI Suite]
+      summary: Chat with the AI business assistant
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  example: Show me leads from California with a hot score
+                conversationHistory:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role: { type: string, enum: [user, assistant] }
+                      content: { type: string }
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  response: { type: string }
+                  actionTaken: { type: string, nullable: true }
+
+  /ai-suite/chat-stream:
+    post:
+      tags: [AI Suite]
+      summary: Streaming AI chat (NDJSON)
+      description: |
+        Same as `/ai-suite/chat` but streams the response as newline-delimited JSON.
+        Each line is a JSON event. The stream ends when `done: true` is received.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                conversationHistory: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: NDJSON stream
+          content:
+            application/x-ndjson:
+              schema:
+                type: object
+                properties:
+                  delta: { type: string }
+                  done: { type: boolean }
+
+  /ai-suite/scheduled-commands:
+    get:
+      tags: [AI Suite]
+      summary: List scheduled AI commands for your account
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of scheduled commands
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ScheduledAiCommand' }
+
+    post:
+      tags: [AI Suite]
+      summary: Create a scheduled AI command
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateScheduledAiCommand' }
+      responses:
+        '201':
+          description: Command scheduled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledAiCommand' }
+
+  /ai-suite/scheduled-commands/{id}:
+    patch:
+      tags: [AI Suite]
+      summary: Update a scheduled AI command
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateScheduledAiCommand' }
+      responses:
+        '200':
+          description: Updated command
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledAiCommand' }
+
+    delete:
+      tags: [AI Suite]
+      summary: Delete a scheduled AI command
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted
+
+# ─── Marketing Center (internal) ──────────────────────────────────────────────
+
+  /marketing-center/stats:
+    get:
+      tags: [Marketing Center]
+      summary: Audience statistics
+      description: Returns counts and opt-in rates for leads, clients, and groups.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Audience stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leads:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      optedIn: { type: integer }
+                      industries: { type: array, items: { type: string } }
+                  clients:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      optedIn: { type: integer }
+                  groups:
                     type: array
                     items:
-                      $ref: '#/components/schemas/AnalyticsMetric'
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        memberCount: { type: integer }
+
+  /marketing-center/groups:
+    get:
+      tags: [Marketing Center]
+      summary: List marketing groups
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MarketingGroup' }
+
+    post:
+      tags: [Marketing Center]
+      summary: Create a marketing group
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses:
+        '201':
+          description: Group created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingGroup' }
+
+  /marketing-center/templates:
+    get:
+      tags: [Marketing Center]
+      summary: List message templates
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MarketingTemplate' }
+
+    post:
+      tags: [Marketing Center]
+      summary: Create a message template
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMarketingTemplate' }
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingTemplate' }
+
+  /marketing-center/sms-inbox:
+    get:
+      tags: [Marketing Center]
+      summary: Get inbound SMS messages
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        '200':
+          description: Inbound SMS messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SmsMessage' }
+
+# ─── Existing endpoints (preserved) ──────────────────────────────────────────
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+
+  /clients:
+    get:
+      tags: [Clients]
+      summary: List clients
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Client' }
+
+    post:
+      tags: [Clients]
+      summary: Create a client
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateClient' }
+      responses:
+        '201':
+          description: Client created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Client' }
+
+  /leads:
+    get:
+      tags: [Leads]
+      summary: List leads
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: stage
+          in: query
+          schema:
+            type: string
+            enum: [prospect, qualified, proposal, closed_won, closed_lost]
+        - name: score
+          in: query
+          schema:
+            type: string
+            enum: [hot, warm, cold]
+      responses:
+        '200':
+          description: Leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Lead' }
+
+    post:
+      tags: [Leads]
+      summary: Create a lead
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateLead' }
+      responses:
+        '201':
+          description: Lead created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lead' }
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [todo, in_progress, review, completed]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, normal, high, urgent]
+      responses:
+        '200':
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Task' }
+
+  /calendar/events:
+    get:
+      tags: [Calendar]
+      summary: List calendar events (legacy endpoint)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CalendarEvent' }
+
+  /emails/send:
+    post:
+      tags: [Emails]
+      summary: Send an email
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, subject, html]
+              properties:
+                to: { type: string, format: email }
+                subject: { type: string }
+                html: { type: string }
+      responses:
+        '200':
+          description: Email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  messageId: { type: string }
+
+  /analytics/metrics:
+    get:
+      tags: [Analytics]
+      summary: Get analytics metrics
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: clientId
+          in: query
+          schema: { type: string }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AnalyticsMetric' }
+
+# ─── Components ───────────────────────────────────────────────────────────────
 
 components:
-  schemas:
-    Error:
-      type: object
-      required:
-        - success
-        - error
-      properties:
-        success:
-          type: boolean
-          example: false
-        error:
-          type: string
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          example: Invalid input data
-        details:
-          type: object
-          additionalProperties: true
-
-    User:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        username:
-          type: string
-          format: email
-          example: user@example.com
-        role:
-          type: string
-          enum: [admin, manager, staff, sales_agent, creator, client]
-          example: admin
-        email:
-          type: string
-          format: email
-          example: user@example.com
-        createdAt:
-          type: string
-          format: date-time
-          example: 2024-01-01T00:00:00Z
-
-    Client:
-      type: object
-      properties:
-        id:
-          type: string
-          example: client_123
-        name:
-          type: string
-          example: Acme Corporation
-        company:
-          type: string
-          example: Acme
-        email:
-          type: string
-          format: email
-          example: contact@acme.com
-        phone:
-          type: string
-          example: +1-555-123-4567
-        industry:
-          type: string
-          example: Technology
-        status:
-          type: string
-          enum: [active, inactive, archived]
-          example: active
-        createdAt:
-          type: string
-          format: date-time
-          example: 2024-01-01T00:00:00Z
-
-    Task:
-      type: object
-      properties:
-        id:
-          type: string
-          example: task_123
-        title:
-          type: string
-          example: Complete project proposal
-        description:
-          type: string
-          example: Draft the Q1 project proposal
-        status:
-          type: string
-          enum: [todo, in-progress, review, completed]
-          example: todo
-        priority:
-          type: string
-          enum: [low, medium, high, urgent]
-          example: high
-        dueDate:
-          type: string
-          format: date
-          example: 2024-01-15
-        assignedToId:
-          type: integer
-          nullable: true
-          example: 1
-        clientId:
-          type: string
-          nullable: true
-          example: client_123
-        checklist:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-              text:
-                type: string
-              completed:
-                type: boolean
-        createdAt:
-          type: string
-          format: date-time
-          example: 2024-01-01T00:00:00Z
-
-    CreateTask:
-      type: object
-      required:
-        - title
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 200
-          example: Complete project proposal
-        description:
-          type: string
-          maxLength: 1000
-        status:
-          type: string
-          enum: [todo, in-progress, review, completed]
-          default: todo
-        priority:
-          type: string
-          enum: [low, medium, high, urgent]
-          default: medium
-        dueDate:
-          type: string
-          format: date
-        assignedToId:
-          type: integer
-        clientId:
-          type: string
-        spaceId:
-          type: string
-
-    UpdateTask:
-      type: object
-      properties:
-        title:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-          enum: [todo, in-progress, review, completed]
-        priority:
-          type: string
-          enum: [low, medium, high, urgent]
-        dueDate:
-          type: string
-          format: date
-        assignedToId:
-          type: integer
-        clientId:
-          type: string
-
-    TaskComment:
-      type: object
-      properties:
-        id:
-          type: string
-          example: comment_123
-        taskId:
-          type: string
-          example: task_123
-        userId:
-          type: integer
-          example: 1
-        content:
-          type: string
-          example: This looks great!
-        createdAt:
-          type: string
-          format: date-time
-          example: 2024-01-01T00:00:00Z
-
-    Lead:
-      type: object
-      properties:
-        id:
-          type: string
-          example: lead_123
-        name:
-          type: string
-          example: John Doe
-        email:
-          type: string
-          format: email
-          example: john@example.com
-        phone:
-          type: string
-          example: +1-555-123-4567
-        company:
-          type: string
-          example: Acme Corp
-        status:
-          type: string
-          enum: [new, contacted, qualified, converted, lost]
-          example: new
-        source:
-          type: string
-          example: Website
-        assignedToId:
-          type: integer
-          nullable: true
-          example: 1
-        createdAt:
-          type: string
-          format: date-time
-          example: 2024-01-01T00:00:00Z
-
-    CreateLead:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-          example: John Doe
-        email:
-          type: string
-          format: email
-        phone:
-          type: string
-        company:
-          type: string
-        source:
-          type: string
-        assignedToId:
-          type: integer
-
-    UpdateLead:
-      type: object
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-        phone:
-          type: string
-        company:
-          type: string
-        status:
-          type: string
-          enum: [new, contacted, qualified, converted, lost]
-        assignedToId:
-          type: integer
-
-    CreateClient:
-      type: object
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-          example: Acme Corporation
-        company:
-          type: string
-        email:
-          type: string
-          format: email
-        phone:
-          type: string
-        industry:
-          type: string
-
-    UpdateClient:
-      type: object
-      properties:
-        name:
-          type: string
-        company:
-          type: string
-        email:
-          type: string
-        phone:
-          type: string
-        industry:
-          type: string
-        status:
-          type: string
-          enum: [active, inactive, archived]
-
-    Campaign:
-      type: object
-      properties:
-        id:
-          type: string
-          example: campaign_123
-        name:
-          type: string
-          example: Q1 Marketing Campaign
-        description:
-          type: string
-          example: Marketing campaign for Q1
-        clientId:
-          type: string
-          example: client_123
-        status:
-          type: string
-          enum: [draft, active, paused, completed]
-          example: active
-        budget:
-          type: number
-          example: 5000
-        startDate:
-          type: string
-          format: date
-          example: 2024-01-01
-        endDate:
-          type: string
-          format: date
-          example: 2024-03-31
-        createdAt:
-          type: string
-          format: date-time
-          example: 2024-01-01T00:00:00Z
-
-    CreateCampaign:
-      type: object
-      required:
-        - name
-        properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-          example: Q1 Marketing Campaign
-        description:
-          type: string
-        clientId:
-          type: string
-        budget:
-          type: number
-          minimum: 0
-        startDate:
-          type: string
-          format: date
-        endDate:
-          type: string
-          format: date
-
-    CalendarEvent:
-      type: object
-      properties:
-        id:
-          type: string
-          example: event_123
-        title:
-          type: string
-          example: Team Meeting
-        description:
-          type: string
-        startDate:
-          type: string
-          format: date-time
-          example: 2024-01-15T10:00:00Z
-        endDate:
-          type: string
-          format: date-time
-          example: 2024-01-15T11:00:00Z
-        location:
-          type: string
-          example: Conference Room A
-        type:
-          type: string
-          enum: [meeting, call, task, reminder]
-          example: meeting
-        attendees:
-          type: array
-          items:
-            type: integer
-        createdAt:
-          type: string
-          format: date-time
-          example: 2024-01-01T00:00:00Z
-
-    CreateCalendarEvent:
-      type: object
-      required:
-        - title
-        - startDate
-        - endDate
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 200
-        description:
-          type: string
-        startDate:
-          type: string
-          format: date-time
-        endDate:
-          type: string
-          format: date-time
-        location:
-          type: string
-        type:
-          type: string
-          enum: [meeting, call, task, reminder]
-        attendees:
-          type: array
-          items:
-            type: integer
-
-    AnalyticsMetric:
-      type: object
-      properties:
-        id:
-          type: string
-          example: metric_123
-        name:
-          type: string
-          example: Page Views
-        value:
-          type: number
-          example: 1250
-        unit:
-          type: string
-          example: views
-        date:
-          type: string
-          format: date
-          example: 2024-01-15
-        clientId:
-          type: string
-          nullable: true
-
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: JWT authentication
+      bearerFormat: API Key
+      description: |
+        Use an API key generated from `POST /api/api-keys`.
+        Format: `Authorization: Bearer mta_live_xxxxxxxxxx`
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        message: { type: string, example: Resource not found }
+        errors:
+          type: array
+          items: { type: object }
+
+    Meta:
+      type: object
+      properties:
+        total: { type: integer, example: 120 }
+        limit: { type: integer, example: 50 }
+        offset: { type: integer, example: 0 }
+
+    # ── Users ────────────────────────────────────────────────────────────────
+
+    User:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        username: { type: string, example: admin@marketingteam.app }
+        email: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        role:
+          type: string
+          enum: [admin, manager, staff, sales_agent, creator_manager, creator, staff_content_creator, client]
+        createdAt: { type: string, format: date-time }
+
+    # ── API Keys ─────────────────────────────────────────────────────────────
+
+    ApiKey:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string, example: Zapier Integration }
+        keyPrefix: { type: string, example: mta_live_xxxx }
+        scopes:
+          type: array
+          items: { type: string }
+          example: ["api:full"]
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
+
+    # ── Clients ──────────────────────────────────────────────────────────────
+
+    Client:
+      type: object
+      properties:
+        id: { type: string, example: "550e8400-e29b-41d4-a716-446655440000" }
+        name: { type: string, example: Acme Corporation }
+        company: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        website: { type: string }
+        status:
+          type: string
+          enum: [active, inactive, onboarding]
+        createdAt: { type: string, format: date-time }
+
+    CreateClient:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        company: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        website: { type: string }
+
+    # ── Leads ────────────────────────────────────────────────────────────────
+
+    Lead:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string, example: John Smith }
+        email: { type: string, format: email }
+        phone: { type: string }
+        company: { type: string }
+        stage:
+          type: string
+          enum: [prospect, qualified, proposal, closed_won, closed_lost]
+        score:
+          type: string
+          enum: [hot, warm, cold]
+        source: { type: string }
+        optInEmail: { type: boolean }
+        optInSms: { type: boolean }
+        assignedToId: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CreateLead:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        company: { type: string }
+        stage:
+          type: string
+          enum: [prospect, qualified, proposal, closed_won, closed_lost]
+          default: prospect
+        score:
+          type: string
+          enum: [hot, warm, cold]
+          default: warm
+        source: { type: string, default: website }
+        assignedToId: { type: integer }
+
+    # ── Tasks ────────────────────────────────────────────────────────────────
+
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        status:
+          type: string
+          enum: [todo, in_progress, review, completed]
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        dueDate: { type: string, format: date-time, nullable: true }
+        assignedToId: { type: integer, nullable: true }
+        clientId: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    # ── Content ──────────────────────────────────────────────────────────────
+
+    ContentPost:
+      type: object
+      properties:
+        id: { type: string }
+        clientId: { type: string }
+        platforms:
+          type: array
+          items:
+            type: string
+            enum: [facebook, instagram, twitter, linkedin, tiktok, youtube]
+          example: ["instagram", "facebook"]
+        caption: { type: string }
+        mediaUrl: { type: string, format: uri, nullable: true }
+        scheduledFor: { type: string, format: date-time, nullable: true }
+        approvalStatus:
+          type: string
+          enum: [draft, pending, approved, rejected, published]
+        publishedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateContentPost:
+      type: object
+      required: [clientId, platforms]
+      properties:
+        clientId: { type: string }
+        platforms:
+          type: array
+          items:
+            type: string
+            enum: [facebook, instagram, twitter, linkedin, tiktok, youtube]
+          minItems: 1
+        caption: { type: string }
+        mediaUrl: { type: string, format: uri }
+        scheduledFor: { type: string, format: date-time }
+        approvalStatus:
+          type: string
+          enum: [draft, pending, approved, rejected, published]
+          default: draft
+
+    PaginatedContentPosts:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ContentPost' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    # ── Calendar ─────────────────────────────────────────────────────────────
+
+    CalendarEvent:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string, example: Client strategy call }
+        description: { type: string }
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+        location: { type: string }
+        type:
+          type: string
+          enum: [meeting, call, deadline, reminder, event]
+        attendees:
+          type: array
+          items: { type: string }
+        meetLink: { type: string, nullable: true }
+        isRecurring: { type: boolean }
+        createdBy: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    CreateCalendarEvent:
+      type: object
+      required: [title, start, end]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+        location: { type: string }
+        type:
+          type: string
+          enum: [meeting, call, deadline, reminder, event]
+          default: event
+        attendees:
+          type: array
+          items: { type: string }
+
+    PaginatedCalendarEvents:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarEvent' }
+        meta: { $ref: '#/components/schemas/Meta' }
+
+    # ── Social ───────────────────────────────────────────────────────────────
+
+    SocialAccount:
+      type: object
+      properties:
+        id: { type: string }
+        clientId: { type: string }
+        platform:
+          type: string
+          enum: [instagram, tiktok, youtube, twitter, facebook, linkedin]
+        handle: { type: string, example: fitlife_brand }
+        displayName: { type: string }
+        profileUrl: { type: string, format: uri }
+        status:
+          type: string
+          enum: [active, inactive, error]
+        lastScrapedAt: { type: string, format: date-time, nullable: true }
+        lastError: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CreateSocialAccount:
+      type: object
+      required: [clientId, platform, handle]
+      properties:
+        clientId: { type: string }
+        platform:
+          type: string
+          enum: [instagram, tiktok, youtube, twitter, facebook, linkedin]
+        handle: { type: string, example: fitlife_brand }
+
+    SocialMetricSnapshot:
+      type: object
+      properties:
+        id: { type: string }
+        socialAccountId: { type: string }
+        capturedAt: { type: string, format: date-time }
+        followers: { type: integer }
+        following: { type: integer }
+        postsCount: { type: integer }
+        likesCount: { type: integer }
+        viewsCount: { type: integer }
+
+    # ── Automation ───────────────────────────────────────────────────────────
+
+    LeadAutomation:
+      type: object
+      properties:
+        id: { type: string }
+        leadId: { type: string }
+        type:
+          type: string
+          enum: [email, sms]
+        trigger:
+          type: string
+          enum: [stage_change, time_delay, manual]
+        triggerConditions: { type: object }
+        actionType:
+          type: string
+          enum: [send_email, send_sms]
+        actionData: { type: object }
+        status:
+          type: string
+          enum: [pending, sent, failed]
+        isActive: { type: boolean }
+        nextRunAt: { type: string, format: date-time, nullable: true }
+        executedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CreateLeadAutomation:
+      type: object
+      required: [leadId, type, trigger, actionType]
+      properties:
+        leadId: { type: string }
+        type:
+          type: string
+          enum: [email, sms]
+        trigger:
+          type: string
+          enum: [stage_change, time_delay, manual]
+        triggerConditions: { type: object }
+        actionType:
+          type: string
+          enum: [send_email, send_sms]
+        actionData: { type: object }
+        isActive: { type: boolean, default: true }
+        nextRunAt: { type: string, format: date-time }
+
+    MarketingSeries:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string, example: New Lead Welcome Sequence }
+        description: { type: string }
+        channel:
+          type: string
+          enum: [email, sms, whatsapp, telegram]
+        isActive: { type: boolean }
+        createdBy: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateMarketingSeries:
+      type: object
+      required: [name, channel]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        channel:
+          type: string
+          enum: [email, sms, whatsapp, telegram]
+        isActive: { type: boolean, default: true }
+
+    MarketingSeriesStep:
+      type: object
+      properties:
+        id: { type: string }
+        seriesId: { type: string }
+        stepOrder: { type: integer }
+        name: { type: string }
+        subject: { type: string, nullable: true, description: Email subject }
+        content: { type: string }
+        delayDays: { type: integer, default: 0 }
+        delayHours: { type: integer, default: 0 }
+        createdAt: { type: string, format: date-time }
+
+    CreateMarketingSeriesStep:
+      type: object
+      required: [name, content, stepOrder]
+      properties:
+        name: { type: string }
+        stepOrder: { type: integer }
+        subject: { type: string }
+        content: { type: string }
+        delayDays: { type: integer, default: 0 }
+        delayHours: { type: integer, default: 0 }
+
+    MarketingBroadcast:
+      type: object
+      properties:
+        id: { type: string }
+        channel:
+          type: string
+          enum: [email, sms, whatsapp, telegram, voice]
+        type: { type: string }
+        content: { type: string }
+        subject: { type: string, nullable: true }
+        audience:
+          type: string
+          enum: [all, leads, clients, group, individual]
+        status:
+          type: string
+          enum: [pending, scheduled, sending, sent, completed, failed]
+        totalRecipients: { type: integer }
+        successCount: { type: integer }
+        failedCount: { type: integer }
+        scheduledAt: { type: string, format: date-time, nullable: true }
+        sentAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        isRecurring: { type: boolean }
+        recurringPattern:
+          type: string
+          enum: [daily, weekly, monthly]
+          nullable: true
+        useAiPersonalization: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    CreateMarketingBroadcast:
+      type: object
+      required: [channel, type, content, audience]
+      properties:
+        channel:
+          type: string
+          enum: [email, sms, whatsapp, telegram, voice]
+        type:
+          type: string
+          enum: [email, sms, whatsapp, telegram, voice]
+        content: { type: string }
+        subject: { type: string, description: Required for email channel }
+        audience:
+          type: string
+          enum: [all, leads, clients, group, individual]
+        groupId: { type: string, description: Required when audience=group }
+        customRecipient: { type: string, description: Required when audience=individual }
+        filters: { type: object, description: Audience filters (industry, tags, etc.) }
+        scheduledAt: { type: string, format: date-time }
+        isRecurring: { type: boolean, default: false }
+        recurringPattern:
+          type: string
+          enum: [daily, weekly, monthly]
+        recurringInterval: { type: integer, default: 1 }
+        recurringEndDate: { type: string, format: date-time }
+        useAiPersonalization: { type: boolean, default: false }
+        mediaUrls:
+          type: array
+          items: { type: string, format: uri }
+
+    # ── AI Suite ─────────────────────────────────────────────────────────────
+
+    ScheduledAiCommand:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: integer }
+        command: { type: string }
+        parameters: { type: object }
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        nextRunAt: { type: string, format: date-time, nullable: true }
+        lastRunAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CreateScheduledAiCommand:
+      type: object
+      required: [command]
+      properties:
+        command: { type: string, example: "Send weekly summary email to all active clients" }
+        parameters: { type: object }
+        nextRunAt: { type: string, format: date-time }
+
+    # ── Marketing Center ─────────────────────────────────────────────────────
+
+    MarketingGroup:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        createdBy: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    MarketingTemplate:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type:
+          type: string
+          enum: [email, sms, whatsapp, telegram]
+        subject: { type: string, nullable: true }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    CreateMarketingTemplate:
+      type: object
+      required: [name, type, content]
+      properties:
+        name: { type: string }
+        type:
+          type: string
+          enum: [email, sms, whatsapp, telegram]
+        subject: { type: string }
+        content: { type: string }
+
+    SmsMessage:
+      type: object
+      properties:
+        id: { type: integer }
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        fromNumber: { type: string }
+        toNumber: { type: string }
+        text: { type: string }
+        status: { type: string }
+        leadId: { type: string, nullable: true }
+        timestamp: { type: string, format: date-time }
+
+    # ── Analytics ────────────────────────────────────────────────────────────
+
+    AnalyticsMetric:
+      type: object
+      properties:
+        id: { type: string }
+        clientId: { type: string }
+        metricType:
+          type: string
+          enum: [social, ads, website]
+        platform: { type: string }
+        date: { type: string, format: date-time }
+        metrics: { type: object }
+        createdAt: { type: string, format: date-time }
