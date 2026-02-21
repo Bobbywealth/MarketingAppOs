@@ -11,9 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { User, Bell, Shield, Database, RefreshCw, Smartphone } from "lucide-react";
+import { User, Bell, Shield, Database, RefreshCw, Smartphone, KeyRound } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { SimpleUploader } from "@/components/SimpleUploader";
+import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -283,6 +284,10 @@ export default function SettingsPage() {
               <TabsTrigger value="security">
                 <Shield className="w-4 h-4 mr-2" />
                 Security
+              </TabsTrigger>
+              <TabsTrigger value="api-keys">
+                <KeyRound className="w-4 h-4 mr-2" />
+                API Keys
               </TabsTrigger>
             </>
           )}
@@ -781,9 +786,14 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
         )}
+
+        {user?.role === "admin" && (
+          <TabsContent value="api-keys" className="space-y-6">
+            <ApiKeysPanel />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
     </div>
   );
 }
-
