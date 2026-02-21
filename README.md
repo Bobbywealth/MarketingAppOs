@@ -5,6 +5,12 @@ MarketingOS is a full-stack CRM + operations platform for a marketing agency and
 ## Knowledge base
 
 - Start here: [`docs/knowledge-base/README.md`](./docs/knowledge-base/README.md)
+- API contract: [`docs/api-spec.yaml`](./docs/api-spec.yaml)
+
+## API access model
+
+- API integrations can create, update, and delete records when the calling user or key has the required permissions.
+- Access should be treated as role-based and scoped; use least-privilege credentials for automation and external tools.
 
 ## Local development
 
@@ -33,4 +39,3 @@ MarketingOS is a full-stack CRM + operations platform for a marketing agency and
   - `npm run build`
 - Start:
   - `npm start`
-
