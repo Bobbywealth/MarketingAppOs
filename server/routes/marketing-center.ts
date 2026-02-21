@@ -188,16 +188,29 @@ export async function ensureMarketingCenterSchema() {
   return marketingSchemaEnsured;
 }
 
-// Secure all marketing center routes to Admin Only
-router.use(isAuthenticated, requireRole(UserRole.ADMIN), async (_req, _res, next) => {
-  try {
-    await ensureMarketingCenterSchema();
-    return next();
-  } catch (err) {
-    console.error("Marketing Center schema ensure failed:", err);
-    return next(err);
-  }
-});
+// Secure all marketing center routes to internal team roles.
+// This matches UI visibility for `/marketing-center` (all non-client users).
+router.use(
+  isAuthenticated,
+  requireRole(
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.STAFF,
+    UserRole.SALES_AGENT,
+    UserRole.CREATOR_MANAGER,
+    UserRole.CREATOR,
+    UserRole.STAFF_CONTENT_CREATOR,
+  ),
+  async (_req, _res, next) => {
+    try {
+      await ensureMarketingCenterSchema();
+      return next();
+    } catch (err) {
+      console.error("Marketing Center schema ensure failed:", err);
+      return next(err);
+    }
+  },
+);
 
 
 // Get audience statistics for targeting
