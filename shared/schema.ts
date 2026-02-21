@@ -1238,3 +1238,61 @@ export type MarketingSeriesEnrollment = typeof marketingSeriesEnrollments.$infer
 export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
 export type TaskTemplate = typeof taskTemplates.$inferSelect;
+
+// Social Accounts table (for tracking client social media profiles)
+export const socialAccounts = pgTable("social_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  platform: varchar("platform").notNull(), // instagram, tiktok, youtube
+  handle: varchar("handle").notNull(), // username without @
+  displayName: varchar("display_name"),
+  profileUrl: varchar("profile_url"),
+  status: varchar("status").notNull().default("active"), // active, error
+  lastScrapedAt: timestamp("last_scraped_at"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("IDX_social_accounts_client_id").on(table.clientId),
+  index("IDX_social_accounts_platform").on(table.platform),
+]);
+
+export const socialAccountsRelations = relations(socialAccounts, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [socialAccounts.clientId],
+    references: [clients.id],
+  }),
+  metricsSnapshots: many(socialAccountMetricsSnapshots),
+}));
+
+// Social Account Metrics Snapshots table (time-series data per account)
+export const socialAccountMetricsSnapshots = pgTable("social_account_metrics_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  socialAccountId: varchar("social_account_id").notNull().references(() => socialAccounts.id, { onDelete: "cascade" }),
+  capturedAt: timestamp("captured_at").notNull(),
+  followers: integer("followers"),
+  following: integer("following"),
+  postsCount: integer("posts_count"),
+  likesCount: integer("likes_count"),
+  viewsCount: integer("views_count"),
+  rawPayload: jsonb("raw_payload"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("IDX_social_metrics_account_id").on(table.socialAccountId),
+  index("IDX_social_metrics_captured_at").on(table.capturedAt),
+]);
+
+export const socialAccountMetricsSnapshotsRelations = relations(socialAccountMetricsSnapshots, ({ one }) => ({
+  socialAccount: one(socialAccounts, {
+    fields: [socialAccountMetricsSnapshots.socialAccountId],
+    references: [socialAccounts.id],
+  }),
+}));
+
+export const insertSocialAccountSchema = createInsertSchema(socialAccounts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSocialAccount = z.infer<typeof insertSocialAccountSchema>;
+export type SocialAccount = typeof socialAccounts.$inferSelect;
+
+export const insertSocialAccountMetricsSnapshotSchema = createInsertSchema(socialAccountMetricsSnapshots).omit({ id: true, createdAt: true });
+export type InsertSocialAccountMetricsSnapshot = z.infer<typeof insertSocialAccountMetricsSnapshotSchema>;
+export type SocialAccountMetricsSnapshot = typeof socialAccountMetricsSnapshots.$inferSelect;
