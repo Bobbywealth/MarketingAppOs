@@ -8,6 +8,10 @@ import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
 import { dialpadService } from "./dialpadService";
 import marketingCenterRoutes from "./routes/marketing-center";
+import contentRoutes from "./routes/content";
+import socialRoutes from "./routes/social";
+import automationRoutes from "./routes/automation";
+import aiSuiteRoutes from "./routes/ai";
 import {
   insertClientSchema,
   insertCampaignSchema,
@@ -177,6 +181,14 @@ export function registerRoutes(app: Express) {
 
   // Mount Marketing Center routes
   app.use("/api/marketing-center", marketingCenterRoutes);
+
+  // ── Marketing-Center REST API ─────────────────────────────────────────────
+  // Dedicated REST endpoints exposing Marketing-Center features as JSON APIs.
+  // All routes support both session-based auth and Bearer API-key auth.
+  app.use("/api/content", contentRoutes);       // posts, calendar
+  app.use("/api/social", socialRoutes);         // accounts, metrics
+  app.use("/api/automation", automationRoutes); // workflows, series, broadcasts
+  app.use("/api/ai-suite", aiSuiteRoutes);      // AI content generation, scheduled commands
 
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
