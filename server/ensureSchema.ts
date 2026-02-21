@@ -592,6 +592,37 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS marketing_series_steps ADD COLUMN IF NOT EXISTS delay_days INTEGER DEFAULT 0;`
   );
 
+
+  // API keys table (hashed-at-rest keys for programmatic access)
+  await safeQuery(
+    "api_keys table",
+    `
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR NOT NULL,
+      key_prefix VARCHAR(24) NOT NULL UNIQUE,
+      key_hash TEXT NOT NULL UNIQUE,
+      scopes TEXT[] NOT NULL DEFAULT ARRAY['api:full']::text[],
+      expires_at TIMESTAMP,
+      last_used_at TIMESTAMP,
+      revoked_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    `
+  );
+  await safeQuery(
+    "idx_api_keys_user_id",
+    `CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);`
+  );
+  await safeQuery(
+    "idx_api_keys_revoked_at",
+    `CREATE INDEX IF NOT EXISTS idx_api_keys_revoked_at ON api_keys(revoked_at);`
+  );
+  await safeQuery(
+    "idx_api_keys_expires_at",
+    `CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at);`
+  );
   // Session storage table (Critical for persistent logins)
   await safeQuery(
     "sessions table",

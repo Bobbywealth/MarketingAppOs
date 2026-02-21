@@ -29,6 +29,7 @@ import {
   emails,
   emailAccounts,
   rolePermissions,
+  apiKeys,
   subscriptionPackages,
   calendarEvents,
   secondMe,
@@ -103,6 +104,8 @@ import {
   type InsertEmailAccount,
   type RolePermissions,
   type InsertRolePermissions,
+  type ApiKey,
+  type InsertApiKey,
   type SubscriptionPackage,
   type InsertSubscriptionPackage,
   type PageView,
@@ -125,7 +128,7 @@ import {
   type InsertMarketingBroadcastRecipient,
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, or, and, gte, count, sql } from "drizzle-orm";
+import { eq, desc, or, and, gte, count, sql, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -135,6 +138,14 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   createUser(user: InsertUser): Promise<User>;
   updateUserRole(userId: string, role: string): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+
+  // API key operations
+  createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  getApiKeysByUser(userId: number): Promise<ApiKey[]>;
+  touchApiKeyLastUsed(id: string): Promise<void>;
+  revokeApiKey(id: string, userId: number): Promise<boolean>;
 
   // Client operations
   getClients(options?: { limit?: number; offset?: number }): Promise<Client[]>;
@@ -427,6 +438,48 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createApiKey(apiKeyData: InsertApiKey): Promise<ApiKey> {
+    const [apiKey] = await db.insert(apiKeys).values(apiKeyData).returning();
+    return apiKey;
+  }
+
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    const [apiKey] = await db
+      .select()
+      .from(apiKeys)
+      .where(and(eq(apiKeys.keyHash, keyHash), isNull(apiKeys.revokedAt)));
+    return apiKey;
+  }
+
+  async getApiKeysByUser(userId: number): Promise<ApiKey[]> {
+    return db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.userId, userId))
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async touchApiKeyLastUsed(id: string): Promise<void> {
+    await db
+      .update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.id, id));
+  }
+
+  async revokeApiKey(id: string, userId: number): Promise<boolean> {
+    const [revoked] = await db
+      .update(apiKeys)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)))
+      .returning({ id: apiKeys.id });
+    return !!revoked;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
