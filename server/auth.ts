@@ -12,6 +12,7 @@ import { User as SelectUser, insertUserSchema } from "@shared/schema";
 import { UserRole } from "@shared/roles";
 import { rolePermissions } from "./rbac";
 import { debugLog, authDebug } from "./debug";
+import { authenticateRequestWithApiKey } from "./apiKeys";
 
 declare global {
   namespace Express {
@@ -541,10 +542,16 @@ export function setupAuth(app: Express) {
   });
 }
 
-export function isAuthenticated(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Unauthorized" });
+export async function isAuthenticated(req: any, res: any, next: any) {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
   }
 
-  return next();
+  const apiKeyUser = await authenticateRequestWithApiKey(req);
+  if (apiKeyUser) {
+    req.user = apiKeyUser;
+    return next();
+  }
+
+  return res.status(401).json({ message: "Unauthorized" });
 }

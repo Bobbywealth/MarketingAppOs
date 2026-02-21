@@ -829,6 +829,25 @@ export const rolePermissions = pgTable("role_permissions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// API Keys table (hashed at rest; plaintext is shown only once on creation)
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  keyPrefix: varchar("key_prefix", { length: 24 }).notNull().unique(),
+  keyHash: text("key_hash").notNull().unique(),
+  scopes: text("scopes").array().notNull().default(sql`ARRAY['api:full']::text[]`),
+  expiresAt: timestamp("expires_at"),
+  lastUsedAt: timestamp("last_used_at"),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_api_keys_user_id").on(table.userId),
+  index("idx_api_keys_key_prefix").on(table.keyPrefix),
+  index("idx_api_keys_revoked_at").on(table.revokedAt),
+  index("idx_api_keys_expires_at").on(table.expiresAt),
+]);
+
 // Subscription Packages table
 export const subscriptionPackages = pgTable("subscription_packages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -980,6 +999,10 @@ export type RolePermissions = typeof rolePermissions.$inferSelect;
 export const insertSubscriptionPackageSchema = createInsertSchema(subscriptionPackages).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSubscriptionPackage = z.infer<typeof insertSubscriptionPackageSchema>;
 export type SubscriptionPackage = typeof subscriptionPackages.$inferSelect;
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
 
 // Page Views table for website analytics tracking
 export const pageViews = pgTable("page_views", {

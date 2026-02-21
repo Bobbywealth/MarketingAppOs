@@ -32,8 +32,15 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
+import { generateApiKey } from "./apiKeys";
 
 const objectStorageService = new ObjectStorageService();
+
+const createApiKeyRequestSchema = z.object({
+  name: z.string().min(3).max(100),
+  expiresInDays: z.number().int().min(1).max(365).optional(),
+  scopes: z.array(z.string().min(1)).min(1).max(20).optional(),
+});
 
 // Initialize Stripe if keys are present
 let stripe: Stripe | null = null;
@@ -99,6 +106,75 @@ const upload = multer({
 });
 
 export function registerRoutes(app: Express) {
+  // API key management (admin-only)
+  app.get("/api/api-keys", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const keys = await storage.getApiKeysByUser(user.id);
+      res.json(
+        keys.map((k) => ({
+          id: k.id,
+          name: k.name,
+          keyPrefix: k.keyPrefix,
+          scopes: k.scopes,
+          createdAt: k.createdAt,
+          expiresAt: k.expiresAt,
+          lastUsedAt: k.lastUsedAt,
+          revokedAt: k.revokedAt,
+        }))
+      );
+    } catch (error) {
+      return handleValidationError(error, res);
+    }
+  });
+
+  app.post("/api/api-keys", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const parsed = createApiKeyRequestSchema.parse(req.body ?? {});
+      const generated = generateApiKey();
+
+      const expiresAt = parsed.expiresInDays
+        ? new Date(Date.now() + parsed.expiresInDays * 24 * 60 * 60 * 1000)
+        : null;
+
+      const saved = await storage.createApiKey({
+        userId: user.id,
+        name: parsed.name,
+        keyPrefix: generated.keyPrefix,
+        keyHash: generated.keyHash,
+        scopes: parsed.scopes?.length ? parsed.scopes : ["api:full"],
+        expiresAt,
+      });
+
+      res.status(201).json({
+        id: saved.id,
+        name: saved.name,
+        keyPrefix: saved.keyPrefix,
+        scopes: saved.scopes,
+        createdAt: saved.createdAt,
+        expiresAt: saved.expiresAt,
+        apiKey: generated.plaintextKey,
+        warning: "Store this API key now. It will not be shown again.",
+      });
+    } catch (error) {
+      return handleValidationError(error, res);
+    }
+  });
+
+  app.delete("/api/api-keys/:id", isAuthenticated, requireRole(UserRole.ADMIN), async (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const revoked = await storage.revokeApiKey(req.params.id, user.id);
+      if (!revoked) {
+        return res.status(404).json({ message: "API key not found" });
+      }
+      return res.json({ success: true });
+    } catch (error) {
+      return handleValidationError(error, res);
+    }
+  });
+
   // Mount Marketing Center routes
   app.use("/api/marketing-center", marketingCenterRoutes);
 
