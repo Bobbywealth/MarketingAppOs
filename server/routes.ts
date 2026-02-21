@@ -12,6 +12,7 @@ import contentRoutes from "./routes/content";
 import socialRoutes from "./routes/social";
 import automationRoutes from "./routes/automation";
 import aiSuiteRoutes from "./routes/ai";
+import docsRoutes from "./routes/docs";
 import {
   insertClientSchema,
   insertCampaignSchema,
@@ -189,6 +190,12 @@ export function registerRoutes(app: Express) {
   app.use("/api/social", socialRoutes);         // accounts, metrics
   app.use("/api/automation", automationRoutes); // workflows, series, broadcasts
   app.use("/api/ai-suite", aiSuiteRoutes);      // AI content generation, scheduled commands
+
+  // ── API Docs (public, no auth required) ──────────────────────────────────
+  // Interactive Swagger UI:  GET /api/docs
+  // Raw OpenAPI YAML spec:   GET /api/docs/spec.yaml
+  // OpenAPI JSON spec:       GET /api/docs/spec.json
+  app.use("/api/docs", docsRoutes);
 
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
