@@ -2112,10 +2112,14 @@ Examples:
   app.post("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
+      const userId = user?.id ?? user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const validatedData = insertTaskCommentSchema.parse({
         ...req.body,
         taskId: req.params.taskId,
-        userId: user.claims.sub,
+        userId,
       });
       const comment = await storage.createTaskComment(validatedData);
       res.status(201).json(comment);
