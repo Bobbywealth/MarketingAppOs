@@ -13,7 +13,6 @@ import {
 import {
   handleValidationError,
   notifyAdminsAboutAction,
-  autoConvertLeadToClient,
   getMissingFieldsForStage
 } from "./common";
 import { insertLeadSchema, subscriptionPackages } from "@shared/schema";
@@ -23,6 +22,7 @@ import { createCheckoutSession } from "../stripeService";
 import { handleParseFile, handleBulkImport, upload } from "../services/LeadImportService";
 import { handleAIAnalyze, handleDraftOutreach, analyzeLeadInBackground } from "../services/LeadAIService";
 import { handleCreateLeadActivity, handleGetLeadActivities } from "../services/LeadActivityService";
+import { convertLeadToClient } from "../services/LeadClientConversionService";
 
 const router = Router();
 
@@ -113,7 +113,7 @@ router.patch("/:id", isAuthenticated, requirePermission("canManageLeads"), async
         actorId: userId
       }).catch(err => console.error("Failed to send lead assignment notifications:", err));
     } else if (stageChanged && nextStage !== "closed_won") {
-      // closed_won is handled by autoConvertLeadToClient
+      // closed_won is handled by convertLeadToClient
       notifyAboutLeadAction({
         lead,
         action: 'stage_changed',
@@ -126,9 +126,8 @@ router.patch("/:id", isAuthenticated, requirePermission("canManageLeads"), async
     // Auto-convert Closed Won -> Client + Onboarding + Commission
     if (nextStage === "closed_won" && (existing as any).stage !== "closed_won") {
       try {
-        await autoConvertLeadToClient({ leadId: lead.id, actorUserId: userId });
-        const refreshed = await db.select().from(leads).where(eq(leads.id, lead.id));
-        return res.json(refreshed[0] ?? lead);
+        const { refreshedLead } = await convertLeadToClient({ leadId: lead.id, actorUserId: userId });
+        return res.json(refreshedLead ?? lead);
       } catch (e: any) {
         console.error("Auto-convert failed:", e);
         return res.status(500).json({ message: "Lead updated but auto-conversion failed", error: e?.message || String(e) });
