@@ -27,6 +27,7 @@ import ClientBilling from "@/pages/client-billing";
 import ClientAnalytics from "@/pages/client-analytics";
 import ClientDailyWorkflow from "@/pages/client-daily-workflow";
 import Clients from "@/pages/clients";
+import ClientDetail from "@/pages/client-detail";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
 import Leads from "@/pages/leads";
@@ -101,6 +102,7 @@ function Router() {
       {!isClient && <ProtectedRoute path="/creator-dashboard" component={CreatorDashboard} allowedRoles={["creator"]} />}
       {!isClient && <ProtectedRoute path="/sales-dashboard" component={SalesDashboard} allowedRoles={["sales_agent"]} />}
       {!isClient && <ProtectedRoute path="/clients" component={Clients} />}
+      {!isClient && <ProtectedRoute path="/clients/:id" component={ClientDetail} />}
       {!isClient && <ProtectedRoute path="/campaigns" component={Campaigns} />}
       {!isClient && <ProtectedRoute path="/tasks" component={Tasks} />}
       {!isClient && <ProtectedRoute path="/leads" component={Leads} />}
