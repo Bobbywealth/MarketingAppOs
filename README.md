@@ -2,15 +2,12 @@
 
 MarketingOS is a full-stack CRM + operations platform for a marketing agency and creator network.
 
-## Knowledge base
+## Documentation
 
-- Start here: [`docs/knowledge-base/README.md`](./docs/knowledge-base/README.md)
-- API contract: [`docs/api-spec.yaml`](./docs/api-spec.yaml)
-
-## API access model
-
-- API integrations can create, update, and delete records when the calling user or key has the required permissions.
-- Access should be treated as role-based and scoped; use least-privilege credentials for automation and external tools.
+- Official API docs: [`docs/OFFICIAL_API_DOCS.md`](./docs/OFFICIAL_API_DOCS.md)
+- Official API base URL: `https://www.marketingteam.app/api`
+- OpenAPI spec: [`docs/api-spec.yaml`](./docs/api-spec.yaml)
+- Knowledge base: [`docs/knowledge-base/README.md`](./docs/knowledge-base/README.md)
 
 ## Local development
 
