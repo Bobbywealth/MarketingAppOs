@@ -87,6 +87,7 @@ function Router() {
       {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
       {isClient && <ProtectedRoute path="/client-daily-workflow" component={ClientDailyWorkflow} />}
       {isClient && <ProtectedRoute path="/client-automation" component={ClientAutomation} />}
+      <ProtectedRoute path="/client-automation" component={ClientAutomation} />
       {isClient && <ProtectedRoute path="/client-billing" component={ClientBilling} />}
       {isClient && <ProtectedRoute path="/second-me" component={SecondMe} />}
       {/* Admin/Manager/Staff routes */}
