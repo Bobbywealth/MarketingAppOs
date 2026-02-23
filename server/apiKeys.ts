@@ -68,6 +68,13 @@ export async function authenticateRequestWithApiKey(req: Request): Promise<User 
   }
 
   await storage.touchApiKeyLastUsed(apiKeyRecord.id);
+
+  // Populate legacy auth shape used by some handlers so API key auth can
+  // access the same endpoints as session auth without special-casing.
+  (user as any).claims = { ...(user as any).claims, sub: String(user.id) };
+  (req as any).userId = Number(user.id);
+  (req as any).userRole = user.role;
+
   (req as any).apiKey = {
     id: apiKeyRecord.id,
     keyPrefix: apiKeyRecord.keyPrefix,

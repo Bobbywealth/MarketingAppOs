@@ -8,6 +8,11 @@ import { InstagramService } from "./instagramService";
 import { createCheckoutSession } from "./stripeService";
 import { dialpadService } from "./dialpadService";
 import marketingCenterRoutes from "./routes/marketing-center";
+import contentRoutes from "./routes/content";
+import socialRoutes from "./routes/social";
+import automationRoutes from "./routes/automation";
+import aiSuiteRoutes from "./routes/ai";
+import docsRoutes from "./routes/docs";
 import {
   insertClientSchema,
   insertCampaignSchema,
@@ -177,6 +182,20 @@ export function registerRoutes(app: Express) {
 
   // Mount Marketing Center routes
   app.use("/api/marketing-center", marketingCenterRoutes);
+
+  // ── Marketing-Center REST API ─────────────────────────────────────────────
+  // Dedicated REST endpoints exposing Marketing-Center features as JSON APIs.
+  // All routes support both session-based auth and Bearer API-key auth.
+  app.use("/api/content", contentRoutes);       // posts, calendar
+  app.use("/api/social", socialRoutes);         // accounts, metrics
+  app.use("/api/automation", automationRoutes); // workflows, series, broadcasts
+  app.use("/api/ai-suite", aiSuiteRoutes);      // AI content generation, scheduled commands
+
+  // ── API Docs (public, no auth required) ──────────────────────────────────
+  // Interactive Swagger UI:  GET /api/docs
+  // Raw OpenAPI YAML spec:   GET /api/docs/spec.yaml
+  // OpenAPI JSON spec:       GET /api/docs/spec.json
+  app.use("/api/docs", docsRoutes);
 
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
@@ -2112,10 +2131,14 @@ Examples:
   app.post("/api/tasks/:taskId/comments", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const user = req.user as any;
+      const userId = user?.id ?? user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
       const validatedData = insertTaskCommentSchema.parse({
         ...req.body,
         taskId: req.params.taskId,
-        userId: user.claims.sub,
+        userId,
       });
       const comment = await storage.createTaskComment(validatedData);
       res.status(201).json(comment);

@@ -36,4 +36,3 @@ MarketingOS is a full-stack CRM + operations platform for a marketing agency and
   - `npm run build`
 - Start:
   - `npm start`
-
