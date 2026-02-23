@@ -25,6 +25,7 @@ import ClientContent from "@/pages/client-content";
 import ClientCampaigns from "@/pages/client-campaigns";
 import ClientBilling from "@/pages/client-billing";
 import ClientAnalytics from "@/pages/client-analytics";
+import ClientDailyWorkflow from "@/pages/client-daily-workflow";
 import Clients from "@/pages/clients";
 import Campaigns from "@/pages/campaigns";
 import Tasks from "@/pages/tasks";
@@ -82,6 +83,7 @@ function Router() {
       {isClient && <ProtectedRoute path="/client-campaigns" component={ClientCampaigns} />}
       {isClient && <ProtectedRoute path="/client-content" component={ClientContent} />}
       {isClient && <ProtectedRoute path="/client-analytics" component={ClientAnalytics} />}
+      {isClient && <ProtectedRoute path="/client-daily-workflow" component={ClientDailyWorkflow} />}
       {isClient && <ProtectedRoute path="/client-billing" component={ClientBilling} />}
       {isClient && <ProtectedRoute path="/second-me" component={SecondMe} />}
       {/* Admin/Manager/Staff routes */}

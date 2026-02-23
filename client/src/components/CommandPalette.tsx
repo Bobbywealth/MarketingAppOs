@@ -91,6 +91,7 @@ export function CommandPalette() {
         { id: "campaigns", title: "My Campaigns", icon: iconMap.campaigns, href: "/client-campaigns", category: "Navigation" },
         { id: "content", title: "My Content", icon: iconMap.content, href: "/client-content", category: "Navigation" },
         { id: "analytics", title: "Analytics", icon: iconMap.analytics, href: "/client-analytics", category: "Navigation" },
+        { id: "daily-workflow", title: "Daily Workflow", icon: iconMap.tasks, href: "/client-daily-workflow", category: "Navigation" },
         { id: "billing", title: "Billing", icon: iconMap.billing, href: "/client-billing", category: "Navigation" },
         { id: "second-me", title: "AI Digital Twin", icon: iconMap.ai, href: "/second-me", category: "Navigation" },
         { id: "tickets", title: "Support Tickets", icon: iconMap.tickets, href: "/tickets", category: "Navigation" },

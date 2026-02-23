@@ -34,6 +34,7 @@ import {
   Zap,
   Search,
   FileText,
+  Workflow,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,11 @@ const clientTools: SidebarNavItem[] = [
     title: "Analytics",
     url: "/client/analytics",
     icon: BarChart3,
+  },
+  {
+    title: "Daily Workflow",
+    url: "/client-daily-workflow",
+    icon: Workflow,
   },
   {
     title: "Billing",
