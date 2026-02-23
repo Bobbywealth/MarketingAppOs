@@ -17,10 +17,12 @@ import {
   getMissingFieldsForStage
 } from "./common";
 import { insertLeadSchema, subscriptionPackages } from "@shared/schema";
+import { ZodError } from "zod";
 import { notifyAboutLeadAction } from "../leadNotifications";
 import { createCheckoutSession } from "../stripeService";
 import { handleParseFile, handleBulkImport, upload } from "../services/LeadImportService";
 import { handleAIAnalyze, handleDraftOutreach, analyzeLeadInBackground } from "../services/LeadAIService";
+import { handleCreateLeadActivity, handleGetLeadActivities } from "../services/LeadActivityService";
 
 const router = Router();
 
@@ -135,12 +137,9 @@ router.patch("/:id", isAuthenticated, requirePermission("canManageLeads"), async
 
     res.json(lead);
   } catch (error: any) {
-    // ZodError was only used for original `insertLeadSchema.parse(req.body)` line in old code. Now it is only for `insertLeadSchema.partial().strip().parse(req.body)`, which is still here.
-    // And `insertLeadSchema.parse(req.body)` for post, so I actually need ZodError here. 
-    // Retaining ZodError import.
-    // After checking - no, ZodError was used `if (error instanceof ZodError)`. So I should not remove it from imports.
-    // I will restore ZodError since there are currently ZodError references in patch and post methods. 
-    // On further inspection, ZodError is only used in router.patch and also in bulkImport (which is already moved), and router.post (which is still here). So it must be kept.
+    if (error instanceof ZodError) {
+      return res.status(400).json({ message: "Validation error", errors: error.errors });
+    }
     if (error.message?.includes("not found")) {
       return res.status(404).json({ message: error.message });
     }
@@ -162,66 +161,9 @@ router.delete("/:id", isAuthenticated, requirePermission("canManageLeads"), asyn
 });
 
 // Lead Activities Routes
-router.post("/:id/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
-  try {
-    const lead = await getAccessibleLeadOr404(req, res, req.params.id);
-    if (!lead) return;
-    const user = req.user as any;
-    const userId = user?.id || user?.claims?.sub;
-    const leadId = req.params.id;
-    const { type, subject, description, outcome } = req.body;
+router.post("/:id/activities", isAuthenticated, requirePermission("canManageLeads"), handleCreateLeadActivity);
 
-    // Create activity
-    const activity = await storage.createLeadActivity({
-      leadId,
-      userId,
-      type,
-      subject,
-      description,
-      outcome,
-      metadata: {},
-    });
-
-    // Notify assigned agent if someone else added an activity
-    if (lead.assignedToId && Number(lead.assignedToId) !== Number(userId)) {
-      storage.createNotification({
-        userId: lead.assignedToId,
-        type: 'info',
-        title: `💬 New ${type} Activity`,
-        message: `A new ${type} was added to lead ${lead.company} by another team member.`,
-        category: 'lead',
-        actionUrl: `/leads?leadId=${lead.id}`,
-        isRead: false,
-      }).catch(err => console.error("Failed to notify agent about activity:", err));
-    }
-
-    // Update lead's last contact info if it's a contact activity
-    if (['call', 'email', 'sms', 'meeting'].includes(type)) {
-      await storage.updateLead(leadId, {
-        lastContactMethod: type,
-        lastContactDate: new Date().toISOString(),
-        lastContactNotes: description?.substring(0, 500) || null,
-      });
-    }
-
-    res.status(201).json(activity);
-  } catch (error) {
-    console.error("Error creating lead activity:", error);
-    res.status(500).json({ message: "Failed to create activity" });
-  }
-});
-
-router.get("/:id/activities", isAuthenticated, requirePermission("canManageLeads"), async (req: Request, res: Response) => {
-  try {
-    const lead = await getAccessibleLeadOr404(req, res, req.params.id);
-    if (!lead) return;
-    const activities = await storage.getLeadActivities(req.params.id);
-    res.json(activities);
-  } catch (error) {
-    console.error("Error fetching lead activities:", error);
-    res.status(500).json({ message: "Failed to fetch activities" });
-  }
-});
+router.get("/:id/activities", isAuthenticated, requirePermission("canManageLeads"), handleGetLeadActivities);
 
 // Parse CSV or PDF file for lead import
 router.post("/parse-file", isAuthenticated, requirePermission("canManageLeads"), upload.single('file'), handleParseFile);
