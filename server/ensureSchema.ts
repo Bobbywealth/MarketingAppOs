@@ -44,6 +44,16 @@ export async function ensureMinimumSchema() {
     `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS task_progress INTEGER DEFAULT 0;`
   );
 
+  // Tasks: timeline/dependency columns used by task and dashboard queries
+  await safeQuery(
+    "tasks.start_date column",
+    `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS start_date TIMESTAMP;`
+  );
+  await safeQuery(
+    "tasks.blocks_completion column",
+    `ALTER TABLE IF EXISTS tasks ADD COLUMN IF NOT EXISTS blocks_completion BOOLEAN DEFAULT FALSE;`
+  );
+
   // Tasks: estimated_hours column
   await safeQuery(
     "tasks.estimated_hours column",
@@ -715,4 +725,3 @@ export async function ensureMinimumSchema() {
     `CREATE INDEX IF NOT EXISTS idx_scheduled_ai_commands_next_run_at ON scheduled_ai_commands(next_run_at);`
   );
 }
-
