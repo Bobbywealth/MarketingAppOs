@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock, TrendingUp, Users, Heart, Eye, Share2, ThumbsUp, Video, Image as ImageIcon, DollarSign, Megaphone, Sparkles } from "lucide-react";
+import { Calendar, FileText, MessageSquare, AlertCircle, CheckCircle2, Clock, TrendingUp, Users, Heart, Eye, Share2, ThumbsUp, Video, Image as ImageIcon, DollarSign, Megaphone, Sparkles, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -10,6 +10,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { InteractiveCard } from "@/components/ui/interactive-card";
 import { apiRequest } from "@/lib/queryClient";
+import { EmptyState } from "@/components/ui/EmptyState"; // New import
 
 export default function ClientDashboard() {
   const { data: user } = useQuery({ queryKey: ["/api/user"] });
@@ -74,8 +75,8 @@ export default function ClientDashboard() {
 
   // Filter for upcoming content
   const upcomingContent = contentPosts
-    .filter((post: any) => 
-      post.scheduledFor && 
+    .filter((post: any) =>
+      post.scheduledFor &&
       new Date(post.scheduledFor) > new Date() &&
       (post.approvalStatus === 'approved' || post.approvalStatus === 'published')
     )
@@ -88,17 +89,17 @@ export default function ClientDashboard() {
     .slice(0, 3);
 
   // Filter for open tickets
-  const openTickets = tickets.filter((ticket: any) => 
+  const openTickets = tickets.filter((ticket: any) =>
     ticket.status === 'open' || ticket.status === 'in_progress'
   );
 
   // Filter campaigns for this client
-  const clientCampaigns = campaigns.filter((campaign: any) => 
+  const clientCampaigns = campaigns.filter((campaign: any) =>
     campaign.clientId === user?.clientId
   );
 
   // Filter invoices for this client
-  const clientInvoices = invoices.filter((invoice: any) => 
+  const clientInvoices = invoices.filter((invoice: any) =>
     invoice.clientId === user?.clientId
   );
 
@@ -196,7 +197,7 @@ export default function ClientDashboard() {
             <Link key={metric.title} href={metric.link}>
               <InteractiveCard className="group h-full">
                 <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 card-hover-lift cursor-pointer h-full">
-                  <div 
+                  <div
                     className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity"
                     style={{ backgroundColor: primaryColor }}
                   ></div>
@@ -205,7 +206,7 @@ export default function ClientDashboard() {
                     <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                       {metric.title}
                     </CardTitle>
-                    <div 
+                    <div
                       className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform"
                       style={{ backgroundColor: primaryColor }}
                     >
@@ -246,53 +247,55 @@ export default function ClientDashboard() {
             </div>
           </CardHeader>
           <CardContent className="relative p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {socialAccounts.length > 0 ? (
-                socialAccounts.map((account: any) => (
-                  <div key={account.id} className="space-y-3 p-4 rounded-xl bg-background/50 border border-border/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center">
-                        {account.platform === "instagram" && <ImageIcon className="w-4 h-4 text-white" />}
-                        {account.platform === "tiktok" && <Video className="w-4 h-4 text-white" />}
-                        {account.platform === "youtube" && <Video className="w-4 h-4 text-white" />}
+            {socialAccounts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {socialAccounts.map((account: any) => (
+                    <div key={account.id} className="space-y-3 p-4 rounded-xl bg-background/50 border border-border/50">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center">
+                          {account.platform === "instagram" && <ImageIcon className="w-4 h-4 text-white" />}
+                          {account.platform === "tiktok" && <Video className="w-4 h-4 text-white" />}
+                          {account.platform === "youtube" && <Video className="w-4 h-4 text-white" />}
+                        </div>
+                        <span className="font-semibold capitalize">{account.platform}</span>
+                        <Badge variant={account.status === "active" ? "default" : "secondary"} className="ml-auto text-xs">
+                          {account.status}
+                        </Badge>
                       </div>
-                      <span className="font-semibold capitalize">{account.platform}</span>
-                      <Badge variant={account.status === "active" ? "default" : "secondary"} className="ml-auto text-xs">
-                        {account.status}
-                      </Badge>
+                      <div className="space-y-2 pl-10">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Followers</span>
+                          <span className="font-medium">{account.id === activeAccountId ? (latestSnapshot?.followers?.toLocaleString() || "—") : "—"}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Handle</span>
+                          <span className="font-medium text-xs">@{account.handle}</span>
+                        </div>
+                        {account.lastScrapedAt && (
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Updated {format(new Date(account.lastScrapedAt), "MMM d")}
+                          </p>
+                        )}
+                        <Link href="/client-analytics">
+                          <Button variant="ghost" size="sm" className="w-full text-xs h-8">
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-                    <div className="space-y-2 pl-10">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Followers</span>
-                        <span className="font-medium">{account.id === activeAccountId ? (latestSnapshot?.followers?.toLocaleString() || "—") : "—"}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Handle</span>
-                        <span className="font-medium text-xs">@{account.handle}</span>
-                      </div>
-                      {account.lastScrapedAt && (
-                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Updated {format(new Date(account.lastScrapedAt), "MMM d")}
-                        </p>
-                      )}
-                      <Link href="/client-analytics">
-                        <Button variant="ghost" size="sm" className="w-full text-xs h-8">
-                          View Details
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="col-span-full py-8 text-center bg-muted/20 rounded-xl border-2 border-dashed">
-                  <Users className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-                  <p className="text-muted-foreground font-medium">No social accounts connected</p>
-                  <Link href="/client-analytics">
-                    <Button variant="link" className="text-primary text-sm mt-2">
-                      Connect your accounts in Analytics →
-                    </Button>
-                  </Link>
+                  ))}
                 </div>
+              ) : (
+                <EmptyState // Replaced with EmptyState component
+                  icon={<Users className="w-12 h-12" />}
+                  title="No Social Accounts Connected"
+                  description="Connect your social media accounts to see your analytics and manage posts."
+                  action={{
+                    label: "Connect Accounts in Analytics",
+                    onClick: () => (window.location.href = "/client-analytics"),
+                    icon: <ArrowRight className="w-4 h-4" />
+                  }}
+                />
               )}
             </div>
 
@@ -353,9 +356,9 @@ export default function ClientDashboard() {
             <CardContent className="relative p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 {secondMe.avatarUrl ? (
-                  <img 
-                    src={secondMe.avatarUrl} 
-                    alt="AI Avatar" 
+                  <img
+                    src={secondMe.avatarUrl}
+                    alt="AI Avatar"
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-primary"
                   />
                 ) : (
@@ -418,7 +421,7 @@ export default function ClientDashboard() {
             <CardContent className="relative">
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Upload 15-20+ professional photos and we'll create your AI avatar. 
+                  Upload 15-20+ professional photos and we'll create your AI avatar.
                   Then get weekly AI-generated content featuring you!
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -464,9 +467,9 @@ export default function ClientDashboard() {
                     </span>
                   </div>
                 </div>
-                <Progress 
-                  value={(onboardingTasks.filter(t => t.completed).length / onboardingTasks.length) * 100} 
-                  className="h-1.5 mt-4" 
+                <Progress
+                  value={(onboardingTasks.filter(t => t.completed).length / onboardingTasks.length) * 100}
+                  className="h-1.5 mt-4"
                 />
               </CardHeader>
               <CardContent className="relative p-4 sm:p-6">
@@ -513,10 +516,16 @@ export default function ClientDashboard() {
             </CardHeader>
             <CardContent className="pt-4 sm:pt-6 p-4 sm:p-6">
               {upcomingContent.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p>No upcoming content scheduled</p>
-                </div>
+                <EmptyState // Replaced with EmptyState component
+                  icon={<Calendar className="w-12 h-12" />}
+                  title="No Upcoming Content Scheduled Yet"
+                  description="Your content will appear here once it's created and approved. Stay tuned!"
+                  action={{
+                    label: "View Content Page",
+                    onClick: () => (window.location.href = "/client-content"), // Or a more direct 'Create Content' action
+                    icon: <ArrowRight className="w-4 h-4" />
+                  }}
+                />
               ) : (
                 <div className="space-y-3">
                   {upcomingContent.map((post: any) => (
@@ -749,4 +758,3 @@ export default function ClientDashboard() {
     </div>
   );
 }
-
