@@ -484,7 +484,6 @@ async function runMigrations() {
         console.log('⚠️ user_notification_preferences index already exists or error:', e.message);
       }
 
->>>>>>> f1d6ed5 (fix: Add schedule_from column and migration for recurring tasks)
       // Create indexes for faster analytics queries
       try {
         await client.query(`CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);`);
