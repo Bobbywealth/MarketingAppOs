@@ -28,6 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Circle,
+  Zap,
   LineChart,
   User,
   Percent,
@@ -131,6 +132,11 @@ const clientTools: SidebarNavItem[] = [
     title: "Daily Workflow",
     url: "/client-daily-workflow",
     icon: Workflow,
+  },
+  {
+    title: "Automations",
+    url: "/client-automation",
+    icon: Zap,
   },
   {
     title: "Billing",
