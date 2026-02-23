@@ -17,3 +17,18 @@ export { TaskQuickActions } from './TaskQuickActions';
 export { TaskInsightsPanel } from './TaskInsightsPanel';
 export { TaskKanbanBoard } from './TaskKanbanBoard';
 export { TaskCompactView } from './TaskCompactView';
+
+// Phase 3 Enhancement Components
+export { TaskDependencyGraph, TaskBlockingIndicator } from './TaskDependencyGraph';
+export { TaskAnalyticsDashboard } from './TaskAnalyticsDashboard';
+export { TaskTemplateBuilder } from './TaskTemplateBuilder';
+
+// Phase 3 Views
+export { TaskCalendarView } from './TaskCalendarView';
+export { TaskGanttView } from './TaskGanttView';
+
+// Phase 4 UX Components
+export { TaskPriorityBadge, TaskPriorityDot, TaskPrioritySignal, getPriorityConfig } from './TaskPriorityBadge';
+export { WorkloadBalanceAlerts } from './WorkloadBalanceAlerts';
+export { TaskNotificationSettings } from './TaskNotificationSettings';
+export { ViewModeSwitcher, ViewModeDropdown, type ViewMode } from './ViewModeSwitcher';

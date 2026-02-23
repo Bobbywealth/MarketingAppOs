@@ -35,6 +35,7 @@ import { toLocaleDateStringEST, toInputDateEST, parseInputDateEST } from "@/lib/
 import { TaskProgressBar } from "./tasks/TaskProgressBar";
 import { TaskActivityTimeline } from "./tasks/TaskActivityTimeline";
 import { TaskAttachmentsList } from "./tasks/TaskAttachmentsList";
+import { TaskDependencyGraph } from "./tasks/TaskDependencyGraph";
 
 interface TaskDetailSidebarProps {
   task: Task | null;
@@ -323,6 +324,9 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
             <TabsTrigger value="attachments" className="data-[state=active]:bg-muted px-4 py-2">
               Files
             </TabsTrigger>
+            <TabsTrigger value="dependencies" className="data-[state=active]:bg-muted px-4 py-2">
+              Dependencies
+            </TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1">
@@ -460,6 +464,11 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
               {/* Attachments Tab */}
               <TabsContent value="attachments" className="mt-0">
                 <TaskAttachmentsList taskId={task.id} />
+              </TabsContent>
+
+              {/* Dependencies Tab */}
+              <TabsContent value="dependencies" className="mt-0">
+                <TaskDependencyGraph task={task} />
               </TabsContent>
             </div>
           </ScrollArea>

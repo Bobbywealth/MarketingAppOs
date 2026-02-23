@@ -164,6 +164,10 @@ export const tasks = pgTable("tasks", {
   checklist: jsonb("checklist"), // Array of checklist items with id, text, completed
   estimatedHours: integer("estimated_hours").default(0),
   tags: text("tags").array(), // Array of tag strings for flexible categorization
+  // Progress and scheduling fields
+  taskProgress: integer("task_progress").default(0), // 0-100 calculated from checklist
+  startDate: timestamp("start_date"), // Start date for Gantt/timeline view
+  blocksCompletion: boolean("blocks_completion").default(false), // Dependency blocks completion
   // Recurring task fields
   isRecurring: boolean("is_recurring").default(false),
   recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, yearly

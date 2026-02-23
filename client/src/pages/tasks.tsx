@@ -52,7 +52,12 @@ import {
   TaskQuickActions,
   TaskInsightsPanel,
   TaskKanbanBoard,
-  TaskCompactView
+  TaskCompactView,
+  TaskCalendarView,
+  TaskGanttView,
+  TaskAnalyticsDashboard,
+  ViewModeSwitcher,
+  type ViewMode
 } from "@/components/tasks";
 import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
 
@@ -134,7 +139,7 @@ export default function TasksPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "kanban" | "compact">("kanban");
+  const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -1393,31 +1398,12 @@ export default function TasksPage() {
             </div>
           )}
 
-          {/* View Mode Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                {viewMode === "kanban" && <LayoutGrid className="w-4 h-4" />}
-                {viewMode === "list" && <List className="w-4 h-4" />}
-                {viewMode === "compact" && <AlignLeft className="w-4 h-4" />}
-                <span className="hidden sm:inline capitalize">{viewMode}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewMode("kanban")}>
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Kanban
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode("list")}>
-                <List className="w-4 h-4 mr-2" />
-                List
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode("compact")}>
-                <AlignLeft className="w-4 h-4 mr-2" />
-                Compact
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* View Mode Switcher */}
+          <ViewModeSwitcher
+            value={viewMode}
+            onChange={setViewMode}
+            showAnalytics={true}
+          />
 
           {/* More Options Menu */}
           <DropdownMenu>
@@ -2206,7 +2192,7 @@ export default function TasksPage() {
       />
 
       <div className="flex-1 overflow-auto">
-        {viewMode === "kanban" ? (
+        {viewMode === "board" ? (
           <TaskKanbanBoard
             tasks={filteredTasks}
             users={users}
@@ -2221,7 +2207,6 @@ export default function TasksPage() {
             }}
             onTaskDelete={(taskId) => deleteTaskMutation.mutate(taskId)}
             onTaskDuplicate={(taskId) => {
-              // Use the new duplicate endpoint
               apiRequest("POST", "/api/tasks/duplicate", { taskIds: [taskId] })
                 .then(() => {
                   queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
@@ -2232,7 +2217,30 @@ export default function TasksPage() {
                 });
             }}
           />
-        ) : viewMode === "compact" ? (
+        ) : viewMode === "calendar" ? (
+          <TaskCalendarView
+            tasks={filteredTasks}
+            onTaskClick={(task) => {
+              setSelectedTask(task);
+              setIsDetailSidebarOpen(true);
+            }}
+          />
+        ) : viewMode === "gantt" ? (
+          <TaskGanttView
+            tasks={filteredTasks}
+            users={users}
+            onTaskClick={(task) => {
+              setSelectedTask(task);
+              setIsDetailSidebarOpen(true);
+            }}
+          />
+        ) : viewMode === "analytics" ? (
+          <div className="p-6">
+            <TaskAnalyticsDashboard />
+          </div>
+        ) : viewMode === "list" ? (
+          renderListView()
+        ) : (
           <TaskCompactView
             tasks={filteredTasks}
             users={users}
@@ -2256,8 +2264,6 @@ export default function TasksPage() {
                 });
             }}
           />
-        ) : (
-          renderListView()
         )}
       </div>
         </div>
