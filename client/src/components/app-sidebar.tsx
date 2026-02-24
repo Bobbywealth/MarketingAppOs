@@ -32,7 +32,6 @@ import {
   LineChart,
   User,
   Percent,
-  Zap,
   Search,
   FileText,
   Workflow,

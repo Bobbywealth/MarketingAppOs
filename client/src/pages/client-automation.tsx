@@ -215,7 +215,7 @@ export default function ClientAutomation() {
   };
 
   const handleToggleStatus = (workflow: Workflow) => {
-    const newStatus = workflow.status === "active" ? "inactive" : "active";
+    const newStatus = workflow.status === "active" ? "inactive" as const : "active" as const;
     const updated = { ...workflow, status: newStatus, updatedAt: new Date().toISOString() };
     setWorkflows(workflows.map(w => w.id === workflow.id ? updated : w));
     if (selectedWorkflow?.id === workflow.id) {
