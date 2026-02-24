@@ -253,6 +253,8 @@ export interface IStorage {
     emailNotifications: boolean;
     taskUpdates: boolean;
     dueDateReminders: boolean;
+    smsNotifications: boolean;
+    soundNotifications: boolean;
   }>;
 
   // Lead operations
@@ -1509,6 +1511,8 @@ export class DatabaseStorage implements IStorage {
     emailNotifications: boolean;
     taskUpdates: boolean;
     dueDateReminders: boolean;
+    smsNotifications: boolean;
+    soundNotifications: boolean;
   }> {
     // For now, return default preferences (all enabled)
     // In the future, this should query a notification_preferences table
@@ -1517,6 +1521,8 @@ export class DatabaseStorage implements IStorage {
       emailNotifications: true,
       taskUpdates: true,
       dueDateReminders: true,
+      smsNotifications: true,
+      soundNotifications: true,
     };
   }
 

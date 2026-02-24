@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { storage } from "./storage";
 import { sendPushToUser } from "./push";
 import { emailNotifications } from "./emailService";
-import { checkAndNotifyTaskDeadlines } from "./notificationService";
+import { checkAndNotifyTaskDeadlines, sendTaskDeadlineSmsAlert } from "./notificationService";
 import { log } from "./vite";
 
 export function startTaskAutomation() {
@@ -79,6 +79,12 @@ export function startTaskAutomation() {
             body: `Task "${task.title}" is due tomorrow!`,
             url: `/tasks?taskId=${task.id}`,
           }).catch(err => console.error('Failed to send push notification:', err));
+
+          void sendTaskDeadlineSmsAlert(
+            '📅 Task Due Tomorrow',
+            `Task "${task.title}" is due tomorrow!`,
+            `/tasks?taskId=${task.id}`,
+          );
         }
       }
     } catch (error) {
@@ -88,4 +94,3 @@ export function startTaskAutomation() {
   
   console.log("🚀 Task automation service started");
 }
-
