@@ -60,13 +60,13 @@ const defaultPreferences: NotificationPreferences = {
   taskAssigned: { email: true, push: true, inApp: true },
   taskDueSoon: { email: true, push: true, inApp: true },
   taskOverdue: { email: true, push: true, inApp: true },
-  taskCompleted: { email: false, push: false, inApp: true },
+  taskCompleted: { email: true, push: true, inApp: true },
   taskMentioned: { email: true, push: true, inApp: true },
-  taskCommented: { email: false, push: true, inApp: true },
-  fileAttached: { email: false, push: false, inApp: true },
-  dependencyResolved: { email: false, push: true, inApp: true },
+  taskCommented: { email: true, push: true, inApp: true },
+  fileAttached: { email: true, push: true, inApp: true },
+  dependencyResolved: { email: true, push: true, inApp: true },
   milestoneReached: { email: true, push: true, inApp: true },
-  weeklyDigest: { email: true, push: false, inApp: false },
+  weeklyDigest: { email: true, push: true, inApp: true },
 };
 
 const notificationEvents = [
@@ -96,7 +96,7 @@ const notificationEvents = [
     label: "Task Completed",
     description: "When a task you created is completed",
     icon: CheckCircle2,
-    defaultEnabled: false,
+    defaultEnabled: true,
   },
   {
     key: "taskMentioned",
@@ -117,7 +117,7 @@ const notificationEvents = [
     label: "File Attached",
     description: "When a file is attached to your task",
     icon: FileText,
-    defaultEnabled: false,
+    defaultEnabled: true,
   },
   {
     key: "dependencyResolved",

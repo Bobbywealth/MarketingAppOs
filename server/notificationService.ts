@@ -1,7 +1,28 @@
 import { storage } from "./storage";
 import { sendPushToUser } from "./push";
 import { emailNotifications } from "./emailService";
+import { sendSms } from "./twilioService";
 import { log } from "./vite";
+
+const defaultSmsRecipient = "+18089139158";
+const smsAlertRecipient = (process.env.NOTIFICATION_ALERT_SMS_TO || defaultSmsRecipient).trim();
+
+export async function sendTaskDeadlineSmsAlert(title: string, message: string, actionUrl: string) {
+  if (!smsAlertRecipient) return;
+
+  const baseUrl = process.env.APP_URL || process.env.REPLIT_DOMAINS?.split(",")[0] || "";
+  const taskUrl = baseUrl ? `${baseUrl}${actionUrl}` : actionUrl;
+  const smsBody = `${title}\n${message}\n${taskUrl}`.slice(0, 1500);
+
+  try {
+    const smsResult = await sendSms(smsAlertRecipient, smsBody);
+    if (!smsResult.success) {
+      log(`Failed to send task deadline SMS alert: ${smsResult.error || "Unknown error"}`, "notifications");
+    }
+  } catch (error) {
+    log(`Task deadline SMS exception: ${error instanceof Error ? error.message : "Unknown error"}`, "notifications");
+  }
+}
 
 export async function checkAndNotifyTaskDeadlines(userId: number) {
   const now = new Date();
@@ -88,6 +109,9 @@ export async function checkAndNotifyTaskDeadlines(userId: number) {
         url: actionUrl,
       }).catch((err) => log(`Failed to send push notification: ${err.message}`, "notifications"));
 
+      // Send SMS alert for high-visibility task reminders
+      void sendTaskDeadlineSmsAlert(title, message, actionUrl);
+
       existingKeys.add(key);
       notificationsCreated++;
     }
@@ -98,4 +122,3 @@ export async function checkAndNotifyTaskDeadlines(userId: number) {
     throw error;
   }
 }
-
