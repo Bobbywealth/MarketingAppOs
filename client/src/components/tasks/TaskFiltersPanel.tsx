@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Filter, Eye, EyeOff, X, Calendar, User, Building2, Clock } from "lucide-react";
+import { Filter, Eye, EyeOff, X, Calendar, User as UserIcon, Building2, Clock } from "lucide-react";
 import type { TaskSpace, Client, User } from "@shared/schema";
 
 interface SpaceOption {
@@ -203,7 +203,7 @@ export const TaskFiltersPanel = memo(function TaskFiltersPanel({
                 onValueChange={(val) => onAssigneeChange(val || null)}
               >
                 <SelectTrigger className="w-44" data-testid="select-filter-assignee">
-                  <User className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                  <UserIcon className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                   <SelectValue placeholder="All Assignees" />
                 </SelectTrigger>
                 <SelectContent>
