@@ -72,6 +72,9 @@ import Contact from "@/pages/contact";
 import CreatorSignup from "@/pages/creator-signup";
 import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
+import Services from "@/pages/services";
+import About from "@/pages/about";
+import Pricing from "@/pages/pricing";
 
 function Router() {
   const { user } = useAuth();
@@ -91,6 +94,9 @@ function Router() {
       <Route path="/become-creator" component={CreatorSignup} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
+      <Route path="/services" component={Services} />
+      <Route path="/about" component={About} />
+      <Route path="/pricing" component={Pricing} />
       {/* Client-specific routes */}
       {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
       {isClient && <ProtectedRoute path="/client-dashboard" component={ClientDashboard} allowedRoles={["client"]} />}
