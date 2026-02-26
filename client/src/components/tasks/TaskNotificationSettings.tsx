@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -152,17 +152,21 @@ export function TaskNotificationSettings({ userId }: TaskNotificationSettingsPro
   const [hasChanges, setHasChanges] = useState(false);
 
   // Fetch existing preferences
-  const { isLoading } = useQuery({
+  const { isLoading, data: fetchedPreferences } = useQuery<NotificationPreferences>({
     queryKey: ["/api/users", userId, "notification-preferences"],
     queryFn: async () => {
       if (!userId) return defaultPreferences;
       const res = await apiRequest("GET", `/api/users/${userId}/notification-preferences`);
       return res.json();
     },
-    onSuccess: (data: NotificationPreferences) => {
-      setPreferences(data);
-    },
   });
+
+  // Sync fetched preferences to state
+  React.useEffect(() => {
+    if (fetchedPreferences) {
+      setPreferences(fetchedPreferences);
+    }
+  }, [fetchedPreferences]);
 
   // Save preferences mutation
   const saveMutation = useMutation({

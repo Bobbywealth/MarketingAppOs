@@ -185,7 +185,7 @@ export const TaskCard = memo(function TaskCard({
         <div className="flex items-center justify-between text-xs text-muted-foreground pl-4">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Due Date with overdue/today highlighting */}
-            {task.dueDate && (
+            {!!task.dueDate && (
               <div className={`flex items-center gap-1 ${
                 overdue ? "text-red-600 font-medium" : 
                 dueToday ? "text-orange-600 font-medium" : ""
@@ -202,10 +202,10 @@ export const TaskCard = memo(function TaskCard({
             )}
             
             {/* Checklist progress */}
-            {task.checklist && Array.isArray(task.checklist) && task.checklist.length > 0 && (
+            {task.checklist && Array.isArray(task.checklist) && (task.checklist as any[]).length > 0 && (
               <div className="flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" />
-                {task.checklist.filter((i: any) => i.completed).length}/{task.checklist.length}
+                {(task.checklist as any[]).filter((i: any) => i.completed).length}/{(task.checklist as any[]).length}
               </div>
             )}
             

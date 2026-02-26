@@ -48,16 +48,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Stepper,
-  StepperContent,
-  StepperDescription,
-  StepperIndicator,
-  StepperItem,
-  StepperSeparator,
-  StepperTitle,
-  StepperTrigger,
-} from "@/components/ui/stepper";
-import {
   Card,
   CardContent,
   CardDescription,

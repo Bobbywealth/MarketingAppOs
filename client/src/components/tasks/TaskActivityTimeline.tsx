@@ -170,6 +170,7 @@ function ActivityItem({ item, isFirst }: ActivityItemProps) {
           </p>
         )}
 
+        {item.createdAt && (
         <div className="flex items-center gap-2 mt-1">
           <span className="text-xs text-muted-foreground">
             {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
@@ -180,6 +181,7 @@ function ActivityItem({ item, isFirst }: ActivityItemProps) {
             </span>
           )}
         </div>
+        )}
       </div>
     </div>
   );

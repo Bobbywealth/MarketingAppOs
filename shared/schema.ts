@@ -271,6 +271,12 @@ export const taskTemplates = pgTable("task_templates", {
   status: varchar("status").notNull().default("todo"), // Default status
   priority: varchar("priority").notNull().default("normal"), // Default priority
   dueDateOffset: integer("due_date_offset"), // Number of days from now for default due date (null = no due date)
+  estimatedHours: integer("estimated_hours"),
+  spaceId: varchar("space_id"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"), // daily, weekly, monthly, etc.
+  recurringInterval: integer("recurring_interval").default(1),
+  tags: jsonb("tags"), // Array of tag strings
   checklist: jsonb("checklist"), // Default checklist items as JSON array
   createdBy: integer("created_by").references(() => users.id),
   isSystemTemplate: boolean("is_system_template").default(false), // System templates are visible to all users
