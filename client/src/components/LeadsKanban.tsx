@@ -76,7 +76,7 @@ const STAGES = [
   },
 ];
 
-export function LeadsKanban({ leads, onLeadClick, onEditLead, onDeleteLead }: LeadsKanbanProps) {
+export function LeadsKanban({ leads, onLeadClick, onEditLead, onDeleteLead, onSendPaymentLink, onConvertLead }: LeadsKanbanProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
