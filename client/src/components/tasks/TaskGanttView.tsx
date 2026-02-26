@@ -156,7 +156,7 @@ export function TaskGanttView({ tasks, users = [], onTaskClick }: TaskGanttViewP
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <Select value={String(visibleDays)} onValueChange={(v) => setVisibleDays(Number(v))}>
+            <div>
               <select
                 className="border rounded px-2 py-1 text-sm"
                 value={visibleDays}
@@ -167,7 +167,7 @@ export function TaskGanttView({ tasks, users = [], onTaskClick }: TaskGanttViewP
                 <option value={28}>4 weeks</option>
                 <option value={42}>6 weeks</option>
               </select>
-            </Select>
+            </div>
           </div>
         </div>
       </CardHeader>

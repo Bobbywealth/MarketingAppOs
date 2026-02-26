@@ -156,7 +156,7 @@ export const TaskCard = memo(function TaskCard({
                 URGENT
               </Badge>
             )}
-            {task.priority === "high" && task.priority !== "urgent" && (
+            {task.priority === "high" && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
                 HIGH
               </Badge>
@@ -195,7 +195,7 @@ export const TaskCard = memo(function TaskCard({
                 ) : (
                   <Calendar className="w-3 h-3" />
                 )}
-                {toLocaleDateStringEST(task.dueDate)}
+                {String(toLocaleDateStringEST(task.dueDate))}
                 {overdue && <span className="text-[10px]">(Overdue)</span>}
                 {dueToday && !overdue && <span className="text-[10px]">(Today)</span>}
               </div>

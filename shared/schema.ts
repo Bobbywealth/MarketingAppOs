@@ -981,6 +981,7 @@ export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type TaskComment = typeof taskComments.$inferSelect;
 export type InsertTaskActivity = z.infer<typeof insertTaskActivitySchema>;
 export type TaskActivityType = typeof taskActivity.$inferSelect;
+export type TaskDependency = typeof taskDependencies.$inferSelect;
 
 export type InsertLeadActivity = z.infer<typeof insertLeadActivitySchema>;
 export type LeadActivity = typeof leadActivities.$inferSelect;

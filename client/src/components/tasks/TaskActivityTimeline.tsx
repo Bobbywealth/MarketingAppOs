@@ -19,7 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
-import type { InsertTaskActivity as TaskActivity, User } from "@shared/schema";
+import type { TaskActivityType as TaskActivity, User } from "@shared/schema";
 
 interface TaskActivityTimelineProps {
   taskId: string;
