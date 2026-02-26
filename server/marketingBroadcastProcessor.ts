@@ -90,9 +90,9 @@ export async function processMarketingBroadcast(broadcastId: string) {
     const individualRecipients: { email?: string; phone?: string; type: "individual" }[] = [];
     if (broadcast.audience === "group" && broadcast.groupId) {
       const members = await storage.getMarketingGroupMembers(broadcast.groupId);
-      const leadIds = members.filter(m => m.leadId).map(m => m.leadId!);
-      const clientIds = members.filter(m => m.clientId).map(m => m.clientId!);
-      const customRecipients = members.filter(m => m.customRecipient).map(m => m.customRecipient!);
+      const leadIds = members.filter(m => m.lead_id).map(m => m.lead_id!);
+      const clientIds = members.filter(m => m.client_id).map(m => m.client_id!);
+      const customRecipients = members.filter(m => m.custom_recipient).map(m => m.custom_recipient!);
 
       if (leadIds.length > 0) {
         const allLeads = await storage.getLeads();
