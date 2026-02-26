@@ -672,7 +672,7 @@ export default function AIBusinessManager() {
                           </div>
                           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                             <CalendarIcon className="w-3 h-3" />
-                            <span>{format(new Date(cmd.nextRunAt || cmd.scheduledAt), "MMM d, h:mm a")}</span>
+                            <span>{format(new Date(cmd.nextRunAt || cmd.scheduledAt || new Date()), "MMM d, h:mm a")}</span>
                             {cmd.isRecurring && (
                               <Badge variant="outline" className="text-[8px] h-3 px-1 gap-0.5">
                                 <Repeat className="w-2 h-2" />

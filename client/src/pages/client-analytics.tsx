@@ -63,12 +63,12 @@ export default function ClientAnalytics() {
   });
 
   // Fetch generic analytics data
-  const { data: analytics = [] } = useQuery({
+  const { data: analytics = [] } = useQuery<any[]>({
     queryKey: ["/api/analytics"],
     enabled: !!user,
   });
 
-  const { data: goals = [] } = useQuery({
+  const { data: goals = [] } = useQuery<any[]>({
     queryKey: ["/api/goals"],
     enabled: !!user,
   });

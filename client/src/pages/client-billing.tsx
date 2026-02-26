@@ -7,15 +7,15 @@ import { CreditCard, Receipt, TrendingUp, Calendar, Download, AlertCircle, Check
 import { formatDistanceToNow, format } from "date-fns";
 
 export default function ClientBilling() {
-  const { data: user } = useQuery({ queryKey: ["/api/user"] });
+  const { data: user } = useQuery<any>({ queryKey: ["/api/user"] });
   
   // Fetch client's billing data
-  const { data: invoices = [] } = useQuery({
+  const { data: invoices = [] } = useQuery<any[]>({
     queryKey: ["/api/invoices"],
     enabled: !!user,
   });
 
-  const { data: subscription } = useQuery({
+  const { data: subscription } = useQuery<any>({
     queryKey: ["/api/subscription"],
     enabled: !!user,
   });
