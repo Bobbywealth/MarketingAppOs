@@ -18,7 +18,8 @@ import {
   Sparkles,
   BrainCircuit,
   Wand2,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -37,277 +38,258 @@ interface LeadCardProps {
   onClick: (lead: Lead) => void;
   onEdit: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
-  onLogActivity: (lead: Lead, type: string) => void;
-  onCall: (phone: string) => void;
-  onAIAnalyze: (lead: Lead) => void;
-  onAIDraftOutreach: (lead: Lead) => void;
-  onSendPaymentLink: (lead: Lead) => void;
-  onConvert: (lead: Lead) => void;
+  onLogActivity: (lead: Lead) => void;
+  onSendEmail: (lead: Lead) => void;
+  onScheduleCall: (lead: Lead) => void;
+  onSendSMS: (lead: Lead) => void;
+  onViewTimeline: (lead: Lead) => void;
+  onConvertToDeal: (lead: Lead) => void;
+  onCallNow?: (lead: Lead) => void;
+  onAIEnrich?: (lead: Lead) => void;
+  onAIScore?: (lead: Lead) => void;
+  onAutoSequence?: (lead: Lead) => void;
 }
 
-const getStageBadge = (stage: string) => {
-  const colors = {
-    prospect: "default",
-    qualified: "default",
-    proposal: "secondary",
-    closed_won: "default",
-    closed_lost: "destructive",
-  };
-  return (colors[stage as keyof typeof colors] || "default") as "default" | "secondary" | "destructive" | "outline";
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'new': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+    case 'contacted': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    case 'qualified': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    case 'proposal': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+    case 'negotiation': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+    case 'closed_won': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
+    case 'closed_lost': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+  }
 };
 
-export const LeadCard: React.FC<LeadCardProps> = ({
-  lead,
+const getPriorityColor = (priority: string) => {
+  switch (priority) {
+    case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+  }
+};
+
+export function LeadCard({ 
+  lead, 
   isSelected,
   onToggleSelection,
-  onClick,
-  onEdit,
+  onClick, 
+  onEdit, 
   onDelete,
   onLogActivity,
-  onCall,
-  onAIAnalyze,
-  onAIDraftOutreach,
-  onSendPaymentLink,
-  onConvert
-}) => {
+  onSendEmail,
+  onScheduleCall,
+  onSendSMS,
+  onViewTimeline,
+  onConvertToDeal,
+  onCallNow,
+  onAIEnrich,
+  onAIScore,
+  onAutoSequence
+}: LeadCardProps) {
   return (
     <Card 
-      className={`group cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 border-muted/40 ${
-        isSelected ? 'ring-2 ring-primary bg-primary/5 shadow-md' : 'shadow-sm'
+      className={`cursor-pointer transition-all hover:shadow-md ${
+        isSelected ? 'ring-2 ring-primary' : ''
       }`}
-      onClick={() => onClick(lead)}
     >
-      <CardContent className="p-3 md:p-4">
+      <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          {/* Checkbox - Hidden on mobile if not selected for cleaner look, or always show if prefer */}
+          {/* Selection checkbox */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onToggleSelection(lead.id);
+              onToggleSelection(String(lead.id));
             }}
-            className={`p-1 hover:bg-accent rounded transition-colors flex-shrink-0 mt-1 md:mt-0 ${
-              !isSelected ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
-            } hidden md:block`}
+            className="mt-1 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
           >
             {isSelected ? (
-              <CheckSquare className="w-4 h-4 text-primary" />
+              <CheckSquare className="h-4 w-4 text-primary" />
             ) : (
-              <Square className="w-4 h-4 text-muted-foreground" />
+              <Square className="h-4 w-4" />
             )}
           </button>
 
-          {/* Avatar with status indicator */}
-          <div className="relative flex-shrink-0">
-            <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-background shadow-sm">
-              <AvatarFallback className="bg-gradient-to-br from-primary/10 via-primary/5 to-purple-500/10 text-primary text-xs md:text-sm font-bold">
-                {(lead.company || lead.name)?.substring(0, 2).toUpperCase() || "??"}
-              </AvatarFallback>
-            </Avatar>
-            {lead.score === 'hot' && (
-              <div className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] p-0.5 rounded-full shadow-sm animate-pulse">
-                🔥
-              </div>
-            )}
-          </div>
-            
-          {/* Lead Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <div className="min-w-0">
-                <h3 className="font-bold text-sm md:text-base truncate text-foreground group-hover:text-primary transition-colors">
-                  {lead.company || lead.name || 'Unnamed Lead'}
-                </h3>
-                {lead.company && lead.name && (
-                  <p className="text-[11px] md:text-xs text-muted-foreground truncate">
-                    {lead.name}
-                  </p>
-                )}
-              </div>
-              
-              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                {lead.stage && (
-                  <Badge variant={getStageBadge(lead.stage)} className="text-[10px] h-5 px-1.5 uppercase font-bold tracking-wider">
-                    {lead.stage.replace('_', ' ')}
-                  </Badge>
-                )}
-                {lead.value && (
-                  <span className="text-xs font-bold text-primary">
-                    ${(Number(lead.value) / 100).toLocaleString()}
-                  </span>
-                )}
-              </div>
+          {/* Avatar */}
+          <Avatar className="h-10 w-10 flex-shrink-0">
+            <AvatarFallback className="text-sm font-medium">
+              {lead.firstName?.[0]}{lead.lastName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0" onClick={() => onClick(lead)}>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-sm truncate">
+                {lead.firstName} {lead.lastName}
+              </h3>
+              {lead.aiScore && (
+                <span className="text-xs font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                  {lead.aiScore}
+                </span>
+              )}
             </div>
-              
-            {/* Action Buttons for Mobile - Quick Access */}
-            <div className="flex md:hidden items-center gap-2 mt-3 pt-3 border-t border-muted/40">
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="h-8 flex-1 gap-1.5 text-[11px] font-semibold bg-primary/5 text-primary hover:bg-primary/10 border-none"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (lead.phone) onCall(lead.phone);
-                }}
-                disabled={!lead.phone}
-              >
-                <PhoneCall className="w-3 h-3" />
-                Call
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="h-8 flex-1 gap-1.5 text-[11px] font-semibold bg-purple-500/5 text-purple-600 hover:bg-purple-500/10 border-none"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onLogActivity(lead, 'note');
-                }}
-              >
-                <FileText className="w-3 h-3" />
-                Note
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="h-8 w-8 p-0 bg-muted/50 text-muted-foreground border-none"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClick(lead);
-                }}
-              >
-                <Eye className="w-3.5 h-3.5" />
-              </Button>
+            
+            {lead.company && (
+              <p className="text-xs text-muted-foreground truncate mb-1">{lead.company}</p>
+            )}
+            
+            {lead.jobTitle && (
+              <p className="text-xs text-muted-foreground truncate mb-2">{lead.jobTitle}</p>
+            )}
+
+            <div className="flex flex-wrap gap-1 mb-2">
+              <Badge variant="secondary" className={`text-xs px-1.5 py-0 ${getStatusColor(lead.status || 'new')}`}>
+                {lead.status || 'new'}
+              </Badge>
+              {lead.priority && (
+                <Badge variant="secondary" className={`text-xs px-1.5 py-0 ${getPriorityColor(lead.priority)}`}>
+                  {lead.priority}
+                </Badge>
+              )}
             </div>
 
-            {/* Desktop Info Row */}
-            <div className="hidden md:flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground/80">
+            {/* Contact info */}
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               {lead.email && (
-                <span className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                  <Mail className="w-3.5 h-3.5" />
-                  {lead.email}
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  <span className="truncate max-w-[120px]">{lead.email}</span>
                 </span>
               )}
               {lead.phone && (
-                <span className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-                  <Phone className="w-3.5 h-3.5" />
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
                   {lead.phone}
                 </span>
               )}
             </div>
 
-            {/* Status Badges Row */}
-            <div className="hidden md:flex flex-wrap gap-2 mt-2.5">
-              {lead.contactStatus && lead.contactStatus !== 'not_contacted' && (
-                <Badge 
-                  variant="outline" 
-                  className={`text-[10px] h-5 px-1.5 border-none shadow-none font-medium ${
-                    lead.contactStatus === 'contacted' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
-                    lead.contactStatus === 'in_discussion' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
-                    lead.contactStatus === 'proposal_sent' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
-                    lead.contactStatus === 'follow_up_needed' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
-                    lead.contactStatus === 'no_response' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
-                    'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  <span className="mr-1">
-                    {lead.contactStatus === 'contacted' && '🟢'}
-                    {lead.contactStatus === 'in_discussion' && '🔵'}
-                    {lead.contactStatus === 'proposal_sent' && '🟡'}
-                    {lead.contactStatus === 'follow_up_needed' && '🟠'}
-                    {lead.contactStatus === 'no_response' && '🔴'}
-                  </span>
-                  {lead.contactStatus.replace(/_/g, ' ')}
-                </Badge>
-              )}
-              {lead.nextFollowUpDate && (
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-amber-500/5 text-amber-600 border-amber-200/50">
-                  <Clock className="w-3 h-3 mr-1" />
-                  Follow-up: {new Date(lead.nextFollowUpDate).toLocaleDateString()}
-                </Badge>
-              )}
-            </div>
+            {/* Next follow-up */}
+            {lead.nextFollowUp && (
+              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>Follow up: {new Date(lead.nextFollowUp).toLocaleDateString()}</span>
+              </div>
+            )}
           </div>
 
-          {/* Actions Dropdown */}
-          <div className="flex flex-col gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 md:opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(lead); }}>
-                  <Eye className="w-4 h-4 mr-2" /> View Details
+          {/* Actions dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0 flex-shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClick(lead); }}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Lead
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {onCallNow && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCallNow(lead); }}>
+                  <PhoneCall className="mr-2 h-4 w-4" />
+                  Call Now
                 </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSendEmail(lead); }}>
+                <Mail className="mr-2 h-4 w-4" />
+                Send Email
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSendSMS(lead); }}>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Send SMS
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onScheduleCall(lead); }}>
+                <Phone className="mr-2 h-4 w-4" />
+                Schedule Call
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLogActivity(lead); }}>
+                <FileText className="mr-2 h-4 w-4" />
+                Log Activity
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onViewTimeline(lead); }}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Timeline
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onConvertToDeal(lead); }}>
+                <DollarSign className="mr-2 h-4 w-4" />
+                Convert to Deal
+              </DropdownMenuItem>
+              {(onAIEnrich || onAIScore || onAutoSequence) && (
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={(e) => { e.stopPropagation(); if (lead.phone) onCall(lead.phone); }}
-                  disabled={!lead.phone}
-                >
-                  <PhoneCall className="w-4 h-4 mr-2" /> Call
+              )}
+              {onAIEnrich && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAIEnrich(lead); }}>
+                  <BrainCircuit className="mr-2 h-4 w-4" />
+                  AI Enrich
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => { e.stopPropagation(); if (lead.email) window.location.href = `mailto:${lead.email}`; }}
-                  disabled={!lead.email}
-                >
-                  <Mail className="w-4 h-4 mr-2" /> Email
+              )}
+              {onAIScore && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAIScore(lead); }}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  AI Score
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLogActivity(lead, 'call'); }}>
-                  <PhoneCall className="w-4 h-4 mr-2" /> Log Call
+              )}
+              {onAutoSequence && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAutoSequence(lead); }}>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Auto Sequence
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLogActivity(lead, 'email'); }}>
-                  <Mail className="w-4 h-4 mr-2" /> Log Email
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onLogActivity(lead, 'note'); }}>
-                  <FileText className="w-4 h-4 mr-2" /> Add Note
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={(e) => { e.stopPropagation(); onAIAnalyze(lead); }}
-                  className="text-blue-600 focus:text-blue-700"
-                >
-                  <BrainCircuit className="w-4 h-4 mr-2" /> AI Analyze
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => { e.stopPropagation(); onAIDraftOutreach(lead); }}
-                  className="text-purple-600 focus:text-purple-700"
-                >
-                  <Wand2 className="w-4 h-4 mr-2" /> AI Outreach
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={(e) => { e.stopPropagation(); onSendPaymentLink(lead); }}
-                  className="text-emerald-600 focus:text-emerald-700"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" /> Send Payment Link
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => { e.stopPropagation(); onConvert(lead); }}
-                  className="text-blue-600 focus:text-blue-700"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" /> Convert to Client
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(lead); }}>
-                  <Edit className="w-4 h-4 mr-2" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => { e.stopPropagation(); onDelete(lead); }}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={(e) => { e.stopPropagation(); onDelete(lead); }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Lead
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+
+        {/* AI Score indicator */}
+        {lead.aiScore && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                AI Score
+              </span>
+              <span className="text-xs font-medium">{lead.aiScore}/100</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-amber-400 to-amber-600 rounded-full transition-all"
+                style={{ width: `${lead.aiScore}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Conversion ready indicator */}
+        {lead.conversionReady && (
+          <div className="mt-2 flex items-center gap-1 text-xs text-emerald-600">
+            <CheckCircle2 className="h-3 w-3" />
+            <span>Conversion Ready</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
-};
-
+}
