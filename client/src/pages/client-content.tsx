@@ -74,9 +74,10 @@ export default function ClientContent() {
       });
       setUploadDialogOpen(false);
       setUploadForm({
-        platform: "",
+        platforms: [],
         caption: "",
         mediaUrl: "",
+        contentLink: "",
         scheduledFor: "",
         scheduledTime: "",
       });
@@ -688,4 +689,3 @@ export default function ClientContent() {
     </div>
   );
 }
-

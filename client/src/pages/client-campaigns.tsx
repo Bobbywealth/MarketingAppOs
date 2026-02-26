@@ -6,10 +6,10 @@ import { Megaphone, Calendar, DollarSign, Target, TrendingUp, Users, Clock, Chec
 import { formatDistanceToNow, format } from "date-fns";
 
 export default function ClientCampaigns() {
-  const { data: user } = useQuery({ queryKey: ["/api/user"] });
+  const { data: user } = useQuery<any>({ queryKey: ["/api/user"] });
   
   // Fetch client's campaigns
-  const { data: campaigns = [], isLoading } = useQuery({
+  const { data: campaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/campaigns"],
     enabled: !!user,
   });

@@ -13,9 +13,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { EmptyState } from "@/components/ui/EmptyState"; // New import
 
 export default function ClientDashboard() {
-  const { data: user } = useQuery({ queryKey: ["/api/user"] });
+  const { data: user } = useQuery<any>({ queryKey: ["/api/user"] });
   
-  const { data: client } = useQuery({
+  const { data: client } = useQuery<any>({
     queryKey: [`/api/clients/${user?.clientId}`],
     enabled: !!user?.clientId,
   });
@@ -24,27 +24,27 @@ export default function ClientDashboard() {
   const socialCredentials = (client as any)?.socialCredentials || {};
   const primaryColor = brandAssets.primaryColor || "#3B82F6";
 
-  const { data: contentPosts = [] } = useQuery({
+  const { data: contentPosts = [] } = useQuery<any[]>({
     queryKey: ["/api/content-posts"],
     enabled: !!user,
   });
 
-  const { data: tickets = [] } = useQuery({
+  const { data: tickets = [] } = useQuery<any[]>({
     queryKey: ["/api/tickets"],
     enabled: !!user,
   });
 
-  const { data: campaigns = [] } = useQuery({
+  const { data: campaigns = [] } = useQuery<any[]>({
     queryKey: ["/api/campaigns"],
     enabled: !!user,
   });
 
-  const { data: invoices = [] } = useQuery({
+  const { data: invoices = [] } = useQuery<any[]>({
     queryKey: ["/api/invoices"],
     enabled: !!user,
   });
 
-  const { data: secondMe } = useQuery({
+  const { data: secondMe } = useQuery<any>({
     queryKey: ["/api/second-me"],
     enabled: !!user,
   });
