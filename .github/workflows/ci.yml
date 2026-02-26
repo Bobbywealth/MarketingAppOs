@@ -13,10 +13,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
@@ -30,7 +30,7 @@ jobs:
         run: npm test -- --run
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
@@ -43,10 +43,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
@@ -57,7 +57,7 @@ jobs:
         run: npm run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: dist/
@@ -69,17 +69,17 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
     env:
-      RENDER_TOKEN: \${{ secrets.RENDER_TOKEN }}
-      RENDER_SERVICE_ID: \${{ secrets.RENDER_SERVICE_ID }}
+      RENDER_TOKEN: ${{ secrets.RENDER_TOKEN }}
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to Render
         run: |
           curl -X POST \
-            -H "Authorization: Bearer \${{ secrets.RENDER_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"serviceId": "\${{ secrets.RENDER_SERVICE_ID }}"}' \
-            https://api.render.com/v1/services/\${{ secrets.RENDER_SERVICE_ID }}/deploys
+            -d '{"serviceId": "${{ secrets.RENDER_SERVICE_ID }}"}' \
+            https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys
