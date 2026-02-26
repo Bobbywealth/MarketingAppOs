@@ -201,7 +201,7 @@ export function RestaurantStats() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {parseEmailMutation.data.items.map((item, idx) => (
+                    {parseEmailMutation.data.items.map((item: any, idx: number) => (
                       <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                         <div className="flex items-center gap-3">
                           <Badge variant="outline">{item.quantity || 1}x</Badge>
