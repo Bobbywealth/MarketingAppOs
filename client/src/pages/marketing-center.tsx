@@ -2835,16 +2835,16 @@ function MemberList({ groupId, onRemove }: { groupId: string; onRemove: (id: num
     const clientMap = new Map(clients.map((client) => [client.id, client]));
 
     return members.map((member) => {
-      const lead = leadMap.get(member.leadId);
-      const client = clientMap.get(member.clientId);
+      const lead = leadMap.get(member.lead_id);
+      const client = clientMap.get(member.client_id);
 
         return {
         ...member,
-          name: lead 
-            ? `${lead.company || lead.name} (Lead)` 
-            : client 
-              ? `${client.company || client.name} (Client)` 
-            : member.customRecipient || "Unknown"
+          name: lead
+            ? `${lead.company || lead.name} (Lead)`
+            : client
+              ? `${client.company || client.name} (Client)`
+            : member.custom_recipient || member.member_name || "Unknown"
         };
       });
   }, [members, leads, clients]);
