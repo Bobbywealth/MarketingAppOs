@@ -420,6 +420,8 @@ export const leads = pgTable("leads", {
   dealValue: varchar("deal_value"),
   contactStatus: varchar("contact_status"),
   expectedCloseDate: timestamp("expected_close_date"),
+  ownerId: varchar("owner_id"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
   createdAt: timestamp("created_at").defaultNow(),
