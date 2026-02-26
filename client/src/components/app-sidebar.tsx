@@ -653,7 +653,7 @@ function NavItem({
           ? 'bg-primary/10 shadow-sm ring-1 ring-primary/20' 
           : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
       }`}
-      data-testid={`nav-${item.url === '/' ? 'dashboard' : item.url.slice(1)}`}
+      data-testid={`nav-${item.url && item.url === '/' ? 'dashboard' : (item.url || '#').slice(1)}`}
     >
       <Link
         href={item.url}
