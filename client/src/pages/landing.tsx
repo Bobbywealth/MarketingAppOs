@@ -470,15 +470,15 @@ export default function LandingPage() {
               Blog
             </Link>
             <Link
-              href="/signup/creator"
+              href="/become-creator"
               className="text-base font-medium text-foreground hover:text-primary transition-colors"
               data-testid="nav-creator-signup"
             >
               Become a Creator
             </Link>
-            <a href="#about" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-about">
+            <Link href="/about" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-about">
               About Us
-            </a>
+            </Link>
             <Link href="/contact" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-contact">
               Contact Us
             </Link>
@@ -558,7 +558,7 @@ export default function LandingPage() {
                       <div className="pt-6 space-y-3">
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">More</div>
                         <SheetClose asChild>
-                          <Link href="/signup/creator" className="text-base font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors py-2 flex items-center gap-3">
+                          <Link href="/become-creator" className="text-base font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors py-2 flex items-center gap-3">
                             <Users className="w-4 h-4 text-blue-500" />
                             Become a Creator
                           </Link>
