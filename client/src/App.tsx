@@ -176,8 +176,14 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-spinner"></div>
+      <div className="h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+          MarketingTeam.app
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full" data-testid="loading-spinner"></div>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading your workspace...</p>
+        </div>
       </div>
     );
   }
