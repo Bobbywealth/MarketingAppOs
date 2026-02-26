@@ -67,9 +67,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      RENDER_TOKEN: ${{ secrets.RENDER_TOKEN }}
-      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+    environment: production
+    env:
+      RENDER_TOKEN: \${{ secrets.RENDER_TOKEN }}
+      RENDER_SERVICE_ID: \${{ secrets.RENDER_SERVICE_ID }}
 
     steps:
       - name: Checkout code
@@ -78,7 +79,7 @@ jobs:
       - name: Deploy to Render
         run: |
           curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.RENDER_TOKEN }}" \
+            -H "Authorization: Bearer \${{ secrets.RENDER_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"serviceId": "${{ secrets.RENDER_SERVICE_ID }}"}' \
-            https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys
+            -d '{"serviceId": "\${{ secrets.RENDER_SERVICE_ID }}"}' \
+            https://api.render.com/v1/services/\${{ secrets.RENDER_SERVICE_ID }}/deploys
