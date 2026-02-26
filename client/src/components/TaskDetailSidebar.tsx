@@ -165,7 +165,7 @@ export function TaskDetailSidebar({ task, isOpen, onClose, onDelete }: TaskDetai
 
   // Build nested space options (same logic as tasks.tsx)
   const buildSpaceOptions = () => {
-    const byParent = new Map<string | null, TaskSpace[]>();
+    const byParent = new Map<string | null, any[]>();
     for (const s of spaces) {
       const pid = ((s as any).parentSpaceId ?? null) as string | null;
       const list = byParent.get(pid) || [];
