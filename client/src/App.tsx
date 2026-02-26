@@ -67,6 +67,11 @@ import DashboardManager from "@/pages/dashboard-manager";
 import DashboardAdmin from "@/pages/dashboard-admin";
 import AdminDebugLogs from "@/pages/admin-debug-logs";
 import Demo from "@/pages/demo";
+import Blog from "@/pages/blog";
+import Contact from "@/pages/contact";
+import CreatorSignup from "@/pages/creator-signup";
+import Privacy from "@/pages/privacy";
+import Terms from "@/pages/terms";
 
 function Router() {
   const { user } = useAuth();
@@ -79,6 +84,13 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
       {!user && <Route path="/" component={Landing} />}
+      {/* Public pages accessible to everyone */}
+      <Route path="/blog" component={Blog} />
+      <Route path="/blog/:slug" component={Blog} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/become-creator" component={CreatorSignup} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       {/* Client-specific routes */}
       {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
       {isClient && <ProtectedRoute path="/client-dashboard" component={ClientDashboard} allowedRoles={["client"]} />}
