@@ -19,7 +19,9 @@ import {
   UsersRound,
   LogOut,
   Settings,
-  Sparkles
+  Sparkles,
+  FileText,
+  BookOpen
 } from "lucide-react";
 import {
   Sidebar,

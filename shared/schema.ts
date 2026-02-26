@@ -406,12 +406,19 @@ export const leads = pgTable("leads", {
   clientId: varchar("client_id").references(() => clients.id),
   assignedToId: integer("assigned_to_id").references(() => users.id),
   name: varchar("name").notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
   email: varchar("email"),
   phone: varchar("phone"),
   company: varchar("company"),
+  jobTitle: varchar("job_title"),
   website: varchar("website"),
   stage: varchar("stage").notNull().default("prospect"), // prospect, qualified, proposal, closed_won, closed_lost
   score: varchar("score").notNull().default("warm"), // hot, warm, cold
+  aiScore: integer("ai_score"),
+  status: varchar("status").default("new"), // new, contacted, qualified, proposal, won, lost
+  priority: varchar("priority"), // high, medium, low
+  conversionReady: boolean("conversion_ready").default(false),
   value: integer("value"), // potential deal value in cents
   source: varchar("source").notNull().default("website"), // website, ads, form, call, referral, social
   sourceMetadata: jsonb("source_metadata"), // {campaign_id, ad_id, form_name, etc.}
