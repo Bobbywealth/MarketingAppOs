@@ -16,8 +16,8 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
 
   // Combine platforms and other services that need logins
   const itemsToCollect = [
-    ...selectedPlatforms.map(p => ({ id: p, label: `${p} Account`, type: 'platform' })),
-    ...neededOtherServices.map(s => ({ id: s, label: `${s} Access`, type: 'service' }))
+    ...selectedPlatforms.map((p: string) => ({ id: p, label: `${p} Account`, type: 'platform' })),
+    ...neededOtherServices.map((s: string) => ({ id: s, label: `${s} Access`, type: 'service' }))
   ];
 
   return (
@@ -105,4 +105,3 @@ export function LoginsStep({ form, selectedServices }: LoginsStepProps) {
     </motion.div>
   );
 }
-

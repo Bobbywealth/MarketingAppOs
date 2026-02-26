@@ -121,6 +121,7 @@ export const LeadListView: React.FC<LeadListViewProps> = ({
   onAIAnalyze,
   onAIDraftOutreach,
   onSendPaymentLink,
+  onConvert,
 }) => {
   return (
     <div className="overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">

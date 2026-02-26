@@ -909,6 +909,7 @@ export const insertTaskSchema = createInsertSchema(tasks)
 export const insertTaskSpaceSchema = createInsertSchema(taskSpaces).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertUserViewPreferencesSchema = createInsertSchema(userViewPreferences).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({ id: true, createdAt: true });
+export const insertTaskActivitySchema = createInsertSchema(taskActivity).omit({ id: true, createdAt: true });
 export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertContentPostSchema = createInsertSchema(contentPosts)
   .omit({ id: true, createdAt: true, updatedAt: true })
@@ -978,6 +979,8 @@ export type ClientDocument = typeof clientDocuments.$inferSelect;
 
 export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type TaskComment = typeof taskComments.$inferSelect;
+export type InsertTaskActivity = z.infer<typeof insertTaskActivitySchema>;
+export type TaskActivityType = typeof taskActivity.$inferSelect;
 
 export type InsertLeadActivity = z.infer<typeof insertLeadActivitySchema>;
 export type LeadActivity = typeof leadActivities.$inferSelect;
