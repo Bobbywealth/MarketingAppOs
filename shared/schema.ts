@@ -1202,6 +1202,9 @@ export const scheduledAiCommands = pgTable("scheduled_ai_commands", {
   status: varchar("status").notNull().default("pending"),
   nextRunAt: timestamp("next_run_at"),
   lastRunAt: timestamp("last_run_at"),
+  scheduledAt: timestamp("scheduled_at"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: varchar("recurring_pattern"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -75,9 +75,9 @@ export function safeAsync<T>(
   asyncFn: () => Promise<T>,
   errorContext?: string
 ): Promise<{ success: true; data: T } | { success: false; error: string }> {
-  return asyncFn
-    .then((data) => ({ success: true, data }))
-    .catch((error) => {
+  return asyncFn()
+    .then((data: T) => ({ success: true as const, data }))
+    .catch((error: any) => {
       handleError(error, errorContext);
       return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
     });

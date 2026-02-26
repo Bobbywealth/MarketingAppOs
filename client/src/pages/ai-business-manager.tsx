@@ -734,4 +734,3 @@ export default function AIBusinessManager() {
     </div>
   );
 }
-

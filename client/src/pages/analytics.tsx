@@ -36,7 +36,7 @@ export default function Analytics() {
   });
 
   // Fetch website analytics
-  const { data: websiteStats } = useQuery({
+  const { data: websiteStats } = useQuery<any>({
     queryKey: ["/api/analytics/website"],
   });
 

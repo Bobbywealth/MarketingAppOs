@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Trash2, Edit, ExternalLink, Eye, PenTool } from "lucide-react";
+import { Plus, Trash2, Edit, ExternalLink, Eye, PenTool, X } from "lucide-react";
 import { SimpleUploader } from "@/components/SimpleUploader";
 import ReactMarkdown from "react-markdown";
 
@@ -551,4 +551,3 @@ export default function AdminBlog() {
     </div>
   );
 }
-
