@@ -418,6 +418,8 @@ export const leads = pgTable("leads", {
   location: varchar("location"),
   industry: varchar("industry"),
   dealValue: varchar("deal_value"),
+  contactStatus: varchar("contact_status"),
+  expectedCloseDate: timestamp("expected_close_date"),
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
   createdAt: timestamp("created_at").defaultNow(),
