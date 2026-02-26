@@ -415,6 +415,9 @@ export const leads = pgTable("leads", {
   value: integer("value"), // potential deal value in cents
   source: varchar("source").notNull().default("website"), // website, ads, form, call, referral, social
   sourceMetadata: jsonb("source_metadata"), // {campaign_id, ad_id, form_name, etc.}
+  location: varchar("location"),
+  industry: varchar("industry"),
+  dealValue: varchar("deal_value"),
   notes: text("notes"),
   nextFollowUp: timestamp("next_follow_up"),
   createdAt: timestamp("created_at").defaultNow(),
