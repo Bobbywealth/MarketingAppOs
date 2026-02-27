@@ -1399,10 +1399,10 @@ export default function MarketingCenter() {
                       <span className="text-muted-foreground font-medium">Recipients</span>
                       <div className="text-right">
                         <span className="text-lg font-black">
-                          {audience === 'group' ? (groups.find(g => g.id === groupId)?.name || "Select Group") : getRecipientCount()}
+                          {getRecipientCount()}
                         </span>
                         <p className="text-[10px] text-muted-foreground uppercase font-bold">
-                          {audience === 'group' ? "Target Group" : "People Reachable"}
+                          {audience === 'group' ? (groups.find(g => g.id === groupId)?.name || "Select Group") : "People Reachable"}
                         </p>
                       </div>
                     </div>
