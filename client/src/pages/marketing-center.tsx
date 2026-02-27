@@ -134,7 +134,7 @@ type BroadcastRecipientRow = {
 export default function MarketingCenter() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("composer");
-  const [historyFilter, setHistoryFilter] = useState<"all" | "scheduled" | "completed">("all");
+  const [historyFilter, setHistoryFilter] = useState<"all" | "scheduled" | "completed" | "failed">("all");
   const [broadcastType, setBroadcastType] = useState<"email" | "sms" | "whatsapp" | "telegram" | "voice">("email");
   const [audience, setAudience] = useState("all");
   const [groupId, setGroupId] = useState<string>("");
@@ -296,11 +296,13 @@ export default function MarketingCenter() {
   // Broadcast History Query
   const { data: broadcasts, isLoading: historyLoading } = useQuery<MarketingBroadcast[]>({
     queryKey: ["/api/marketing-center/broadcasts"],
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Refresh frequently if any broadcast is still sending
+      // React Query v5: callback receives the Query object, not data directly
+      const data = (query as any).state?.data;
       if (!Array.isArray(data)) return false;
-      if (data.some(b => b.status === 'sending')) return 3000;
-      if (data.some(b => b.status === 'pending')) return 15000;
+      if (data.some((b: any) => b.status === 'sending')) return 3000;
+      if (data.some((b: any) => b.status === 'pending')) return 15000;
       return false;
     }
   });
@@ -483,8 +485,9 @@ export default function MarketingCenter() {
   const filteredBroadcasts = useMemo(() => {
     if (!broadcasts) return [];
     if (historyFilter === 'all') return broadcasts;
-    if (historyFilter === 'scheduled') return broadcasts.filter(b => b.status === 'pending');
-    if (historyFilter === 'completed') return broadcasts.filter(b => b.status === 'completed' || b.status === 'sending');
+    if (historyFilter === 'scheduled') return broadcasts.filter(b => b.status === 'pending' || b.status === 'scheduled');
+    if (historyFilter === 'completed') return broadcasts.filter(b => b.status === 'completed' || b.status === 'sending' || b.status === 'sent');
+    if (historyFilter === 'failed') return broadcasts.filter(b => b.status === 'failed' || (b.status === 'completed' && b.successCount === 0 && (b.failedCount ?? 0) > 0));
     return broadcasts;
   }, [broadcasts, historyFilter]);
 
@@ -1510,13 +1513,21 @@ export default function MarketingCenter() {
                 >
                   Scheduled
                 </Button>
-                <Button 
-                  variant={historyFilter === 'completed' ? 'default' : 'outline'} 
-                  size="sm" 
+                <Button
+                  variant={historyFilter === 'completed' ? 'default' : 'outline'}
+                  size="sm"
                   onClick={() => setHistoryFilter('completed')}
                   className="font-bold h-8"
                 >
                   Sent
+                </Button>
+                <Button
+                  variant={historyFilter === 'failed' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setHistoryFilter('failed')}
+                  className="font-bold h-8 text-red-500 border-red-200 hover:bg-red-50 data-[variant=default]:bg-red-500 data-[variant=default]:text-white"
+                >
+                  Failed
                 </Button>
               </div>
             </div>
@@ -1573,14 +1584,20 @@ export default function MarketingCenter() {
                             <Badge variant="secondary" className="font-bold uppercase text-[10px] tracking-widest bg-zinc-100 dark:bg-zinc-800">
                               {broadcast.audience === 'individual' ? `Individual: ${broadcast.customRecipient}` : broadcast.audience}
                             </Badge>
-                            {broadcast.status === 'pending' ? (
+                            {broadcast.status === 'pending' || broadcast.status === 'scheduled' ? (
                               <Badge className="bg-amber-500 text-white font-black uppercase text-[10px]">Scheduled</Badge>
                             ) : broadcast.status === 'sending' ? (
                               <Badge className="bg-primary animate-pulse font-black uppercase text-[10px]">Sending...</Badge>
-                            ) : broadcast.status === 'completed' ? (
-                              <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px]">Completed</Badge>
+                            ) : broadcast.status === 'completed' || broadcast.status === 'sent' ? (
+                              broadcast.successCount === 0 && (broadcast.failedCount ?? 0) > 0 ? (
+                                <Badge variant="destructive" className="font-black uppercase text-[10px]">Failed</Badge>
+                              ) : (
+                                <Badge className="bg-emerald-500 text-white font-black uppercase text-[10px]">Completed</Badge>
+                              )
+                            ) : broadcast.status === 'failed' ? (
+                              <Badge variant="destructive" className="font-black uppercase text-[10px]">Failed</Badge>
                             ) : (
-                              <Badge variant="destructive" className="font-black uppercase text-[10px]">{broadcast.status}</Badge>
+                              <Badge variant="secondary" className="font-black uppercase text-[10px]">{broadcast.status}</Badge>
                             )}
                             {broadcast.mediaUrls && broadcast.mediaUrls.length > 0 && (
                               <Badge variant="outline" className="font-bold text-[10px] bg-primary/5 text-primary border-primary/20">
