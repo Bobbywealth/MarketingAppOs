@@ -1,2466 +1,928 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useTaskKeyboardShortcuts } from "@/hooks/useTaskKeyboardShortcuts";
-import { useBulkTasks } from "@/hooks/useBulkTasks";
-import { useTaskMutations } from "@/hooks/useTaskMutations";
-import { Plus, Calendar, User, ListTodo, KanbanSquare, Filter, Loader2, Edit, Trash2, MessageSquare, X, Repeat, Eye, EyeOff, CheckCircle2, MoreHorizontal, LayoutGrid, List, AlignLeft, Search, Tag, Building2, Clock, AlertTriangle, Archive, BarChart3 } from "lucide-react";
-import type { Task, InsertTask, Client, User as UserType, TaskSpace, TaskTemplate } from "@shared/schema";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { TaskSpacesSidebar } from "@/components/TaskSpacesSidebar";
-import { TaskDetailSidebar } from "@/components/TaskDetailSidebar";
-import {
-  TaskFiltersPanel,
-  TaskRecurringConfig,
-  TaskTagsInput,
-  TaskBulkActions,
-  TaskFilterChips,
-  TaskQuickActions,
-  TaskInsightsPanel,
-  TaskKanbanBoard,
-  TaskCompactView,
-  TaskCalendarView,
-  TaskGanttView,
-  TaskAnalyticsDashboard,
-  ViewModeSwitcher,
-  type ViewMode
-} from "@/components/tasks";
-import { parseInputDateEST, toLocaleDateStringEST, toInputDateEST, nowEST, toEST } from "@/lib/dateUtils";
+import { 
+  Search, Plus, LayoutGrid, List, CalendarDays, ChevronRight, ChevronLeft, X, 
+  Clock3, Flag, CheckCircle2, Loader2, Building2, Tag, User
+} from "lucide-react";
+import type { Task, Client, User as UserType, TaskSpace } from "@shared/schema";
+import { toInputDateEST, toLocaleDateStringEST, nowEST } from "@/lib/dateUtils";
 
-function getNextWeekday(): string {
+// Status mapping between our schema and the UI
+const statusMap: Record<string, string> = {
+  "todo": "Inbox",
+  "in_progress": "In Progress",
+  "review": "Review",
+  "completed": "Done"
+};
+
+const reverseStatusMap: Record<string, string> = {
+  "Inbox": "todo",
+  "In Progress": "in_progress",
+  "Review": "review",
+  "Done": "completed"
+};
+
+const priorityMap: Record<string, string> = {
+  "low": "Low",
+  "normal": "Medium",
+  "high": "High",
+  "urgent": "High"
+};
+
+const reversePriorityMap: Record<string, string> = {
+  "Low": "low",
+  "Medium": "normal",
+  "High": "high"
+};
+
+const statuses = ["Inbox", "In Progress", "Review", "Done"];
+const views = ["Board", "List", "Calendar"];
+const filters = ["All Tasks", "My Tasks", "Today", "Overdue", "High Priority", "Waiting"];
+
+const priorityStyles: Record<string, string> = {
+  High: "bg-red-50 text-red-700 border-red-200",
+  Medium: "bg-amber-50 text-amber-700 border-amber-200",
+  Low: "bg-slate-100 text-slate-700 border-slate-200",
+};
+
+const statusAccent: Record<string, string> = {
+  Inbox: "from-slate-900 to-slate-700",
+  "In Progress": "from-blue-700 to-cyan-600",
+  Review: "from-amber-600 to-orange-500",
+  Done: "from-emerald-600 to-green-500",
+};
+
+// Helper to format due date for display
+function formatDueDate(dueDate: string | null | undefined): string {
+  if (!dueDate) return "No due date";
+  
+  const date = new Date(dueDate);
   const now = new Date();
-  const day = now.getDay();
-  const diff = 7 - day; // Days until next Monday
-  const nextMonday = new Date(now);
-  nextMonday.setDate(now.getDate() + diff);
-  return nextMonday.toISOString().split('T')[0];
-}
-
-interface ChecklistItem {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-function applyTemplate(
-  template: TaskTemplate,
-  form: any,
-  setSelectedTemplateId: (id: string | null) => void
-) {
-  // Set basic fields
-  form.setValue('title', template.title);
-  form.setValue('description', template.taskDescription || '');
-  form.setValue('status', template.status);
-  form.setValue('priority', template.priority);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   
-  // Set due date based on offset
-  if (template.dueDateOffset !== null && template.dueDateOffset !== undefined) {
-    const now = new Date();
-    now.setDate(now.getDate() + template.dueDateOffset);
-    form.setValue('dueDate', now.toISOString().split('T')[0]);
-  } else {
-    form.setValue('dueDate', '');
+  if (taskDate.getTime() === today.getTime()) {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    if (hours === 23 && minutes === 59) {
+      return "Today";
+    }
+    return `Today · ${hours === 0 ? 12 : hours > 12 ? hours - 12 : hours}:${minutes.toString().padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
+  }
+  if (taskDate.getTime() === tomorrow.getTime()) {
+    return "Tomorrow";
   }
   
-  // Set recurring settings
-  form.setValue('isRecurring', template.isRecurring);
-  form.setValue('recurringPattern', template.recurringPattern || '');
-  form.setValue('recurringInterval', template.recurringInterval || 1);
-  
-  // Set checklist if available
-  if (template.checklist && Array.isArray(template.checklist)) {
-    form.setValue('checklist', template.checklist);
+  const diffDays = Math.ceil((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays > 0 && diffDays <= 7) {
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
   }
   
-  setSelectedTemplateId(template.id);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const taskFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  status: z.enum(["todo", "in_progress", "review", "completed"]),
-  priority: z.enum(["low", "normal", "high", "urgent"]),
-  dueDate: z.string().optional(),
-  dueTime: z.string().optional(),
-  campaignId: z.string().optional(),
-  clientId: z.string().optional(),
-  assignedToId: z.string().optional(),
-  spaceId: z.string().optional(),
-  isRecurring: z.boolean().optional(),
-  recurringPattern: z.enum(["daily", "weekly", "monthly", "yearly"]).optional(),
-  recurringInterval: z.number().optional(),
-  recurringEndDate: z.string().optional(),
-  scheduleFrom: z.enum(["due_date", "completion_date"]).optional(),
-  checklist: z.array(z.object({
-    id: z.string(),
-    text: z.string(),
-    completed: z.boolean(),
-  })).optional(),
-  tags: z.array(z.string()).optional(),
-});
+// Helper to get user initials
+function getInitials(userId: number | null, users: UserType[]): string {
+  if (!userId) return "?";
+  const user = users.find(u => u.id === userId);
+  if (!user) return "?";
+  const names = user.fullName?.split(" ") || user.username?.split(" ") || [];
+  return names.map(n => n[0]).join("").toUpperCase().slice(0, 2);
+}
 
-type TaskFormData = z.infer<typeof taskFormSchema>;
+// Helper to get company name from client
+function getCompanyName(clientId: string | null, clients: Client[]): string {
+  if (!clientId) return "No company";
+  const client = clients.find(c => c.id === clientId);
+  return client?.name || "Unknown";
+}
 
 export default function TasksPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("board");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // UI State
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [activeView, setActiveView] = useState("Board");
+  const [activeFilter, setActiveFilter] = useState("All Tasks");
+  const [search, setSearch] = useState("");
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [showNewTask, setShowNewTask] = useState(false);
+  
+  // New task form state
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    status: "todo",
+    priority: "normal",
+    assignedToId: "" as string,
+    clientId: "" as string,
+    dueDate: "" as string,
+    tags: "",
+  });
+
+  // Filter state for API
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  // New advanced filter states
-  const [filterClientId, setFilterClientId] = useState<string | null>(null);
-  const [filterAssigneeId, setFilterAssigneeId] = useState<string | null>(null);
-  const [filterDueDateRange, setFilterDueDateRange] = useState<string | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isDetailSidebarOpen, setIsDetailSidebarOpen] = useState(false);
-  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  const [spacesDialogOpen, setSpacesDialogOpen] = useState(false);
-  const [isRecurringMasterOpen, setIsRecurringMasterOpen] = useState(false);
-  const [editingRecurringTask, setEditingRecurringTask] = useState<Task | null>(null);
-  // Load showCompleted preference from localStorage.
-  // Default to TRUE so completed tasks remain visible unless users opt to hide them.
-  const [showCompleted, setShowCompleted] = useState(() => {
-    const saved = localStorage.getItem('tasks-show-completed');
-    try {
-      return saved !== null ? JSON.parse(saved) : true;
-    } catch {
-      return true;
-    }
-  });
 
-  // Save showCompleted preference to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('tasks-show-completed', JSON.stringify(showCompleted));
-  }, [showCompleted]);
-
-  // Load hideCompleted preference from localStorage
-  const [hideCompleted, setHideCompleted] = useState(() => {
-    const saved = localStorage.getItem('tasks-hide-completed');
-    try {
-      return saved !== null ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
-
-  // Save hideCompleted preference to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('tasks-hide-completed', JSON.stringify(hideCompleted));
-  }, [hideCompleted]);
-
-  const { data: tasks = [], isLoading, error: tasksError } = useQuery<Task[]>({
+  // Fetch tasks
+  const { data: tasksData = [], isLoading, refetch } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
-    refetchInterval: 15000, // Poll every 15 seconds for real-time updates (optimized)
-    refetchIntervalInBackground: false, // Stop polling when tab is hidden
-    refetchOnWindowFocus: true, // Only refresh when user returns to tab
+    refetchInterval: 15000,
   });
 
-  const isAdminOrManager = (user as any)?.role === "admin" || (user as any)?.role === "manager";
-  const backfillRecurringMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/tasks/backfill-recurring", {});
-      return await res.json();
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({
-        title: "Recurring tasks backfilled",
-        description: `Created ${data.tasksCreated ?? 0} task(s) across ${data.seriesProcessed ?? 0} series.`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Backfill failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Surface task loading errors instead of silently showing an empty list
-  useEffect(() => {
-    if (!tasksError) return;
-    toast({
-      title: "Failed to load tasks",
-      description: tasksError.message,
-      variant: "destructive",
-    });
-  }, [tasksError, toast]);
-
-  const { data: clients = [] } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-    retry: false,
-    meta: { returnNull: true }, // Don't throw error if forbidden
-  });
-
+  // Fetch users and clients
   const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
     retry: false,
   });
 
-  const { data: spaces = [] } = useQuery<TaskSpace[]>({
-    queryKey: ["/api/task-spaces"],
-    refetchInterval: 10000, // Poll every 10 seconds for real-time updates
+  const { data: clients = [] } = useQuery<Client[]>({
+    queryKey: ["/api/clients"],
     retry: false,
-    meta: { returnNull: true }, // Don't throw error if forbidden
   });
 
-  // Bulk operations hook
-  const bulkTasks = useBulkTasks();
+  // Update local tasks when data changes
+  useEffect(() => {
+    setTasks(tasksData);
+  }, [tasksData]);
 
-  // Search input ref for keyboard shortcuts
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  // Find selected task
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId) || null;
+  const showTaskDetail = Boolean(selectedTask);
 
-  const { data: templates = [] } = useQuery<TaskTemplate[]>({
-    queryKey: ["/api/tasks/templates"],
-    retry: false,
-    meta: { returnNull: true }, // Don't throw error if forbidden
-  });
-
-  const buildSpaceOptions = () => {
-    const byParent = new Map<string | null, TaskSpace[]>();
-    for (const s of spaces) {
-      const pid = (s.parentSpaceId ?? null) as string | null;
-      const list = byParent.get(pid) || [];
-      list.push(s);
-      byParent.set(pid, list);
-    }
-    for (const [pid, list] of byParent) {
-      list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name));
-      byParent.set(pid, list);
-    }
-
-    const out: Array<{ id: string; label: string }> = [];
-    const walk = (parentId: string | null, depth: number) => {
-      const children = byParent.get(parentId) || [];
-      for (const s of children) {
-        const indent = depth > 0 ? `${"— ".repeat(Math.min(depth, 6))}` : "";
-        out.push({ id: s.id, label: `${indent}${s.icon ?? "📁"} ${s.name}` });
-        walk(s.id, depth + 1);
-      }
-    };
-    walk(null, 0);
-    return out;
+  // Map task status to UI status
+  const mapStatusToUI = (status: string): string => {
+    return statusMap[status] || "Inbox";
   };
 
-  const form = useForm<TaskFormData>({
-    resolver: zodResolver(taskFormSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      status: "todo",
-      priority: "normal",
-      dueDate: "",
-      dueTime: "",
-      campaignId: "",
-      clientId: "",
-      assignedToId: "",
-      spaceId: "",
-      isRecurring: false,
-      recurringPattern: undefined,
-      recurringInterval: 1,
-      recurringEndDate: "",
-      scheduleFrom: "due_date",
-    },
-  });
+  // Map priority to UI priority
+  const mapPriorityToUI = (priority: string): string => {
+    return priorityMap[priority] || "Medium";
+  };
 
-  const createTaskMutation = useMutation({
-    mutationFn: async (data: TaskFormData) => {
-      console.log("📝 Form data received:", data);
-      
-      const taskData: any = {
-        title: data.title,
-        status: data.status,
-        priority: data.priority,
-      };
-      
-      // Only add optional fields if they have values
-      if (data.description) taskData.description = data.description;
-      
-      // Combine date and time if both are provided, using EST timezone
-      if (data.dueDate) {
-        if (data.dueTime) {
-          // Parse as EST datetime
-          taskData.dueDate = parseInputDateEST(`${data.dueDate}T${data.dueTime}`).toISOString();
+  // Filter tasks
+  const filteredTasks = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return tasks.filter((task) => {
+      // Search filter
+      const matchesSearch =
+        !q ||
+        task.title.toLowerCase().includes(q) ||
+        (task.description?.toLowerCase().includes(q) || false) ||
+        getCompanyName(task.clientId, clients).toLowerCase().includes(q) ||
+        (task.tags?.join(" ").toLowerCase().includes(q) || false) ||
+        getInitials(task.assignedToId, users).toLowerCase().includes(q);
+
+      // Status filter
+      const uiStatus = mapStatusToUI(task.status);
+      let matchesStatus = true;
+      if (filterStatus !== "all") {
+        matchesStatus = task.status === filterStatus;
+      }
+
+      // Priority filter
+      let matchesPriority = true;
+      if (filterPriority !== "all") {
+        matchesPriority = task.priority === filterPriority;
+      }
+
+      // Quick filter
+      let matchesFilter = true;
+      if (activeFilter === "My Tasks" && user) {
+        matchesFilter = task.assignedToId === (user as any).id;
+      } else if (activeFilter === "Today") {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        if (task.dueDate) {
+          const due = new Date(task.dueDate);
+          matchesFilter = due >= today && due < tomorrow;
         } else {
-          // Parse as EST date, set to end of day (11:59 PM EST)
-          taskData.dueDate = parseInputDateEST(`${data.dueDate}T23:59`).toISOString();
+          matchesFilter = false;
         }
-      }
-      
-      if (data.campaignId) taskData.campaignId = data.campaignId;
-      if (data.clientId) taskData.clientId = data.clientId;
-      if (data.spaceId) {
-        taskData.spaceId = data.spaceId;
-        console.log("✅ Adding task to space:", data.spaceId);
-      }
-      if (data.assignedToId && data.assignedToId !== "") {
-        const parsedId = parseInt(data.assignedToId);
-        if (!isNaN(parsedId)) {
-          taskData.assignedToId = parsedId;
-          console.log("✅ Parsed assignedToId:", parsedId);
+      } else if (activeFilter === "Overdue") {
+        const now = new Date();
+        if (task.dueDate) {
+          matchesFilter = new Date(task.dueDate) < now && task.status !== "completed";
         } else {
-          console.error("❌ Failed to parse assignedToId:", data.assignedToId);
+          matchesFilter = false;
         }
+      } else if (activeFilter === "High Priority") {
+        matchesFilter = task.priority === "high" || task.priority === "urgent";
+      } else if (activeFilter === "Waiting") {
+        matchesFilter = task.status === "review";
       }
-      if (data.isRecurring) {
-        taskData.isRecurring = true;
-        if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
-        if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
-        if (data.recurringEndDate) taskData.recurringEndDate = parseInputDateEST(data.recurringEndDate).toISOString();
-        if (data.scheduleFrom) taskData.scheduleFrom = data.scheduleFrom;
-      }
-      
-      console.log("📤 Sending taskData:", taskData);
-      return apiRequest("POST", "/api/tasks", taskData);
-    },
-    onSuccess: () => {
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesFilter;
+    });
+  }, [tasks, search, activeFilter, filterStatus, filterPriority, clients, users, user]);
+
+  // Group tasks by status
+  const groupedTasks = useMemo(() => {
+    return statuses.reduce((acc, status) => {
+      acc[status] = filteredTasks.filter((task) => mapStatusToUI(task.status) === status);
+      return acc;
+    }, {} as Record<string, Task[]>);
+  }, [filteredTasks]);
+
+  // Summary stats
+  const summary = useMemo(() => {
+    const open = tasks.filter((t) => t.status !== "completed").length;
+    const inProgress = tasks.filter((t) => t.status === "in_progress").length;
+    const waiting = tasks.filter((t) => t.status === "review").length;
+    const completed = tasks.filter((t) => t.status === "completed").length;
+    const high = tasks.filter((t) => (t.priority === "high" || t.priority === "urgent") && t.status !== "completed").length;
+    return [
+      { label: "Open", value: open, note: "Active tasks across all teams" },
+      { label: "In Progress", value: inProgress, note: "Currently being worked" },
+      { label: "Waiting", value: waiting, note: "Pending review or reply" },
+      { label: "Completed", value: completed, note: "Closed tasks" },
+      { label: "High Priority", value: high, note: "Needs attention first" },
+    ];
+  }, [tasks]);
+
+  // Move task to next/previous status
+  const moveTask = async (taskId: string, direction: number) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const currentIndex = statuses.indexOf(mapStatusToUI(task.status));
+    const nextIndex = Math.max(0, Math.min(statuses.length - 1, currentIndex + direction));
+    const newStatus = reverseStatusMap[statuses[nextIndex]];
+
+    try {
+      await apiRequest("PATCH", `/api/tasks/${taskId}`, { status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    } catch (error) {
+      toast({ title: "Failed to update task", variant: "destructive" });
+    }
+  };
+
+  // Cycle priority
+  const cyclePriority = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const order = ["low", "normal", "high"];
+    const currentIndex = order.indexOf(task.priority);
+    const nextPriority = order[(currentIndex + 1) % order.length];
+
+    try {
+      await apiRequest("PATCH", `/api/tasks/${taskId}`, { priority: nextPriority });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    } catch (error) {
+      toast({ title: "Failed to update priority", variant: "destructive" });
+    }
+  };
+
+  // Update task field
+  const updateSelectedTask = async (patch: Partial<Task>) => {
+    if (!selectedTask) return;
+    try {
+      await apiRequest("PATCH", `/api/tasks/${selectedTask.id}`, patch);
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    } catch (error) {
+      toast({ title: "Failed to update task", variant: "destructive" });
+    }
+  };
+
+  // Add new task
+  const addTask = async () => {
+    if (!newTask.title.trim()) return;
+    
+    const taskData: any = {
+      title: newTask.title,
+      description: newTask.description,
+      status: newTask.status,
+      priority: newTask.priority,
+    };
+
+    if (newTask.assignedToId) {
+      taskData.assignedToId = parseInt(newTask.assignedToId);
+    }
+    if (newTask.clientId) {
+      taskData.clientId = newTask.clientId;
+    }
+    if (newTask.dueDate) {
+      taskData.dueDate = new Date(newTask.dueDate + "T23:59").toISOString();
+    }
+    if (newTask.tags) {
+      taskData.tags = newTask.tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+    }
+
+    try {
+      await apiRequest("POST", "/api/tasks", taskData);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       toast({ title: "Task created successfully" });
-      setIsCreateDialogOpen(false);
-      form.reset();
-    },
-    onError: (error: any) => {
-      console.error("Task creation error:", error);
-      toast({ 
-        title: "Failed to create task", 
-        description: error?.message || "Please try again",
-        variant: "destructive" 
+      setShowNewTask(false);
+      setNewTask({
+        title: "",
+        description: "",
+        status: "todo",
+        priority: "normal",
+        assignedToId: "",
+        clientId: "",
+        dueDate: "",
+        tags: "",
       });
-    },
-  });
+    } catch (error) {
+      toast({ title: "Failed to create task", variant: "destructive" });
+    }
+  };
 
-  const editTaskMutation = useMutation({
-    mutationFn: async (data: TaskFormData) => {
-      if (!editingTask) return;
-      const taskData: any = {
-        title: data.title,
-        status: data.status,
-        priority: data.priority,
-      };
-
-      // Only add optional fields if they have values
-      if (data.description) taskData.description = data.description;
-
-      // Combine date and time if both are provided, using EST timezone
-      if (data.dueDate) {
-        if (data.dueTime) {
-          // Parse as EST datetime
-          taskData.dueDate = parseInputDateEST(`${data.dueDate}T${data.dueTime}`).toISOString();
-        } else {
-          // Parse as EST date, set to end of day (11:59 PM EST)
-          taskData.dueDate = parseInputDateEST(`${data.dueDate}T23:59`).toISOString();
-        }
-      } else {
-        // Explicitly clear due date when not provided
-        taskData.dueDate = null;
-      }
-      
-      if (data.campaignId) taskData.campaignId = data.campaignId;
-      if (data.clientId) taskData.clientId = data.clientId;
-      if (data.spaceId) taskData.spaceId = data.spaceId;
-      if (data.assignedToId) taskData.assignedToId = parseInt(data.assignedToId);
-      if (data.isRecurring) {
-        taskData.isRecurring = true;
-        if (data.recurringPattern) taskData.recurringPattern = data.recurringPattern;
-        if (data.recurringInterval) taskData.recurringInterval = data.recurringInterval;
-        if (data.recurringEndDate) taskData.recurringEndDate = parseInputDateEST(data.recurringEndDate).toISOString();
-        if (data.scheduleFrom) taskData.scheduleFrom = data.scheduleFrom;
-      } else {
-        taskData.isRecurring = false;
-      }
-      
-      return apiRequest("PATCH", `/api/tasks/${editingTask.id}`, taskData);
-    },
-    onSuccess: () => {
+  // Delete task
+  const deleteTask = async (taskId: string) => {
+    try {
+      await apiRequest("DELETE", `/api/tasks/${taskId}`);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "Task updated successfully" });
-      setIsEditDialogOpen(false);
-      setEditingTask(null);
-      form.reset();
-    },
-    onError: (error: any) => {
-      console.error("Task update error:", error);
-      toast({ 
-        title: "Failed to update task", 
-        description: error?.message || "Please try again",
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const deleteTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      return apiRequest("DELETE", `/api/tasks/${taskId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "Task deleted successfully" });
-    },
-    onError: (error: any) => {
-      console.error("Task delete error:", error);
-      toast({ 
-        title: "Failed to delete task", 
-        description: error?.message || "Please try again",
-        variant: "destructive" 
-      });
-    },
-  });
-
-  // Bulk operations now use the bulkTasks hook defined above
-  // The old inline mutations have been replaced with the useBulkTasks hook
-
-  // Recurring task series mutations
-  const updateRecurringSeriesMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return apiRequest("PATCH", `/api/tasks/${id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "Recurring task updated successfully" });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to update recurring task", 
-        description: error?.message || "Please try again",
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const deleteRecurringSeriesMutation = useMutation({
-    mutationFn: async (taskId: string) => {
-      return apiRequest("DELETE", `/api/tasks/${taskId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      toast({ title: "Recurring task series deleted" });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to delete recurring task", 
-        description: error?.message || "Please try again",
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    form.reset({
-      title: task.title,
-      description: task.description || "",
-      status: task.status as any,
-      priority: task.priority as any,
-      dueDate: task.dueDate ? toInputDateEST(task.dueDate) : "",
-      campaignId: task.campaignId || "",
-      clientId: task.clientId || "",
-      spaceId: task.spaceId || "",
-      assignedToId: task.assignedToId?.toString() || "",
-      isRecurring: task.isRecurring || false,
-      recurringPattern: task.recurringPattern as any,
-      recurringInterval: task.recurringInterval || 1,
-      recurringEndDate: task.recurringEndDate ? toInputDateEST(task.recurringEndDate) : "",
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const toggleTaskSelection = (taskId: string, event?: React.MouseEvent) => {
-    if (event) event.stopPropagation();
-    const newSelection = new Set(selectedTaskIds);
-    if (newSelection.has(taskId)) {
-      newSelection.delete(taskId);
-    } else {
-      newSelection.add(taskId);
+      toast({ title: "Task deleted" });
+      setSelectedTaskId(null);
+    } catch (error) {
+      toast({ title: "Failed to delete task", variant: "destructive" });
     }
-    setSelectedTaskIds(newSelection);
-  };
-
-  const selectAllTasks = () => {
-    if (selectedTaskIds.size === filteredTasks.length) {
-      setSelectedTaskIds(new Set());
-    } else {
-      setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)));
-    }
-  };
-
-  const handleDragStart = (task: Task) => {
-    setDraggedTask(task);
-    setIsDragging(true);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedTask(null);
-    setIsDragging(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Allow drop
-  };
-
-  const handleDrop = (e: React.DragEvent, newStatus: string) => {
-    e.preventDefault();
-    if (draggedTask && draggedTask.status !== newStatus) {
-      updateTaskStatusMutation.mutate({
-        id: draggedTask.id,
-        status: newStatus
-      });
-    }
-    setDraggedTask(null);
-    setIsDragging(false);
-  };
-
-  const handleVoiceInput = () => {
-    // Check if browser supports speech recognition
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      toast({
-        title: "Voice input not supported",
-        description: "Please use Chrome or Edge browser for voice input",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      toast({
-        title: "🎤 Listening...",
-        description: "Speak your task naturally"
-      });
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setAiInput(transcript);
-      toast({
-        title: "✓ Captured",
-        description: `"${transcript}"`
-      });
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      toast({
-        title: "Voice input error",
-        description: event.error === 'no-speech' ? "No speech detected. Please try again." : "Failed to capture voice input",
-        variant: "destructive"
-      });
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
-  };
-
-  const updateTaskStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return apiRequest("PATCH", `/api/tasks/${id}`, { 
-        status,
-      });
-    },
-    onMutate: async ({ id, status }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["/api/tasks"] });
-      
-      // Snapshot previous value
-      const previousTasks = queryClient.getQueryData<Task[]>("/api/tasks");
-      
-      // Optimistically update
-      queryClient.setQueryData<Task[]>("/api/tasks", (old: Task[] | undefined) => {
-        if (!old) return old;
-        return old.map(t => t.id === id ? { ...t, status } : t);
-      });
-      
-      return { previousTasks };
-    },
-    onError: (err, { id, status }, context) => {
-      // Rollback on error
-      if (context?.previousTasks) {
-        queryClient.setQueryData<Task[]>("/api/tasks", context.previousTasks);
-      }
-      toast({ title: "Failed to update task", variant: "destructive" });
-    },
-    onSettled: () => {
-      // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-    },
-  });
-
-  const matchesBaseFilters = (task: Task) => {
-    if (filterStatus !== "all" && task.status !== filterStatus) return false;
-    if (filterPriority !== "all" && task.priority !== filterPriority) return false;
-    if (selectedSpaceId !== null && task.spaceId !== selectedSpaceId) return false;
-    if (searchQuery.trim() !== '' && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) && !task.description?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
-    // Advanced filters
-    if (filterClientId !== null && task.clientId !== filterClientId) return false;
-    if (filterAssigneeId !== null) {
-      if (filterAssigneeId === "unassigned" && task.assignedToId) return false;
-      if (filterAssigneeId !== "unassigned" && task.assignedToId?.toString() !== filterAssigneeId) return false;
-    }
-    
-    // Due date range filter
-    if (filterDueDateRange !== null) {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
-      
-      switch (filterDueDateRange) {
-        case "overdue":
-          if (!taskDueDate || taskDueDate >= today) return false;
-          break;
-        case "today":
-          if (!taskDueDate || taskDueDate.toDateString() !== today.toDateString()) return false;
-          break;
-        case "tomorrow": {
-          const tomorrow = new Date(today);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          if (!taskDueDate || taskDueDate.toDateString() !== tomorrow.toDateString()) return false;
-          break;
-        }
-        case "this_week": {
-          if (!taskDueDate) return false;
-          const weekEnd = new Date(today);
-          weekEnd.setDate(weekEnd.getDate() + (6 - today.getDay()));
-          if (taskDueDate < today || taskDueDate > weekEnd) return false;
-          break;
-        }
-        case "next_week": {
-          if (!taskDueDate) return false;
-          const nextWeekStart = new Date(today);
-          nextWeekStart.setDate(nextWeekStart.getDate() + (7 - today.getDay()));
-          const nextWeekEnd = new Date(nextWeekStart);
-          nextWeekEnd.setDate(nextWeekEnd.getDate() + 6);
-          if (taskDueDate < nextWeekStart || taskDueDate > nextWeekEnd) return false;
-          break;
-        }
-        case "this_month": {
-          if (!taskDueDate) return false;
-          const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-          if (taskDueDate < today || taskDueDate > monthEnd) return false;
-          break;
-        }
-        case "no_date":
-          if (taskDueDate) return false;
-          break;
-      }
-    }
-    
-    return true;
-  };
-
-  const completedHiddenByToggle = !showCompleted
-    ? tasks.filter((t) => matchesBaseFilters(t) && t.status === "completed").length
-    : 0;
-
-  // Memoized filtered tasks for performance
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      if (!matchesBaseFilters(task)) return false;
-
-      // Hide all completed tasks if toggle is off
-      if (!showCompleted && task.status === "completed") return false;
-      return true;
-    });
-  }, [tasks, filterStatus, filterPriority, selectedSpaceId, showCompleted, filterClientId, filterAssigneeId, filterDueDateRange, searchQuery]);
-
-  // Keyboard shortcuts - defined after filteredTasks to avoid reference errors
-  const cycleViewMode = useCallback(() => {
-    setViewMode(current => {
-      if (current === "kanban") return "list";
-      if (current === "list") return "compact";
-      return "kanban";
-    });
-  }, []);
-
-  useTaskKeyboardShortcuts({
-    onCreateTask: () => setIsCreateDialogOpen(true),
-    onSearch: () => searchInputRef.current?.focus(),
-    onToggleFilters: () => setIsFilterPanelOpen(prev => !prev),
-    onToggleView: cycleViewMode,
-    onSelectAll: () => {
-      if (selectedTaskIds.size === filteredTasks.length) {
-        setSelectedTaskIds(new Set());
-      } else {
-        setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)));
-      }
-    },
-    onEscape: () => {
-      if (isDetailSidebarOpen) {
-        setIsDetailSidebarOpen(false);
-      } else if (selectedTaskIds.size > 0) {
-        setSelectedTaskIds(new Set());
-      }
-    },
-    enabled: true,
-  });
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent": return "bg-red-500";
-      case "high": return "bg-orange-500";
-      case "normal": return "bg-blue-500";
-      case "low": return "bg-gray-400";
-      default: return "bg-gray-400";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed": return "bg-green-500";
-      case "in_progress": return "bg-blue-500";
-      case "review": return "bg-purple-500";
-      case "todo": return "bg-gray-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const renderKanbanView = () => {
-    const columns = [
-      { id: "todo", title: "To Do", icon: "📋" },
-      { id: "in_progress", title: "In Progress", icon: "⚡" },
-      { id: "review", title: "Review", icon: "👀" },
-      { id: "completed", title: "Completed", icon: "✅" },
-    ];
-    
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 h-full p-4 overflow-x-auto">
-        {columns.map((column) => {
-          const columnTasks = filteredTasks.filter((task) => task.status === column.id);
-          
-          return (
-            <div
-              key={column.id}
-              className="flex flex-col h-full min-w-[200px] md:min-w-[240px] lg:min-w-[280px] bg-muted/30 rounded-xl border p-3 backdrop-blur-sm"
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, column.id)}
-            >
-              <div className="mb-4 px-2 py-1 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{column.icon}</span>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    {column.title}
-                  </h3>
-                  <Badge variant="secondary" className="ml-2 bg-background/50 text-[10px] px-1.5 h-4 min-w-[20px] justify-center">
-                    {columnTasks.length}
-                  </Badge>
-                </div>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-50 hover:opacity-100">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar"
-                style={{ 
-                  borderColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.3)' : 'transparent',
-                  backgroundColor: draggedTask && draggedTask.status !== column.id ? 'hsl(var(--primary) / 0.05)' : 'transparent'
-                }}
-              >
-                {columnTasks.map((task) => (
-                  <Card
-                    key={task.id}
-                    draggable
-                    onDragStart={() => handleDragStart(task)}
-                    onDragEnd={handleDragEnd}
-                    className={`hover-elevate transition-all group cursor-grab active:cursor-grabbing border border-muted shadow-sm hover:shadow-md bg-card ${
-                      draggedTask?.id === task.id ? 'opacity-50' : ''
-                    }`}
-                    data-testid={`task-card-${task.id}`}
-                    onClick={() => {
-                      if (!isDragging) {
-                        setSelectedTask(task);
-                        setIsDetailSidebarOpen(true);
-                      }
-                    }}
-                  >
-                    <CardContent className="p-3 space-y-2">
-                      {/* Priority indicator */}
-                      <div className="flex items-start justify-between gap-2 mr-8">
-                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${
-                          task.priority === "urgent" ? "bg-red-500" :
-                          task.priority === "high" ? "bg-orange-500" :
-                          task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
-                        }`} />
-                        <h4 className="font-medium text-sm leading-tight flex-1 line-clamp-2">{task.title}</h4>
-                      </div>
-
-                      {/* Description preview */}
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                          {task.description}
-                        </p>
-                      )}
-
-                      {/* Meta info row */}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          {task.dueDate && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {toLocaleDateStringEST(task.dueDate)}
-                            </div>
-                          )}
-                          {task.checklist && task.checklist.length > 0 && (
-                            <div className="flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
-                            </div>
-                          )}
-                          {task.isRecurring && (
-                            <Repeat className="w-3 h-3 text-blue-500" />
-                          )}
-                        </div>
-                        {task.assignedToId && (
-                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                            {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
-                          </div>
-                        )}
-                        {/* Delete button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm(`Delete task "${task.title}"?`)) {
-                              deleteTaskMutation.mutate(task.id);
-                            }
-                          }}
-                          className="absolute top-2 right-2 p-1.5 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
-                          title="Delete task"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {columnTasks.length === 0 && (
-                  <div className="text-center py-10 border-2 border-dashed rounded-xl border-muted/20 text-muted-foreground/50 text-xs">
-                    Drop tasks here
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderCompactView = () => {
-    return (
-      <div className="border rounded-lg overflow-hidden bg-card">
-        {/* Header */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground items-center">
-          <div className="col-span-1 flex justify-center">
-            <Checkbox
-              checked={selectedTaskIds.size === filteredTasks.length && filteredTasks.length > 0}
-              onCheckedChange={selectAllTasks}
-              className="h-4 w-4"
-            />
-          </div>
-          <div className="col-span-5">TASK</div>
-          <div className="col-span-2">STATUS</div>
-          <div className="col-span-2">DUE</div>
-          <div className="col-span-2 text-right">ASSIGNEE</div>
-        </div>
-
-        {/* Task Rows */}
-        <div className="divide-y">
-          {filteredTasks.map((task) => (
-            <div key={task.id} className="group relative">
-              <div
-                className={`px-3 md:px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${
-                  selectedTaskIds.has(task.id) ? "bg-primary/5 hover:bg-primary/10" :
-                  selectedTask?.id === task.id ? "bg-muted/50" : ""
-                }`}
-                onClick={() => {
-                  setSelectedTask(task);
-                  setIsDetailSidebarOpen(true);
-                }}
-                data-testid={`task-row-${task.id}`}
-              >
-                {/* Mobile Layout */}
-                <div className="md:hidden flex items-center gap-3">
-                  <Checkbox
-                    checked={selectedTaskIds.has(task.id)}
-                    onCheckedChange={() => toggleTaskSelection(task.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-4"
-                  />
-                  <div className={`w-2 h-8 rounded-full flex-shrink-0 ${
-                    task.priority === "urgent" ? "bg-red-500" :
-                    task.priority === "high" ? "bg-orange-500" :
-                    task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-sm line-clamp-2">{task.title}</span>
-                    {task.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">
-                        {task.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                      <span className="capitalize">{task.status.replace("_", " ")}</span>
-                      {task.dueDate && <span>{toLocaleDateStringEST(task.dueDate)}</span>}
-                    </div>
-                  </div>
-                  {task.assignedToId && (
-                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                      {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
-                    </div>
-                  )}
-                </div>
-
-                {/* Desktop Layout */}
-                <div className="hidden md:grid grid-cols-12 gap-4 items-center">
-                  <div className="col-span-1 flex justify-center">
-                    <Checkbox
-                      checked={selectedTaskIds.has(task.id)}
-                      onCheckedChange={() => toggleTaskSelection(task.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-4 w-4"
-                    />
-                  </div>
-                  <div className="col-span-5 flex items-center gap-3 min-w-0">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      task.priority === "urgent" ? "bg-red-500" :
-                      task.priority === "high" ? "bg-orange-500" :
-                      task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
-                    }`} />
-                    <div className="min-w-0">
-                      <span className="line-clamp-2 text-sm font-medium">{task.title}</span>
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5 leading-relaxed">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
-                    {task.isRecurring && <Repeat className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
-                  </div>
-
-                  <div className="col-span-2">
-                    <span className="text-xs capitalize bg-muted/50 px-2 py-1 rounded">{task.status.replace("_", " ")}</span>
-                  </div>
-
-                  <div className="col-span-2 text-xs text-muted-foreground">
-                    {task.dueDate ? toLocaleDateStringEST(task.dueDate) : "-"}
-                  </div>
-
-                  <div className="col-span-2 flex items-center justify-end gap-2">
-                    {task.assignedToId ? (
-                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                        {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
-                      </div>
-                    ) : (
-                      <div className="w-7 h-7 rounded-full border border-dashed flex items-center justify-center text-muted-foreground/30">
-                        <User className="w-3 h-3" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredTasks.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No tasks match the current filters</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderListView = () => {
-    return (
-      <div className="space-y-2">
-        {filteredTasks.map((task) => (
-          <Card
-            key={task.id}
-            className={`hover-elevate transition-all group cursor-pointer ${
-              selectedTaskIds.has(task.id) ? "border-primary bg-primary/5" : ""
-            }`}
-            data-testid={`task-card-${task.id}`}
-            onClick={() => {
-              setSelectedTask(task);
-              setIsDetailSidebarOpen(true);
-            }}
-          >
-            <CardContent className="p-4 flex items-center gap-4">
-              {/* Checkbox */}
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                <Checkbox
-                  checked={selectedTaskIds.has(task.id)}
-                  onCheckedChange={() => toggleTaskSelection(task.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4"
-                />
-              </div>
-
-              {/* Priority indicator */}
-              <div className={`w-2 h-8 rounded-full flex-shrink-0 ${
-                task.priority === "urgent" ? "bg-red-500" :
-                task.priority === "high" ? "bg-orange-500" :
-                task.priority === "normal" ? "bg-blue-500" : "bg-gray-400"
-              }`} />
-
-              {/* Task info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium line-clamp-2">{task.title}</h3>
-                {task.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1 leading-relaxed">
-                    {task.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                  {task.dueDate && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {toLocaleDateStringEST(task.dueDate)}
-                    </div>
-                  )}
-                  {task.checklist && task.checklist.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
-                    </div>
-                  )}
-                  {task.isRecurring && (
-                    <Repeat className="w-3 h-3 text-blue-500" />
-                  )}
-                </div>
-              </div>
-
-              {/* Status dropdown */}
-              <Select
-                value={task.status}
-                onValueChange={(status) => updateTaskStatusMutation.mutate({ id: task.id, status })}
-              >
-                <SelectTrigger className="w-32" onClick={(e) => e.stopPropagation()} data-testid={`select-status-${task.id}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Assignee */}
-              {task.assignedToId ? (
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                  {users.find(u => u.id === task.assignedToId)?.firstName?.[0] || "?"}
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-full border border-dashed flex items-center justify-center text-muted-foreground/30">
-                  <User className="w-4 h-4" />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-        {filteredTasks.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No tasks match the current filters</p>
-          </div>
-        )}
-      </div>
-    );
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading tasks...</p>
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Left Sidebar - Task Spaces - Hidden on mobile */}
-      <div className="hidden md:block w-64 border-r bg-card/50 overflow-y-auto">
-        <TaskSpacesSidebar 
-          selectedSpaceId={selectedSpaceId}
-          onSpaceSelect={setSelectedSpaceId}
-        />
-      </div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f8fafc,white_40%,#eef2ff_100%)] text-slate-900">
+      <div className="mx-auto max-w-[1680px] p-4 md:p-6 xl:p-8">
+        <div className="space-y-6">
+          {/* Header Section */}
+          <section className="overflow-hidden rounded-[32px] border border-slate-200/80 bg-white/90 shadow-[0_20px_70px_-35px_rgba(15,23,42,0.35)] backdrop-blur">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 px-5 py-6 text-white md:px-6">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Task Management</div>
+                  <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Modern Interactive Task Command Center</h1>
+                  <p className="mt-2 max-w-3xl text-sm text-slate-300 md:text-base">
+                    Search, filter, move tasks, edit task details, and add new tasks on one page.
+                  </p>
+                </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="p-3 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold">Tasks</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""}
-                {filterStatus !== "all" && ` • ${filterStatus.replace("_", " ")}`}
-                {filterPriority !== "all" && ` • ${filterPriority}`}
-              </p>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative w-full lg:w-72">
-              <Input
-                ref={searchInputRef}
-                placeholder="Search tasks... (⌘F)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
-                  onClick={() => setSearchQuery('')}
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              )}
-            </div>
-            {/* Mobile: open Spaces sidebar */}
-            <div className="md:hidden">
-              <Dialog open={spacesDialogOpen} onOpenChange={setSpacesDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">Spaces</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Spaces</DialogTitle>
-                    <DialogDescription>Select a space to filter tasks</DialogDescription>
-                  </DialogHeader>
-                  <TaskSpacesSidebar 
-                    selectedSpaceId={selectedSpaceId}
-                    onSpaceSelect={(id) => { setSelectedSpaceId(id); setSpacesDialogOpen(false); }}
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          {tasksError && (
-            <div className="w-full rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-medium text-destructive">Tasks failed to load</div>
-                <div className="text-muted-foreground truncate">{tasksError.message}</div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] })}
-              >
-                Retry
-              </Button>
-            </div>
-          )}
-
-          {!tasksError && completedHiddenByToggle > 0 && (
-            <div className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-medium">Completed tasks are hidden</div>
-                <div className="text-muted-foreground truncate">
-                  {completedHiddenByToggle} completed tasks match your current filters.
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
+                  <div className="flex min-w-[280px] items-center rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-slate-200 backdrop-blur">
+                    <Search className="mr-2 h-4 w-4" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search tasks, people, tags, company..."
+                      className="w-full bg-transparent outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setShowNewTask(true)}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:scale-[1.01]"
+                  >
+                    <Plus className="h-4 w-4" /> New Task
+                  </button>
                 </div>
               </div>
-              <Button variant="secondary" size="sm" onClick={() => setShowCompleted(true)}>
-                Show completed
-              </Button>
             </div>
-          )}
 
-          {/* Filter Button */}
-          <Button
-            variant={isFilterPanelOpen ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            className="gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filter
-            {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || filterClientId !== null || filterAssigneeId !== null || filterDueDateRange !== null) && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                {(filterStatus !== "all" ? 1 : 0) + (filterPriority !== "all" ? 1 : 0) + (selectedSpaceId !== null ? 1 : 0) + (filterClientId !== null ? 1 : 0) + (filterAssigneeId !== null ? 1 : 0) + (filterDueDateRange !== null ? 1 : 0)}
-              </Badge>
-            )}
-          </Button>
+            <div className="px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {filters.map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setActiveFilter(filter)}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                        activeFilter === filter
+                          ? "bg-slate-900 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
 
-          {/* Collapsible Filter Panel */}
-          {isFilterPanelOpen && (
-            <div className="w-full space-y-3 p-4 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
-              {/* Row 1: Basic Filters */}
-              <div className="flex flex-wrap items-center gap-3">
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-36" data-testid="select-filter-status">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="review">Review</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={filterPriority} onValueChange={setFilterPriority}>
-                  <SelectTrigger className="w-36" data-testid="select-filter-priority">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select
-                  value={selectedSpaceId || ""}
-                  onValueChange={(val) => setSelectedSpaceId(val || null)}
-                >
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="All Spaces" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Spaces</SelectItem>
-                    {buildSpaceOptions().map((space) => (
-                      <SelectItem key={space.id} value={space.id}>
-                        {space.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Row 2: Advanced Filters */}
-              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-muted">
-                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                  <Filter className="w-3 h-3" />
-                  Advanced Filters
-                </span>
-
-                {/* Client Filter */}
-                <Select
-                  value={filterClientId || ""}
-                  onValueChange={(val) => setFilterClientId(val || null)}
-                >
-                  <SelectTrigger className="w-44" data-testid="select-filter-client">
-                    <Building2 className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                    <SelectValue placeholder="All Clients" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Clients</SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Assignee Filter */}
-                <Select
-                  value={filterAssigneeId || ""}
-                  onValueChange={(val) => setFilterAssigneeId(val || null)}
-                >
-                  <SelectTrigger className="w-44" data-testid="select-filter-assignee">
-                    <User className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                    <SelectValue placeholder="All Assignees" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Assignees</SelectItem>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id.toString()}>
-                        {user.firstName && user.lastName
-                          ? `${user.firstName} ${user.lastName}`
-                          : user.username}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Due Date Range Filter */}
-                <Select
-                  value={filterDueDateRange || ""}
-                  onValueChange={(val) => setFilterDueDateRange(val || null)}
-                >
-                  <SelectTrigger className="w-44" data-testid="select-filter-due-date">
-                    <Calendar className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                    <SelectValue placeholder="Any Due Date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Any Due Date</SelectItem>
-                    <SelectItem value="overdue">
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="w-3 h-3 text-red-500" />
-                        Overdue
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                    <SelectItem value="this_week">This Week</SelectItem>
-                    <SelectItem value="next_week">Next Week</SelectItem>
-                    <SelectItem value="this_month">This Month</SelectItem>
-                    <SelectItem value="no_date">No Due Date</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant={showCompleted ? "outline" : "secondary"}
-                  size="sm"
-                  onClick={() => setShowCompleted(!showCompleted)}
-                  className="gap-2"
-                >
-                  {showCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {showCompleted ? "Hide Completed" : "Show Completed"}
-                </Button>
-
-                {(filterStatus !== "all" || filterPriority !== "all" || selectedSpaceId !== null || !showCompleted || filterClientId !== null || filterAssigneeId !== null || filterDueDateRange !== null) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setFilterStatus("all");
-                      setFilterPriority("all");
-                      setSelectedSpaceId(null);
-                      setShowCompleted(true);
-                      setSearchQuery('');
-                      setFilterClientId(null);
-                      setFilterAssigneeId(null);
-                      setFilterDueDateRange(null);
-                    }}
-                    className="text-muted-foreground"
-                  >
-                    Clear all filters
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* View Mode Switcher */}
-          <ViewModeSwitcher
-            value={viewMode}
-            onChange={setViewMode}
-            showAnalytics={true}
-          />
-
-          {/* More Options Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {isAdminOrManager && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => backfillRecurringMutation.mutate()}
-                    disabled={backfillRecurringMutation.isPending}
-                  >
-                    <Repeat className="w-4 h-4 mr-2" />
-                    {backfillRecurringMutation.isPending ? "Backfilling..." : "Backfill Recurring"}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem onClick={() => setIsRecurringMasterOpen(true)}>
-                <List className="w-4 h-4 mr-2" />
-                Recurring Tasks Master
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  if (confirm("Archive all completed tasks older than 30 days? This will hide them from view.")) {
-                    bulkTasks.archiveCompleted(30);
-                  }
-                }}
-                disabled={bulkTasks.isPending}
-              >
-                <Archive className="w-4 h-4 mr-2" />
-                Archive Old Completed
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSelectedSpaceId(null)}>
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                All Spaces
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSpacesDialogOpen(true)}>
-                <ListTodo className="w-4 h-4 mr-2" />
-                Manage Spaces
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="flex-1" />
-
-          {/* New Task Button */}
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-task" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
-              <DialogHeader>
-                <DialogTitle>Create New Task</DialogTitle>
-                <DialogDescription>Add a new task to your workflow</DialogDescription>
-              </DialogHeader>
-              {/* Predefined Task Templates */}
-              <div className="mb-4">
-                <label className="text-sm font-medium text-muted-foreground">Quick Templates</label>
-                {templates.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    {templates.map((template) => (
+                <div className="flex flex-wrap gap-2">
+                  {views.map((view) => {
+                    const Icon = view === "Board" ? LayoutGrid : view === "List" ? List : CalendarDays;
+                    return (
                       <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => applyTemplate(template, form, setSelectedTemplateId)}
-                        className={`p-3 text-left border rounded-lg hover:bg-muted/50 transition-colors ${
-                          selectedTemplateId === template.id ? 'border-primary bg-primary/5' : ''
+                        key={view}
+                        onClick={() => setActiveView(view)}
+                        className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+                          activeView === view
+                            ? "bg-indigo-600 text-white shadow-sm"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                       >
-                        <div className="text-sm">
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-xs text-muted-foreground">{template.description || template.title}</div>
+                        <Icon className="h-4 w-4" />
+                        {view}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Summary Cards */}
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {summary.map((card) => (
+              <div key={card.label} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="text-sm text-slate-500">{card.label}</div>
+                <div className="mt-2 text-3xl font-bold tracking-tight">{card.value}</div>
+                <div className="mt-2 text-sm text-slate-500">{card.note}</div>
+              </div>
+            ))}
+          </section>
+
+          {/* Task Workspace */}
+          <section>
+            <div className="rounded-[32px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Task Workspace</h2>
+                  <p className="text-sm text-slate-500">Clean layout, better hierarchy, and direct control without jumping around pages.</p>
+                </div>
+                <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  {filteredTasks.length} shown
+                </div>
+              </div>
+
+              {activeView === "Board" && (
+                <div className="grid gap-4 xl:grid-cols-4">
+                  {statuses.map((status) => (
+                    <div key={status} className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
+                      <div className={`bg-gradient-to-r ${statusAccent[status]} px-4 py-4 text-white`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold">{status}</div>
+                            <div className="text-xs text-white/80">{groupedTasks[status]?.length || 0} tasks</div>
+                          </div>
+                          <div className="rounded-full bg-white/15 px-2.5 py-1 text-xs">Live</div>
                         </div>
+                      </div>
+
+                      <div className="max-h-[680px] space-y-3 overflow-auto p-3">
+                        {(groupedTasks[status] || []).map((task) => (
+                          <button
+                            key={task.id}
+                            onClick={() => setSelectedTaskId(task.id)}
+                            className={`w-full rounded-[24px] border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                              selectedTaskId === task.id ? "border-indigo-500 ring-2 ring-indigo-100" : "border-slate-200"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold leading-5 text-slate-900">{task.title}</div>
+                                <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                  <span>{getCompanyName(task.clientId, clients)}</span>
+                                  <span>•</span>
+                                  <span>{getInitials(task.assignedToId, users)}</span>
+                                </div>
+                              </div>
+                              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${priorityStyles[mapPriorityToUI(task.priority)]}`}>
+                                {mapPriorityToUI(task.priority)}
+                              </span>
+                            </div>
+
+                            <p className="mt-3 line-clamp-2 text-sm leading-5 text-slate-600">{task.description || "No description"}</p>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {(task.tags || []).slice(0, 2).map((tag) => (
+                                <span key={tag} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <Clock3 className="h-3.5 w-3.5" />
+                                {formatDueDate(task.dueDate)}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveTask(task.id, -1);
+                                  }}
+                                  className="rounded-full border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100"
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveTask(task.id, 1);
+                                  }}
+                                  className="rounded-full border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100"
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+
+                        {(groupedTasks[status] || []).length === 0 && (
+                          <div className="rounded-[22px] border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">
+                            No tasks here
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeView === "List" && (
+                <div className="overflow-hidden rounded-[28px] border border-slate-200">
+                  <div className="grid grid-cols-[1.7fr_0.9fr_0.7fr_0.7fr_0.7fr] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div>Task</div>
+                    <div>Company</div>
+                    <div>Status</div>
+                    <div>Priority</div>
+                    <div>Assignee</div>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {filteredTasks.map((task) => (
+                      <button
+                        key={task.id}
+                        onClick={() => setSelectedTaskId(task.id)}
+                        className="grid w-full grid-cols-[1.7fr_0.9fr_0.7fr_0.7fr_0.7fr] gap-3 px-4 py-4 text-left transition hover:bg-slate-50"
+                      >
+                        <div>
+                          <div className="font-semibold text-slate-900">{task.title}</div>
+                          <div className="mt-1 text-sm text-slate-500">{formatDueDate(task.dueDate)}</div>
+                        </div>
+                        <div className="text-sm text-slate-600">{getCompanyName(task.clientId, clients)}</div>
+                        <div className="text-sm text-slate-600">{mapStatusToUI(task.status)}</div>
+                        <div>
+                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${priorityStyles[mapPriorityToUI(task.priority)]}`}>
+                            {mapPriorityToUI(task.priority)}
+                          </span>
+                        </div>
+                        <div className="text-sm text-slate-600">{getInitials(task.assignedToId, users)}</div>
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">No templates available</div>
-                )}
-              </div>
+                </div>
+              )}
 
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => {
-                  const templateData = selectedTemplateId
-                    ? { ...data, templateId: selectedTemplateId }
-                    : data;
-                  createTaskMutation.mutate(templateData);
-                })} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Task title" data-testid="input-task-title" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Task description" rows={3} data-testid="input-task-description" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-task-status">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="todo">To Do</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="review">Review</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Priority *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-task-priority">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Date (Optional)</FormLabel>
-                          <FormControl>
-                            <DatePicker
-                              value={field.value}
-                              onChange={field.onChange}
-                              placeholder="Select due date"
-                              data-testid="input-task-due-date"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="dueTime"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Time (Optional)</FormLabel>
-                          <FormControl>
-                            <Input type="time" {...field} placeholder="HH:MM" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="assignedToId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assign To</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-task-assignee">
-                              <SelectValue placeholder="Select team member" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {users.map((user) => (
-                              <SelectItem key={user.id} value={user.id.toString()}>
-                                {user.username}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Related Client</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-task-client">
-                              <SelectValue placeholder="Select client (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="spaceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Space (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-task-space">
-                              <SelectValue placeholder="Select space (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {buildSpaceOptions().map((space) => (
-                              <SelectItem key={space.id} value={space.id}>
-                                {space.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Recurring Task Settings */}
-                  <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-                    <FormField
-                      control={form.control}
-                      name="isRecurring"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <input
-                              type="checkbox"
-                              checked={field.value || false}
-                              onChange={(e) => field.onChange(e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 mt-1"
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel className="cursor-pointer">
-                              🔄 Make this a recurring task
-                            </FormLabel>
-                            <p className="text-xs text-muted-foreground">
-                              Automatically create a new task when this one is completed
-                            </p>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {form.watch("isRecurring") && (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="recurringPattern"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Repeat Pattern</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select pattern" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="daily">Daily</SelectItem>
-                                    <SelectItem value="weekly">Weekly</SelectItem>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                    <SelectItem value="yearly">Yearly</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="recurringInterval"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Every</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    placeholder="1"
-                                  />
-                                </FormControl>
-                                <p className="text-xs text-muted-foreground">
-                                  Repeat every X {form.watch("recurringPattern") || "period"}(s)
-                                </p>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name="scheduleFrom"
-                          render={({ field }) => (
-                            <FormItem className="space-y-3">
-                              <FormLabel>Schedule Next Task From</FormLabel>
-                              <FormControl>
-                                <div className="flex flex-col gap-2">
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="radio"
-                                      value="due_date"
-                                      checked={field.value === "due_date"}
-                                      onChange={() => field.onChange("due_date")}
-                                      className="h-4 w-4"
-                                    />
-                                    <div>
-                                      <div className="font-medium text-sm">📅 Due Date</div>
-                                      <div className="text-xs text-muted-foreground">Next task uses same schedule (e.g., every Monday)</div>
-                                    </div>
-                                  </label>
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                      type="radio"
-                                      value="completion_date"
-                                      checked={field.value === "completion_date"}
-                                      onChange={() => field.onChange("completion_date")}
-                                      className="h-4 w-4"
-                                    />
-                                    <div>
-                                      <div className="font-medium text-sm">✅ Completion Date</div>
-                                      <div className="text-xs text-muted-foreground">Next task starts from when you complete this one</div>
-                                    </div>
-                                  </label>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="recurringEndDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>End Date (Optional)</FormLabel>
-                              <FormControl>
-                                <DatePicker
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  placeholder="Select end date"
-                                />
-                              </FormControl>
-                              <p className="text-xs text-muted-foreground">
-                                Leave empty to repeat indefinitely
-                              </p>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsCreateDialogOpen(false)}
-                      data-testid="button-cancel-task"
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createTaskMutation.isPending} data-testid="button-submit-task">
-                      {createTaskMutation.isPending ? "Creating..." : "Create Task"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-
-          {/* Edit Task Dialog */}
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
-              <DialogHeader>
-                <DialogTitle>Edit Task</DialogTitle>
-                <DialogDescription>Update task details</DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => editTaskMutation.mutate(data))} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Task title" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Task description" rows={3} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="todo">To Do</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="review">Review</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Priority *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="dueDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Due Date (Optional)</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="Select due date"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="assignedToId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assign To</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select team member" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {users.map((user) => (
-                              <SelectItem key={user.id} value={user.id.toString()}>
-                                {user.username}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Related Client</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select client (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="spaceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Space (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select space (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {buildSpaceOptions().map((space) => (
-                              <SelectItem key={space.id} value={space.id}>
-                                {space.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Recurring Task Settings */}
-                  <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
-                    <FormField
-                      control={form.control}
-                      name="isRecurring"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <input
-                              type="checkbox"
-                              checked={field.value || false}
-                              onChange={(e) => field.onChange(e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 mt-1"
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel className="cursor-pointer">
-                              🔄 Make this a recurring task
-                            </FormLabel>
-                            <p className="text-xs text-muted-foreground">
-                              Automatically create a new task when this one is completed
-                            </p>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {form.watch("isRecurring") && (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="recurringPattern"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Repeat Pattern</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select pattern" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="daily">Daily</SelectItem>
-                                    <SelectItem value="weekly">Weekly</SelectItem>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                    <SelectItem value="yearly">Yearly</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="recurringInterval"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Every</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="1"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    placeholder="1"
-                                  />
-                                </FormControl>
-                                <p className="text-xs text-muted-foreground">
-                                  Repeat every X {form.watch("recurringPattern") || "period"}(s)
-                                </p>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name="recurringEndDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>End Date (Optional)</FormLabel>
-                              <FormControl>
-                                <DatePicker
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  placeholder="Select end date"
-                                />
-                              </FormControl>
-                              <p className="text-xs text-muted-foreground">
-                                Leave empty to repeat indefinitely
-                              </p>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsEditDialogOpen(false);
-                        setEditingTask(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={editTaskMutation.isPending}>
-                      {editTaskMutation.isPending ? "Updating..." : "Update Task"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Task Insights Panel */}
-      <TaskInsightsPanel
-        tasks={tasks}
-        users={users}
-        filteredTasks={filteredTasks}
-      />
-
-      {/* Filter Chips */}
-      <TaskFilterChips
-        filterStatus={filterStatus}
-        filterPriority={filterPriority}
-        searchQuery={searchQuery}
-        filterClientId={filterClientId}
-        filterAssigneeId={filterAssigneeId}
-        filterDueDateRange={filterDueDateRange}
-        selectedSpaceId={selectedSpaceId}
-        showCompleted={showCompleted}
-        clients={clients}
-        users={users}
-        onClearStatus={() => setFilterStatus("all")}
-        onClearPriority={() => setFilterPriority("all")}
-        onClearSearch={() => setSearchQuery('')}
-        onClearClient={() => setFilterClientId(null)}
-        onClearAssignee={() => setFilterAssigneeId(null)}
-        onClearDueDate={() => setFilterDueDateRange(null)}
-        onClearSpace={() => setSelectedSpaceId(null)}
-        onToggleCompleted={() => setShowCompleted(!showCompleted)}
-        onClearAll={() => {
-          setFilterStatus("all");
-          setFilterPriority("all");
-          setSearchQuery('');
-          setFilterClientId(null);
-          setFilterAssigneeId(null);
-          setFilterDueDateRange(null);
-          setSelectedSpaceId(null);
-        }}
-      />
-
-      <div className="flex-1 overflow-auto">
-        {viewMode === "board" ? (
-          <TaskKanbanBoard
-            tasks={filteredTasks}
-            users={users}
-            draggedTask={draggedTask}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onTaskClick={(task) => {
-              setSelectedTask(task);
-              setIsDetailSidebarOpen(true);
-            }}
-            onTaskDelete={(taskId) => deleteTaskMutation.mutate(taskId)}
-            onTaskDuplicate={(taskId) => {
-              apiRequest("POST", "/api/tasks/duplicate", { taskIds: [taskId] })
-                .then(() => {
-                  queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-                  toast({ title: "Task duplicated" });
-                })
-                .catch(() => {
-                  toast({ title: "Failed to duplicate task", variant: "destructive" });
-                });
-            }}
-          />
-        ) : viewMode === "calendar" ? (
-          <TaskCalendarView
-            tasks={filteredTasks}
-            onTaskClick={(task) => {
-              setSelectedTask(task);
-              setIsDetailSidebarOpen(true);
-            }}
-          />
-        ) : viewMode === "gantt" ? (
-          <TaskGanttView
-            tasks={filteredTasks}
-            users={users}
-            onTaskClick={(task) => {
-              setSelectedTask(task);
-              setIsDetailSidebarOpen(true);
-            }}
-          />
-        ) : viewMode === "analytics" ? (
-          <div className="p-6">
-            <TaskAnalyticsDashboard />
-          </div>
-        ) : viewMode === "list" ? (
-          renderListView()
-        ) : (
-          <TaskCompactView
-            tasks={filteredTasks}
-            users={users}
-            selectedTaskIds={selectedTaskIds}
-            expandedTaskId={expandedTaskId}
-            onToggleTaskSelection={toggleTaskSelection}
-            onSelectAll={selectAllTasks}
-            onTaskClick={(task) => {
-              setSelectedTask(task);
-              setIsDetailSidebarOpen(true);
-            }}
-            onTaskDelete={(taskId) => deleteTaskMutation.mutate(taskId)}
-            onTaskDuplicate={(taskId) => {
-              apiRequest("POST", "/api/tasks/duplicate", { taskIds: [taskId] })
-                .then(() => {
-                  queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-                  toast({ title: "Task duplicated" });
-                })
-                .catch(() => {
-                  toast({ title: "Failed to duplicate task", variant: "destructive" });
-                });
-            }}
-          />
-        )}
-      </div>
-        </div>
-      </div>
-
-      <TaskDetailSidebar
-        task={selectedTask}
-        isOpen={isDetailSidebarOpen}
-        onClose={() => {
-          setIsDetailSidebarOpen(false);
-          setSelectedTask(null);
-        }}
-      />
-
-      {/* Recurring Task Master List Dialog */}
-      <Dialog open={isRecurringMasterOpen} onOpenChange={setIsRecurringMasterOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto glass-strong">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Repeat className="w-5 h-5 text-blue-500" />
-              Recurring Task Master List
-            </DialogTitle>
-            <DialogDescription>
-              Manage all your recurring tasks in one place. Edit patterns, intervals, or delete series.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {/* Filter recurring tasks */}
-          <div className="flex items-center gap-3 pb-3 border-b">
-            <Input
-              placeholder="Search recurring tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
-              Clear
-            </Button>
-          </div>
-          
-          {/* Recurring tasks list */}
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {(() => {
-              const recurringTasks = tasks.filter(t => t.isRecurring);
-              const filteredRecurring = recurringTasks.filter(task =>
-                task.title.toLowerCase().includes(searchQuery.toLowerCase())
-              );
-              
-              if (filteredRecurring.length === 0) {
-                return (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Repeat className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="font-medium">No recurring tasks found</p>
-                    <p className="text-sm mt-1">
-                      {recurringTasks.length === 0 
-                        ? "Create a task with recurring enabled to see it here"
-                        : "Try a different search term"}
-                    </p>
-                  </div>
-                );
-              }
-              
-              return filteredRecurring.map(task => (
-                <Card key={task.id} className="hover:bg-muted/30 transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium line-clamp-2">{task.title}</h4>
-                          <Badge variant="outline" className="text-xs">
-                            {task.recurringPattern || "weekly"}
-                          </Badge>
-                          {task.recurringInterval && task.recurringInterval > 1 && (
-                            <Badge variant="secondary" className="text-xs">
-                              Every {task.recurringInterval}
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2 leading-relaxed">
-                            {task.description}
-                          </p>
-                        )}
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          {task.dueDate && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              Next: {toLocaleDateStringEST(task.dueDate)}
-                            </div>
-                          )}
-                          {task.assignedToId && (
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              {users.find(u => u.id === task.assignedToId)?.firstName || "Unassigned"}
-                            </div>
-                          )}
-                        </div>
+              {activeView === "Calendar" && (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {["Today", "Tomorrow", "This Week"].map((bucket) => (
+                    <div key={bucket} className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="font-semibold text-slate-900">{bucket}</h3>
+                        <div className="text-xs text-slate-500">Schedule view</div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {/* Toggle recurring */}
-                        <Button
-                          variant={task.isRecurring ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => updateRecurringSeriesMutation.mutate({
-                            id: task.id,
-                            data: { isRecurring: !task.isRecurring }
-                          })}
-                          className="gap-2"
-                        >
-                          {task.isRecurring ? (
-                            <>
-                              <CheckCircle2 className="w-4 h-4" />
-                              Active
-                            </>
-                          ) : (
-                            <>
-                              <X className="w-4 h-4" />
-                              Paused
-                            </>
-                          )}
-                        </Button>
-                        
-                        {/* Edit button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            handleEditTask(task);
-                            setIsRecurringMasterOpen(false);
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        
-                        {/* Delete button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => {
-                            if (confirm(`Delete this recurring task and all future occurrences?`)) {
-                              deleteRecurringSeriesMutation.mutate(task.id);
+                      <div className="space-y-3">
+                        {filteredTasks
+                          .filter((task) => {
+                            if (!task.dueDate) return false;
+                            const due = new Date(task.dueDate);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const tomorrow = new Date(today);
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            const nextWeek = new Date(today);
+                            nextWeek.setDate(nextWeek.getDate() + 7);
+
+                            if (bucket === "Today") {
+                              return due >= today && due < tomorrow;
+                            } else if (bucket === "Tomorrow") {
+                              return due >= tomorrow && due < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+                            } else {
+                              return due >= today && due < nextWeek;
                             }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                          })
+                          .map((task) => (
+                            <button
+                              key={task.id}
+                              onClick={() => setSelectedTaskId(task.id)}
+                              className="w-full rounded-[22px] border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-indigo-300"
+                            >
+                              <div className="font-semibold text-slate-900">{task.title}</div>
+                              <div className="mt-1 text-sm text-slate-500">{formatDueDate(task.dueDate)}</div>
+                              <div className="mt-3 flex items-center justify-between">
+                                <span className="text-xs text-slate-500">{getCompanyName(task.clientId, clients)}</span>
+                                <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${priorityStyles[mapPriorityToUI(task.priority)]}`}>
+                                  {mapPriorityToUI(task.priority)}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ));
-            })()}
-          </div>
-          
-          <div className="flex justify-end pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsRecurringMasterOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
 
-      {/* Quick Actions Toolbar - New Component */}
-      <TaskQuickActions
-        selectedTaskIds={selectedTaskIds}
-        tasks={tasks}
-        users={users}
-        onClearSelection={() => setSelectedTaskIds(new Set())}
-        onBulkStatusChange={(status) => {
-          bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { status } });
-        }}
-        onBulkAssigneeChange={(assigneeId) => {
-          bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { assignedToId: assigneeId } });
-        }}
-        onBulkDelete={() => {
-          bulkTasks.bulkDelete(Array.from(selectedTaskIds));
-          setSelectedTaskIds(new Set());
-        }}
-        onBulkArchive={() => {
-          bulkTasks.bulkUpdate({ taskIds: Array.from(selectedTaskIds), updates: { archived: true } });
-          setSelectedTaskIds(new Set());
-        }}
-        onDuplicateTasks={(taskIds) => {
-          apiRequest("POST", "/api/tasks/duplicate", { taskIds })
-            .then(() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-              setSelectedTaskIds(new Set());
-            })
-            .catch((err) => {
-              toast({ title: "Failed to duplicate tasks", variant: "destructive" });
-            });
-        }}
-      />
+      {/* Task Detail Sidebar */}
+      {showTaskDetail && selectedTask && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 backdrop-blur-sm">
+          <div className="h-full w-full max-w-2xl overflow-y-auto border-l border-slate-200 bg-white shadow-2xl">
+            <div className="sticky top-0 z-10 border-b border-slate-100 bg-white/95 px-6 py-5 backdrop-blur">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Task Detail</div>
+                  <h2 className="mt-1 text-2xl font-semibold">{selectedTask.title}</h2>
+                  <p className="mt-1 text-sm text-slate-500">Live editor opens only after clicking a task.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => deleteTask(selectedTask.id)}
+                    className="rounded-full border border-red-200 p-2 text-red-500 hover:bg-red-50"
+                    title="Delete task"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setSelectedTaskId(null)}
+                    className="rounded-full border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5 p-6">
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Task title</label>
+                <input
+                  value={selectedTask.title}
+                  onChange={(e) => updateSelectedTask({ title: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Description</label>
+                <textarea
+                  value={selectedTask.description || ""}
+                  onChange={(e) => updateSelectedTask({ description: e.target.value })}
+                  rows={5}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-indigo-400"
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
+                  <select
+                    value={selectedTask.status}
+                    onChange={(e) => updateSelectedTask({ status: e.target.value })}
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                  >
+                    <option value="todo">Inbox</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="review">Review</option>
+                    <option value="completed">Done</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</label>
+                  <button
+                    onClick={() => cyclePriority(selectedTask.id)}
+                    className={`flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold ${priorityStyles[mapPriorityToUI(selectedTask.priority)]}`}
+                  >
+                    <Flag className="h-4 w-4" />
+                    {mapPriorityToUI(selectedTask.priority)} — click to cycle
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Assignee</label>
+                  <select
+                    value={selectedTask.assignedToId?.toString() || ""}
+                    onChange={(e) => updateSelectedTask({ assignedToId: e.target.value ? parseInt(e.target.value) : null })}
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                  >
+                    <option value="">Unassigned</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName || u.username}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Company</label>
+                  <select
+                    value={selectedTask.clientId || ""}
+                    onChange={(e) => updateSelectedTask({ clientId: e.target.value || null })}
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                  >
+                    <option value="">No company</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Due Date</label>
+                <input
+                  type="date"
+                  value={selectedTask.dueDate ? toInputDateEST(selectedTask.dueDate) : ""}
+                  onChange={(e) => updateSelectedTask({ dueDate: e.target.value ? new Date(e.target.value + "T23:59").toISOString() : null })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Tags (comma separated)</label>
+                <input
+                  value={(selectedTask.tags || []).join(", ")}
+                  onChange={(e) => updateSelectedTask({ tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-indigo-400"
+                  placeholder="Marketing, Content, Urgent"
+                />
+              </div>
+
+              <div className="rounded-[24px] bg-slate-50 p-4">
+                <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Quick actions</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => moveTask(selectedTask.id, -1)}
+                    className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Move Back
+                  </button>
+                  <button
+                    onClick={() => moveTask(selectedTask.id, 1)}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Move Forward <ChevronRight className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => updateSelectedTask({ status: "completed" })}
+                    className="col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Mark Complete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Task Modal */}
+      {showNewTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Create New Task</h2>
+                <p className="mt-1 text-sm text-slate-500">Simple modal so your developer sees how task creation can feel in the redesigned page.</p>
+              </div>
+              <button onClick={() => setShowNewTask(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 hover:bg-slate-100">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Task title</label>
+                <input
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                  placeholder="Enter task title"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Description</label>
+                <textarea
+                  rows={4}
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                  placeholder="Add description"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
+                <select
+                  value={newTask.status}
+                  onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                >
+                  <option value="todo">Inbox</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="review">Review</option>
+                  <option value="completed">Done</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</label>
+                <select
+                  value={newTask.priority}
+                  onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Assignee</label>
+                <select
+                  value={newTask.assignedToId}
+                  onChange={(e) => setNewTask({ ...newTask, assignedToId: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.fullName || u.username}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Company</label>
+                <select
+                  value={newTask.clientId}
+                  onChange={(e) => setNewTask({ ...newTask, clientId: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                >
+                  <option value="">No company</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Due Date</label>
+                <input
+                  type="date"
+                  value={newTask.dueDate}
+                  onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Tags</label>
+                <input
+                  value={newTask.tags}
+                  onChange={(e) => setNewTask({ ...newTask, tags: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-400"
+                  placeholder="Marketing, Content"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowNewTask(false)}
+                className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addTask}
+                className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                Create Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
