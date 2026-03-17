@@ -3033,7 +3033,8 @@ Examples:
       
       const { hashPassword } = await import("./auth.js");
       const userData = {
-        username: req.body.username,
+              username: (req.body.username || '').trim(),
+      email: req.body.email ? req.body.email.trim().toLowerCase() : (req.body.username || '').trim().toLowerCase(),
         password: await hashPassword(req.body.password),
         role: req.body.role || "staff",
       };
