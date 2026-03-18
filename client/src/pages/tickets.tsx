@@ -37,6 +37,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Ticket, Client } from "@shared/schema";
+import { VibeStatCard } from "@/components/ui/VibeStatCard";
+import { VibeSectionCard } from "@/components/ui/VibeSectionCard";
 
 export default function Tickets() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -250,69 +252,36 @@ export default function Tickets() {
         />
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="hover-elevate">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Open Tickets</p>
-                  <p className="text-3xl font-bold">{ticketStats.open}</p>
-                </div>
-                <div className="p-3 bg-amber-500/10 rounded-lg">
-                  <AlertCircle className="w-6 h-6 text-amber-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-elevate">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-3xl font-bold">
-                    {ticketStats.in_progress}
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <Timer className="w-6 h-6 text-blue-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-elevate">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Resolved</p>
-                  <p className="text-3xl font-bold">{ticketStats.resolved}</p>
-                </div>
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <CheckCircle className="w-6 h-6 text-green-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover-elevate">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Urgent</p>
-                  <p className="text-3xl font-bold">{ticketStats.urgent}</p>
-                </div>
-                <div className="p-3 bg-red-500/10 rounded-lg">
-                  <XCircle className="w-6 h-6 text-red-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <VibeStatCard
+            label="Open Tickets"
+            value={ticketStats.open}
+            className="hover-elevate"
+            icon={<div className="rounded-lg bg-amber-500/10 p-3"><AlertCircle className="h-6 w-6 text-amber-500" /></div>}
+          />
+          <VibeStatCard
+            label="In Progress"
+            value={ticketStats.in_progress}
+            className="hover-elevate"
+            icon={<div className="rounded-lg bg-blue-500/10 p-3"><Timer className="h-6 w-6 text-blue-500" /></div>}
+          />
+          <VibeStatCard
+            label="Resolved"
+            value={ticketStats.resolved}
+            className="hover-elevate"
+            icon={<div className="rounded-lg bg-green-500/10 p-3"><CheckCircle className="h-6 w-6 text-green-500" /></div>}
+          />
+          <VibeStatCard
+            label="Urgent"
+            value={ticketStats.urgent}
+            className="hover-elevate"
+            icon={<div className="rounded-lg bg-red-500/10 p-3"><XCircle className="h-6 w-6 text-red-500" /></div>}
+          />
         </div>
 
         {/* Tickets Table with Tabs */}
-        <Card className="border-0 shadow-xl">
-          <CardHeader className="border-b">
+        <VibeSectionCard className="border-0 shadow-xl" surface="2xl">
+          <CardHeader className="border-b px-6">
             <CardTitle>Ticket Queue</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -446,7 +415,7 @@ export default function Tickets() {
               </div>
             </Tabs>
           </CardContent>
-        </Card>
+        </VibeSectionCard>
       </div>
     </div>
   );
