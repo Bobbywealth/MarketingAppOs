@@ -3487,9 +3487,13 @@ Examples:
       // Add missing columns to clients table
       await db.execute(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0`);
       
+      // Add missing columns to leads table
+      await db.execute(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS first_name VARCHAR(255)`);
+      await db.execute(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_name VARCHAR(255)`);
+      
       res.json({ 
         success: true, 
-        message: "Database migration completed successfully! Added email, first_name, last_name to users and display_order to clients. Leads name columns are now handled automatically at server startup." 
+        message: "Database migration completed successfully! Added email, first_name, last_name to users, display_order to clients, and first_name, last_name to leads." 
       });
     } catch (error: any) {
       console.error("Migration error:", error);
