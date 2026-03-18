@@ -68,6 +68,8 @@ const contactSubmissionSchema = z.object({
   phone: z.string().trim().optional().nullable(),
   company: z.string().trim().optional().nullable(),
   smsOptIn: z.boolean().optional(),
+});
+
 const publicDiscountValidationSchema = z.object({
   code: z.string().min(1).max(50),
   packageId: z.string().optional().nullable(),
