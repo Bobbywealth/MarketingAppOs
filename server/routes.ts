@@ -3243,6 +3243,8 @@ Examples:
   });
 
   // One-time database migration endpoint (Admin only)
+  // NOTE: production startup correctness must come from boot-time migrations
+  // (ensureMinimumSchema), not from this manual endpoint.
   app.post("/api/admin/run-migration", isAuthenticated, requireRole(UserRole.ADMIN), async (_req: Request, res: Response) => {
     try {
       const { db } = await import("./db.js");
@@ -3255,13 +3257,9 @@ Examples:
       // Add missing columns to clients table
       await db.execute(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0`);
       
-      // Add missing columns to leads table
-      await db.execute(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS first_name VARCHAR(255)`);
-      await db.execute(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_name VARCHAR(255)`);
-      
       res.json({ 
         success: true, 
-        message: "Database migration completed successfully! Added email, first_name, last_name to users, display_order to clients, and first_name, last_name to leads." 
+        message: "Database migration completed successfully! Added email, first_name, last_name to users and display_order to clients. Leads name columns are now handled automatically at server startup." 
       });
     } catch (error: any) {
       console.error("Migration error:", error);
