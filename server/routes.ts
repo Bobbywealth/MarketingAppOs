@@ -39,7 +39,7 @@ import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
 import { generateApiKey } from "./apiKeys";
-import { emailService } from "./emailService";
+import { emailNotifications } from "./emailService";
 import { pool } from "./db";
 
 const objectStorageService = new ObjectStorageService();
@@ -257,7 +257,7 @@ export function registerRoutes(app: Express) {
         timeZone: "America/New_York",
       }).format(requestedAt);
 
-      await emailService.sendBookingConfirmationEmail(
+      await emailNotifications.sendBookingConfirmationEmail(
         normalizedBooking.email,
         normalizedBooking.name,
         whenEt,
@@ -278,6 +278,9 @@ export function registerRoutes(app: Express) {
       return res.status(500).json({
         message: "Could not create booking right now. Please try again shortly.",
       });
+    }
+  });
+
   // Public website contact form
   app.post("/api/contact", async (req: Request, res: Response) => {
     try {
