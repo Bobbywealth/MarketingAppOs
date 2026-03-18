@@ -1,14 +1,20 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   Search, Plus, LayoutGrid, List, CalendarDays, ChevronRight, ChevronLeft, X, 
-  Clock3, Flag, CheckCircle2, Loader2, Building2, Tag, User
+  Clock3, Flag, CheckCircle2, Loader2
 } from "lucide-react";
-import type { Task, Client, User as UserType, TaskSpace } from "@shared/schema";
-import { toInputDateEST, toLocaleDateStringEST, nowEST } from "@/lib/dateUtils";
+import type { Task, Client, User as UserType } from "@shared/schema";
+import { toInputDateEST } from "@/lib/dateUtils";
+import { VibePageShell } from "@/components/layout/VibePageShell";
+import { VibeHeroHeader } from "@/components/layout/VibeHeroHeader";
+import { VibeSectionCard } from "@/components/ui/VibeSectionCard";
+import { VibeStatCard } from "@/components/ui/VibeStatCard";
+import { VibeFilterChips } from "@/components/ui/VibeFilterChips";
+import { VibeViewToggle } from "@/components/ui/VibeViewToggle";
 
 // Status mapping between our schema and the UI
 const statusMap: Record<string, string> = {
@@ -39,7 +45,11 @@ const reversePriorityMap: Record<string, string> = {
 };
 
 const statuses = ["Inbox", "In Progress", "Review", "Done"];
-const views = ["Board", "List", "Calendar"];
+const viewOptions = [
+  { label: "Board", icon: LayoutGrid },
+  { label: "List", icon: List },
+  { label: "Calendar", icon: CalendarDays },
+];
 const filters = ["All Tasks", "My Tasks", "Today", "Overdue", "High Priority", "Waiting"];
 
 const priorityStyles: Record<string, string> = {
@@ -105,8 +115,6 @@ function getCompanyName(clientId: string | null, clients: Client[]): string {
 export default function TasksPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
   // UI State
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeView, setActiveView] = useState("Board");
@@ -359,96 +367,49 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f8fafc,white_40%,#eef2ff_100%)] text-slate-900">
-      <div className="mx-auto max-w-[1680px] p-4 md:p-6 xl:p-8">
-        <div className="space-y-6">
-          {/* Header Section */}
-          <section className="overflow-hidden rounded-[32px] border border-slate-200/80 bg-white/90 shadow-[0_20px_70px_-35px_rgba(15,23,42,0.35)] backdrop-blur">
-            <div className="border-b border-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-800 px-5 py-6 text-white md:px-6">
-              <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Task Management</div>
-                  <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Modern Interactive Task Command Center</h1>
-                  <p className="mt-2 max-w-3xl text-sm text-slate-300 md:text-base">
-                    Search, filter, move tasks, edit task details, and add new tasks on one page.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
-                  <div className="flex min-w-[280px] items-center rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-slate-200 backdrop-blur">
-                    <Search className="mr-2 h-4 w-4" />
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search tasks, people, tags, company..."
-                      className="w-full bg-transparent outline-none placeholder:text-slate-400"
-                    />
-                  </div>
-                  <button
-                    onClick={() => setShowNewTask(true)}
-                    className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:scale-[1.01]"
-                  >
-                    <Plus className="h-4 w-4" /> New Task
-                  </button>
-                </div>
+    <VibePageShell>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <VibeHeroHeader
+          eyebrow="Task Management"
+          title="Modern Interactive Task Command Center"
+          description="Search, filter, move tasks, edit task details, and add new tasks on one page."
+          action={
+            <>
+              <div className="flex min-w-[280px] items-center rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-slate-200 backdrop-blur">
+                <Search className="mr-2 h-4 w-4" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search tasks, people, tags, company..."
+                  className="w-full bg-transparent outline-none placeholder:text-slate-400"
+                />
               </div>
-            </div>
+              <button
+                onClick={() => setShowNewTask(true)}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:scale-[1.01]"
+              >
+                <Plus className="h-4 w-4" /> New Task
+              </button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <VibeFilterChips options={filters} active={activeFilter} onChange={setActiveFilter} />
+            <VibeViewToggle options={viewOptions} active={activeView} onChange={setActiveView} />
+          </div>
+        </VibeHeroHeader>
 
-            <div className="px-5 py-5 md:px-6">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex flex-wrap gap-2">
-                  {filters.map((filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setActiveFilter(filter)}
-                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                        activeFilter === filter
-                          ? "bg-slate-900 text-white shadow-sm"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {filter}
-                    </button>
-                  ))}
-                </div>
+        {/* Summary Cards */}
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {summary.map((card) => (
+            <VibeStatCard key={card.label} label={card.label} value={card.value} note={card.note} />
+          ))}
+        </section>
 
-                <div className="flex flex-wrap gap-2">
-                  {views.map((view) => {
-                    const Icon = view === "Board" ? LayoutGrid : view === "List" ? List : CalendarDays;
-                    return (
-                      <button
-                        key={view}
-                        onClick={() => setActiveView(view)}
-                        className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                          activeView === view
-                            ? "bg-indigo-600 text-white shadow-sm"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {view}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Summary Cards */}
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {summary.map((card) => (
-              <div key={card.label} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-sm text-slate-500">{card.label}</div>
-                <div className="mt-2 text-3xl font-bold tracking-tight">{card.value}</div>
-                <div className="mt-2 text-sm text-slate-500">{card.note}</div>
-              </div>
-            ))}
-          </section>
-
-          {/* Task Workspace */}
-          <section>
-            <div className="rounded-[32px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        {/* Task Workspace */}
+        <section>
+          <VibeSectionCard surface="2xl" className="p-4 md:p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Task Workspace</h2>
@@ -629,9 +590,8 @@ export default function TasksPage() {
                   ))}
                 </div>
               )}
-            </div>
-          </section>
-        </div>
+          </VibeSectionCard>
+        </section>
       </div>
 
       {/* Task Detail Sidebar */}
@@ -923,6 +883,6 @@ export default function TasksPage() {
           </div>
         </div>
       )}
-    </div>
+    </VibePageShell>
   );
 }
