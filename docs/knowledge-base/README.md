@@ -36,6 +36,10 @@ This is the **source of truth** for how MarketingOS works and how our team opera
 - **Troubleshooting**: [`ops/troubleshooting.md`](./ops/troubleshooting.md)
 - **Security & compliance**: [`security-and-compliance.md`](./security-and-compliance.md)
 
+## AI workflows
+
+- **Web developer copilot custom instruction (Kodex)**: [`web-developer-copilot-instructions.md`](./web-developer-copilot-instructions.md)
+
 ## Templates
 
 - **SOP templates + checklists**: [`templates/`](./templates/)
