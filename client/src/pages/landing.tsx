@@ -2172,19 +2172,51 @@ export default function LandingPage() {
             <div>
               <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Services</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li className="hover:text-primary transition-colors cursor-pointer">Digital Marketing</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Web Dev & CRMs</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Content Creation</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">AI Automation</li>
+                <li>
+                  <Link href="#digital-marketing" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Digital Marketing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#web-design" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Web Dev & CRMs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#content-creation" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Content Creation
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#ai-automation" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    AI Automation
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Quick Links</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><Link href="/login" className="hover:text-primary transition-colors">Login</Link></li>
-                <li className="hover:text-primary transition-colors cursor-pointer">About Us</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Contact Us</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Privacy</li>
+                <li>
+                  <Link href="/login" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    About Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Contact Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Privacy
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
