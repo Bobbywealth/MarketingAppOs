@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,11 +20,48 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Mail, Phone, Globe, Building2, Edit, GripVertical, Trash2, DollarSign, BarChart3, Filter, SlidersHorizontal, ArrowUpDown, Clock, Activity, Tag, ExternalLink, MessageSquare, PhoneCall, LayoutGrid, List, Eye, ArrowRight, Info, MoreHorizontal, FileText, Send } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Mail,
+  Phone,
+  Globe,
+  Building2,
+  Edit,
+  GripVertical,
+  Trash2,
+  DollarSign,
+  BarChart3,
+  Filter,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Clock,
+  Activity,
+  Tag,
+  ExternalLink,
+  MessageSquare,
+  PhoneCall,
+  LayoutGrid,
+  List,
+  Eye,
+  ArrowRight,
+  Info,
+  MoreHorizontal,
+  FileText,
+  Send,
+} from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { logError } from "@/lib/errorHandler";
@@ -43,7 +86,9 @@ export default function Clients() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [draggedClient, setDraggedClient] = useState<Client | null>(null);
   const [dragOverClient, setDragOverClient] = useState<Client | null>(null);
-  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
+  const [selectedClients, setSelectedClients] = useState<Set<string>>(
+    new Set(),
+  );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>("none");
@@ -53,7 +98,7 @@ export default function Clients() {
   const [tagFilter, setTagFilter] = useState<string>("all");
   const [billingFilter, setBillingFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const { toast} = useToast();
+  const { toast } = useToast();
 
   const { data: clients, isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
@@ -71,35 +116,48 @@ export default function Clients() {
     onSuccess: async (response: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
-      
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/admin-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/manager-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/staff-stats"],
+      });
+
       const clientData = await response.json();
-      
+
       // Handle different payment methods if a package was selected
-      if (variables.subscriptionPackageId && variables.subscriptionPackageId !== "none") {
+      if (
+        variables.subscriptionPackageId &&
+        variables.subscriptionPackageId !== "none"
+      ) {
         if (variables.paymentMethod === "stripe") {
           try {
             toast({ title: "Client created! Redirecting to payment..." });
-            
-            const checkoutResponse = await apiRequest("POST", "/api/create-checkout-session", {
-              packageId: variables.subscriptionPackageId,
-              email: variables.email,
-              name: variables.name,
-              clientId: clientData.id,
-            });
-            
+
+            const checkoutResponse = await apiRequest(
+              "POST",
+              "/api/create-checkout-session",
+              {
+                packageId: variables.subscriptionPackageId,
+                email: variables.email,
+                name: variables.name,
+                clientId: clientData.id,
+              },
+            );
+
             const checkoutData = await checkoutResponse.json();
-            
+
             if (checkoutData.success && checkoutData.checkoutUrl) {
               // Redirect to Stripe checkout
               window.location.href = checkoutData.checkoutUrl;
             } else {
-              toast({ 
-                title: "Client created, but payment setup failed", 
+              toast({
+                title: "Client created, but payment setup failed",
                 description: "You can set up payment later",
-                variant: "destructive" 
+                variant: "destructive",
               });
               setDialogOpen(false);
             }
@@ -109,32 +167,37 @@ export default function Clients() {
             toast({
               title: "Client created, but payment setup failed",
               description: "You can set up payment later",
-              variant: "destructive"
+              variant: "destructive",
             });
             setDialogOpen(false);
           }
         } else if (variables.paymentMethod === "email") {
           try {
             toast({ title: "Client created! Sending enrollment email..." });
-            
-            const emailResponse = await apiRequest("POST", "/api/send-enrollment-email", {
-              packageId: variables.subscriptionPackageId,
-              email: variables.email,
-              name: variables.name,
-              clientId: clientData.id,
-            });
-            
+
+            const emailResponse = await apiRequest(
+              "POST",
+              "/api/send-enrollment-email",
+              {
+                packageId: variables.subscriptionPackageId,
+                email: variables.email,
+                name: variables.name,
+                clientId: clientData.id,
+              },
+            );
+
             const emailData = await emailResponse.json();
-            
+
             if (emailData.success) {
               toast({ title: "✅ Enrollment email sent successfully" });
               setDialogOpen(false);
               setPaymentMethod("none");
             } else {
-              toast({ 
-                title: "Client created, but email failed", 
-                description: emailData.message || "Failed to send enrollment email",
-                variant: "destructive" 
+              toast({
+                title: "Client created, but email failed",
+                description:
+                  emailData.message || "Failed to send enrollment email",
+                variant: "destructive",
               });
               setDialogOpen(false);
             }
@@ -144,7 +207,7 @@ export default function Clients() {
             toast({
               title: "Client created, but email failed",
               description: "Failed to send enrollment email",
-              variant: "destructive"
+              variant: "destructive",
             });
             setDialogOpen(false);
           }
@@ -171,9 +234,15 @@ export default function Clients() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/admin-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/manager-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/staff-stats"],
+      });
       setEditDialogOpen(false);
       setEditingClient(null);
       setSelectedClient(null);
@@ -187,7 +256,9 @@ export default function Clients() {
   const reorderClientsMutation = useMutation({
     mutationFn: async (reorderedClients: Client[]) => {
       const promises = reorderedClients.map((client, index) =>
-        apiRequest("PATCH", `/api/clients/${client.id}`, { displayOrder: index })
+        apiRequest("PATCH", `/api/clients/${client.id}`, {
+          displayOrder: index,
+        }),
       );
       await Promise.all(promises);
     },
@@ -207,9 +278,15 @@ export default function Clients() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/admin-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/manager-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/staff-stats"],
+      });
       setDeleteDialogOpen(false);
       setClientToDelete(null);
       toast({ title: "✅ Client deleted successfully" });
@@ -221,19 +298,27 @@ export default function Clients() {
 
   const bulkDeleteClientsMutation = useMutation({
     mutationFn: async (clientIds: string[]) => {
-      const promises = clientIds.map(id => 
-        apiRequest("DELETE", `/api/clients/${id}`, undefined)
+      const promises = clientIds.map((id) =>
+        apiRequest("DELETE", `/api/clients/${id}`, undefined),
       );
       await Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] }); // legacy
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/admin-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/manager-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/staff-stats"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/admin-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/manager-stats"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/staff-stats"],
+      });
       setSelectedClients(new Set());
-      toast({ title: `✅ Deleted ${selectedClients.size} clients successfully` });
+      toast({
+        title: `✅ Deleted ${selectedClients.size} clients successfully`,
+      });
     },
     onError: () => {
       toast({ title: "Failed to delete clients", variant: "destructive" });
@@ -245,7 +330,7 @@ export default function Clients() {
     const formData = new FormData(e.currentTarget);
     const serviceTags = (formData.get("serviceTags") as string)
       .split(",")
-      .map(tag => tag.trim())
+      .map((tag) => tag.trim())
       .filter(Boolean);
 
     const clientData: any = {
@@ -285,7 +370,7 @@ export default function Clients() {
     const formData = new FormData(e.currentTarget);
     const serviceTags = (formData.get("serviceTags") as string)
       .split(",")
-      .map(tag => tag.trim())
+      .map((tag) => tag.trim())
       .filter(Boolean);
 
     // Build social links object
@@ -332,12 +417,16 @@ export default function Clients() {
       return;
     }
 
-    const sortedClients = [...(clients || [])].sort((a, b) => 
-      (a.displayOrder || 0) - (b.displayOrder || 0)
+    const sortedClients = [...(clients || [])].sort(
+      (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0),
     );
 
-    const draggedIndex = sortedClients.findIndex(c => c.id === draggedClient.id);
-    const targetIndex = sortedClients.findIndex(c => c.id === targetClient.id);
+    const draggedIndex = sortedClients.findIndex(
+      (c) => c.id === draggedClient.id,
+    );
+    const targetIndex = sortedClients.findIndex(
+      (c) => c.id === targetClient.id,
+    );
 
     const newClients = [...sortedClients];
     const [removed] = newClients.splice(draggedIndex, 1);
@@ -355,49 +444,65 @@ export default function Clients() {
   };
 
   // Get all unique tags from clients
-  const allTags = Array.from(new Set(clients?.flatMap(c => c.serviceTags || []) || []));
+  const allTags = Array.from(
+    new Set(clients?.flatMap((c) => c.serviceTags || []) || []),
+  );
 
   // Enhanced filtering and sorting - memoized for performance
   const filteredClients = useMemo(() => {
-    return clients
-      ?.filter((client) => {
-        // Search filter
-        const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          client.company?.toLowerCase().includes(searchTerm.toLowerCase());
+    return (
+      clients
+        ?.filter((client) => {
+          // Search filter
+          const matchesSearch =
+            client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            client.company?.toLowerCase().includes(searchTerm.toLowerCase());
 
-        // Status filter
-        const matchesStatus = statusFilter === "all" || client.status === statusFilter;
+          // Status filter
+          const matchesStatus =
+            statusFilter === "all" || client.status === statusFilter;
 
-        // Tag filter
-        const matchesTag = tagFilter === "all" ||
-          client.serviceTags?.includes(tagFilter);
+          // Tag filter
+          const matchesTag =
+            tagFilter === "all" || client.serviceTags?.includes(tagFilter);
 
-        // Billing filter
-        const matchesBilling = billingFilter === "all" ||
-          (billingFilter === "paid" && !!client.stripeSubscriptionId) ||
-          (billingFilter === "unpaid" && !client.stripeSubscriptionId) ||
-          (billingFilter === "overdue" && client.billingStatus === "overdue");
+          // Billing filter
+          const matchesBilling =
+            billingFilter === "all" ||
+            (billingFilter === "paid" && !!client.stripeSubscriptionId) ||
+            (billingFilter === "unpaid" && !client.stripeSubscriptionId) ||
+            (billingFilter === "overdue" && client.billingStatus === "overdue");
 
-        return matchesSearch && matchesStatus && matchesTag && matchesBilling;
-      })
-      .sort((a, b) => {
-        switch (sortBy) {
-          case "newest":
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          case "oldest":
-            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          case "alphabetical":
-            return a.name.localeCompare(b.name);
-          case "active":
-            // Sort by subscription status
-            return (b.stripeSubscriptionId ? 1 : 0) - (a.stripeSubscriptionId ? 1 : 0);
-          case "displayOrder":
-            return (a.displayOrder || 0) - (b.displayOrder || 0);
-          default:
-            return 0;
-        }
-      }) || [];
+          return matchesSearch && matchesStatus && matchesTag && matchesBilling;
+        })
+        .sort((a, b) => {
+          switch (sortBy) {
+            case "newest":
+              return (
+                new Date(b.createdAt).getTime() -
+                new Date(a.createdAt).getTime()
+              );
+            case "oldest":
+              return (
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+              );
+            case "alphabetical":
+              return a.name.localeCompare(b.name);
+            case "active":
+              // Sort by subscription status
+              return (
+                (b.stripeSubscriptionId ? 1 : 0) -
+                (a.stripeSubscriptionId ? 1 : 0)
+              );
+            case "displayOrder":
+              return (a.displayOrder || 0) - (b.displayOrder || 0);
+            default:
+              return 0;
+          }
+        }) || []
+    );
   }, [clients, searchTerm, statusFilter, tagFilter, billingFilter, sortBy]);
 
   if (isLoading) {
@@ -420,143 +525,229 @@ export default function Clients() {
   return (
     <div className="min-h-full gradient-mesh">
       <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 xl:p-12 space-y-4 md:space-y-6 lg:space-y-8">
-        {/* Premium Header Section with Gradient */}
-        <div className="p-6 rounded-xl bg-gradient-to-r from-primary/10 via-purple-500/5 to-transparent border border-border/50 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-gradient-purple" data-testid="text-page-title">Clients</h1>
-              <p className="text-sm md:text-base lg:text-lg text-muted-foreground">Manage your client relationships</p>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="secondary" className="text-xs">
-                  {filteredClients?.length || 0} clients
+        <PageHeader
+          title="Clients"
+          description="Manage your client relationships"
+          variant="premium"
+          meta={
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="secondary" className="text-xs">
+                {filteredClients?.length || 0} clients
+              </Badge>
+              {statusFilter !== "all" && (
+                <Badge variant="outline" className="text-xs">
+                  {statusFilter}
                 </Badge>
-                {statusFilter !== "all" && (
-                  <Badge variant="outline" className="text-xs">
-                    {statusFilter}
-                  </Badge>
-                )}
-              </div>
+              )}
             </div>
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) setPaymentMethod("none");
-            }}>
+          }
+          actions={
+            <Dialog
+              open={dialogOpen}
+              onOpenChange={(open) => {
+                setDialogOpen(open);
+                if (!open) setPaymentMethod("none");
+              }}
+            >
               <DialogTrigger asChild>
-                <Button size="lg" className="shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700" data-testid="button-add-client">
+                <Button
+                  size="lg"
+                  className="shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700"
+                  data-testid="button-add-client"
+                >
                   <Plus className="w-5 h-5 mr-2" />
                   Add Client
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col glass-strong">
-              <DialogHeader className="flex-shrink-0">
-                <DialogTitle className="text-2xl">Create New Client</DialogTitle>
-                <DialogDescription>Add a new client to your CRM system</DialogDescription>
-              </DialogHeader>
-              <form id="create-client-form" onSubmit={handleCreateClient} className="space-y-4 overflow-y-auto flex-1 px-1">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Client Name *</Label>
-                    <Input id="name" name="name" required data-testid="input-client-name" className="glass" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company</Label>
-                    <Input id="company" name="company" data-testid="input-company" className="glass" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" data-testid="input-email" className="glass" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" name="phone" data-testid="input-phone" className="glass" />
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="website">Website</Label>
-                    <Input id="website" name="website" placeholder="https://" data-testid="input-website" className="glass" />
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="serviceTags">Service Tags (comma-separated)</Label>
-                    <Input id="serviceTags" name="serviceTags" placeholder="social media, lead gen, design" data-testid="input-service-tags" className="glass" />
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea id="notes" name="notes" rows={3} data-testid="input-notes" className="glass" />
-                  </div>
-
-                  {/* Billing Setup Section */}
-                  <div className="col-span-2 pt-4 border-t border-border/50">
-                    <div className="flex items-center gap-2 mb-4">
-                      <DollarSign className="w-5 h-5 text-primary" />
-                      <h3 className="text-lg font-semibold">Billing Setup (Optional)</h3>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col glass-strong">
+                <DialogHeader className="flex-shrink-0">
+                  <DialogTitle className="text-2xl">
+                    Create New Client
+                  </DialogTitle>
+                  <DialogDescription>
+                    Add a new client to your CRM system
+                  </DialogDescription>
+                </DialogHeader>
+                <form
+                  id="create-client-form"
+                  onSubmit={handleCreateClient}
+                  className="space-y-4 overflow-y-auto flex-1 px-1"
+                >
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Client Name *</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        required
+                        data-testid="input-client-name"
+                        className="glass"
+                      />
                     </div>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="subscriptionPackageId">Subscription Package</Label>
-                        <Select name="subscriptionPackageId">
-                          <SelectTrigger className="glass">
-                            <SelectValue placeholder="Select a package (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No Package</SelectItem>
-                            {subscriptionPackages.map((pkg: any) => (
-                              <SelectItem key={pkg.id} value={pkg.id}>
-                                {pkg.name} - ${(pkg.price / 100).toFixed(2)}/mo
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Company</Label>
+                      <Input
+                        id="company"
+                        name="company"
+                        data-testid="input-company"
+                        className="glass"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        data-testid="input-email"
+                        className="glass"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        data-testid="input-phone"
+                        className="glass"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="website">Website</Label>
+                      <Input
+                        id="website"
+                        name="website"
+                        placeholder="https://"
+                        data-testid="input-website"
+                        className="glass"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="serviceTags">
+                        Service Tags (comma-separated)
+                      </Label>
+                      <Input
+                        id="serviceTags"
+                        name="serviceTags"
+                        placeholder="social media, lead gen, design"
+                        data-testid="input-service-tags"
+                        className="glass"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="notes">Notes</Label>
+                      <Textarea
+                        id="notes"
+                        name="notes"
+                        rows={3}
+                        data-testid="input-notes"
+                        className="glass"
+                      />
+                    </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="paymentMethod">Payment Method</Label>
-                        <Select 
-                          name="paymentMethod" 
-                          value={paymentMethod}
-                          onValueChange={setPaymentMethod}
-                        >
-                          <SelectTrigger className="glass">
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None (Set up later)</SelectItem>
-                            <SelectItem value="stripe">Pay Now (Redirect to Stripe)</SelectItem>
-                            <SelectItem value="email">Email Enrollment Link to Client</SelectItem>
-                            <SelectItem value="manual">Manual Invoice</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    {/* Billing Setup Section */}
+                    <div className="col-span-2 pt-4 border-t border-border/50">
+                      <div className="flex items-center gap-2 mb-4">
+                        <DollarSign className="w-5 h-5 text-primary" />
+                        <h3 className="text-lg font-semibold">
+                          Billing Setup (Optional)
+                        </h3>
                       </div>
-
-                      {paymentMethod === "manual" && (
+                      <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="invoiceAmount">Invoice Amount ($)</Label>
-                          <Input 
-                            id="invoiceAmount" 
-                            name="invoiceAmount" 
-                            type="number" 
-                            step="0.01"
-                            placeholder="0.00" 
-                            className="glass" 
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            This will create a manual invoice for the client to pay
-                          </p>
+                          <Label htmlFor="subscriptionPackageId">
+                            Subscription Package
+                          </Label>
+                          <Select name="subscriptionPackageId">
+                            <SelectTrigger className="glass">
+                              <SelectValue placeholder="Select a package (optional)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No Package</SelectItem>
+                              {subscriptionPackages.map((pkg: any) => (
+                                <SelectItem key={pkg.id} value={pkg.id}>
+                                  {pkg.name} - ${(pkg.price / 100).toFixed(2)}
+                                  /mo
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      )}
+
+                        <div className="space-y-2">
+                          <Label htmlFor="paymentMethod">Payment Method</Label>
+                          <Select
+                            name="paymentMethod"
+                            value={paymentMethod}
+                            onValueChange={setPaymentMethod}
+                          >
+                            <SelectTrigger className="glass">
+                              <SelectValue placeholder="Select payment method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">
+                                None (Set up later)
+                              </SelectItem>
+                              <SelectItem value="stripe">
+                                Pay Now (Redirect to Stripe)
+                              </SelectItem>
+                              <SelectItem value="email">
+                                Email Enrollment Link to Client
+                              </SelectItem>
+                              <SelectItem value="manual">
+                                Manual Invoice
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {paymentMethod === "manual" && (
+                          <div className="space-y-2">
+                            <Label htmlFor="invoiceAmount">
+                              Invoice Amount ($)
+                            </Label>
+                            <Input
+                              id="invoiceAmount"
+                              name="invoiceAmount"
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              className="glass"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              This will create a manual invoice for the client
+                              to pay
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                </form>
+                <div className="flex justify-end gap-2 pt-4 border-t border-border/50 mt-4 flex-shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="create-client-form"
+                    disabled={createClientMutation.isPending}
+                    data-testid="button-submit-client"
+                    className="shadow-md"
+                  >
+                    {createClientMutation.isPending
+                      ? "Creating..."
+                      : "Create Client"}
+                  </Button>
                 </div>
-              </form>
-              <div className="flex justify-end gap-2 pt-4 border-t border-border/50 mt-4 flex-shrink-0">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" form="create-client-form" disabled={createClientMutation.isPending} data-testid="button-submit-client" className="shadow-md">
-                  {createClientMutation.isPending ? "Creating..." : "Create Client"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </DialogContent>
+            </Dialog>
+          }
+        />
 
         {/* Info Banner - Click to View Details */}
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -569,7 +760,10 @@ export default function Clients() {
                 💡 Pro Tip: Click Any Client Card
               </h3>
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                Click on any client card to open their <strong>full profile page</strong> with tabs for Tasks, Content, Social Analytics, Billing, and more! Hover over a card to see the "View Full Profile" button.
+                Click on any client card to open their{" "}
+                <strong>full profile page</strong> with tabs for Tasks, Content,
+                Social Analytics, Billing, and more! Hover over a card to see
+                the "View Full Profile" button.
               </p>
             </div>
           </div>
@@ -628,7 +822,7 @@ export default function Clients() {
                 data-testid="input-search-clients"
               />
             </div>
-            
+
             {/* Sort Dropdown */}
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
@@ -643,7 +837,7 @@ export default function Clients() {
                 <SelectItem value="displayOrder">Custom Order</SelectItem>
               </SelectContent>
             </Select>
-            
+
             {/* Tag Filter */}
             {allTags.length > 0 && (
               <Select value={tagFilter} onValueChange={setTagFilter}>
@@ -675,7 +869,7 @@ export default function Clients() {
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
-            
+
             {/* Filter Toggle */}
             <Button
               variant="outline"
@@ -713,7 +907,7 @@ export default function Clients() {
               </Button>
             </div>
           </div>
-          
+
           {/* Bulk Actions */}
           {selectedClients.size > 0 && (
             <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
@@ -725,7 +919,9 @@ export default function Clients() {
                 size="sm"
                 onClick={() => {
                   if (confirm(`Delete ${selectedClients.size} clients?`)) {
-                    bulkDeleteClientsMutation.mutate(Array.from(selectedClients));
+                    bulkDeleteClientsMutation.mutate(
+                      Array.from(selectedClients),
+                    );
                   }
                 }}
                 disabled={bulkDeleteClientsMutation.isPending}
@@ -745,23 +941,31 @@ export default function Clients() {
         </div>
 
         {/* Premium Client Cards with Stagger Animation */}
-        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in" : "flex flex-col gap-2 md:gap-3 stagger-fade-in"}>
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in"
+              : "flex flex-col gap-2 md:gap-3 stagger-fade-in"
+          }
+        >
           {filteredClients?.map((client) => (
-            <Card 
+            <Card
               key={client.id}
               onDragOver={(e) => handleDragOver(e, client)}
               onDrop={(e) => handleDrop(e, client)}
               className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 ${viewMode === "grid" ? "card-hover-lift" : "border-l-4 border-l-primary"} gradient-border cursor-pointer ${
-                draggedClient?.id === client.id ? 'opacity-50 scale-95' : ''
+                draggedClient?.id === client.id ? "opacity-50 scale-95" : ""
               } ${
-                dragOverClient?.id === client.id ? 'ring-2 ring-primary ring-offset-2' : ''
+                dragOverClient?.id === client.id
+                  ? "ring-2 ring-primary ring-offset-2"
+                  : ""
               }`}
               onClick={() => setLocation(`/clients/${client.id}`)}
               data-testid={`card-client-${client.id}`}
             >
               {/* Gradient Overlay on Hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              
+
               {/* View Details Overlay - Appears on Hover */}
               <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-end justify-center pb-6 pointer-events-none z-20">
                 <div className="flex items-center gap-2 text-white font-semibold text-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
@@ -770,10 +974,15 @@ export default function Clients() {
                   <ArrowRight className="w-5 h-5 animate-pulse" />
                 </div>
               </div>
-              
-              <CardContent className={`relative ${viewMode === "grid" ? "p-6" : "p-4"}`}>
+
+              <CardContent
+                className={`relative ${viewMode === "grid" ? "p-6" : "p-4"}`}
+              >
                 {/* Checkbox for selection */}
-                <div className={`absolute z-10 ${viewMode === "grid" ? "top-4 left-4" : "top-4 left-4"}`} onClick={(e) => e.stopPropagation()}>
+                <div
+                  className={`absolute z-10 ${viewMode === "grid" ? "top-4 left-4" : "top-4 left-4"}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Checkbox
                     checked={selectedClients.has(client.id)}
                     onCheckedChange={(checked) => {
@@ -789,7 +998,10 @@ export default function Clients() {
                 </div>
 
                 {/* Quick Actions Dropdown */}
-                <div className={`absolute z-10 opacity-0 group-hover:opacity-100 transition-opacity ${viewMode === "grid" ? "top-4 right-4" : "top-4 right-4"}`} onClick={(e) => e.stopPropagation()}>
+                <div
+                  className={`absolute z-10 opacity-0 group-hover:opacity-100 transition-opacity ${viewMode === "grid" ? "top-4 right-4" : "top-4 right-4"}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -807,7 +1019,10 @@ export default function Clients() {
                           if (client.email) {
                             window.location.href = `mailto:${client.email}`;
                           } else {
-                            toast({ title: "No email available", variant: "destructive" });
+                            toast({
+                              title: "No email available",
+                              variant: "destructive",
+                            });
                           }
                         }}
                       >
@@ -817,7 +1032,9 @@ export default function Clients() {
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLocation(`/tasks?clientId=${client.id}&action=create`);
+                          setLocation(
+                            `/tasks?clientId=${client.id}&action=create`,
+                          );
                         }}
                       >
                         <FileText className="w-4 h-4 mr-2" />
@@ -859,9 +1076,11 @@ export default function Clients() {
                   </DropdownMenu>
                 </div>
 
-                <div className={`flex items-start gap-4 ${viewMode === "grid" ? "mb-4 mt-6" : "mb-2 mt-4 flex-row"}`}>
+                <div
+                  className={`flex items-start gap-4 ${viewMode === "grid" ? "mb-4 mt-6" : "mb-2 mt-4 flex-row"}`}
+                >
                   {/* Drag Handle - Only this triggers dragging */}
-                  <div 
+                  <div
                     draggable
                     onDragStart={(e) => {
                       e.stopPropagation();
@@ -874,7 +1093,9 @@ export default function Clients() {
                     <GripVertical className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div className="relative flex-shrink-0">
-                    <Avatar className={`${viewMode === "grid" ? "h-14 w-14" : "h-12 w-12"} border-2 border-primary/20 shadow-md`}>
+                    <Avatar
+                      className={`${viewMode === "grid" ? "h-14 w-14" : "h-12 w-12"} border-2 border-primary/20 shadow-md`}
+                    >
                       <AvatarImage src={client.logoUrl || ""} />
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-lg font-bold">
                         {client.name.substring(0, 2).toUpperCase()}
@@ -883,20 +1104,31 @@ export default function Clients() {
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-background shadow-sm"></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold ${viewMode === "grid" ? "text-lg" : "text-base"} truncate mb-1 group-hover:text-primary transition-colors flex items-center gap-2`}>
+                    <h3
+                      className={`font-semibold ${viewMode === "grid" ? "text-lg" : "text-base"} truncate mb-1 group-hover:text-primary transition-colors flex items-center gap-2`}
+                    >
                       {client.name}
                       {client.billingStatus === "overdue" ? (
-                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] h-5 px-1.5 py-0">
+                        <Badge
+                          variant="outline"
+                          className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] h-5 px-1.5 py-0"
+                        >
                           <Clock className="w-3 h-3 mr-0.5" />
                           Overdue
                         </Badge>
                       ) : client.stripeSubscriptionId ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] h-5 px-1.5 py-0">
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] h-5 px-1.5 py-0"
+                        >
                           <DollarSign className="w-3 h-3 mr-0.5" />
                           Paid
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-500/20 text-[10px] h-5 px-1.5 py-0">
+                        <Badge
+                          variant="outline"
+                          className="bg-slate-500/10 text-slate-600 border-slate-500/20 text-[10px] h-5 px-1.5 py-0"
+                        >
                           Unpaid
                         </Badge>
                       )}
@@ -910,7 +1142,13 @@ export default function Clients() {
                   </div>
                 </div>
 
-                <div className={viewMode === "grid" ? "space-y-2.5" : "flex flex-wrap items-center gap-2 mt-2"}>
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? "space-y-2.5"
+                      : "flex flex-wrap items-center gap-2 mt-2"
+                  }
+                >
                   {client.email && (
                     <a
                       href={`mailto:${client.email}`}
@@ -920,7 +1158,9 @@ export default function Clients() {
                       <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 group-hover/action:bg-blue-500/20 transition-colors">
                         <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <span className="truncate text-muted-foreground group-hover/action:text-blue-600 dark:group-hover/action:text-blue-400 transition-colors">{client.email}</span>
+                      <span className="truncate text-muted-foreground group-hover/action:text-blue-600 dark:group-hover/action:text-blue-400 transition-colors">
+                        {client.email}
+                      </span>
                       <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/action:opacity-100 transition-opacity text-blue-600" />
                     </a>
                   )}
@@ -929,7 +1169,9 @@ export default function Clients() {
                       <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                         <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <span className="truncate text-muted-foreground flex-1">{client.phone}</span>
+                      <span className="truncate text-muted-foreground flex-1">
+                        {client.phone}
+                      </span>
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -937,7 +1179,9 @@ export default function Clients() {
                           className="h-8 px-2"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setLocation(`/phone?number=${encodeURIComponent(client.phone!)}&action=call`);
+                            setLocation(
+                              `/phone?number=${encodeURIComponent(client.phone!)}&action=call`,
+                            );
                           }}
                           aria-label={`Call ${client.name}`}
                           title="Call this client"
@@ -950,7 +1194,9 @@ export default function Clients() {
                           className="h-8 px-2"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setLocation(`/phone?number=${encodeURIComponent(client.phone!)}&action=sms`);
+                            setLocation(
+                              `/phone?number=${encodeURIComponent(client.phone!)}&action=sms`,
+                            );
                           }}
                           aria-label={`Send SMS to ${client.name}`}
                           title="Send SMS"
@@ -962,7 +1208,11 @@ export default function Clients() {
                   )}
                   {client.website && (
                     <a
-                      href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
+                      href={
+                        client.website.startsWith("http")
+                          ? client.website
+                          : `https://${client.website}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
@@ -971,72 +1221,91 @@ export default function Clients() {
                       <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 group-hover/action:bg-purple-500/20 transition-colors">
                         <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <span className="truncate text-muted-foreground group-hover/action:text-purple-600 dark:group-hover/action:text-purple-400 transition-colors">{client.website}</span>
+                      <span className="truncate text-muted-foreground group-hover/action:text-purple-600 dark:group-hover/action:text-purple-400 transition-colors">
+                        {client.website}
+                      </span>
                       <ExternalLink className="w-3 h-3 ml-auto opacity-0 group-hover/action:opacity-100 transition-opacity text-purple-600" />
                     </a>
                   )}
 
                   {/* Social Media Links */}
-                  {client.socialLinks && Object.keys(client.socialLinks as any).length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap text-sm p-2">
-                      {(client.socialLinks as any).instagram && (
-                        <a 
-                          href={`https://instagram.com/${(client.socialLinks as any).instagram.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 transition-colors"
-                          title="Instagram"
-                        >
-                          <span className="text-pink-600 dark:text-pink-400">📷</span>
-                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).instagram}</span>
-                        </a>
-                      )}
-                      {(client.socialLinks as any).facebook && (
-                        <a 
-                          href={`https://facebook.com/${(client.socialLinks as any).facebook}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
-                          title="Facebook"
-                        >
-                          <span className="text-blue-600 dark:text-blue-400">📘</span>
-                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).facebook}</span>
-                        </a>
-                      )}
-                      {(client.socialLinks as any).twitter && (
-                        <a 
-                          href={`https://twitter.com/${(client.socialLinks as any).twitter.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
-                          title="Twitter/X"
-                        >
-                          <span className="text-sky-600 dark:text-sky-400">𝕏</span>
-                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).twitter}</span>
-                        </a>
-                      )}
-                      {(client.socialLinks as any).linkedin && (
-                        <a 
-                          href={`https://linkedin.com/in/${(client.socialLinks as any).linkedin}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-700/10 hover:bg-blue-700/20 transition-colors"
-                          title="LinkedIn"
-                        >
-                          <span className="text-blue-700 dark:text-blue-400">💼</span>
-                          <span className="text-xs text-muted-foreground">{(client.socialLinks as any).linkedin}</span>
-                        </a>
-                      )}
-                    </div>
-                  )}
+                  {client.socialLinks &&
+                    Object.keys(client.socialLinks as any).length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap text-sm p-2">
+                        {(client.socialLinks as any).instagram && (
+                          <a
+                            href={`https://instagram.com/${(client.socialLinks as any).instagram.replace("@", "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 transition-colors"
+                            title="Instagram"
+                          >
+                            <span className="text-pink-600 dark:text-pink-400">
+                              📷
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {(client.socialLinks as any).instagram}
+                            </span>
+                          </a>
+                        )}
+                        {(client.socialLinks as any).facebook && (
+                          <a
+                            href={`https://facebook.com/${(client.socialLinks as any).facebook}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+                            title="Facebook"
+                          >
+                            <span className="text-blue-600 dark:text-blue-400">
+                              📘
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {(client.socialLinks as any).facebook}
+                            </span>
+                          </a>
+                        )}
+                        {(client.socialLinks as any).twitter && (
+                          <a
+                            href={`https://twitter.com/${(client.socialLinks as any).twitter.replace("@", "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
+                            title="Twitter/X"
+                          >
+                            <span className="text-sky-600 dark:text-sky-400">
+                              𝕏
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {(client.socialLinks as any).twitter}
+                            </span>
+                          </a>
+                        )}
+                        {(client.socialLinks as any).linkedin && (
+                          <a
+                            href={`https://linkedin.com/in/${(client.socialLinks as any).linkedin}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-700/10 hover:bg-blue-700/20 transition-colors"
+                            title="LinkedIn"
+                          >
+                            <span className="text-blue-700 dark:text-blue-400">
+                              💼
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {(client.socialLinks as any).linkedin}
+                            </span>
+                          </a>
+                        )}
+                      </div>
+                    )}
                 </div>
 
                 {client.serviceTags && client.serviceTags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-border/50">
                     {client.serviceTags.map((tag, idx) => (
-                      <Badge 
-                        key={idx} 
-                        variant="secondary" 
+                      <Badge
+                        key={idx}
+                        variant="secondary"
                         className="text-xs font-medium bg-gradient-to-r from-primary/10 to-purple-500/10 hover:from-primary/20 hover:to-purple-500/20 transition-all"
                       >
                         {tag}
@@ -1046,10 +1315,14 @@ export default function Clients() {
                 )}
 
                 {/* Click to View Profile Indicator - Always Visible */}
-                <div className={`${client.serviceTags && client.serviceTags.length > 0 ? 'mt-3' : 'mt-4 pt-4 border-t border-border/50'} flex items-center justify-center text-xs text-muted-foreground group-hover:text-primary transition-colors`}>
+                <div
+                  className={`${client.serviceTags && client.serviceTags.length > 0 ? "mt-3" : "mt-4 pt-4 border-t border-border/50"} flex items-center justify-center text-xs text-muted-foreground group-hover:text-primary transition-colors`}
+                >
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 group-hover:bg-primary/10 transition-all">
                     <Eye className="w-3 h-3" />
-                    <span className="font-medium">Click to view full profile</span>
+                    <span className="font-medium">
+                      Click to view full profile
+                    </span>
                     <ArrowRight className="w-3 h-3" />
                   </div>
                 </div>
@@ -1067,10 +1340,16 @@ export default function Clients() {
               </div>
               <h3 className="text-xl font-semibold mb-2">No Clients Found</h3>
               <p className="text-muted-foreground max-w-md mb-6">
-                {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first client"}
+                {searchTerm
+                  ? "Try adjusting your search terms"
+                  : "Get started by adding your first client"}
               </p>
               {!searchTerm && (
-                <Button onClick={() => setDialogOpen(true)} size="lg" className="shadow-lg">
+                <Button
+                  onClick={() => setDialogOpen(true)}
+                  size="lg"
+                  className="shadow-lg"
+                >
                   <Plus className="w-5 h-5 mr-2" />
                   Add Your First Client
                 </Button>
@@ -1080,7 +1359,10 @@ export default function Clients() {
         )}
 
         {/* Client Details Dialog */}
-        <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
+        <Dialog
+          open={!!selectedClient}
+          onOpenChange={() => setSelectedClient(null)}
+        >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto glass-strong">
             {selectedClient && (
               <>
@@ -1094,7 +1376,9 @@ export default function Clients() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <DialogTitle className="text-2xl">{selectedClient.name}</DialogTitle>
+                        <DialogTitle className="text-2xl">
+                          {selectedClient.name}
+                        </DialogTitle>
                         {selectedClient.company && (
                           <DialogDescription className="text-base flex items-center gap-2 mt-1">
                             <Building2 className="w-4 h-4" />
@@ -1122,7 +1406,9 @@ export default function Clients() {
                 <div className="space-y-6 mt-4">
                   {/* Quick Social analytics entry */}
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Social analytics and connections</div>
+                    <div className="text-sm text-muted-foreground">
+                      Social analytics and connections
+                    </div>
                     <Link href={`/social?clientId=${selectedClient.id}`}>
                       <Button size="sm" className="gap-2">
                         <BarChart3 className="w-4 h-4" />
@@ -1142,9 +1428,14 @@ export default function Clients() {
                         <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
                           <div className="flex items-center gap-2 mb-1">
                             <Mail className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-muted-foreground">Email</span>
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Email
+                            </span>
                           </div>
-                          <a href={`mailto:${selectedClient.email}`} className="text-foreground hover:text-primary transition-colors">
+                          <a
+                            href={`mailto:${selectedClient.email}`}
+                            className="text-foreground hover:text-primary transition-colors"
+                          >
                             {selectedClient.email}
                           </a>
                         </div>
@@ -1153,17 +1444,23 @@ export default function Clients() {
                         <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
                           <div className="flex items-center gap-2 mb-1">
                             <Phone className="w-4 h-4 text-emerald-600" />
-                            <span className="text-sm font-medium text-muted-foreground">Phone</span>
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Phone
+                            </span>
                           </div>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-foreground">{selectedClient.phone}</span>
+                            <span className="text-foreground">
+                              {selectedClient.phone}
+                            </span>
                             <div className="flex gap-1">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
                                   setSelectedClient(null);
-                                  setLocation(`/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=call`);
+                                  setLocation(
+                                    `/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=call`,
+                                  );
                                 }}
                                 aria-label={`Call ${selectedClient.name}`}
                               >
@@ -1175,7 +1472,9 @@ export default function Clients() {
                                 size="sm"
                                 onClick={() => {
                                   setSelectedClient(null);
-                                  setLocation(`/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=sms`);
+                                  setLocation(
+                                    `/phone?number=${encodeURIComponent(selectedClient.phone!)}&action=sms`,
+                                  );
                                 }}
                                 aria-label={`Send SMS to ${selectedClient.name}`}
                               >
@@ -1190,11 +1489,17 @@ export default function Clients() {
                         <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/20 col-span-full">
                           <div className="flex items-center gap-2 mb-1">
                             <Globe className="w-4 h-4 text-purple-600" />
-                            <span className="text-sm font-medium text-muted-foreground">Website</span>
+                            <span className="text-sm font-medium text-muted-foreground">
+                              Website
+                            </span>
                           </div>
-                          <a 
-                            href={selectedClient.website.startsWith('http') ? selectedClient.website : `https://${selectedClient.website}`} 
-                            target="_blank" 
+                          <a
+                            href={
+                              selectedClient.website.startsWith("http")
+                                ? selectedClient.website
+                                : `https://${selectedClient.website}`
+                            }
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-foreground hover:text-primary transition-colors flex items-center gap-1"
                           >
@@ -1207,120 +1512,159 @@ export default function Clients() {
                   </div>
 
                   {/* Social Media */}
-                  {selectedClient.socialLinks && Object.keys(selectedClient.socialLinks).length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Social Media</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {selectedClient.socialLinks.instagram && (
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-pink-500/10 to-orange-500/10 border border-pink-500/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">📷</span>
-                              <span className="text-sm font-medium text-muted-foreground">Instagram</span>
+                  {selectedClient.socialLinks &&
+                    Object.keys(selectedClient.socialLinks).length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">
+                          Social Media
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {selectedClient.socialLinks.instagram && (
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-pink-500/10 to-orange-500/10 border border-pink-500/20">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg">📷</span>
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  Instagram
+                                </span>
+                              </div>
+                              <a
+                                href={`https://instagram.com/${selectedClient.socialLinks.instagram.replace("@", "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-foreground hover:text-primary transition-colors"
+                              >
+                                @
+                                {selectedClient.socialLinks.instagram.replace(
+                                  "@",
+                                  "",
+                                )}
+                              </a>
                             </div>
-                            <a 
-                              href={`https://instagram.com/${selectedClient.socialLinks.instagram.replace('@', '')}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-foreground hover:text-primary transition-colors"
-                            >
-                              @{selectedClient.socialLinks.instagram.replace('@', '')}
-                            </a>
-                          </div>
-                        )}
-                        {selectedClient.socialLinks.facebook && (
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">📘</span>
-                              <span className="text-sm font-medium text-muted-foreground">Facebook</span>
+                          )}
+                          {selectedClient.socialLinks.facebook && (
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg">📘</span>
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  Facebook
+                                </span>
+                              </div>
+                              <a
+                                href={`https://facebook.com/${selectedClient.socialLinks.facebook}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-foreground hover:text-primary transition-colors"
+                              >
+                                {selectedClient.socialLinks.facebook}
+                              </a>
                             </div>
-                            <a 
-                              href={`https://facebook.com/${selectedClient.socialLinks.facebook}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-foreground hover:text-primary transition-colors"
-                            >
-                              {selectedClient.socialLinks.facebook}
-                            </a>
-                          </div>
-                        )}
-                        {selectedClient.socialLinks.twitter && (
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-sky-500/10 to-blue-500/10 border border-sky-500/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">𝕏</span>
-                              <span className="text-sm font-medium text-muted-foreground">Twitter/X</span>
+                          )}
+                          {selectedClient.socialLinks.twitter && (
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-sky-500/10 to-blue-500/10 border border-sky-500/20">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg">𝕏</span>
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  Twitter/X
+                                </span>
+                              </div>
+                              <a
+                                href={`https://twitter.com/${selectedClient.socialLinks.twitter.replace("@", "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-foreground hover:text-primary transition-colors"
+                              >
+                                @
+                                {selectedClient.socialLinks.twitter.replace(
+                                  "@",
+                                  "",
+                                )}
+                              </a>
                             </div>
-                            <a 
-                              href={`https://twitter.com/${selectedClient.socialLinks.twitter.replace('@', '')}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-foreground hover:text-primary transition-colors"
-                            >
-                              @{selectedClient.socialLinks.twitter.replace('@', '')}
-                            </a>
-                          </div>
-                        )}
-                        {selectedClient.socialLinks.tiktok && (
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-slate-900/10 to-slate-700/10 border border-slate-500/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">🎵</span>
-                              <span className="text-sm font-medium text-muted-foreground">TikTok</span>
+                          )}
+                          {selectedClient.socialLinks.tiktok && (
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-slate-900/10 to-slate-700/10 border border-slate-500/20">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg">🎵</span>
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  TikTok
+                                </span>
+                              </div>
+                              <a
+                                href={`https://tiktok.com/@${selectedClient.socialLinks.tiktok.replace("@", "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-foreground hover:text-primary transition-colors"
+                              >
+                                @
+                                {selectedClient.socialLinks.tiktok.replace(
+                                  "@",
+                                  "",
+                                )}
+                              </a>
                             </div>
-                            <a 
-                              href={`https://tiktok.com/@${selectedClient.socialLinks.tiktok.replace('@', '')}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-foreground hover:text-primary transition-colors"
-                            >
-                              @{selectedClient.socialLinks.tiktok.replace('@', '')}
-                            </a>
-                          </div>
-                        )}
-                        {selectedClient.socialLinks.linkedin && (
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-blue-700/10 to-blue-800/10 border border-blue-700/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">💼</span>
-                              <span className="text-sm font-medium text-muted-foreground">LinkedIn</span>
+                          )}
+                          {selectedClient.socialLinks.linkedin && (
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-blue-700/10 to-blue-800/10 border border-blue-700/20">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg">💼</span>
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  LinkedIn
+                                </span>
+                              </div>
+                              <a
+                                href={`https://linkedin.com/in/${selectedClient.socialLinks.linkedin}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-foreground hover:text-primary transition-colors"
+                              >
+                                {selectedClient.socialLinks.linkedin}
+                              </a>
                             </div>
-                            <a 
-                              href={`https://linkedin.com/in/${selectedClient.socialLinks.linkedin}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-foreground hover:text-primary transition-colors"
-                            >
-                              {selectedClient.socialLinks.linkedin}
-                            </a>
-                          </div>
-                        )}
-                        {selectedClient.socialLinks.youtube && (
-                          <div className="p-3 rounded-lg bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">▶️</span>
-                              <span className="text-sm font-medium text-muted-foreground">YouTube</span>
+                          )}
+                          {selectedClient.socialLinks.youtube && (
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/20">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-lg">▶️</span>
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  YouTube
+                                </span>
+                              </div>
+                              <a
+                                href={`https://youtube.com/@${selectedClient.socialLinks.youtube.replace("@", "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-foreground hover:text-primary transition-colors"
+                              >
+                                @
+                                {selectedClient.socialLinks.youtube.replace(
+                                  "@",
+                                  "",
+                                )}
+                              </a>
                             </div>
-                            <a 
-                              href={`https://youtube.com/@${selectedClient.socialLinks.youtube.replace('@', '')}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-foreground hover:text-primary transition-colors"
-                            >
-                              @{selectedClient.socialLinks.youtube.replace('@', '')}
-                            </a>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Subscription Package */}
                   {selectedClient.stripeSubscriptionId && (
                     <div>
-                      <h3 className="text-lg font-semibold mb-3">Subscription</h3>
+                      <h3 className="text-lg font-semibold mb-3">
+                        Subscription
+                      </h3>
                       <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">Active Package</p>
-                            <p className="font-semibold">Premium Subscription</p>
-                            <p className="text-xs text-muted-foreground mt-1">Stripe ID: {selectedClient.stripeSubscriptionId}</p>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">
+                              Active Package
+                            </p>
+                            <p className="font-semibold">
+                              Premium Subscription
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Stripe ID: {selectedClient.stripeSubscriptionId}
+                            </p>
                           </div>
                           <Badge className="bg-green-500/20 text-green-700 border-green-500/30">
                             Active
@@ -1331,40 +1675,47 @@ export default function Clients() {
                   )}
 
                   {/* Service Tags */}
-                  {selectedClient.serviceTags && selectedClient.serviceTags.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Services</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedClient.serviceTags.map((tag, idx) => (
-                          <Badge 
-                            key={idx} 
-                            variant="secondary" 
-                            className="text-sm px-3 py-1 bg-gradient-to-r from-primary/10 to-purple-500/10"
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
+                  {selectedClient.serviceTags &&
+                    selectedClient.serviceTags.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3">Services</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedClient.serviceTags.map((tag, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="secondary"
+                              className="text-sm px-3 py-1 bg-gradient-to-r from-primary/10 to-purple-500/10"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Notes */}
                   {selectedClient.notes && (
                     <div>
                       <h3 className="text-lg font-semibold mb-3">Notes</h3>
                       <div className="p-4 rounded-lg bg-muted/50 border">
-                        <p className="text-sm whitespace-pre-wrap">{selectedClient.notes}</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {selectedClient.notes}
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {/* Created Date */}
                   <div className="text-sm text-muted-foreground pt-4 border-t">
-                    Added on {new Date(selectedClient.createdAt).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
+                    Added on{" "}
+                    {new Date(selectedClient.createdAt).toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      },
+                    )}
                   </div>
                 </div>
               </>
@@ -1384,22 +1735,22 @@ export default function Clients() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="edit-name">Name *</Label>
-                    <Input 
-                      id="edit-name" 
-                      name="name" 
-                      defaultValue={editingClient.name} 
-                      required 
-                      placeholder="Client name" 
+                    <Input
+                      id="edit-name"
+                      name="name"
+                      defaultValue={editingClient.name}
+                      required
+                      placeholder="Client name"
                     />
                   </div>
                   <div>
                     <Label htmlFor="edit-email">Email</Label>
-                    <Input 
-                      id="edit-email" 
-                      name="email" 
-                      type="email" 
-                      defaultValue={editingClient.email || ""} 
-                      placeholder="client@example.com" 
+                    <Input
+                      id="edit-email"
+                      name="email"
+                      type="email"
+                      defaultValue={editingClient.email || ""}
+                      placeholder="client@example.com"
                     />
                   </div>
                 </div>
@@ -1407,45 +1758,47 @@ export default function Clients() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="edit-phone">Phone</Label>
-                    <Input 
-                      id="edit-phone" 
-                      name="phone" 
-                      type="tel" 
-                      defaultValue={editingClient.phone || ""} 
-                      placeholder="+1 (555) 000-0000" 
+                    <Input
+                      id="edit-phone"
+                      name="phone"
+                      type="tel"
+                      defaultValue={editingClient.phone || ""}
+                      placeholder="+1 (555) 000-0000"
                     />
                   </div>
                   <div>
                     <Label htmlFor="edit-company">Company</Label>
-                    <Input 
-                      id="edit-company" 
-                      name="company" 
-                      defaultValue={editingClient.company || ""} 
-                      placeholder="Company name" 
+                    <Input
+                      id="edit-company"
+                      name="company"
+                      defaultValue={editingClient.company || ""}
+                      placeholder="Company name"
                     />
                   </div>
                 </div>
 
                 <div>
                   <Label htmlFor="edit-website">Website</Label>
-                  <Input 
-                    id="edit-website" 
-                    name="website" 
-                    type="url" 
-                    defaultValue={editingClient.website || ""} 
-                    placeholder="https://example.com" 
+                  <Input
+                    id="edit-website"
+                    name="website"
+                    type="url"
+                    defaultValue={editingClient.website || ""}
+                    placeholder="https://example.com"
                   />
                 </div>
 
                 <div>
                   <Label htmlFor="edit-serviceTags">Service Tags</Label>
-                  <Input 
-                    id="edit-serviceTags" 
-                    name="serviceTags" 
-                    defaultValue={editingClient.serviceTags?.join(", ") || ""} 
-                    placeholder="SEO, PPC, Social Media (comma separated)" 
+                  <Input
+                    id="edit-serviceTags"
+                    name="serviceTags"
+                    defaultValue={editingClient.serviceTags?.join(", ") || ""}
+                    placeholder="SEO, PPC, Social Media (comma separated)"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Separate multiple tags with commas</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Separate multiple tags with commas
+                  </p>
                 </div>
 
                 {/* Social Media Section */}
@@ -1457,38 +1810,46 @@ export default function Clients() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="edit-instagram">Instagram</Label>
-                      <Input 
-                        id="edit-instagram" 
-                        name="instagram" 
-                        defaultValue={(editingClient.socialLinks as any)?.instagram || ""} 
-                        placeholder="@username or https://instagram.com/..." 
+                      <Input
+                        id="edit-instagram"
+                        name="instagram"
+                        defaultValue={
+                          (editingClient.socialLinks as any)?.instagram || ""
+                        }
+                        placeholder="@username or https://instagram.com/..."
                       />
                     </div>
                     <div>
                       <Label htmlFor="edit-facebook">Facebook</Label>
-                      <Input 
-                        id="edit-facebook" 
-                        name="facebook" 
-                        defaultValue={(editingClient.socialLinks as any)?.facebook || ""} 
-                        placeholder="username or profile URL" 
+                      <Input
+                        id="edit-facebook"
+                        name="facebook"
+                        defaultValue={
+                          (editingClient.socialLinks as any)?.facebook || ""
+                        }
+                        placeholder="username or profile URL"
                       />
                     </div>
                     <div>
                       <Label htmlFor="edit-twitter">Twitter/X</Label>
-                      <Input 
-                        id="edit-twitter" 
-                        name="twitter" 
-                        defaultValue={(editingClient.socialLinks as any)?.twitter || ""} 
-                        placeholder="@handle or profile URL" 
+                      <Input
+                        id="edit-twitter"
+                        name="twitter"
+                        defaultValue={
+                          (editingClient.socialLinks as any)?.twitter || ""
+                        }
+                        placeholder="@handle or profile URL"
                       />
                     </div>
                     <div>
                       <Label htmlFor="edit-linkedin">LinkedIn</Label>
-                      <Input 
-                        id="edit-linkedin" 
-                        name="linkedin" 
-                        defaultValue={(editingClient.socialLinks as any)?.linkedin || ""} 
-                        placeholder="username or profile URL" 
+                      <Input
+                        id="edit-linkedin"
+                        name="linkedin"
+                        defaultValue={
+                          (editingClient.socialLinks as any)?.linkedin || ""
+                        }
+                        placeholder="username or profile URL"
                       />
                     </div>
                   </div>
@@ -1496,21 +1857,30 @@ export default function Clients() {
 
                 <div>
                   <Label htmlFor="edit-notes">Notes</Label>
-                  <Textarea 
-                    id="edit-notes" 
-                    name="notes" 
-                    defaultValue={editingClient.notes || ""} 
-                    placeholder="Add any additional notes about the client..." 
-                    rows={4} 
+                  <Textarea
+                    id="edit-notes"
+                    name="notes"
+                    defaultValue={editingClient.notes || ""}
+                    placeholder="Add any additional notes about the client..."
+                    rows={4}
                   />
                 </div>
 
                 <div className="flex gap-3 justify-end pt-4">
-                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={updateClientMutation.isPending}>
-                    {updateClientMutation.isPending ? "Saving..." : "Save Changes"}
+                  <Button
+                    type="submit"
+                    disabled={updateClientMutation.isPending}
+                  >
+                    {updateClientMutation.isPending
+                      ? "Saving..."
+                      : "Save Changes"}
                   </Button>
                 </div>
               </form>
@@ -1524,11 +1894,14 @@ export default function Clients() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Client?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the client and all associated data.
+                This action cannot be undone. This will permanently delete the
+                client and all associated data.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setClientToDelete(null)}>
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
@@ -1544,7 +1917,5 @@ export default function Clients() {
         </AlertDialog>
       </div>
     </div>
-  </div>
   );
 }
-
