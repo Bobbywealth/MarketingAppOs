@@ -50,6 +50,7 @@ const viewOptions = [
   { label: "List", icon: List },
   { label: "Calendar", icon: CalendarDays },
 ];
+const views = viewOptions.map((option) => option.label);
 const filters = ["All Tasks", "My Tasks", "Today", "Overdue", "High Priority", "Waiting"];
 
 const priorityStyles: Record<string, string> = {
@@ -637,7 +638,7 @@ export default function TasksPage() {
                   ))}
                 </div>
               )}
-          </VibeSectionCard>
+            </div>
         </section>
       </div>
 
@@ -930,6 +931,7 @@ export default function TasksPage() {
           </div>
         </div>
       )}
-    </VibePageShell>
+    </div>
+    </div>
   );
 }

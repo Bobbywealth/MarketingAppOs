@@ -112,14 +112,14 @@ exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* pri
   class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
 >
   <div
-    class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6"
+    class="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6"
   >
     <div
       class="space-y-1"
     >
       <nav
         aria-label="Breadcrumb"
-        class="text-xs text-muted-foreground mb-1"
+        class="mb-1 text-xs text-muted-foreground"
       >
         <ol
           class="flex items-center gap-1.5 flex-wrap"
@@ -152,12 +152,12 @@ exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* pri
         </ol>
       </nav>
       <h1
-        class="text-xl md:text-2xl font-bold tracking-tight"
+        class="font-bold tracking-tight text-xl md:text-2xl"
       >
         Marketing Overview
       </h1>
       <p
-        class="text-sm text-muted-foreground max-w-2xl"
+        class="max-w-2xl text-sm text-muted-foreground"
       >
         Track campaign and channel performance in one place.
       </p>
@@ -959,14 +959,14 @@ exports[`Vibe primitives story snapshots > renders snapshots in dark mode withou
   class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
 >
   <div
-    class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6"
+    class="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6"
   >
     <div
       class="space-y-1"
     >
       <nav
         aria-label="Breadcrumb"
-        class="text-xs text-muted-foreground mb-1"
+        class="mb-1 text-xs text-muted-foreground"
       >
         <ol
           class="flex items-center gap-1.5 flex-wrap"
@@ -999,12 +999,12 @@ exports[`Vibe primitives story snapshots > renders snapshots in dark mode withou
         </ol>
       </nav>
       <h1
-        class="text-xl md:text-2xl font-bold tracking-tight"
+        class="font-bold tracking-tight text-xl md:text-2xl"
       >
         Marketing Overview
       </h1>
       <p
-        class="text-sm text-muted-foreground max-w-2xl"
+        class="max-w-2xl text-sm text-muted-foreground"
       >
         Track campaign and channel performance in one place.
       </p>
