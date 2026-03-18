@@ -57,6 +57,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import heroImage from "@assets/hero-header-image.png";
 import instagramLogo from "@assets/instagram-logo.png";
 import tiktokLogo from "@assets/tiktok-logo.png";
 import linkedinLogo from "@assets/linkedin-logo.png";
@@ -72,6 +73,35 @@ const Footer = lazy(() => import("@/components/landing/Footer"));
 
 function SectionSkeleton() {
   return <div className="container mx-auto px-4 py-16 animate-pulse"><div className="h-8 w-48 bg-muted rounded mb-4" /><div className="h-5 w-full bg-muted rounded" /></div>;
+}
+
+function Counter({ value, suffix = "", duration = 2 }: { value: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const nodeRef = useRef<HTMLSpanElement | null>(null);
+  const isVisible = useInView(nodeRef, { once: true });
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    let start = 0;
+    const end = value;
+    if (start === end) return;
+
+    const totalMilliseconds = duration * 1000;
+    const incrementTime = totalMilliseconds / end;
+
+    const timer = window.setInterval(() => {
+      start += 1;
+      setCount(start);
+      if (start === end) {
+        window.clearInterval(timer);
+      }
+    }, incrementTime);
+
+    return () => window.clearInterval(timer);
+  }, [isVisible, value, duration]);
+
+  return <span ref={nodeRef}>{count}{suffix}</span>;
 }
 
 // Live Feed Mockup Data
@@ -198,7 +228,9 @@ export default function LandingPage() {
       }
     });
     document.head.appendChild(script);
-    return () => document.head.removeChild(script);
+    return () => {
+      document.head.removeChild(script);
+    };
   }, []);
 
   useEffect(() => {
@@ -270,6 +302,8 @@ export default function LandingPage() {
     }
     auditMutation.mutate(auditForm);
   };
+
+  const handleAuditSubmit = onAuditSubmit;
 
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 

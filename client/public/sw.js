@@ -2,7 +2,7 @@
 
 // Service Worker for Marketing Team App PWA
 // Update these version numbers to force cache refresh
-const CACHE_VERSION = '3.0.0';
+const CACHE_VERSION = '3.0.1';
 const CACHE_NAME = `mta-crm-v${CACHE_VERSION}`;
 const STATIC_CACHE = `mta-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `mta-dynamic-v${CACHE_VERSION}`;
