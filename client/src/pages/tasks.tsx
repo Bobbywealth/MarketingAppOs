@@ -367,49 +367,96 @@ export default function TasksPage() {
   }
 
   return (
-    <VibePageShell>
-      <div className="space-y-6">
-        {/* Header Section */}
-        <VibeHeroHeader
-          eyebrow="Task Management"
-          title="Modern Interactive Task Command Center"
-          description="Search, filter, move tasks, edit task details, and add new tasks on one page."
-          action={
-            <>
-              <div className="flex min-w-[280px] items-center rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-slate-200 backdrop-blur">
-                <Search className="mr-2 h-4 w-4" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search tasks, people, tags, company..."
-                  className="w-full bg-transparent outline-none placeholder:text-slate-400"
-                />
+    <div className="min-h-screen bg-page-radial text-slate-900">
+      <div className="mx-auto max-w-[1680px] p-4 md:p-6 xl:p-8">
+        <div className="space-y-6">
+          {/* Header Section */}
+          <section className="overflow-hidden rounded-surface-xl border border-slate-200/80 bg-white/90 shadow-shell-elevated backdrop-blur">
+            <div className="border-b border-slate-100 bg-hero-command px-5 py-6 text-white md:px-6">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Task Management</div>
+                  <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">Modern Interactive Task Command Center</h1>
+                  <p className="mt-2 max-w-3xl text-sm text-slate-300 md:text-base">
+                    Search, filter, move tasks, edit task details, and add new tasks on one page.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
+                  <div className="flex min-w-[280px] items-center rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-slate-200 backdrop-blur">
+                    <Search className="mr-2 h-4 w-4" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search tasks, people, tags, company..."
+                      className="w-full bg-transparent outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setShowNewTask(true)}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:scale-[1.01]"
+                  >
+                    <Plus className="h-4 w-4" /> New Task
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setShowNewTask(true)}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:scale-[1.01]"
-              >
-                <Plus className="h-4 w-4" /> New Task
-              </button>
-            </>
-          }
-        >
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <VibeFilterChips options={filters} active={activeFilter} onChange={setActiveFilter} />
-            <VibeViewToggle options={viewOptions} active={activeView} onChange={setActiveView} />
-          </div>
-        </VibeHeroHeader>
+            </div>
 
-        {/* Summary Cards */}
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {summary.map((card) => (
-            <VibeStatCard key={card.label} label={card.label} value={card.value} note={card.note} />
-          ))}
-        </section>
+            <div className="px-5 py-5 md:px-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {filters.map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setActiveFilter(filter)}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                        activeFilter === filter
+                          ? "chip-selected"
+                          : "chip-unselected"
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
 
-        {/* Task Workspace */}
-        <section>
-          <VibeSectionCard surface="2xl" className="p-4 md:p-5">
+                <div className="flex flex-wrap gap-2">
+                  {views.map((view) => {
+                    const Icon = view === "Board" ? LayoutGrid : view === "List" ? List : CalendarDays;
+                    return (
+                      <button
+                        key={view}
+                        onClick={() => setActiveView(view)}
+                        className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+                          activeView === view
+                            ? "chip-selected-brand"
+                            : "chip-unselected"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {view}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Summary Cards */}
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {summary.map((card) => (
+              <div key={card.label} className="rounded-surface-lg border border-slate-200 bg-white p-5 shadow-card-elevated">
+                <div className="text-sm text-slate-500">{card.label}</div>
+                <div className="mt-2 text-3xl font-bold tracking-tight">{card.value}</div>
+                <div className="mt-2 text-sm text-slate-500">{card.note}</div>
+              </div>
+            ))}
+          </section>
+
+          {/* Task Workspace */}
+          <section>
+            <div className="rounded-surface-xl border border-slate-200 bg-white p-4 shadow-card-elevated md:p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Task Workspace</h2>
@@ -423,7 +470,7 @@ export default function TasksPage() {
               {activeView === "Board" && (
                 <div className="grid gap-4 xl:grid-cols-4">
                   {statuses.map((status) => (
-                    <div key={status} className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
+                    <div key={status} className="overflow-hidden rounded-surface-lg border border-slate-200 bg-slate-50">
                       <div className={`bg-gradient-to-r ${statusAccent[status]} px-4 py-4 text-white`}>
                         <div className="flex items-center justify-between">
                           <div>
@@ -439,7 +486,7 @@ export default function TasksPage() {
                           <button
                             key={task.id}
                             onClick={() => setSelectedTaskId(task.id)}
-                            className={`w-full rounded-[24px] border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                            className={`w-full rounded-3xl border bg-white p-4 text-left shadow-card-elevated transition hover:-translate-y-0.5 hover:shadow-md ${
                               selectedTaskId === task.id ? "border-indigo-500 ring-2 ring-indigo-100" : "border-slate-200"
                             }`}
                           >
@@ -497,7 +544,7 @@ export default function TasksPage() {
                         ))}
 
                         {(groupedTasks[status] || []).length === 0 && (
-                          <div className="rounded-[22px] border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">
+                          <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">
                             No tasks here
                           </div>
                         )}
@@ -508,7 +555,7 @@ export default function TasksPage() {
               )}
 
               {activeView === "List" && (
-                <div className="overflow-hidden rounded-[28px] border border-slate-200">
+                <div className="overflow-hidden rounded-surface-lg border border-slate-200">
                   <div className="grid grid-cols-[1.7fr_0.9fr_0.7fr_0.7fr_0.7fr] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <div>Task</div>
                     <div>Company</div>
@@ -544,7 +591,7 @@ export default function TasksPage() {
               {activeView === "Calendar" && (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {["Today", "Tomorrow", "This Week"].map((bucket) => (
-                    <div key={bucket} className="rounded-[28px] border border-slate-200 bg-slate-50 p-4">
+                    <div key={bucket} className="rounded-surface-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="mb-3 flex items-center justify-between">
                         <h3 className="font-semibold text-slate-900">{bucket}</h3>
                         <div className="text-xs text-slate-500">Schedule view</div>
@@ -573,7 +620,7 @@ export default function TasksPage() {
                             <button
                               key={task.id}
                               onClick={() => setSelectedTaskId(task.id)}
-                              className="w-full rounded-[22px] border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-indigo-300"
+                              className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-card-elevated hover:border-indigo-300"
                             >
                               <div className="font-semibold text-slate-900">{task.title}</div>
                               <div className="mt-1 text-sm text-slate-500">{formatDueDate(task.dueDate)}</div>
@@ -722,7 +769,7 @@ export default function TasksPage() {
                 />
               </div>
 
-              <div className="rounded-[24px] bg-slate-50 p-4">
+              <div className="rounded-3xl bg-slate-50 p-4">
                 <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Quick actions</div>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -753,7 +800,7 @@ export default function TasksPage() {
       {/* New Task Modal */}
       {showNewTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-2xl rounded-surface-xl border border-slate-200 bg-white p-6 shadow-shell-elevated">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold">Create New Task</h2>

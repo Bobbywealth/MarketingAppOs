@@ -9,6 +9,17 @@ export default {
         lg: ".5625rem", /* 9px */
         md: ".375rem", /* 6px */
         sm: ".1875rem", /* 3px */
+        "surface-lg": "1.75rem", /* 28px */
+        "surface-xl": "2rem", /* 32px */
+      },
+      boxShadow: {
+        "shell-elevated": "0 20px 70px -35px rgba(15, 23, 42, 0.35)",
+        "card-elevated": "0 8px 24px -14px rgba(15, 23, 42, 0.28)",
+      },
+      backgroundImage: {
+        "page-radial": "radial-gradient(circle at top, #f8fafc, white 40%, #eef2ff 100%)",
+        "hero-command": "linear-gradient(to right, #020617, #0f172a, #1e293b)",
+        "hero-brand": "linear-gradient(135deg, #4f46e5, #4338ca, #3730a3)",
       },
       colors: {
         // Flat / base colors (regular buttons)
@@ -85,6 +96,24 @@ export default {
           DEFAULT: "hsl(var(--chart-2) / <alpha-value>)",
           light: "hsl(25 95% 65% / <alpha-value>)",
           dark: "hsl(25 95% 45% / <alpha-value>)",
+        },
+        chip: {
+          selected: {
+            DEFAULT: "rgb(15 23 42)",
+            foreground: "rgb(255 255 255)",
+            border: "rgb(15 23 42)",
+          },
+          unselected: {
+            DEFAULT: "rgb(241 245 249)",
+            foreground: "rgb(71 85 105)",
+            border: "rgb(226 232 240)",
+            hover: "rgb(226 232 240)",
+          },
+          brand: {
+            DEFAULT: "rgb(79 70 229)",
+            foreground: "rgb(255 255 255)",
+            border: "rgb(79 70 229)",
+          },
         },
         // Semantic status colors
         success: {
