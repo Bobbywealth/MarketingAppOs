@@ -1,11 +1,66 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { Link } from "wouter";
+import { motion, useInView } from "framer-motion";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { SubscriptionPackage } from "@shared/schema";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { Hero } from "@/components/landing/Hero";
+import { HeaderLogo, FooterLogo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  ArrowRight,
+  BarChart3,
+  Bot,
+  Brain,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  Menu,
+  MessageSquare,
+  Pencil,
+  Rocket,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Target,
+  TrendingUp,
+  Users,
+  Zap,
+} from "lucide-react";
+import instagramLogo from "@assets/instagram-logo.png";
+import tiktokLogo from "@assets/tiktok-logo.png";
+import linkedinLogo from "@assets/linkedin-logo.png";
+import googleAdsLogo from "@assets/google-ads-logo.png";
 
 const SocialProof = lazy(() => import("@/components/landing/SocialProof"));
 const Services = lazy(() => import("@/components/landing/Services"));
@@ -17,7 +72,6 @@ const Footer = lazy(() => import("@/components/landing/Footer"));
 
 function SectionSkeleton() {
   return <div className="container mx-auto px-4 py-16 animate-pulse"><div className="h-8 w-48 bg-muted rounded mb-4" /><div className="h-5 w-full bg-muted rounded" /></div>;
-  return <span ref={nodeRef}>{count}{suffix}</span>;
 }
 
 // Live Feed Mockup Data
@@ -81,8 +135,36 @@ function LogoCloud() {
 
 export default function LandingPage() {
   const { toast } = useToast();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [auditResults, setAuditResults] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [showStickyCTA, setShowStickyCTA] = useState(false);
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+  const testimonialIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pricingRef = useRef<HTMLElement | null>(null);
+  const pricingSectionRef = useRef<HTMLElement | null>(null);
+  const testimonialsSectionRef = useRef<HTMLElement | null>(null);
+  const isTestimonialsInView = useInView(testimonialsSectionRef, { once: true, margin: "-200px" });
   const [auditForm, setAuditForm] = useState({ website: "", instagramUrl: "", tiktokUrl: "", facebookUrl: "" });
+
+  const testimonials = [
+    { name: "Marcus Johnson", role: "Independent Musician", initials: "MJ", gradient: "from-blue-500 to-purple-500", text: "Marketing Team App took my Instagram from 5K to 50K followers in 6 months. Their content strategy and ad campaigns were game-changers. My music career has never been better!", featured: false },
+    { name: "Tanya Chen", role: "E-commerce Business Owner", initials: "TC", gradient: "from-green-500 to-emerald-500", text: "Our e-commerce sales tripled after Marketing Team App revamped our website and ran our ad campaigns. The ROI has been insane. Best marketing investment we've ever made!", featured: true },
+    { name: "David Rodriguez", role: "Fitness Coach & Influencer", initials: "DR", gradient: "from-orange-500 to-red-500", text: "As a fitness coach, I needed help building my personal brand. Marketing Team App handled everything - content, ads, website. Now I'm booked out 3 months in advance!", featured: false },
+    { name: "Sarah Patel", role: "Restaurant Owner", initials: "SP", gradient: "from-pink-500 to-rose-500", text: "Running a restaurant with zero marketing experience was tough. Marketing Team App created our entire digital presence - website, social media, Google Ads. We're now fully booked every weekend!", featured: false },
+    { name: "James Wilson", role: "SaaS Founder", initials: "JW", gradient: "from-indigo-500 to-blue-500", text: "As a B2B SaaS company, we needed LinkedIn expertise and enterprise-level campaigns. Marketing Team App delivered beyond expectations - 300% increase in qualified leads in just 4 months!", featured: false },
+    { name: "Lisa Martinez", role: "Real Estate Agent", initials: "LM", gradient: "from-teal-500 to-cyan-500", text: "I'm a real estate agent competing in a saturated market. Marketing Team App's targeted Facebook ads and professional content helped me close 40% more deals this year. Absolute game changer!", featured: false },
+    { name: "Michael Chang", role: "Fashion Brand Owner", initials: "MC", gradient: "from-violet-500 to-purple-500", text: "Launching my fashion brand was scary. Marketing Team App created our entire launch strategy - influencer partnerships, Instagram ads, email campaigns. We sold out our first collection in 2 weeks!", featured: false },
+    { name: "Emma Thompson", role: "Online Course Creator", initials: "ET", gradient: "from-amber-500 to-orange-500", text: "I was struggling to sell my online courses. Marketing Team App built my sales funnels, created compelling ads, and optimized my landing pages. My course sales increased by 450% in 3 months!", featured: false },
+  ];
+
+  const nextTestimonial = () => {
+    setCurrentTestimonialIndex((prev) => (prev + 1) % testimonials.length);
+  };
+
+  const prevTestimonial = () => {
+    setCurrentTestimonialIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
 
   useDocumentMeta({
     title: "Marketing Team App | Your Remote Digital Marketing Team",
@@ -119,6 +201,51 @@ export default function LandingPage() {
     return () => document.head.removeChild(script);
   }, []);
 
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        setShowStickyCTA(window.scrollY > 600);
+        ticking = false;
+      });
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!isTestimonialsInView) return;
+
+    const startAutoRotate = () => {
+      testimonialIntervalRef.current = setInterval(() => {
+        setCurrentTestimonialIndex((prev) => (prev + 1) % testimonials.length);
+      }, 5000);
+    };
+
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        if (!testimonialIntervalRef.current) startAutoRotate();
+      } else if (testimonialIntervalRef.current) {
+        clearInterval(testimonialIntervalRef.current);
+        testimonialIntervalRef.current = null;
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      if (testimonialIntervalRef.current) {
+        clearInterval(testimonialIntervalRef.current);
+        testimonialIntervalRef.current = null;
+      }
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [isTestimonialsInView, testimonials.length]);
+
   const { data: packages = [], isLoading: packagesLoading } = useQuery<SubscriptionPackage[]>({
     queryKey: ["/api/subscription-packages"],
     queryFn: async () => (await apiRequest("GET", "/api/subscription-packages")).json(),
@@ -127,7 +254,11 @@ export default function LandingPage() {
 
   const auditMutation = useMutation({
     mutationFn: async (data: typeof auditForm) => (await apiRequest("POST", "/api/social-audit", data)).json(),
-    onSuccess: () => toast({ title: "🎉 Audit Complete!", description: "Your social media audit results are ready." }),
+    onSuccess: (result) => {
+      setAuditResults(result);
+      setShowResults(true);
+      toast({ title: "🎉 Audit Complete!", description: "Your social media audit results are ready." });
+    },
     onError: () => toast({ title: "❌ Audit Failed", description: "Something went wrong. Please try again.", variant: "destructive" }),
   });
 
@@ -139,6 +270,8 @@ export default function LandingPage() {
     }
     auditMutation.mutate(auditForm);
   };
+
+  const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">

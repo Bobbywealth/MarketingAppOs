@@ -127,9 +127,5 @@
       "protocol": "web+mta",
       "url": "/?protocol=%s"
     }
-  ],
-  "launch_handler": {
-    "client_mode": ["navigate-existing", "auto"]
-  }
+  ]
 }
-
