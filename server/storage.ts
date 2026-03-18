@@ -32,6 +32,7 @@ import {
   apiKeys,
   subscriptionPackages,
   calendarEvents,
+  bookings,
   secondMe,
   secondMeContent,
   pageViews,
@@ -79,6 +80,8 @@ import {
   type Invoice,
   type CalendarEvent,
   type InsertCalendarEvent,
+  type Booking,
+  type InsertBooking,
   type InsertInvoice,
   type Ticket,
   type InsertTicket,
@@ -247,6 +250,9 @@ export interface IStorage {
   createCalendarEvent(event: InsertCalendarEvent): Promise<CalendarEvent>;
   updateCalendarEvent(id: string, data: Partial<InsertCalendarEvent>): Promise<CalendarEvent>;
   deleteCalendarEvent(id: string): Promise<void>;
+
+  // Public booking operations
+  createBooking(booking: InsertBooking): Promise<Booking>;
   
   // User View Preferences operations
   getUserViewPreferences(userId: number): Promise<UserViewPreferences | undefined>;
@@ -1046,6 +1052,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCalendarEvent(id: string): Promise<void> {
     await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
+  }
+
+  async createBooking(bookingData: InsertBooking): Promise<Booking> {
+    const [booking] = await db.insert(bookings).values(bookingData).returning();
+    return booking;
   }
 
   // Lead operations

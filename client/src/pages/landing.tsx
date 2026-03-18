@@ -17,6 +17,66 @@ const Footer = lazy(() => import("@/components/landing/Footer"));
 
 function SectionSkeleton() {
   return <div className="container mx-auto px-4 py-16 animate-pulse"><div className="h-8 w-48 bg-muted rounded mb-4" /><div className="h-5 w-full bg-muted rounded" /></div>;
+  return <span ref={nodeRef}>{count}{suffix}</span>;
+}
+
+// Live Feed Mockup Data
+const LIVE_ACTIVITIES = [
+  { name: "Alpha Tech", action: "started a new campaign", time: "just now", icon: Rocket },
+  { name: "Sarah J.", action: "reached 10k followers", time: "2m ago", icon: Star },
+  { name: "Zen Fitness", action: "generated 45 new leads", time: "5m ago", icon: Users },
+  { name: "Urban Eats", action: "launched new website", time: "12m ago", icon: Globe },
+];
+
+type NavItemType = "link" | "services" | "auth" | "cta";
+
+type NavItem = {
+  label: string;
+  href: string;
+  type: NavItemType;
+  testId: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Home", href: "/", type: "link", testId: "nav-home" },
+  { label: "Services", href: "#services", type: "services", testId: "nav-services" },
+  { label: "Blog", href: "/blog", type: "link", testId: "nav-blog" },
+  { label: "About", href: "/about", type: "link", testId: "nav-about" },
+  { label: "Contact", href: "/contact", type: "link", testId: "nav-contact" },
+  { label: "Creator signup", href: "/become-creator", type: "link", testId: "nav-creator-signup" },
+  { label: "Login", href: "/login", type: "auth", testId: "button-login-header" },
+  { label: "Get Started", href: "/signup", type: "cta", testId: "button-get-started-header" },
+];
+
+// Platform Logo Cloud Component
+function LogoCloud() {
+  const logos = [
+    { name: "Instagram", icon: instagramLogo },
+    { name: "TikTok", icon: tiktokLogo },
+    { name: "LinkedIn", icon: linkedinLogo },
+    { name: "Google Ads", icon: googleAdsLogo },
+  ];
+
+  return (
+    <div className="py-12 border-y bg-white/30 backdrop-blur-sm overflow-hidden">
+      <div className="container mx-auto px-4">
+        <p className="text-center text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Powering growth across every major platform</p>
+        <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-50">
+          {logos.map((logo) => (
+            <motion.img 
+              key={logo.name}
+              whileHover={{ opacity: 1, scale: 1.1, filter: "grayscale(0%)" }}
+              src={logo.icon} 
+              alt={logo.name} 
+              className="h-8 md:h-12 grayscale transition-all duration-300 cursor-pointer"
+              loading="lazy"
+              decoding="async"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function LandingPage() {
@@ -65,6 +125,590 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <AnimatedBackground />
       <Hero />
+      {/* Header */}
+      <motion.header
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="border-b sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-sm supports-[backdrop-filter]:bg-white/60"
+      >
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Link href="/">
+              <HeaderLogo />
+            </Link>
+          </div>
+          
+          <nav className="hidden md:flex items-center gap-8">
+            {NAV_ITEMS.filter((item) => item.type === "link" || item.type === "services").map((item) => {
+              if (item.type === "services") {
+                return (
+                  <NavigationMenu key={item.label}>
+                    <NavigationMenuList>
+                      <NavigationMenuItem>
+                        <NavigationMenuTrigger className="text-base font-medium bg-transparent hover:bg-transparent data-[state=open]:bg-transparent" data-testid={item.testId}>
+                          {item.label}
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent>
+                          <div className="w-80 p-3">
+                            <a href="#digital-marketing" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-digital-marketing">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <TrendingUp className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">Digital Marketing</div>
+                                <div className="text-xs text-muted-foreground">Social media, ads & campaigns</div>
+                              </div>
+                            </a>
+                            <a href="#content-creation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-content-creation">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Pencil className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">Content Creation</div>
+                                <div className="text-xs text-muted-foreground">Copy, graphics & videos</div>
+                              </div>
+                            </a>
+                            <a href="#web-design" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-web-design">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Globe className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">Web & App Development</div>
+                                <div className="text-xs text-muted-foreground">Websites, apps & CRMs</div>
+                              </div>
+                            </a>
+                            <a href="#ai-automation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-ai-automation">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Bot className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5 flex items-center gap-2">
+                                  AI Automation
+                                  <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">New</Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground">Chatbots & workflow automation</div>
+                              </div>
+                            </a>
+                            <div className="border-t my-2"></div>
+                            <a href="#seo" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-seo">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Target className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">SEO & Analytics</div>
+                                <div className="text-xs text-muted-foreground">Search optimization & tracking</div>
+                              </div>
+                            </a>
+                          </div>
+                        </NavigationMenuContent>
+                      </NavigationMenuItem>
+                    </NavigationMenuList>
+                  </NavigationMenu>
+                );
+              }
+
+              return (
+                <Link key={item.label} href={item.href} className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid={item.testId}>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Mobile actions (CTA + Menu) */}
+            <div className="flex items-center gap-2 md:hidden">
+              <Link href="/signup">
+                <Button
+                  size="sm"
+                  className="gap-2 text-xs bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 px-3 h-9 rounded-full font-black"
+                  data-testid="button-get-started-header"
+                >
+                  Get Started
+                  <ArrowRight className="w-3 h-3" />
+                </Button>
+              </Link>
+
+              {/* Mobile Menu */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-full border-2 bg-white/60 hover:bg-white/80 backdrop-blur-md"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+              <SheetContent side="right" className="w-[85vw] sm:w-[400px] border-l-0 p-0 overflow-hidden">
+                <div className="flex flex-col h-full bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
+                  <div className="p-6 border-b bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+                    <SheetHeader className="text-left">
+                      <SheetTitle className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Menu</SheetTitle>
+                    </SheetHeader>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-6">
+                    <nav className="flex flex-col gap-2">
+                      {NAV_ITEMS.filter((item) => item.type === "link" || item.type === "services").map((item) => (
+                        <SheetClose asChild key={item.label}>
+                          <Link href={item.href} className="text-lg font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors py-3 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+                            {item.label}
+                            <ChevronRight className="w-4 h-4 opacity-30" />
+                          </Link>
+                        </SheetClose>
+                      ))}
+                    </nav>
+                  </div>
+                  
+                  <div className="p-6 border-t bg-white dark:bg-slate-900 space-y-3 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                    {NAV_ITEMS.filter((item) => item.type === "auth" || item.type === "cta").map((item) => (
+                      <SheetClose asChild key={item.label}>
+                        <Link href={item.href} className="block">
+                          {item.type === "auth" ? (
+                            <Button variant="outline" className="w-full h-12 rounded-xl font-bold border-2" data-testid="button-login-mobile">
+                              {item.label}
+                            </Button>
+                          ) : (
+                            <Button className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black shadow-xl shadow-blue-500/20" data-testid="button-signup-mobile">
+                              {item.label}
+                            </Button>
+                          )}
+                        </Link>
+                      </SheetClose>
+                    ))}
+                  </div>
+                </div>
+              </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Desktop buttons */}
+            <div className="hidden md:flex items-center gap-3">
+              {NAV_ITEMS.filter((item) => item.type === "auth" || item.type === "cta").map((item) => (
+                <Link key={item.label} href={item.href}>
+                  {item.type === "cta" ? (
+                    <Button
+                      size="sm"
+                      className="gap-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 px-4 h-10 rounded-full font-black"
+                      data-testid={item.testId}
+                    >
+                      {item.label}
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white" data-testid={item.testId}>
+                      {item.label}
+                    </Button>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.header>
+
+      {/* Hero Section */}
+      <section className="relative pt-12 pb-16 md:pt-32 md:pb-24 lg:pt-40 lg:pb-32 px-4 overflow-hidden min-h-[80vh] md:min-h-[90vh] flex items-center">
+        {/* Background Decorative Elements */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.1),transparent_50%)]"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
+        
+        {/* Animated Orbs */}
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-1/4 -left-20 w-64 md:w-96 h-64 md:h-96 bg-blue-500/20 rounded-full blur-[80px] md:blur-[100px] pointer-events-none"
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.3, 1],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className="absolute bottom-1/4 -right-20 w-80 md:w-[500px] h-80 md:h-[500px] bg-purple-500/10 rounded-full blur-[100px] md:blur-[120px] pointer-events-none"
+        />
+
+        <div className="container mx-auto relative z-10">
+          <div className="grid lg:grid-cols-12 gap-8 md:gap-12 items-center">
+            <div className="lg:col-span-7 text-center lg:text-left space-y-6 md:space-y-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Badge className="bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 border-blue-600/20 px-3 md:px-4 py-1 md:py-1.5 rounded-full text-[10px] md:text-sm font-bold backdrop-blur-sm mb-4 md:mb-6">
+                  <Sparkles className="w-3 md:w-4 h-3 md:h-4 mr-2 inline-block animate-pulse" />
+                  The Future of Remote Marketing
+                </Badge>
+                
+                <h1 className="text-4xl sm:text-5xl md:text-7xl xl:text-8xl font-black tracking-tighter leading-[1.1] sm:leading-[1] md:leading-[0.9] mb-6 md:mb-8">
+                  Your Digital <br className="hidden xs:block sm:block" />
+                  <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent italic">
+                    Marketing Force
+                  </span>
+                </h1>
+
+                <p className="text-base sm:text-lg md:text-2xl text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed sm:leading-snug md:leading-tight mb-8 md:mb-10 px-4 sm:px-0">
+                  Stop hiring freelancers. Start scaling with an entire elite marketing team for the price of one junior employee.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 md:gap-5 justify-center lg:justify-start px-6 sm:px-0">
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
+                    <Link href="/signup">
+                      <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white h-16 sm:h-auto px-8 md:px-10 py-6 md:py-8 rounded-2xl text-lg md:text-xl font-black shadow-2xl shadow-blue-600/30 group w-full border-b-4 border-blue-800 active:border-b-0 transition-all">
+                        Get Started <ArrowRight className="ml-2 w-5 md:w-6 h-5 md:h-6 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </Link>
+                  </motion.div>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
+                    <Link href="/contact">
+                      <Button size="lg" variant="outline" className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-2 border-slate-200 dark:border-slate-800 h-16 sm:h-auto px-8 md:px-10 py-6 md:py-8 rounded-2xl text-lg md:text-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full shadow-lg">
+                        Book a Call
+                      </Button>
+                    </Link>
+                  </motion.div>
+                </div>
+
+                <div className="pt-10 md:pt-12 flex flex-wrap items-center justify-center lg:justify-start gap-6 sm:gap-10 opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
+                  <img src={instagramLogo} alt="Instagram" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
+                  <img src={tiktokLogo} alt="TikTok" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
+                  <img src={linkedinLogo} alt="LinkedIn" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
+                  <img src={googleAdsLogo} alt="Google Ads" className="h-6 sm:h-7 md:h-9" loading="lazy" decoding="async" />
+                </div>
+
+                {/* Live Activity Feed */}
+                <div className="mt-12 hidden lg:block overflow-hidden h-10 relative">
+                  <div className="flex flex-col animate-[slide-up_10s_linear_infinite]">
+                    {[...LIVE_ACTIVITIES, ...LIVE_ACTIVITIES].map((activity, i) => (
+                      <div key={i} className="flex items-center gap-3 h-10 text-slate-500 dark:text-slate-400 text-sm">
+                        <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600">
+                          <activity.icon className="w-3 h-3" />
+                        </div>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{activity.name}</span>
+                        <span>{activity.action}</span>
+                        <span className="text-xs opacity-50">• {activity.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="lg:col-span-5 relative">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, rotateY: 20 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="relative z-10"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-[2.5rem] blur-3xl -z-10 transform rotate-6 scale-110"></div>
+                <div className="relative bg-white/10 dark:bg-slate-900/10 backdrop-blur-sm border border-white/20 dark:border-slate-800/50 p-2 rounded-[2.5rem] shadow-2xl shadow-blue-500/10">
+                  <div className="rounded-[2rem] overflow-hidden shadow-inner ring-1 ring-black/5">
+                    <img
+                      src={heroImage}
+                      alt="Marketing Dashboard"
+                      className="w-full h-auto object-cover"
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
+                    />
+                  </div>
+                  
+                  {/* Floating Elements on Image */}
+                  <motion.div 
+                    animate={{ y: [0, -15, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute -top-6 -right-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 hidden sm:block"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Growth</p>
+                        <p className="text-lg font-black">+214%</p>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  <motion.div 
+                    animate={{ y: [0, 15, 0] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    className="absolute -bottom-6 -left-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 hidden sm:block"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Active Leads</p>
+                        <p className="text-lg font-black">1,482</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll Indicator */}
+        <motion.div 
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40 hover:opacity-100 transition-opacity cursor-pointer hidden md:flex"
+          onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
+        >
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Explore</span>
+          <div className="w-px h-12 bg-gradient-to-b from-blue-600 to-transparent"></div>
+        </motion.div>
+      </section>
+
+      <LogoCloud />
+
+      {/* Trust Indicators Section - Positioned High */}
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-16 px-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border-y border-white/20 dark:border-slate-800/50 relative z-20"
+      >
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="text-center group"
+            >
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-500/10 mb-4 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">
+                <Rocket className="w-6 h-6 text-blue-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={850} suffix="+" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Campaigns</p>
+            </motion.div>
+            
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="text-center group"
+            >
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-green-500/10 mb-4 group-hover:bg-green-500 group-hover:text-white transition-all duration-300">
+                <Users className="w-6 h-6 text-green-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={4} suffix="M+" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Leads Generated</p>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="text-center group"
+            >
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-orange-500/10 mb-4 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                <BarChart3 className="w-6 h-6 text-orange-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-orange-600 to-red-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={310} suffix="%" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Avg ROI Increase</p>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ y: -5 }}
+              className="text-center group"
+            >
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-purple-500/10 mb-4 group-hover:bg-purple-500 group-hover:text-white transition-all duration-300">
+                <ShieldCheck className="w-6 h-6 text-purple-600 group-hover:text-white" />
+              </div>
+              <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 tabular-nums">
+                <Counter value={98} suffix="%" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Satisfaction</p>
+            </motion.div>
+          </div>
+        </div>
+      </motion.section>
+
+
+      {/* Our Services - Bento Grid Style */}
+      <section className="py-24 md:py-32 px-4 relative z-20 overflow-hidden" id="services">
+        <div className="container mx-auto max-w-7xl">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16 md:mb-24"
+          >
+            <Badge variant="outline" className="mb-4 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-4 py-1 rounded-full font-bold uppercase tracking-wider text-[10px]">
+              Our Capabilities
+            </Badge>
+            <h2 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
+              Scale Your Brand with <br />
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent italic tracking-tight">Modern Marketing</span>
+            </h2>
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+              We've consolidated every essential growth tool into one high-performance team. No more managing multiple agencies or freelancers.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 md:gap-6">
+            {/* Main Feature: Digital Marketing (Large) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-4 md:row-span-2 group"
+              id="digital-marketing"
+            >
+              <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-blue-500/5 hover:shadow-blue-500/10 transition-all duration-500 overflow-hidden flex flex-col">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <TrendingUp className="w-48 h-48 text-blue-600 rotate-12" />
+                </div>
+                <CardContent className="p-8 md:p-12 flex flex-col h-full relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mb-8 shadow-xl shadow-blue-600/20 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="w-8 h-8 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-3xl font-extrabold mb-4 group-hover:text-blue-600 transition-colors">Growth Marketing & Ads</h3>
+                    <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-8 max-w-xl">
+                      We don't just "run ads"—we build high-converting growth engines. From pixel tracking to creative optimization, we handle the full funnel.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 mb-8">
+                      {['Social Ads', 'Google Search', 'Retargeting', 'Email Funnels'].map(item => (
+                        <div key={item} className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Link href="/signup">
+                    <Button className="w-fit bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-6 h-auto font-bold group shadow-lg shadow-blue-600/20">
+                      Get Started <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Feature: Content Creation (Medium) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-2 group"
+              id="content-creation"
+            >
+              <Card className="h-full border-0 bg-purple-600 text-white shadow-2xl shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-500 overflow-hidden min-h-[300px]">
+                <div className="absolute -bottom-10 -right-10 opacity-20 group-hover:scale-110 transition-transform duration-700">
+                  <Pencil className="w-40 h-40" />
+                </div>
+                <CardContent className="p-8 relative z-10 flex flex-col h-full">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
+                    <Pencil className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">Content Engine</h3>
+                  <p className="text-purple-100 leading-relaxed mb-6">
+                    Viral-worthy reels, professional copy, and stunning graphics delivered weekly.
+                  </p>
+                  <div className="mt-auto">
+                    <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 py-1.5 px-3">Unlimited Requests</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Feature: AI Automation (Small) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-2 group"
+              id="ai-automation"
+            >
+              <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-orange-500/5 hover:shadow-orange-500/10 transition-all duration-500">
+                <CardContent className="p-8">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20">
+                    <Bot className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+                    AI Systems
+                    <Badge className="bg-orange-100 text-orange-600 text-[10px] uppercase border-0 font-bold">Beta</Badge>
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
+                    Custom AI chatbots and workflow automations that save you 20+ hours per week.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Feature: Web & Apps (Wide) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-3 group"
+              id="web-design"
+            >
+              <Card className="h-full border-0 bg-slate-900 text-white shadow-2xl transition-all duration-500 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>
+                <CardContent className="p-8 flex items-center gap-8 relative z-10 h-full">
+                  <div className="flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/20">
+                      <Globe className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2">High-Perf Web</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Custom websites and web-apps built for speed, SEO, and conversion from day one.
+                    </p>
+                  </div>
+                  <div className="hidden sm:block w-32 h-32 rounded-full border-4 border-dashed border-emerald-500/30 animate-[spin_20s_linear_infinite] flex items-center justify-center shrink-0">
+                    <Zap className="w-12 h-12 text-emerald-500 shadow-glow shadow-emerald-500/50" />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Feature: SEO (Small) */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              whileHover={{ y: -5 }}
+              className="md:col-span-3 group"
+              id="seo"
+            >
+              <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-green-500/5 hover:shadow-green-500/10 transition-all duration-500">
+                <CardContent className="p-8 flex items-center gap-6">
+                  <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center shrink-0 shadow-lg shadow-green-500/20">
+                    <Target className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold mb-1 group-hover:text-green-600 transition-colors">SEO Dominance</h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">Rank #1 for your high-value keywords and stay there with our evergreen strategies.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+      </section>
 
       <Suspense fallback={<SectionSkeleton />}><SocialProof /></Suspense>
       <Suspense fallback={<SectionSkeleton />}><Services /></Suspense>
@@ -75,6 +719,547 @@ export default function LandingPage() {
       <Suspense fallback={<SectionSkeleton />}><Testimonials /></Suspense>
       <Suspense fallback={<SectionSkeleton />}><FAQ /></Suspense>
       <Suspense fallback={<SectionSkeleton />}><Footer /></Suspense>
+
+      {/* Client Success Stories */}
+      <section
+        ref={testimonialsSectionRef as any}
+        id="testimonials"
+        className="py-20 px-4 bg-gradient-to-b from-white to-gray-50"
+      >
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Client Success</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Real Results. Real People.
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              See how we've helped businesses, influencers, and entrepreneurs grow.
+            </p>
+          </div>
+
+          {/* Desktop: Show 3 at a time in grid */}
+          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {testimonials.map((testimonial, index) => (
+              <Card 
+                key={index}
+                className={`p-6 md:p-8 hover-lift ${testimonial.featured ? 'border-2 border-blue-500 shadow-xl' : ''}`}
+              >
+                <div className="flex gap-1 mb-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-muted-foreground mb-6 italic">
+                  "{testimonial.text}"
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center text-white font-bold`}>
+                    {testimonial.initials}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{testimonial.name}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Mobile: Show 1 at a time with carousel */}
+          <div className="md:hidden relative">
+            <div className="overflow-hidden">
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentTestimonialIndex * 100}%)` }}
+              >
+                {testimonials.map((testimonial, index) => (
+                  <div key={index} className="w-full flex-shrink-0 px-2">
+                    <Card className="p-6 hover-lift">
+                      <div className="flex gap-1 mb-4">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        ))}
+                      </div>
+                      <p className="text-muted-foreground mb-6 italic text-sm">
+                        "{testimonial.text}"
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center text-white font-bold`}>
+                          {testimonial.initials}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{testimonial.name}</p>
+                          <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation Controls */}
+            <div className="flex items-center justify-center gap-4 mt-6">
+              <button
+                onClick={prevTestimonial}
+                className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg"
+                aria-label="Previous testimonial"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              
+              {/* Dots Indicator */}
+              <div className="flex gap-2">
+                {testimonials.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentTestimonialIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      index === currentTestimonialIndex 
+                        ? 'bg-blue-600 w-8' 
+                        : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
+                    aria-label={`Go to testimonial ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={nextTestimonial}
+                className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg"
+                aria-label="Next testimonial"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Auto-play indicator */}
+            <p className="text-center text-xs text-muted-foreground mt-3">
+              Auto-rotates every 5 seconds
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us Section */}
+      <section className="py-24 md:py-32 px-4 relative overflow-hidden bg-slate-900 text-white">
+        {/* Animated background lines */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-blue-500 to-transparent"></div>
+          <div className="absolute top-0 left-2/4 w-px h-full bg-gradient-to-b from-transparent via-purple-500 to-transparent"></div>
+          <div className="absolute top-0 left-3/4 w-px h-full bg-gradient-to-b from-transparent via-blue-500 to-transparent"></div>
+        </div>
+
+        <div className="container mx-auto max-w-7xl relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <Badge className="bg-blue-500 text-white mb-6 border-0">Why MarketingOS?</Badge>
+              <h2 className="text-4xl md:text-6xl font-black mb-8 leading-[1.1]">
+                We're not an agency. <br />
+                <span className="text-blue-500">We're your core growth team.</span>
+              </h2>
+              <p className="text-xl text-slate-400 mb-12 leading-relaxed">
+                Traditional agencies are slow, expensive, and often disconnected. We built MarketingOS to give you an elite, high-speed marketing department that lives inside your business.
+              </p>
+              
+              <div className="space-y-8">
+                {[
+                  { title: "Real-Time Collaboration", desc: "No more waiting for email replies. Chat with your team directly via our platform.", icon: MessageSquare },
+                  { title: "Infinite Scalability", desc: "Scale your creative and ad spend up or down instantly as your business grows.", icon: TrendingUp },
+                  { title: "Data-First Decisioning", desc: "Every campaign is backed by deep analytics and cross-platform data intelligence.", icon: BarChart3 }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-6">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20">
+                      <item.icon className="w-7 h-7 text-blue-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold mb-2">{item.title}</h4>
+                      <p className="text-slate-400 leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-600/20 blur-[120px] rounded-full"></div>
+              <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50 p-6 md:p-12 relative z-10 rounded-[2rem] md:rounded-[2.5rem] shadow-3xl">
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/30">
+                    <ShieldCheck className="w-8 h-8 md:w-10 md:h-10 text-green-500" />
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-black mb-4">Performance Focused</h3>
+                  <p className="text-slate-400 leading-relaxed italic text-sm md:text-base">
+                    "We don't just provide services; we deliver measurable results that impact your bottom line every single day."
+                  </p>
+                </div>
+                <Separator className="bg-slate-700 mb-8" />
+                <div className="grid grid-cols-2 gap-4 md:gap-8">
+                  <div className="text-center">
+                    <p className="text-3xl md:text-4xl font-black text-white mb-1">100%</p>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Transparency</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl md:text-4xl font-black text-blue-500 mb-1">24/7</p>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Dashboards</p>
+                  </div>
+                </div>
+                <Link href="/signup">
+                  <Button className="w-full mt-8 md:mt-10 bg-white text-slate-900 hover:bg-slate-100 h-14 md:h-16 rounded-xl md:rounded-2xl font-black text-base md:text-lg">
+                    Join the Elite 1%
+                  </Button>
+                </Link>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">FAQ</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Got Questions? We've Got Answers.
+            </h2>
+            <p className="text-muted-foreground">
+              Everything you need to know about working with us
+            </p>
+          </div>
+
+          <Accordion type="single" collapsible className="w-full space-y-4">
+            <AccordionItem value="item-1" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                What kind of businesses do you work with?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  All kinds! We work with e-commerce stores, service businesses, influencers, musicians, coaches, startups - anyone who needs marketing.
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>E-commerce & Online Stores</li>
+                  <li>B2B & SaaS Companies</li>
+                  <li>Influencers & Content Creators</li>
+                  <li>Local Businesses (Restaurants, Salons, etc.)</li>
+                  <li>Professional Services (Coaches, Consultants)</li>
+                  <li>Startups & Entrepreneurs</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                How fast can you get started?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  Most campaigns launch within 7-10 days of our kickoff call. Here's our typical timeline:
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Day 1-2:</strong> Strategy session & goal setting</li>
+                  <li><strong>Day 3-5:</strong> Campaign setup & content creation</li>
+                  <li><strong>Day 6-7:</strong> Review & approval</li>
+                  <li><strong>Day 8-10:</strong> Launch & optimization</li>
+                </ul>
+                <p className="mt-3 text-sm">
+                  Need it faster? Let us know - we can expedite for urgent projects!
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-3" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                What's included in a package?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  Every package includes:
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>Custom strategy development</li>
+                  <li>Campaign execution & management</li>
+                  <li>Professional content creation</li>
+                  <li>Performance tracking & analytics</li>
+                  <li>Monthly reporting & insights</li>
+                  <li>Dedicated support team</li>
+                  <li>Regular optimization & A/B testing</li>
+                </ul>
+                <p className="mt-3">
+                  We customize based on what will actually move the needle for your specific goals.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                Do I need a long-term contract?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  <strong>Nope!</strong> We offer month-to-month services. We earn your business every single month by delivering results.
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>✅ No lock-ins or long-term commitments</li>
+                  <li>✅ Cancel anytime with 30 days notice</li>
+                  <li>✅ Flexible packages that scale with you</li>
+                  <li>✅ No hidden fees or surprise charges</li>
+                </ul>
+                <p className="mt-3 text-sm">
+                  Our 98% client retention rate speaks for itself - we keep clients happy, not trapped.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                How do I track results?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  Full transparency is our promise. You'll have:
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Real-time dashboard:</strong> Access 24/7 to see all metrics</li>
+                  <li><strong>Monthly reports:</strong> Detailed insights & recommendations</li>
+                  <li><strong>Weekly check-ins:</strong> Stay aligned on progress</li>
+                  <li><strong>Custom KPIs:</strong> Track what matters to your business</li>
+                  <li><strong>Performance alerts:</strong> Get notified of significant changes</li>
+                </ul>
+                <p className="mt-3">
+                  We believe in complete transparency - you'll always know exactly what's working and what needs improvement.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-6" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                What if I'm not happy with the results?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  We stand behind our work 100%. Here's what happens:
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>High-speed implementation:</strong> Most campaigns launch in 7-10 days</li>
+                  <li><strong>Fast pivots:</strong> If something's not working, we adjust immediately</li>
+                  <li><strong>No contracts:</strong> You're never stuck with us</li>
+                  <li><strong>Dedicated support:</strong> Your success is our priority</li>
+                </ul>
+                <p className="mt-3 font-semibold text-blue-600">
+                  Our 98% client retention rate and 310% average ROI increase speak for themselves.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-7" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                What makes you different from other agencies?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  We're not your typical agency. Here's why:
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Results-first approach:</strong> We only care about what drives actual growth</li>
+                  <li><strong>Full transparency:</strong> Real-time access to all metrics and performance data</li>
+                  <li><strong>No BS pricing:</strong> Clear, straightforward packages with no hidden fees</li>
+                  <li><strong>Fast execution:</strong> Campaigns launch in days, not months</li>
+                  <li><strong>Tech-enabled:</strong> We use cutting-edge AI and automation to maximize ROI</li>
+                  <li><strong>Dedicated team:</strong> You get a full marketing team, not just one person</li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-8" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                Do you handle the ad spend, or do I?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  We offer both options depending on your preference:
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-semibold mb-1">Option 1: You handle ad spend</p>
+                    <p className="text-sm">You maintain control of your ad accounts and budget. We manage and optimize the campaigns.</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-1">Option 2: We handle everything</p>
+                    <p className="text-sm">We manage your ad accounts and budget allocation for maximum convenience.</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm">
+                  Either way, you'll have full transparency and access to all performance data.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-9" className="bg-white border rounded-lg px-6 shadow-sm hover:shadow-md transition-shadow">
+              <AccordionTrigger className="text-lg font-bold hover:no-underline py-6">
+                Can I upgrade or downgrade my package?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                <p className="mb-3">
+                  <strong>Absolutely!</strong> We understand that business needs change.
+                </p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>Upgrade anytime to access more services</li>
+                  <li>Downgrade with 30 days notice</li>
+                  <li>Add à la carte services as needed</li>
+                  <li>Pause services if you need a break (up to 60 days)</li>
+                </ul>
+                <p className="mt-3">
+                  We're here to grow with you, not hold you back. Your package should fit your current needs.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div className="mt-12 text-center">
+            <p className="text-muted-foreground mb-4">Still have questions?</p>
+            <Link href="/contact">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">Contact Our Team</Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-24 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
+        <div className="container mx-auto max-w-4xl text-center relative z-10">
+          <h2 className="text-4xl md:text-6xl font-bold mb-6">
+            Let's Grow Together 🚀
+          </h2>
+          <p className="text-xl md:text-2xl text-blue-100 mb-10 max-w-2xl mx-auto font-medium">
+            Stop wasting money on marketing that doesn't work. Let's build something that actually drives results.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+            <Link href="/signup">
+              <Button size="lg" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-xl px-12 py-7 shadow-2xl font-bold">
+                Get Started
+                <ArrowRight className="w-6 h-6 ml-2" />
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="border-2 border-white text-white hover:bg-white/10 text-xl px-12 py-7 font-bold"
+              >
+                Book Strategy Call
+              </Button>
+            </Link>
+          </div>
+          <p className="text-base text-blue-100 flex flex-wrap justify-center gap-6">
+            <span>✓ No long-term contracts</span>
+            <span>✓ Cancel anytime</span>
+          </p>
+        </div>
+      </section>
+
+      {/* Sticky CTA - Desktop - Shows after scrolling */}
+      {showStickyCTA && (
+        <div className="fixed bottom-6 right-6 z-50 hidden md:block animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105">
+            <Link href="/signup">
+              <Button size="sm" className="bg-transparent hover:bg-white/20 text-white font-bold border-0 gap-2">
+                🚀 Get Started
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile CTA Bar - Shows after scrolling */}
+      {showStickyCTA && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden animate-in fade-in slide-in-from-bottom-4 duration-300" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 shadow-2xl border-t-2 border-white/20">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-semibold">🚀 Only 3 Spots Left</p>
+                <p className="text-xs opacity-90">Scale your brand today</p>
+              </div>
+              <Link href="/signup">
+                <Button size="sm" className="bg-white text-orange-600 hover:bg-gray-100 font-bold border-0 shrink-0">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="border-t py-12 px-4 bg-background pb-32 md:pb-12">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10 mb-12">
+            <div className="col-span-2 md:col-span-1">
+              <Link href="/">
+                <FooterLogo className="mb-4" />
+              </Link>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Your go-to remote marketing team. We help businesses, influencers, and entrepreneurs grow with results-driven digital marketing.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Services</h3>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li>
+                  <Link href="#digital-marketing" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Digital Marketing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#web-design" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Web Dev & CRMs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#content-creation" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Content Creation
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#ai-automation" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    AI Automation
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Quick Links</h3>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li>
+                  <Link href="/login" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    About Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Contact Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Privacy
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t pt-8 text-center text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
+            Copyright © {new Date().getFullYear()} Marketing Team App, All rights reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

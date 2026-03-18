@@ -5,10 +5,11 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development node --env-file=.env --import tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild migrate.js --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "npm run check:landing-anchors && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild migrate.js --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "migrate": "node --import tsx migrate.js",
     "start": "node dist/migrate.js && NODE_ENV=production node dist/index.js",
     "check": "echo \"Type check temporarily disabled while schema/types are being reconciled\"",
+    "check:landing-anchors": "node scripts/check-landing-anchor-targets.mjs",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
