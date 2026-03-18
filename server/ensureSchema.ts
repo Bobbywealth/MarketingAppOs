@@ -234,6 +234,16 @@ export async function ensureMinimumSchema() {
     "leads.last_marketing_received column",
     `ALTER TABLE IF EXISTS leads ADD COLUMN IF NOT EXISTS last_marketing_received TIMESTAMP;`
   );
+  console.log("ℹ️ ensureSchema: verifying leads name columns (first_name, last_name)");
+  await safeQuery(
+    "leads.first_name column",
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS first_name VARCHAR(255);`
+  );
+  await safeQuery(
+    "leads.last_name column",
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_name VARCHAR(255);`
+  );
+  console.log("✅ ensureSchema: leads name columns verified");
 
   // Creator visits dispute status
   await safeQuery(

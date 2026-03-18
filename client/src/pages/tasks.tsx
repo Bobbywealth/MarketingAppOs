@@ -1,14 +1,20 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   Search, Plus, LayoutGrid, List, CalendarDays, ChevronRight, ChevronLeft, X, 
-  Clock3, Flag, CheckCircle2, Loader2, Building2, Tag, User
+  Clock3, Flag, CheckCircle2, Loader2
 } from "lucide-react";
-import type { Task, Client, User as UserType, TaskSpace } from "@shared/schema";
-import { toInputDateEST, toLocaleDateStringEST, nowEST } from "@/lib/dateUtils";
+import type { Task, Client, User as UserType } from "@shared/schema";
+import { toInputDateEST } from "@/lib/dateUtils";
+import { VibePageShell } from "@/components/layout/VibePageShell";
+import { VibeHeroHeader } from "@/components/layout/VibeHeroHeader";
+import { VibeSectionCard } from "@/components/ui/VibeSectionCard";
+import { VibeStatCard } from "@/components/ui/VibeStatCard";
+import { VibeFilterChips } from "@/components/ui/VibeFilterChips";
+import { VibeViewToggle } from "@/components/ui/VibeViewToggle";
 
 // Status mapping between our schema and the UI
 const statusMap: Record<string, string> = {
@@ -39,7 +45,11 @@ const reversePriorityMap: Record<string, string> = {
 };
 
 const statuses = ["Inbox", "In Progress", "Review", "Done"];
-const views = ["Board", "List", "Calendar"];
+const viewOptions = [
+  { label: "Board", icon: LayoutGrid },
+  { label: "List", icon: List },
+  { label: "Calendar", icon: CalendarDays },
+];
 const filters = ["All Tasks", "My Tasks", "Today", "Overdue", "High Priority", "Waiting"];
 
 const priorityStyles: Record<string, string> = {
@@ -105,8 +115,6 @@ function getCompanyName(clientId: string | null, clients: Client[]): string {
 export default function TasksPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
   // UI State
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeView, setActiveView] = useState("Board");
@@ -629,9 +637,8 @@ export default function TasksPage() {
                   ))}
                 </div>
               )}
-            </div>
-          </section>
-        </div>
+          </VibeSectionCard>
+        </section>
       </div>
 
       {/* Task Detail Sidebar */}
@@ -923,6 +930,6 @@ export default function TasksPage() {
           </div>
         </div>
       )}
-    </div>
+    </VibePageShell>
   );
 }

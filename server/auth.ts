@@ -21,6 +21,60 @@ declare global {
 }
 
 const scryptAsync = promisify(scrypt);
+const FAILED_LOGIN_ALERT_WINDOW_MS = 10 * 60 * 1000;
+const failedLoginAlertWindow = new Map<string, number>();
+
+function getCorrelationId(req: any): string {
+  const headerCorrelationId = req.headers["x-correlation-id"];
+  if (typeof headerCorrelationId === "string" && headerCorrelationId.trim()) {
+    return headerCorrelationId.slice(0, 128);
+  }
+  return randomBytes(8).toString("hex");
+}
+
+function getFailedLoginAlertKey(username: unknown, ip: string): string {
+  const normalizedUsername =
+    typeof username === "string" && username.trim()
+      ? username.trim().toLowerCase().slice(0, 128)
+      : "unknown";
+  return `${normalizedUsername}:${ip || "unknown-ip"}`;
+}
+
+function shouldSendFailedLoginAlert(key: string, nowMs = Date.now()): { send: boolean; eventCount: number } {
+  const cutoff = nowMs - FAILED_LOGIN_ALERT_WINDOW_MS;
+
+  for (const [mapKey, timestamp] of failedLoginAlertWindow.entries()) {
+    if (timestamp < cutoff) {
+      failedLoginAlertWindow.delete(mapKey);
+    }
+  }
+
+  const lastSentAt = failedLoginAlertWindow.get(key);
+  if (!lastSentAt || nowMs - lastSentAt >= FAILED_LOGIN_ALERT_WINDOW_MS) {
+    failedLoginAlertWindow.set(key, nowMs);
+    return { send: true, eventCount: failedLoginAlertWindow.size };
+  }
+
+  return { send: false, eventCount: failedLoginAlertWindow.size };
+}
+
+function queueFailedLoginNotification(title: string, message: string, correlationId: string): void {
+  setImmediate(() => {
+    void (async () => {
+      try {
+        const { notifyAdminsAboutSecurityEvent } = await import("./routes/common");
+        await notifyAdminsAboutSecurityEvent(title, message, "security");
+      } catch (notifError) {
+        debugLog({
+          level: "error",
+          location: "auth:login",
+          message: "Failed queued failed-login notification",
+          data: { correlationId, error: notifError instanceof Error ? notifError.message : String(notifError) },
+        });
+      }
+    })();
+  });
+}
 
 export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -246,22 +300,45 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    console.log('🔐 Login attempt', { origin: req.headers.origin, host: req.headers.host, cookieDomain: process.env.COOKIE_DOMAIN });
+    const correlationId = getCorrelationId(req);
+    const sourceIp = req.ip || "unknown-ip";
+    const usernameInput = typeof req.body?.username === "string" ? req.body.username : "";
+    debugLog({
+      level: "info",
+      location: "auth:login",
+      message: "Login request received",
+      data: {
+        correlationId,
+        origin: req.headers.origin,
+        host: req.headers.host,
+        hasCookieDomain: Boolean(process.env.COOKIE_DOMAIN),
+      },
+    });
     authDebug.loginAttempt(req.body.username, req.headers.origin as string);
 
     passport.authenticate("local", async (err: any, user: SelectUser | false, info: any) => {
       if (err) return next(err);
       if (!user) {
-        // Track failed login attempt
-        try {
-          const { notifyAdminsAboutSecurityEvent } = await import('./routes/common');
-          await notifyAdminsAboutSecurityEvent(
-            '🚨 Failed Login Attempt',
-            `Failed login attempt from IP: ${req.ip} with username: ${req.body.username || 'unknown'}`,
-            'security'
-          );
-        } catch (notifError) {
-          console.error('Failed to send security notification:', notifError);
+        const alertKey = getFailedLoginAlertKey(usernameInput, sourceIp);
+        const alertDecision = shouldSendFailedLoginAlert(alertKey);
+
+        debugLog({
+          level: "warn",
+          location: "auth:login",
+          message: "Failed login attempt",
+          data: {
+            correlationId,
+            ip: sourceIp,
+            usernameLength: usernameInput.length,
+            notifyAdmins: alertDecision.send,
+            throttledWindowMs: FAILED_LOGIN_ALERT_WINDOW_MS,
+            failedLoginAlertEventCount: alertDecision.eventCount,
+          },
+        });
+
+        if (alertDecision.send) {
+          const alertMessage = `Failed login attempt from IP: ${sourceIp} (correlationId: ${correlationId})`;
+          queueFailedLoginNotification("🚨 Failed Login Attempt", alertMessage, correlationId);
         }
 
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
@@ -368,7 +445,15 @@ export function setupAuth(app: Express) {
 
       // Always return success to prevent email enumeration
       if (!user) {
-        console.log(`Password reset requested for non-existent email: ${email}`);
+        debugLog({
+          level: "info",
+          location: "auth:password-reset",
+          message: "Password reset requested for unknown account",
+          data: {
+            correlationId: getCorrelationId(req),
+            emailLength: typeof email === "string" ? email.length : 0,
+          },
+        });
         return res.json({ message: "If that email exists, a reset link has been sent." });
       }
 
@@ -384,19 +469,20 @@ export function setupAuth(app: Express) {
       const host = req.get('host');
       const appUrl = process.env.APP_URL || `${protocol}://${host}`;
       const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+      const redactedResetUrl = `${appUrl}/reset-password?token=[REDACTED]`;
 
-      console.log(`
-   ═══════════════════════════════════════════════
-   🔐 PASSWORD RESET REQUEST
-   ═══════════════════════════════════════════════
-   User: ${user.username}
-   Email: ${email}
-   Reset Token: ${resetToken}
-   Expires: ${resetTokenExpiry.toLocaleString()}
-   
-   Reset URL: ${resetUrl}
-   ═══════════════════════════════════════════════
-      `);
+      debugLog({
+        level: "info",
+        location: "auth:password-reset",
+        message: "Password reset token generated",
+        data: {
+          userId: user.id,
+          username: user.username,
+          email,
+          expiresAt: resetTokenExpiry.toISOString(),
+          resetUrl: redactedResetUrl,
+        },
+      });
 
       // Actually try to send the email if email service is configured
       try {
@@ -438,6 +524,7 @@ export function setupAuth(app: Express) {
 
       const hashedPassword = await hashPassword(password);
       await storage.updateUserPassword(user.id, hashedPassword);
+      await storage.clearUserResetToken(user.id);
 
       // Log the password change activity
       try {

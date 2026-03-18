@@ -139,6 +139,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserRole(userId: string, role: string): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  updateUserResetToken(userId: User["id"], token: string, expiresAt: Date): Promise<User>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  updateUserPassword(userId: User["id"], hashedPassword: string): Promise<User>;
+  clearUserResetToken(userId: User["id"]): Promise<User>;
 
   // API key operations
   createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
@@ -444,6 +448,70 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async updateUserResetToken(userId: User["id"], token: string, expiresAt: Date): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        resetPasswordToken: token,
+        resetPasswordExpires: expiresAt,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.resetPasswordToken, token),
+          gte(users.resetPasswordExpires, new Date()),
+        ),
+      );
+
+    return user;
+  }
+
+  async updateUserPassword(userId: User["id"], hashedPassword: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  }
+
+  async clearUserResetToken(userId: User["id"]): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     return user;
   }
 
