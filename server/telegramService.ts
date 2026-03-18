@@ -1,6 +1,7 @@
 import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
 import { Api } from 'telegram/tl/index.js';
+import { debugLog } from './debug';
 
 type TelegramSendResult =
   | { success: true; messageId?: number }
@@ -22,11 +23,33 @@ if (sessionString && (sessionString.includes('\n') || sessionString.includes('\r
 // MTProto client instance
 let mtprotoClient: TelegramClient | null = null;
 let clientInitializing: Promise<TelegramClient | null> | null = null;
+const mtprotoEventCounters = {
+  initAttempts: 0,
+  initSuccess: 0,
+  initFailures: 0,
+};
+
+function buildCorrelationId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 // Initialize MTProto client
 async function initializeMTProto(): Promise<TelegramClient | null> {
+  const correlationId = buildCorrelationId();
+  mtprotoEventCounters.initAttempts += 1;
+
   if (!apiId || !apiHash) {
-    console.log('⚠️ MTProto not configured. Set TELEGRAM_API_ID and TELEGRAM_API_HASH');
+    debugLog({
+      level: 'warn',
+      location: 'telegram:mtproto',
+      message: 'MTProto not configured',
+      data: {
+        correlationId,
+        hasApiId: Boolean(apiId),
+        hasApiHash: Boolean(apiHash),
+        eventCount: mtprotoEventCounters.initAttempts,
+      },
+    });
     return null;
   }
 
@@ -42,12 +65,20 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
 
   clientInitializing = (async () => {
     try {
-      console.log('🔍 Debug: Creating TelegramClient with apiId:', apiId, 'apiHash:', apiHash.substring(0, 8) + '...');
-      console.log('📝 Session string present:', sessionString.length > 0 ? 'Yes (' + sessionString.length + ' chars)' : 'No');
+      debugLog({
+        level: 'info',
+        location: 'telegram:mtproto',
+        message: 'Initializing Telegram MTProto client',
+        data: {
+          correlationId,
+          apiIdConfigured: Boolean(apiId),
+          sessionConfigured: sessionString.length > 0,
+          initAttemptCount: mtprotoEventCounters.initAttempts,
+        },
+      });
       
       // Properly deserialize the session string using StringSession
       const session = new StringSession(sessionString);
-      console.log('✅ StringSession created from saved session');
       
       const client = new TelegramClient(session, apiId, apiHash, {
         connectionRetries: 5,
@@ -55,19 +86,38 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
         retryDelay: 1000,
       });
 
-      console.log('🔄 Connecting to Telegram MTProto...');
       await client.connect();
-      console.log('✅ Telegram MTProto client connected successfully');
       
       // Test the connection by getting self
       const me = await client.getMe();
-      console.log('✅ Authenticated as:', me.username || me.phone || me.id);
+      mtprotoEventCounters.initSuccess += 1;
+      debugLog({
+        level: 'info',
+        location: 'telegram:mtproto',
+        message: 'Telegram MTProto client connected',
+        data: {
+          correlationId,
+          initSuccessCount: mtprotoEventCounters.initSuccess,
+          hasUsername: Boolean(me.username),
+          hasPhone: Boolean(me.phone),
+        },
+      });
       
       mtprotoClient = client;
       clientInitializing = null;
       return client;
     } catch (err: any) {
-      console.error('❌ Failed to initialize MTProto:', err.message);
+      mtprotoEventCounters.initFailures += 1;
+      debugLog({
+        level: 'error',
+        location: 'telegram:mtproto',
+        message: 'Failed to initialize MTProto',
+        data: {
+          correlationId,
+          error: err?.message || 'Unknown error',
+          initFailureCount: mtprotoEventCounters.initFailures,
+        },
+      });
       if (err.message.includes('AUTH_KEY_UNREGISTERED')) {
         console.error('🔧 Session expired. Run authentication script again: npm run telegram:auth');
       }
@@ -116,7 +166,15 @@ export async function sendTelegramMessage(
     if (mtprotoResult.success) {
       return mtprotoResult;
     }
-    console.log('MTProto send failed:', mtprotoResult.error);
+    debugLog({
+      level: 'warn',
+      location: 'telegram:send',
+      message: 'MTProto send failed',
+      data: {
+        correlationId: buildCorrelationId(),
+        error: mtprotoResult.error,
+      },
+    });
     return mtprotoResult;
   }
 
@@ -147,6 +205,7 @@ export async function authorizeTelegramAccount(code: string, twoFA?: string): Pr
   }
 
   try {
+    const correlationId = buildCorrelationId();
     // Create new session for fresh authentication
     const session = new StringSession('');
     const client = new TelegramClient(session, apiId, apiHash, {
@@ -155,12 +214,15 @@ export async function authorizeTelegramAccount(code: string, twoFA?: string): Pr
     
     await client.connect();
     
-    console.log('✅ Telegram account authorized successfully!');
-    console.log('📝 Your session string (add to .env as TELEGRAM_SESSION_STRING):');
+    debugLog({
+      level: 'info',
+      location: 'telegram:auth',
+      message: 'Telegram account authorized successfully',
+      data: { correlationId },
+    });
     
     const savedSession = client.session.save();
     if (typeof savedSession === 'string') {
-      console.log('Session length:', savedSession.length, 'characters');
       return { success: true, sessionString: savedSession };
     }
     
@@ -205,6 +267,11 @@ export async function sendToUser(userId: string, text: string): Promise<Telegram
 initializeMTProto().then(client => {
   if (client) {
     mtprotoClient = client;
-    console.log('✅ Telegram MTProto client initialized and ready');
+    debugLog({
+      level: 'info',
+      location: 'telegram:mtproto',
+      message: 'Telegram MTProto client initialized and ready',
+      data: { correlationId: buildCorrelationId() },
+    });
   }
 });

@@ -47,7 +47,10 @@ export const authDebug = {
       level: "debug",
       location: "auth:login",
       message: "Login attempt",
-      data: { username: username.slice(0, 50), origin },
+      data: {
+        usernameLength: typeof username === "string" ? username.length : 0,
+        origin,
+      },
     }),
 
   loginSuccess: (userId: number, sessionId: string) =>
