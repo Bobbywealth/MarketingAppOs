@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .bg-page-radial {
+    background-image: theme("backgroundImage.page-radial");
+  }
+
+  .bg-hero-command {
+    background-image: theme("backgroundImage.hero-command");
+  }
+
+  .bg-hero-brand {
+    background-image: theme("backgroundImage.hero-brand");
+  }
+
+  .chip-selected {
+    @apply bg-chip-selected text-chip-selected-foreground border border-chip-selected-border shadow-sm;
+  }
+
+  .chip-selected-brand {
+    @apply bg-chip-brand text-chip-brand-foreground border border-chip-brand-border shadow-sm;
+  }
+
+  .chip-unselected {
+    @apply bg-chip-unselected text-chip-unselected-foreground border border-chip-unselected-border hover:bg-chip-unselected-hover;
+  }
+}
+
+
 /* ============================================
    ACCESSIBILITY & FOCUS IMPROVEMENTS
    ============================================ */
