@@ -1075,6 +1075,27 @@ export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit
 export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
 
+// Public bookings table (strategy call requests)
+export const bookings = pgTable("bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 32 }).notNull(),
+  company: varchar("company", { length: 150 }),
+  message: text("message"),
+  requestedAt: timestamp("requested_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_bookings_email").on(table.email),
+  index("idx_bookings_requested_at").on(table.requestedAt),
+  index("idx_bookings_created_at").on(table.createdAt),
+]);
+
+export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertBooking = z.infer<typeof insertBookingSchema>;
+export type Booking = typeof bookings.$inferSelect;
+
 // Second Me (AI Avatar) table
 export const secondMe = pgTable("second_me", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
