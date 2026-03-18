@@ -45,7 +45,12 @@ async function throwIfResNotOk(res: Response) {
     // Provide user-friendly error messages for common status codes
     switch (res.status) {
       case 401:
-        throw new Error("Authentication required. Please log in again.");
+        // For login endpoints, show the actual error message (e.g., "Invalid username or password")
+        // For other endpoints, show the generic message
+        if (url.includes('/api/login')) {
+          throw new Error(errorMessage || "Invalid username or password");
+        }
+        throw new Error(errorMessage || "Authentication required. Please log in again.");
       case 403:
         throw new Error("You don't have permission to access this resource.");
       case 404:
