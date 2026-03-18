@@ -873,6 +873,7 @@ export default function LandingPage() {
               viewport={{ once: true }}
               whileHover={{ y: -5 }}
               className="md:col-span-4 md:row-span-2 group"
+              id="digital-marketing"
             >
               <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-blue-500/5 hover:shadow-blue-500/10 transition-all duration-500 overflow-hidden flex flex-col">
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -913,6 +914,7 @@ export default function LandingPage() {
               transition={{ delay: 0.1 }}
               whileHover={{ y: -5 }}
               className="md:col-span-2 group"
+              id="content-creation"
             >
               <Card className="h-full border-0 bg-purple-600 text-white shadow-2xl shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-500 overflow-hidden min-h-[300px]">
                 <div className="absolute -bottom-10 -right-10 opacity-20 group-hover:scale-110 transition-transform duration-700">
@@ -941,6 +943,7 @@ export default function LandingPage() {
               transition={{ delay: 0.2 }}
               whileHover={{ y: -5 }}
               className="md:col-span-2 group"
+              id="ai-automation"
             >
               <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-orange-500/5 hover:shadow-orange-500/10 transition-all duration-500">
                 <CardContent className="p-8">
@@ -966,6 +969,7 @@ export default function LandingPage() {
               transition={{ delay: 0.3 }}
               whileHover={{ y: -5 }}
               className="md:col-span-3 group"
+              id="web-design"
             >
               <Card className="h-full border-0 bg-slate-900 text-white shadow-2xl transition-all duration-500 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent"></div>
@@ -994,6 +998,7 @@ export default function LandingPage() {
               transition={{ delay: 0.4 }}
               whileHover={{ y: -5 }}
               className="md:col-span-3 group"
+              id="seo"
             >
               <Card className="h-full border-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-2xl shadow-green-500/5 hover:shadow-green-500/10 transition-all duration-500">
                 <CardContent className="p-8 flex items-center gap-6">
@@ -2167,19 +2172,51 @@ export default function LandingPage() {
             <div>
               <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Services</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li className="hover:text-primary transition-colors cursor-pointer">Digital Marketing</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Web Dev & CRMs</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Content Creation</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">AI Automation</li>
+                <li>
+                  <Link href="#digital-marketing" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Digital Marketing
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#web-design" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Web Dev & CRMs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#content-creation" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Content Creation
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#ai-automation" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    AI Automation
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold text-slate-900 mb-4 uppercase tracking-widest text-[10px]">Quick Links</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
-                <li><Link href="/login" className="hover:text-primary transition-colors">Login</Link></li>
-                <li className="hover:text-primary transition-colors cursor-pointer">About Us</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Contact Us</li>
-                <li className="hover:text-primary transition-colors cursor-pointer">Privacy</li>
+                <li>
+                  <Link href="/login" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    About Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Contact Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="inline-flex rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                    Privacy
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
