@@ -438,6 +438,7 @@ export function setupAuth(app: Express) {
 
       const hashedPassword = await hashPassword(password);
       await storage.updateUserPassword(user.id, hashedPassword);
+      await storage.clearUserResetToken(user.id);
 
       // Log the password change activity
       try {

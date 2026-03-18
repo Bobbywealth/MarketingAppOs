@@ -34,6 +34,8 @@ export const users = pgTable("users", {
   username: text("username").unique().notNull(),
   password: text("password").notNull(),
   email: text("email"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordExpires: timestamp("reset_password_expires"),
   firstName: text("first_name"),
   lastName: text("last_name"),
   role: text("role").notNull().default("staff"), // admin, staff, client
