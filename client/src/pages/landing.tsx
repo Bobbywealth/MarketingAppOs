@@ -108,6 +108,26 @@ const LIVE_ACTIVITIES = [
   { name: "Urban Eats", action: "launched new website", time: "12m ago", icon: Globe },
 ];
 
+type NavItemType = "link" | "services" | "auth" | "cta";
+
+type NavItem = {
+  label: string;
+  href: string;
+  type: NavItemType;
+  testId: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Home", href: "/", type: "link", testId: "nav-home" },
+  { label: "Services", href: "#services", type: "services", testId: "nav-services" },
+  { label: "Blog", href: "/blog", type: "link", testId: "nav-blog" },
+  { label: "About", href: "/about", type: "link", testId: "nav-about" },
+  { label: "Contact", href: "/contact", type: "link", testId: "nav-contact" },
+  { label: "Creator signup", href: "/become-creator", type: "link", testId: "nav-creator-signup" },
+  { label: "Login", href: "/login", type: "auth", testId: "button-login-header" },
+  { label: "Get Started", href: "/signup", type: "cta", testId: "button-get-started-header" },
+];
+
 // Platform Logo Cloud Component
 function LogoCloud() {
   const logos = [
@@ -399,89 +419,80 @@ export default function LandingPage() {
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="/" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-home">
-              Home
-            </Link>
-            
-            <NavigationMenu>
-              <NavigationMenuList>
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-base font-medium bg-transparent hover:bg-transparent data-[state=open]:bg-transparent" data-testid="nav-services">
-                    Services
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <div className="w-80 p-3">
-                      <a href="#digital-marketing" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-digital-marketing">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <TrendingUp className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-foreground mb-0.5">Digital Marketing</div>
-                          <div className="text-xs text-muted-foreground">Social media, ads & campaigns</div>
-                        </div>
-                      </a>
-                      <a href="#content-creation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-content-creation">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <Pencil className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-foreground mb-0.5">Content Creation</div>
-                          <div className="text-xs text-muted-foreground">Copy, graphics & videos</div>
-                        </div>
-                      </a>
-                      <a href="#web-design" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-web-design">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <Globe className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-foreground mb-0.5">Web & App Development</div>
-                          <div className="text-xs text-muted-foreground">Websites, apps & CRMs</div>
-                        </div>
-                      </a>
-                      <a href="#ai-automation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-ai-automation">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <Bot className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-foreground mb-0.5 flex items-center gap-2">
-                            AI Automation
-                            <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">New</Badge>
+            {NAV_ITEMS.filter((item) => item.type === "link" || item.type === "services").map((item) => {
+              if (item.type === "services") {
+                return (
+                  <NavigationMenu key={item.label}>
+                    <NavigationMenuList>
+                      <NavigationMenuItem>
+                        <NavigationMenuTrigger className="text-base font-medium bg-transparent hover:bg-transparent data-[state=open]:bg-transparent" data-testid={item.testId}>
+                          {item.label}
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent>
+                          <div className="w-80 p-3">
+                            <a href="#digital-marketing" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-digital-marketing">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <TrendingUp className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">Digital Marketing</div>
+                                <div className="text-xs text-muted-foreground">Social media, ads & campaigns</div>
+                              </div>
+                            </a>
+                            <a href="#content-creation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-content-creation">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Pencil className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">Content Creation</div>
+                                <div className="text-xs text-muted-foreground">Copy, graphics & videos</div>
+                              </div>
+                            </a>
+                            <a href="#web-design" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-web-design">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Globe className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">Web & App Development</div>
+                                <div className="text-xs text-muted-foreground">Websites, apps & CRMs</div>
+                              </div>
+                            </a>
+                            <a href="#ai-automation" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-ai-automation">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Bot className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5 flex items-center gap-2">
+                                  AI Automation
+                                  <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">New</Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground">Chatbots & workflow automation</div>
+                              </div>
+                            </a>
+                            <div className="border-t my-2"></div>
+                            <a href="#seo" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-seo">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                <Target className="w-5 h-5 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-semibold text-foreground mb-0.5">SEO & Analytics</div>
+                                <div className="text-xs text-muted-foreground">Search optimization & tracking</div>
+                              </div>
+                            </a>
                           </div>
-                          <div className="text-xs text-muted-foreground">Chatbots & workflow automation</div>
-                        </div>
-                      </a>
-                      <div className="border-t my-2"></div>
-                      <a href="#seo" className="flex items-start gap-3 px-4 py-3 text-sm hover:bg-accent rounded-md transition-colors group" data-testid="nav-seo">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                          <Target className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-foreground mb-0.5">SEO & Analytics</div>
-                          <div className="text-xs text-muted-foreground">Search optimization & tracking</div>
-                        </div>
-                      </a>
-                    </div>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
-            
-            <Link href="/blog" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-blog">
-              Blog
-            </Link>
-            <Link
-              href="/become-creator"
-              className="text-base font-medium text-foreground hover:text-primary transition-colors"
-              data-testid="nav-creator-signup"
-            >
-              Become a Creator
-            </Link>
-            <Link href="/about" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-about">
-              About Us
-            </Link>
-            <Link href="/contact" className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid="nav-contact">
-              Contact Us
-            </Link>
+                        </NavigationMenuContent>
+                      </NavigationMenuItem>
+                    </NavigationMenuList>
+                  </NavigationMenu>
+                );
+              }
+
+              return (
+                <Link key={item.label} href={item.href} className="text-base font-medium text-foreground hover:text-primary transition-colors" data-testid={item.testId}>
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-2 md:gap-4">
@@ -518,76 +529,35 @@ export default function LandingPage() {
                     </SheetHeader>
                   </div>
                   
-                  <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                  <div className="flex-1 overflow-y-auto p-6">
                     <nav className="flex flex-col gap-2">
-                      <SheetClose asChild>
-                        <Link href="/" className="text-lg font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors py-3 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-                          Home
-                          <ChevronRight className="w-4 h-4 opacity-30" />
-                        </Link>
-                      </SheetClose>
-                      
-                      <div className="pt-4 space-y-4">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">Expert Services</div>
-                        <div className="grid gap-3">
-                          <SheetClose asChild>
-                            <a href="#digital-marketing" className="flex items-center gap-4 p-4 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700 hover:shadow-xl hover:shadow-blue-500/5 group">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
-                                <TrendingUp className="w-6 h-6 text-white" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-black text-slate-900 dark:text-white text-sm mb-0.5">Digital Marketing</div>
-                                <div className="text-[11px] text-slate-500 font-medium">Ads & Campaigns</div>
-                              </div>
-                            </a>
-                          </SheetClose>
-                          <SheetClose asChild>
-                            <a href="#content-creation" className="flex items-center gap-4 p-4 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700 hover:shadow-xl hover:shadow-purple-500/5 group">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform">
-                                <Pencil className="w-6 h-6 text-white" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-black text-slate-900 dark:text-white text-sm mb-0.5">Content Creation</div>
-                                <div className="text-[11px] text-slate-500 font-medium">Social & Video</div>
-                              </div>
-                            </a>
-                          </SheetClose>
-                        </div>
-                      </div>
-                      
-                      <div className="pt-6 space-y-3">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">More</div>
-                        <SheetClose asChild>
-                          <Link href="/become-creator" className="text-base font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors py-2 flex items-center gap-3">
-                            <Users className="w-4 h-4 text-blue-500" />
-                            Become a Creator
+                      {NAV_ITEMS.filter((item) => item.type === "link" || item.type === "services").map((item) => (
+                        <SheetClose asChild key={item.label}>
+                          <Link href={item.href} className="text-lg font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors py-3 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+                            {item.label}
+                            <ChevronRight className="w-4 h-4 opacity-30" />
                           </Link>
                         </SheetClose>
-                        <SheetClose asChild>
-                          <Link href="/contact" className="text-base font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors py-2 flex items-center gap-3">
-                            <MessageSquare className="w-4 h-4 text-blue-500" />
-                            Contact Us
-                          </Link>
-                        </SheetClose>
-                      </div>
+                      ))}
                     </nav>
                   </div>
                   
                   <div className="p-6 border-t bg-white dark:bg-slate-900 space-y-3 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-                    <SheetClose asChild>
-                      <Link href="/login" className="block">
-                        <Button variant="outline" className="w-full h-12 rounded-xl font-bold border-2" data-testid="button-login-mobile">
-                          Login
-                        </Button>
-                      </Link>
-                    </SheetClose>
-                    <SheetClose asChild>
-                      <Link href="/signup" className="block">
-                        <Button className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black shadow-xl shadow-blue-500/20" data-testid="button-signup-mobile">
-                          Get Started
-                        </Button>
-                      </Link>
-                    </SheetClose>
+                    {NAV_ITEMS.filter((item) => item.type === "auth" || item.type === "cta").map((item) => (
+                      <SheetClose asChild key={item.label}>
+                        <Link href={item.href} className="block">
+                          {item.type === "auth" ? (
+                            <Button variant="outline" className="w-full h-12 rounded-xl font-bold border-2" data-testid="button-login-mobile">
+                              {item.label}
+                            </Button>
+                          ) : (
+                            <Button className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black shadow-xl shadow-blue-500/20" data-testid="button-signup-mobile">
+                              {item.label}
+                            </Button>
+                          )}
+                        </Link>
+                      </SheetClose>
+                    ))}
                   </div>
                 </div>
               </SheetContent>
@@ -596,21 +566,24 @@ export default function LandingPage() {
 
             {/* Desktop buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/login">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-login-header">
-                  Login
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button
-                  size="sm"
-                  className="gap-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 px-4 h-10 rounded-full font-black"
-                  data-testid="button-get-started-header"
-                >
-                  Get Started
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
+              {NAV_ITEMS.filter((item) => item.type === "auth" || item.type === "cta").map((item) => (
+                <Link key={item.label} href={item.href}>
+                  {item.type === "cta" ? (
+                    <Button
+                      size="sm"
+                      className="gap-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 px-4 h-10 rounded-full font-black"
+                      data-testid={item.testId}
+                    >
+                      {item.label}
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white" data-testid={item.testId}>
+                      {item.label}
+                    </Button>
+                  )}
+                </Link>
+              ))}
             </div>
           </div>
         </div>
