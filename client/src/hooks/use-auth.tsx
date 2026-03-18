@@ -8,6 +8,7 @@ import { User as SelectUser } from "@shared/schema";
 import { insertUserSchema } from "@shared/validation";
 import { InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { getSafeErrorMessage } from "../lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { clientDebug } from "../lib/debug";
 // OneSignal removed - using Native Web Push
@@ -15,11 +16,11 @@ import { clientDebug } from "../lib/debug";
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
-  error: Error | null;
-  loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
-  logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
-  switchRoleMutation: UseMutationResult<SelectUser, Error, void>;
+  error: unknown;
+  loginMutation: UseMutationResult<SelectUser, unknown, LoginData>;
+  logoutMutation: UseMutationResult<void, unknown, void>;
+  registerMutation: UseMutationResult<SelectUser, unknown, InsertUser>;
+  switchRoleMutation: UseMutationResult<SelectUser, unknown, void>;
 };
 
 type LoginData = {
@@ -36,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<SelectUser | undefined, Error>({
+  } = useQuery<SelectUser | undefined, unknown>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
@@ -54,9 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = await res.json();
         clientDebug.loginSuccess(userData.id);
         return userData;
-      } catch (e) {
-        clientDebug.loginError(String((e as any)?.message || e));
-        throw e;
+      } catch (error: unknown) {
+        clientDebug.loginError(getSafeErrorMessage(error, "Login request failed."));
+        throw error;
       }
     },
     onSuccess: (user: SelectUser) => {
@@ -66,10 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome back, ${user.firstName || user.username}!`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: getSafeErrorMessage(error, "Login failed. Please try again."),
         variant: "destructive",
       });
     },
@@ -87,10 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome, ${user.firstName || user.username}!`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: getSafeErrorMessage(error, "Registration failed. Please try again."),
         variant: "destructive",
       });
     },
@@ -111,10 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been successfully logged out.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
         title: "Logout failed",
-        description: error.message,
+        description: getSafeErrorMessage(error, "Logout failed. Please try again."),
         variant: "destructive",
       });
     },
@@ -134,10 +135,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `You're now in ${user.role} mode.`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
         title: "Could not switch view",
-        description: error.message,
+        description: getSafeErrorMessage(error, "Could not switch view. Please try again."),
         variant: "destructive",
       });
     },

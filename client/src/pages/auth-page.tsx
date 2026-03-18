@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getSafeErrorMessage } from "@/lib/api";
 import { Logo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { motion, AnimatePresence } from "framer-motion";
@@ -80,10 +81,10 @@ export default function AuthPage() {
       });
       setResetDialogOpen(false);
       setResetEmail("");
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error?.message || "Failed to send reset email. Please try again.",
+        description: getSafeErrorMessage(error, "Failed to send reset email. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -506,4 +507,3 @@ export default function AuthPage() {
     </div>
   );
 }
-

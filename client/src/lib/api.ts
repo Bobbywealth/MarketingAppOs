@@ -2,6 +2,38 @@ import { QueryFunction } from "@tanstack/react-query";
 import { isNativeApp } from "./runtime";
 import { clientDebug } from "./debug";
 
+export class ApiError extends Error {
+  status: number;
+  url: string;
+
+  constructor({ message, status, url }: { message: string; status: number; url: string }) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.url = url;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") return null;
+  return value as Record<string, unknown>;
+}
+
+export function getSafeErrorMessage(error: unknown, fallback = "Something went wrong. Please try again."): string {
+  const record = asRecord(error);
+  const fromMessage = record?.message;
+  if (typeof fromMessage === "string" && fromMessage.trim().length > 0) {
+    return fromMessage;
+  }
+
+  const fromError = record?.error;
+  if (typeof fromError === "string" && fromError.trim().length > 0) {
+    return fromError;
+  }
+
+  return fallback;
+}
+
 function getApiBaseUrl(): string {
   const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
   if (fromEnv && fromEnv.trim()) return fromEnv.trim();
@@ -26,14 +58,18 @@ export function resolveApiUrl(url: string): string {
 
 async function throwIfResNotOk(res: Response, url?: string) {
   if (!res.ok) {
-    let errorMessage = res.statusText;
+    let errorMessage = res.statusText || "Request failed";
+    const safeUrl = typeof url === "string" && url.trim().length > 0 ? url : res.url || "unknown";
 
     try {
       const text = await res.text();
       if (text) {
         try {
-          const parsed = JSON.parse(text);
-          errorMessage = parsed.message || parsed.error || text;
+          const parsed = asRecord(JSON.parse(text));
+          errorMessage =
+            (typeof parsed?.message === "string" && parsed.message) ||
+            (typeof parsed?.error === "string" && parsed.error) ||
+            text;
         } catch {
           errorMessage = text;
         }
@@ -47,20 +83,48 @@ async function throwIfResNotOk(res: Response, url?: string) {
       case 401:
         // For login endpoints, show the actual error message (e.g., "Invalid username or password")
         // For other endpoints, show the generic message
-        if (url && url.includes('/api/login')) {
-          throw new Error(errorMessage || "Invalid username or password");
+        if (typeof url === "string" && url.includes('/api/login')) {
+          throw new ApiError({
+            message: errorMessage || "Invalid username or password",
+            status: res.status,
+            url: safeUrl,
+          });
         }
-        throw new Error(errorMessage || "Authentication required. Please log in again.");
+        throw new ApiError({
+          message: errorMessage || "Authentication required. Please log in again.",
+          status: res.status,
+          url: safeUrl,
+        });
       case 403:
-        throw new Error("You don't have permission to access this resource.");
+        throw new ApiError({
+          message: "You don't have permission to access this resource.",
+          status: res.status,
+          url: safeUrl,
+        });
       case 404:
-        throw new Error("The requested resource was not found.");
+        throw new ApiError({
+          message: "The requested resource was not found.",
+          status: res.status,
+          url: safeUrl,
+        });
       case 500:
-        throw new Error(errorMessage || "Server error. Please try again later.");
+        throw new ApiError({
+          message: errorMessage || "Server error. Please try again later.",
+          status: res.status,
+          url: safeUrl,
+        });
       case 503:
-        throw new Error("Service temporarily unavailable. Please try again later.");
+        throw new ApiError({
+          message: "Service temporarily unavailable. Please try again later.",
+          status: res.status,
+          url: safeUrl,
+        });
       default:
-        throw new Error(`${res.status}: ${errorMessage}`);
+        throw new ApiError({
+          message: `${res.status}: ${errorMessage}`,
+          status: res.status,
+          url: safeUrl,
+        });
     }
   }
 }
