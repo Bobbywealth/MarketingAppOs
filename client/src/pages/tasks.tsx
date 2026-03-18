@@ -506,15 +506,38 @@ export default function TasksPage() {
                           e.dataTransfer.dropEffect = "move";
                           setDragOverStatus(status);
                         }}
-                        onDragLeave={() => setDragOverStatus((current) => (current === status ? null : current))}
+                        onDragEnter={(e) => {
+                          e.preventDefault();
+                          setDragOverStatus(status);
+                        }}
+                        onDragLeave={(e) => {
+                          // Only clear if we're leaving the container itself, not a child element
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = e.clientX;
+                          const y = e.clientY;
+                          if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+                            setDragOverStatus(null);
+                          }
+                        }}
                         onDrop={(e) => {
                           e.preventDefault();
-                          const taskId = e.dataTransfer.getData("text/task-id") || draggedTaskId;
+                          e.stopPropagation();
+                          // Try to get taskId from dataTransfer first, then fallback to state
+                          let taskId = e.dataTransfer.getData("text/task-id");
+                          if (!taskId) {
+                            taskId = draggedTaskId;
+                          }
                           setDragOverStatus(null);
                           setDraggedTaskId(null);
-                          if (!taskId) return;
+                          if (!taskId) {
+                            console.error("No taskId found during drop");
+                            return;
+                          }
                           const nextStatus = reverseStatusMap[status];
-                          if (!nextStatus) return;
+                          if (!nextStatus) {
+                            console.error("No status mapping found for:", status);
+                            return;
+                          }
                           setTaskStatus(taskId, nextStatus);
                         }}
                       >
