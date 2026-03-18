@@ -9,6 +9,28 @@ interface ClientLogEntry {
   data?: Record<string, unknown>;
 }
 
+function safeString(value: unknown, fallback = "unknown"): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return fallback;
+}
+
+function safeSlice(value: unknown, max = 50): string {
+  return safeString(value).slice(0, max);
+}
+
+function safeQueryKey(queryKey: unknown): string {
+  if (Array.isArray(queryKey)) {
+    return queryKey.map((part) => safeString(part, "")).filter(Boolean).join("/");
+  }
+  return safeString(queryKey);
+}
+
 async function sendLogToServer(entry: ClientLogEntry): Promise<void> {
   try {
     await fetch("/api/debug/log", {
@@ -41,13 +63,13 @@ export const clientDebug = {
     sendLogToServer(entry);
   },
 
-  loginStart: (username: string) => {
+  loginStart: (username: unknown) => {
     const entry: ClientLogEntry = {
       timestamp: Date.now(),
       level: "debug",
       location: "client:auth",
       message: "Login started",
-      data: { username: username.slice(0, 50) },
+      data: { username: safeSlice(username, 50) },
     };
 
     if (import.meta.env.DEV) {
@@ -121,12 +143,14 @@ export const clientDebug = {
     sendLogToServer(entry);
   },
 
-  apiRequest: (method: string, url: string, status?: number) => {
+  apiRequest: (method: unknown, url: unknown, status?: number) => {
+    const safeMethod = safeString(method, "UNKNOWN");
+    const safeUrl = safeString(url, "unknown-url");
     const entry: ClientLogEntry = {
       timestamp: Date.now(),
       level: "debug",
       location: "client:api",
-      message: `${method} ${url}`,
+      message: `${safeMethod} ${safeUrl}`,
       data: { status },
     };
 
@@ -137,12 +161,12 @@ export const clientDebug = {
     sendLogToServer(entry);
   },
 
-  queryFetch: (queryKey: string[], status?: number) => {
+  queryFetch: (queryKey: unknown, status?: number) => {
     const entry: ClientLogEntry = {
       timestamp: Date.now(),
       level: "debug",
       location: "client:query",
-      message: `Query fetch: ${queryKey.join("/")}`,
+      message: `Query fetch: ${safeQueryKey(queryKey)}`,
       data: { status },
     };
 
