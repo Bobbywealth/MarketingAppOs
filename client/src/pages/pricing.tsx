@@ -18,7 +18,7 @@ const pricingTiers = [
       "API access",
     ],
     cta: "Get Started",
-    href: "/contact",
+    href: "/signup",
     highlighted: false,
   },
   {
@@ -37,7 +37,7 @@ const pricingTiers = [
       "Automated workflows",
     ],
     cta: "Get Started",
-    href: "/contact",
+    href: "/signup",
     highlighted: true,
   },
   {
@@ -137,11 +137,11 @@ export default function Pricing() {
         {/* Footer Note */}
         <div className="text-center mt-12 text-muted-foreground text-sm">
           <p>
-            All plans include a 14-day free trial. No credit card required.{" "}
+            Starter and Growth plans can start online now.{" "}
             <Link href="/contact" className="text-primary underline underline-offset-4">
               Contact us
             </Link>{" "}
-            if you have questions.
+            for enterprise pricing or custom scope.
           </p>
         </div>
       </div>

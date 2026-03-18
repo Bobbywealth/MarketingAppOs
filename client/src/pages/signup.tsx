@@ -295,7 +295,7 @@ export default function SignupPage() {
     let fields: any[] = [];
     if (step === 1) fields = ["username", "password"];
     else if (step === 2) fields = ["name", "email", "phone", "company", "website"];
-    else if (step === 4) fields = ["services", "budget", "industry"];
+    else if (step === 3) fields = ["services", "budget", "industry"];
     
     try {
       const isValid = await form.trigger(fields as any);
@@ -382,7 +382,7 @@ export default function SignupPage() {
         validDiscount={validDiscount}
         isValidatingDiscount={isValidatingDiscount}
         checkoutMutation={checkoutMutation}
-        onBack={() => setStep(4)}
+        onBack={() => setStep(3)}
         formValues={form.getValues()}
         onSuccess={() => setLocation("/onboarding/post-payment")}
       />
@@ -444,7 +444,7 @@ export default function SignupPage() {
             >
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-full text-xs md:text-sm font-black mb-4 md:mb-6 shadow-xl shadow-orange-500/20">
                 <Sparkles className="w-3 md:w-4 h-3 md:h-4" />
-                🚀 Join 500+ Businesses Growing 3x Faster
+                Start your onboarding
               </div>
               <h1 className="text-4xl md:text-7xl font-black mb-4 md:mb-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent leading-[1.1] tracking-tight">
                 Your Elite, High-Speed
@@ -460,7 +460,7 @@ export default function SignupPage() {
               <div className="inline-flex items-center gap-2 py-2 px-4 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-sm font-bold animate-in fade-in slide-in-from-top-4 duration-1000">
                 <Users className="w-4 h-4" />
                 Are you a content creator? 
-                <Link href="/signup/creator" className="underline decoration-2 underline-offset-4 hover:text-blue-800 transition-colors">Apply to our network here →</Link>
+                <Link href="/become-creator" className="underline decoration-2 underline-offset-4 hover:text-blue-800 transition-colors">Apply to our network here →</Link>
               </div>
             </motion.div>
           )}
@@ -535,7 +535,7 @@ export default function SignupPage() {
               <div className="inline-flex items-center gap-1 mb-2">
                 {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
               </div>
-              <p className="font-bold text-slate-900">Rated 4.9/5 by 500+ happy business owners</p>
+              <p className="font-bold text-slate-900">Built for fast onboarding, clear communication, and secure setup</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">

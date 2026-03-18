@@ -76,7 +76,7 @@ export function PackageSelection({
               <div className="flex items-center gap-1">
                 {[1,2,3,4,5].map(i => <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />)}
               </div>
-              <p className="text-xs font-black text-slate-900">JOIN 500+ SCALE-UPS</p>
+              <p className="text-xs font-black text-slate-900">SELF-SERVE CHECKOUT</p>
             </div>
           </div>
         </div>
@@ -341,4 +341,3 @@ export function PackageSelection({
     </div>
   );
 }
-

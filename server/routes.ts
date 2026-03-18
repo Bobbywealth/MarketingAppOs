@@ -68,6 +68,9 @@ const contactSubmissionSchema = z.object({
   phone: z.string().trim().optional().nullable(),
   company: z.string().trim().optional().nullable(),
   smsOptIn: z.boolean().optional(),
+const publicDiscountValidationSchema = z.object({
+  code: z.string().min(1).max(50),
+  packageId: z.string().optional().nullable(),
 });
 
 // Initialize Stripe if keys are present
@@ -351,10 +354,66 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.post("/api/discounts/validate", async (req: Request, res: Response) => {
+    try {
+      const { code, packageId } = publicDiscountValidationSchema.parse(req.body ?? {});
+      const normalizedCode = code.trim().toUpperCase();
+
+      const result = await pool.query(
+        `
+          SELECT id, code, description, discount_percentage, duration_months, stripe_coupon_id,
+                 max_uses, uses_count, expires_at, is_active, applies_to_packages
+          FROM discount_codes
+          WHERE code = $1
+          LIMIT 1
+        `,
+        [normalizedCode]
+      );
+
+      const discount = result.rows[0];
+      if (!discount) {
+        return res.json({ valid: false, message: "Discount code not found" });
+      }
+
+      if (!discount.is_active) {
+        return res.json({ valid: false, message: "Discount code is inactive" });
+      }
+
+      if (discount.expires_at && new Date(discount.expires_at) < new Date()) {
+        return res.json({ valid: false, message: "Discount code has expired" });
+      }
+
+      if (discount.max_uses && Number(discount.uses_count) >= Number(discount.max_uses)) {
+        return res.json({ valid: false, message: "Discount code usage limit reached" });
+      }
+
+      const appliesToPackages = Array.isArray(discount.applies_to_packages)
+        ? discount.applies_to_packages
+        : typeof discount.applies_to_packages === "string"
+          ? JSON.parse(discount.applies_to_packages)
+          : null;
+
+      if (packageId && Array.isArray(appliesToPackages) && appliesToPackages.length > 0 && !appliesToPackages.includes(packageId)) {
+        return res.json({ valid: false, message: "Discount code does not apply to this package" });
+      }
+
+      res.json({
+        valid: true,
+        code: discount.code,
+        description: discount.description,
+        discountPercentage: Number(discount.discount_percentage),
+        durationMonths: discount.duration_months,
+        stripeCouponId: discount.stripe_coupon_id,
+      });
+    } catch (error) {
+      return handleValidationError(error, res);
+    }
+  });
+
   // Create Stripe Checkout Session for package purchase
   app.post("/api/create-checkout-session", async (req: Request, res: Response) => {
     try {
-      const { packageId, leadId, email, name } = req.body;
+      const { packageId, leadId, email, name, discountCode } = req.body;
 
       if (!packageId || !email || !name) {
         return res.status(400).json({ message: "Missing required fields: packageId, email, name" });
@@ -369,6 +428,46 @@ export function registerRoutes(app: Express) {
       // Get the app's base URL
       const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 
+      let validatedDiscountCode: string | undefined;
+      let stripeCouponId: string | undefined;
+      if (typeof discountCode === "string" && discountCode.trim()) {
+        const normalizedCode = discountCode.trim().toUpperCase();
+        const result = await pool.query(
+          `
+            SELECT code, stripe_coupon_id, expires_at, is_active, max_uses, uses_count, applies_to_packages
+            FROM discount_codes
+            WHERE code = $1
+            LIMIT 1
+          `,
+          [normalizedCode]
+        );
+        const discount = result.rows[0];
+        if (!discount) {
+          return res.status(400).json({ success: false, message: "Discount code not found" });
+        }
+        if (!discount.is_active) {
+          return res.status(400).json({ success: false, message: "Discount code is inactive" });
+        }
+        if (discount.expires_at && new Date(discount.expires_at) < new Date()) {
+          return res.status(400).json({ success: false, message: "Discount code has expired" });
+        }
+        if (discount.max_uses && Number(discount.uses_count) >= Number(discount.max_uses)) {
+          return res.status(400).json({ success: false, message: "Discount code usage limit reached" });
+        }
+
+        const appliesToPackages = Array.isArray(discount.applies_to_packages)
+          ? discount.applies_to_packages
+          : typeof discount.applies_to_packages === "string"
+            ? JSON.parse(discount.applies_to_packages)
+            : null;
+        if (Array.isArray(appliesToPackages) && appliesToPackages.length > 0 && !appliesToPackages.includes(packageId)) {
+          return res.status(400).json({ success: false, message: "Discount code does not apply to this package" });
+        }
+
+        validatedDiscountCode = normalizedCode;
+        stripeCouponId = discount.stripe_coupon_id || undefined;
+      }
+
       // Create Stripe checkout session
       const session = await createCheckoutSession({
         packageId: pkg.id,
@@ -377,6 +476,8 @@ export function registerRoutes(app: Express) {
         clientEmail: email,
         clientName: name,
         leadId,
+        discountCode: validatedDiscountCode,
+        stripeCouponId,
         successUrl: `${baseUrl}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${baseUrl}/signup?canceled=true`,
       });

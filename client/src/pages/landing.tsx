@@ -93,9 +93,28 @@ export default function LandingPage() {
   });
 
   useEffect(() => {
-    const script = document.createElement("script");
-    script.type = "application/ld+json";
-    script.text = JSON.stringify({ "@context": "https://schema.org", "@type": "Organization", name: "Marketing Team App", url: window.location.origin });
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Marketing Team App",
+      "description": "Your remote digital marketing team for strategy, content, campaigns and growth",
+      "url": window.location.origin,
+      "logo": `${window.location.origin}/icon-512x512.png`,
+      "sameAs": [
+        "https://facebook.com/marketingteamapp",
+        "https://twitter.com/marketingteamapp",
+        "https://linkedin.com/company/marketingteamapp"
+      ],
+      "offers": {
+        "@type": "AggregateOffer",
+        "priceCurrency": "USD",
+        "lowPrice": "297",
+        "highPrice": "2997",
+        "offerCount": "6"
+      }
+    });
     document.head.appendChild(script);
     return () => document.head.removeChild(script);
   }, []);
@@ -432,7 +451,7 @@ export default function LandingPage() {
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Growth</p>
-                        <p className="text-lg font-black">+214%</p>
+                        <p className="text-lg font-black">Always-on</p>
                       </div>
                     </div>
                   </motion.div>
@@ -448,7 +467,7 @@ export default function LandingPage() {
                       </div>
                       <div>
                         <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Active Leads</p>
-                        <p className="text-lg font-black">1,482</p>
+                        <p className="text-lg font-black">Live</p>
                       </div>
                     </div>
                   </motion.div>
@@ -715,6 +734,597 @@ export default function LandingPage() {
       <Suspense fallback={<SectionSkeleton />}><AuditForm value={auditForm} onChange={setAuditForm} onSubmit={onAuditSubmit} isSubmitting={auditMutation.isPending} /></Suspense>
       <section ref={pricingRef}>
         <Suspense fallback={<SectionSkeleton />}><Pricing packages={packages} isLoading={packagesLoading} /></Suspense>
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group w-full"
+            >
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-white rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all border border-gray-100">
+                <img src={googleAdsLogo} alt="Google Ads" className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain" loading="lazy" decoding="async" />
+              </div>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Google Ads</p>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group w-full"
+            >
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">SEO</span>
+              </div>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">SEO</p>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group w-full"
+            >
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">EM</span>
+              </div>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Email</p>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group w-full"
+            >
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">GA</span>
+              </div>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Analytics</p>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="text-center group w-full"
+            >
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">CR</span>
+              </div>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">Conversion</p>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: -5 }}
+              className="text-center group w-full"
+            >
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center mb-2 sm:mb-4 mx-auto shadow-lg group-hover:shadow-xl transition-all">
+                <span className="text-white text-base sm:text-xl md:text-2xl font-bold">+</span>
+              </div>
+              <p className="text-[10px] sm:text-sm font-semibold text-gray-700">More</p>
+            </motion.div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Don't see your preferred channel? <span className="text-blue-600 font-semibold">We can work on any platform!</span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Free Social Audit Section - Modernized */}
+      <motion.section 
+        id="audit"
+        className="py-24 md:py-32 px-4 relative overflow-hidden bg-slate-50 dark:bg-slate-950"
+      >
+        <div className="container mx-auto max-w-6xl relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div 
+              initial={{ x: -30, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              <Badge className="bg-orange-500/10 text-orange-600 mb-6 px-4 py-1.5 rounded-full font-bold uppercase tracking-widest text-[10px]">
+                Diagnostic Engine
+              </Badge>
+              <h2 className="text-3xl md:text-6xl font-black mb-6 md:mb-8 leading-[1.1] tracking-tighter text-slate-900 dark:text-white">
+                Is your social media <br className="hidden sm:block" />
+                <span className="text-orange-500">working or wasting?</span>
+              </h2>
+              <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                Most businesses are one small tweak away from doubling their engagement. Our AI-powered diagnostic engine scans your presence and identifies the exact growth bottlenecks.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4 md:gap-6">
+                {[
+                  { label: "Data-Points Scanned", val: "50+" },
+                  { label: "Analysis Time", val: "< 60s" },
+                  { label: "Cost", val: "$0.00" },
+                  { label: "Insights", val: "Actionable" }
+                ].map((stat, i) => (
+                  <div key={i} className="bg-white dark:bg-slate-900 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                    <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">{stat.val}</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-tight">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ x: 30, opacity: 0 }}
+              whileInView={{ x: 0, opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              {!showResults ? (
+                <Card className="border-0 bg-white dark:bg-slate-900 shadow-3xl rounded-[2.5rem] overflow-hidden p-1 relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <CardContent className="p-8 md:p-12 relative z-10">
+                    <h3 className="text-2xl font-bold mb-8 text-center">Run Your Growth Scan</h3>
+                    <form onSubmit={handleAuditSubmit} className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                          <Input
+                            type="url"
+                            placeholder="Website URL (required)"
+                            value={auditForm.website}
+                            onChange={(e) => setAuditForm({...auditForm, website: e.target.value})}
+                            className="pl-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-14 text-lg rounded-xl focus:ring-orange-500"
+                            required
+                          />
+                        </div>
+                        <div className="relative">
+                          <img src={instagramLogo} alt="IG" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 grayscale opacity-50" loading="lazy" decoding="async" />
+                          <Input
+                            type="url"
+                            placeholder="Instagram URL (optional)"
+                            value={auditForm.instagramUrl}
+                            onChange={(e) => setAuditForm({...auditForm, instagramUrl: e.target.value})}
+                            className="pl-12 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-14 text-lg rounded-xl focus:ring-orange-500"
+                          />
+                        </div>
+                      </div>
+                      <Button 
+                        type="submit" 
+                        size="lg"
+                        disabled={auditMutation.isPending}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black text-lg h-16 rounded-xl shadow-xl shadow-orange-500/20"
+                      >
+                        {auditMutation.isPending ? (
+                          <span className="flex items-center gap-3">
+                            <span className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></span>
+                            SCANNING SYSTEMS...
+                          </span>
+                        ) : "START ENGINE SCAN →"}
+                      </Button>
+                      <p className="text-center text-xs text-slate-400 font-medium">
+                        We never share your data. 100% private analysis.
+                      </p>
+                    </form>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-0 bg-slate-900 text-white shadow-3xl rounded-[2.5rem] p-12 overflow-hidden">
+                  <div className="text-center space-y-8">
+                    <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-glow shadow-green-500/50">
+                      <CheckCircle className="w-12 h-12 text-white" />
+                    </div>
+                    <h3 className="text-3xl font-black">Analysis Complete!</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                        <p className="text-4xl font-black text-green-400">{auditResults.summary?.score || 72}</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Efficiency Score</p>
+                      </div>
+                      <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                        <p className="text-4xl font-black text-orange-400">{auditResults.summary?.totalIssues || 12}</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">Key Bottlenecks</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => setShowResults(false)}
+                      variant="ghost"
+                      className="text-slate-400 hover:text-white"
+                    >
+                      ← Run New Scan
+                    </Button>
+                    <Link href="/signup">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 h-16 rounded-xl font-black text-lg shadow-xl shadow-blue-600/20">
+                        Fix All Bottlenecks Now
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              )}
+            </motion.div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Why Trust Us Section - New */}
+      <section className="py-16 px-4 bg-white border-y">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Trusted by Leaders</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Why Top Brands Choose Us
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Join hundreds of successful businesses, influencers, and entrepreneurs who trust us with their growth.
+            </p>
+          </div>
+
+          {/* Trust Badges Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-white" />
+              </div>
+              <p className="font-bold text-base md:text-lg text-gray-900">Clear</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Reporting</p>
+            </div>
+
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-green-50 to-white rounded-xl border border-green-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Target className="w-6 h-6 md:w-8 md:h-8 text-white" />
+              </div>
+              <p className="font-bold text-base md:text-lg text-gray-900">Custom</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Growth Plans</p>
+            </div>
+
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-orange-50 to-white rounded-xl border border-orange-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Zap className="w-6 h-6 md:w-8 md:h-8 text-white" />
+              </div>
+              <p className="font-bold text-base md:text-lg text-gray-900">7-10 Days</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Fast Launch</p>
+            </div>
+
+            <div className="text-center p-4 md:p-6 bg-gradient-to-br from-purple-50 to-white rounded-xl border border-purple-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
+                <Users className="w-6 h-6 md:w-8 md:h-8 text-white" />
+              </div>
+              <p className="font-bold text-base md:text-lg text-gray-900">Hands-on</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground uppercase tracking-widest font-bold">Support Team</p>
+            </div>
+          </div>
+
+          {/* Core Values Row */}
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="p-6 text-center hover-lift bg-gradient-to-br from-white to-blue-50 border-blue-100">
+              <div className="text-4xl mb-3">🎯</div>
+              <h3 className="font-bold text-lg mb-2">Professional Results</h3>
+              <p className="text-sm text-muted-foreground">
+                We're obsessed with your ROI. Every campaign is designed to deliver measurable business growth.
+              </p>
+            </Card>
+
+            <Card className="p-6 text-center hover-lift bg-gradient-to-br from-white to-green-50 border-green-100">
+              <div className="text-4xl mb-3">📊</div>
+              <h3 className="font-bold text-lg mb-2">100% Transparency</h3>
+              <p className="text-sm text-muted-foreground">
+                Real-time access to all metrics, reports, and campaign performance data.
+              </p>
+            </Card>
+
+            <Card className="p-6 text-center hover-lift bg-gradient-to-br from-white to-orange-50 border-orange-100">
+              <div className="text-4xl mb-3">🚀</div>
+              <h3 className="font-bold text-lg mb-2">No Contracts</h3>
+              <p className="text-sm text-muted-foreground">
+                Month-to-month service. We earn your business with results, not lock-ins.
+              </p>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">How It Works</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              From Idea to Impact in 3 Simple Steps
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              No fluff, no complicated process. Just results-driven marketing that works.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-6 shadow-xl">
+                1
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Tell Us Your Goals</h3>
+              <p className="text-muted-foreground text-base">
+                Book a quick call or fill out our form. We'll understand what you need and create a custom plan.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-6 shadow-xl">
+                2
+              </div>
+              <h3 className="text-2xl font-bold mb-3">We Execute</h3>
+              <p className="text-muted-foreground text-base">
+                Our team gets to work immediately. Campaigns launch fast, content goes live, results start rolling in.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-4xl font-bold mx-auto mb-6 shadow-xl">
+                3
+              </div>
+              <h3 className="text-2xl font-bold mb-3">You Grow</h3>
+              <p className="text-muted-foreground text-base">
+                Track results in real-time, watch your audience grow, and scale what works.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-16 text-center">
+            <Link href="/signup">
+              <Button size="lg" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-lg px-10 py-6 shadow-xl">
+                Get Started
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* All Packages Section with Tabs */}
+      <section
+        ref={pricingSectionRef as any}
+        id="pricing"
+        className="py-20 px-4 bg-gradient-to-b from-gray-50 to-white"
+      >
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-12">
+            <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider mb-2">Pricing & Packages</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Choose Your Perfect Package
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Whether you're launching a product, building your brand, or growing your audience - we have a package for you.
+            </p>
+            <div className="mt-6 relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl blur-xl opacity-50 animate-pulse"></div>
+              <div className="relative p-5 bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-3 border-orange-500 rounded-xl shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 hover:scale-105">
+                <div className="flex flex-col md:flex-row items-center justify-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-4xl animate-bounce">🔥</span>
+                    <p className="text-lg md:text-xl text-orange-700 font-black">
+                      LIMITED TIME: 20% OFF All Packages
+                    </p>
+                  </div>
+                  <Badge className="bg-gradient-to-r from-orange-600 to-red-600 text-white text-sm px-4 py-1.5 shadow-lg animate-pulse">
+                    This Month Only!
+                  </Badge>
+                </div>
+                <p className="text-center text-sm text-orange-600 font-semibold mt-2">
+                  ⏰ Offer expires in 7 days • Limited to first 3 clients
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Tabs defaultValue="marketing" className="w-full">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-12">
+              <TabsTrigger value="marketing" className="text-base font-semibold">
+                Marketing Packages
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="text-base font-semibold">
+                AI Packages (Second Me)
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="marketing" className="mt-8">
+              {packagesLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-4 text-muted-foreground">Loading packages...</p>
+                </div>
+              ) : packages.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No packages available at this time.</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {packages.filter(pkg => !pkg.name.toLowerCase().includes('second me')).map((pkg) => (
+                    <Card
+                      key={pkg.id}
+                      className={`p-6 md:p-8 hover-lift transition-all duration-300 ${
+                        pkg.isFeatured
+                          ? "border-2 border-blue-500 relative shadow-xl"
+                          : "border-2 border-gray-200"
+                      }`}
+                    >
+                      {pkg.isFeatured && (
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                          <Badge className="bg-blue-600 text-white">Most Popular</Badge>
+                        </div>
+                      )}
+                      <div className="mb-6">
+                        <h3 className="text-xl md:text-2xl font-bold mb-2">{pkg.name}</h3>
+                        {pkg.description && (
+                          <p className="text-muted-foreground text-sm">{pkg.description}</p>
+                        )}
+                      </div>
+                      <div className="mb-6">
+                        <span className="text-3xl md:text-4xl font-bold">{formatCurrency(pkg.price)}</span>
+                        <span className="text-muted-foreground">/{pkg.billingPeriod}</span>
+                      </div>
+                      <ul className="space-y-3 mb-8">
+                        {(pkg.features as string[]).map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                            <span className="text-sm">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Link href={pkg.buttonLink || "/signup"}>
+                        <Button
+                          className={`w-full ${
+                            pkg.isFeatured
+                              ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          }`}
+                        >
+                          {pkg.buttonText || "Get Started"}
+                        </Button>
+                      </Link>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              <div className="mt-12 text-center">
+                <p className="text-sm text-muted-foreground mb-4">
+                  All packages include: Strategy development, campaign execution, performance tracking, and monthly reporting
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Need something custom? <Link href="/contact" className="text-blue-600 hover:underline font-semibold">Let's talk</Link>
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="ai" className="mt-8">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-full mb-4">
+                  <Bot className="w-5 h-5" />
+                  <span className="font-semibold">NEW: AI-Powered Marketing Assistant</span>
+                </div>
+                <h3 className="text-2xl md:text-3xl font-bold mb-4">
+                  Second Me: Your AI Marketing Clone
+                </h3>
+                <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                  Clone your expertise and let AI handle the repetitive work. Available 24/7 to answer questions, create content, and engage with your audience. Includes a digital visual version of you with AI-generated pictures, videos, and multimedia content.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                {/* Second Me Starter */}
+                <Card className="p-6 md:p-8 hover-lift transition-all duration-300 border-2 border-purple-200 bg-white/80 backdrop-blur">
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-6 h-6 text-purple-600" />
+                  <h3 className="text-2xl font-bold">Second Me Starter</h3>
+                </div>
+                <p className="text-muted-foreground">Perfect for solopreneurs and small teams</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl md:text-5xl font-bold">$297</span>
+                <span className="text-muted-foreground">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">1 AI personality trained on your brand</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Up to 500 conversations/month</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Website chat widget integration</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Social media auto-responses</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Basic analytics dashboard</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Email support</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">AI-generated photos & videos of your digital twin</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Weekly visual content delivery</span>
+                </li>
+              </ul>
+              <Link href="/signup">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
+                  Get Started
+                </Button>
+              </Link>
+            </Card>
+
+            {/* Second Me Pro */}
+            <Card className="p-6 md:p-8 hover-lift transition-all duration-300 border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 relative shadow-xl">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <Badge className="bg-blue-600 text-white">Most Popular</Badge>
+              </div>
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-6 h-6 text-blue-600" />
+                  <h3 className="text-2xl font-bold">Second Me Pro</h3>
+                </div>
+                <p className="text-muted-foreground">For growing businesses and agencies</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl md:text-5xl font-bold">$597</span>
+                <span className="text-muted-foreground">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Up to 3 AI personalities</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Unlimited conversations</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">All Starter features</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Advanced AI training & customization</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Multi-platform integration (Instagram, Facebook, WhatsApp)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Lead qualification & CRM integration</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Priority support & dedicated account manager</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Advanced AI-generated photos, videos & multimedia content</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Custom visual content styles & branding</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                  <span className="text-sm md:text-base">Daily visual content delivery</span>
+                </li>
+              </ul>
+              <Link href="/signup">
+                <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700" size="lg">
+                  Get Started
+                </Button>
+              </Link>
+            </Card>
+          </div>
+
+          <div className="text-center mt-8">
+            <p className="text-sm md:text-base text-muted-foreground mb-4">
+              🎁 <strong>Special Launch Offer:</strong> Get 2 months free when you pay annually
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Need enterprise features? <Link href="/contact" className="text-blue-600 hover:underline font-semibold">Contact us for custom pricing</Link>
+            </p>
+          </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </section>
       <Suspense fallback={<SectionSkeleton />}><Testimonials /></Suspense>
       <Suspense fallback={<SectionSkeleton />}><FAQ /></Suspense>
@@ -1006,7 +1616,7 @@ export default function LandingPage() {
                   <li>✅ No hidden fees or surprise charges</li>
                 </ul>
                 <p className="mt-3 text-sm">
-                  Our 98% client retention rate speaks for itself - we keep clients happy, not trapped.
+                  We keep the engagement flexible so you can stay because the work is valuable, not because a contract traps you.
                 </p>
               </AccordionContent>
             </AccordionItem>
@@ -1047,7 +1657,7 @@ export default function LandingPage() {
                   <li><strong>Dedicated support:</strong> Your success is our priority</li>
                 </ul>
                 <p className="mt-3 font-semibold text-blue-600">
-                  Our 98% client retention rate and 310% average ROI increase speak for themselves.
+                  We focus on measurable business outcomes and make performance visible inside your dashboard.
                 </p>
               </AccordionContent>
             </AccordionItem>
@@ -1179,8 +1789,8 @@ export default function LandingPage() {
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 shadow-2xl border-t-2 border-white/20">
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1">
-                <p className="text-sm font-semibold">🚀 Only 3 Spots Left</p>
-                <p className="text-xs opacity-90">Scale your brand today</p>
+                <p className="text-sm font-semibold">Start your setup</p>
+                <p className="text-xs opacity-90">Talk to the team or check out online</p>
               </div>
               <Link href="/signup">
                 <Button size="sm" className="bg-white text-orange-600 hover:bg-gray-100 font-bold border-0 shrink-0">

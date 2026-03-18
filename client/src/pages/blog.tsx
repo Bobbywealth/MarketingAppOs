@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useRoute } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -830,7 +830,19 @@ const categories = ["All", "Digital Marketing", "AI & Automation", "SEO", "Socia
 export default function BlogPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
+  const [, setLocation] = useLocation();
+  const [slugMatch, params] = useRoute("/blog/:slug");
+  const viewingPost = slugMatch ? blogPosts.find((post) => post.slug === params?.slug) || null : null;
+
+  useEffect(() => {
+    if (slugMatch) return;
+    const querySlug = new URLSearchParams(window.location.search).get("post");
+    if (!querySlug) return;
+    const matched = blogPosts.find((post) => post.slug === querySlug);
+    if (matched) {
+      setLocation(`/blog/${matched.slug}`, { replace: true });
+    }
+  }, [setLocation, slugMatch]);
 
   // SEO Management
   useDocumentMeta(viewingPost ? {
@@ -839,7 +851,7 @@ export default function BlogPage() {
     ogTitle: viewingPost.title,
     ogDescription: viewingPost.excerpt,
     ogType: "article",
-    canonical: `https://www.marketingteam.app/blog?post=${viewingPost.slug}`
+    canonical: `https://www.marketingteam.app/blog/${viewingPost.slug}`
   } : {
     title: "Marketing Insights & News | Marketing Team App",
     description: "Stay ahead with expert tips on digital marketing, AI automation, SEO, social media and growth from the Marketing Team App.",
@@ -867,7 +879,7 @@ export default function BlogPage() {
     "datePublished": viewingPost.publishedAt,
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://www.marketingteam.app/blog?post=${viewingPost.slug}`
+      "@id": `https://www.marketingteam.app/blog/${viewingPost.slug}`
     }
   } : null;
 
@@ -902,7 +914,7 @@ export default function BlogPage() {
                 <HeaderLogo />
               </Link>
               <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => setViewingPost(null)}>
+                <Button variant="ghost" size="sm" onClick={() => setLocation("/blog")}>
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Blog
                 </Button>
@@ -918,7 +930,7 @@ export default function BlogPage() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => setViewingPost(null)}
+            onClick={() => setLocation("/blog")}
             className="mb-8"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -973,7 +985,7 @@ export default function BlogPage() {
           <div className="mt-16 bg-blue-50 rounded-2xl p-8 text-center">
             <h2 className="text-2xl font-bold mb-4">Enjoyed this article?</h2>
             <p className="text-lg text-gray-600 mb-6 max-w-2xl mx-auto">
-              Get more marketing tips and expert strategies delivered to your inbox. Join 500+ businesses growing with Marketing Team App.
+              Get more marketing tips and expert strategies delivered to your inbox and see how the team approaches growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/signup">
@@ -1125,7 +1137,7 @@ export default function BlogPage() {
                     </div>
                     <Button 
                       className="w-full group-hover:bg-primary group-hover:text-white transition-colors"
-                      onClick={() => setViewingPost(post)}
+                      onClick={() => setLocation(`/blog/${post.slug}`)}
                     >
                       Read More
                       <ArrowRight className="w-4 h-4 ml-2" />
@@ -1146,7 +1158,7 @@ export default function BlogPage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {regularPosts.map((post) => (
-              <Card key={post.id} className="group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => setViewingPost(post)}>
+              <Card key={post.id} className="group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => setLocation(`/blog/${post.slug}`)}>
                 <CardHeader>
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="secondary" className="bg-primary/10 text-primary">
@@ -1191,7 +1203,7 @@ export default function BlogPage() {
                     className="w-full group-hover:bg-primary group-hover:text-white transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setViewingPost(post);
+                      setLocation(`/blog/${post.slug}`);
                     }}
                   >
                     Read More
@@ -1226,7 +1238,7 @@ export default function BlogPage() {
             Ready to Transform Your Marketing?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join 500+ businesses who are already seeing 3x results with our proven marketing strategies.
+            See how a focused marketing system can improve clarity, speed, and conversion for your business.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup">
