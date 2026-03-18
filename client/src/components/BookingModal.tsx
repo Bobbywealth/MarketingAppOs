@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { resolveApiUrl } from "@/lib/api";
 import { Calendar as CalendarIcon, Clock, CheckCircle2 } from "lucide-react";
 import { format, addDays, setHours, setMinutes } from "date-fns";
 
@@ -36,9 +36,54 @@ export function BookingModal({ open, onOpenChange }: BookingModalProps) {
     message: "",
   });
 
+  const parseBookingErrors = (payload: unknown): string[] => {
+    if (!payload || typeof payload !== "object") return [];
+    const maybeErrors = (payload as { errors?: unknown }).errors;
+    if (!maybeErrors || typeof maybeErrors !== "object") return [];
+
+    const errors = maybeErrors as Record<string, unknown>;
+    const friendlyLabels: Record<string, string> = {
+      name: "Full name",
+      email: "Email",
+      phone: "Phone number",
+      datetime: "Date and time",
+      company: "Company",
+      message: "Message",
+    };
+
+    return Object.entries(errors)
+      .flatMap(([field, value]) => {
+        if (!Array.isArray(value)) return [];
+        return value
+          .filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+          .map((message) => `${friendlyLabels[field] ?? field}: ${message}`);
+      });
+  };
+
   const bookingMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/bookings", data);
+      const response = await fetch(resolveApiUrl("/api/bookings"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        let payload: unknown = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        throw {
+          status: response.status,
+          message: "Booking request failed.",
+          validationErrors: parseBookingErrors(payload),
+        };
+      }
+
       return response.json();
     },
     onSuccess: () => {
@@ -49,7 +94,20 @@ export function BookingModal({ open, onOpenChange }: BookingModalProps) {
         description: "We'll send you a confirmation email shortly.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      const validationErrors = Array.isArray(error?.validationErrors)
+        ? error.validationErrors.filter((entry: unknown): entry is string => typeof entry === "string")
+        : [];
+
+      if (validationErrors.length > 0) {
+        toast({
+          title: "Please review your details",
+          description: validationErrors.slice(0, 3).join(" • "),
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Booking Failed",
         description: "Please try again or contact us directly.",
@@ -282,4 +340,3 @@ export function BookingModal({ open, onOpenChange }: BookingModalProps) {
     </Dialog>
   );
 }
-

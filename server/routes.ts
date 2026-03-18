@@ -29,6 +29,7 @@ import {
   insertAnalyticsMetricSchema,
   insertLeadActivitySchema,
   insertLeadAutomationSchema,
+  insertBookingSchema,
 } from "@shared/schema";
 import { z, ZodError } from "zod";
 import Stripe from "stripe";
@@ -38,6 +39,7 @@ import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
 import { generateApiKey } from "./apiKeys";
+import { emailService } from "./emailService";
 import { pool } from "./db";
 
 const objectStorageService = new ObjectStorageService();
@@ -48,6 +50,17 @@ const createApiKeyRequestSchema = z.object({
   scopes: z.array(z.string().min(1)).min(1).max(20).optional(),
 });
 
+const bookingRequestSchema = z.object({
+  name: z.string().trim().min(2, "Please provide your full name.").max(100, "Name is too long."),
+  email: z.string().trim().email("Please enter a valid email address.").max(255, "Email is too long."),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[0-9()\-\s.]{10,25}$/, "Please enter a valid phone number."),
+  datetime: z.coerce.date(),
+  company: z.string().trim().max(150, "Company name is too long.").optional(),
+  message: z.string().trim().max(2000, "Message is too long.").optional(),
+}).strict();
 const contactSubmissionSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Valid email is required"),
@@ -207,6 +220,64 @@ export function registerRoutes(app: Express) {
   // OpenAPI JSON spec:       GET /api/docs/spec.json
   app.use("/api/docs", docsRoutes);
 
+  // Public booking endpoint for strategy calls
+  app.post("/api/bookings", async (req: Request, res: Response) => {
+    try {
+      const parsed = bookingRequestSchema.parse(req.body ?? {});
+      const requestedAt = parsed.datetime;
+
+      if (Number.isNaN(requestedAt.getTime())) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: { datetime: ["Please choose a valid date and time."] },
+        });
+      }
+
+      if (requestedAt.getTime() <= Date.now()) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: { datetime: ["Booking time must be in the future."] },
+        });
+      }
+
+      const normalizedBooking = insertBookingSchema.parse({
+        name: parsed.name,
+        email: parsed.email.toLowerCase(),
+        phone: parsed.phone,
+        company: parsed.company && parsed.company.length > 0 ? parsed.company : undefined,
+        message: parsed.message && parsed.message.length > 0 ? parsed.message : undefined,
+        requestedAt,
+      });
+
+      const booking = await storage.createBooking(normalizedBooking);
+
+      const whenEt = new Intl.DateTimeFormat("en-US", {
+        dateStyle: "full",
+        timeStyle: "short",
+        timeZone: "America/New_York",
+      }).format(requestedAt);
+
+      await emailService.sendBookingConfirmationEmail(
+        normalizedBooking.email,
+        normalizedBooking.name,
+        whenEt,
+        normalizedBooking.phone
+      );
+
+      return res.status(201).json({ success: true, bookingId: booking.id });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const flattened = error.flatten();
+        return res.status(400).json({
+          message: "Validation error",
+          errors: flattened.fieldErrors,
+        });
+      }
+
+      console.error("Failed to create booking:", error);
+      return res.status(500).json({
+        message: "Could not create booking right now. Please try again shortly.",
+      });
   // Public website contact form
   app.post("/api/contact", async (req: Request, res: Response) => {
     try {
