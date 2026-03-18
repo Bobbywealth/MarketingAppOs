@@ -49,6 +49,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Logo } from "./Logo";
 
 type NavItem = {
   title: string;
@@ -160,15 +161,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">MarketingOS</span>
-              <span className="text-xs text-muted-foreground">CRM Platform</span>
-            </div>
-          )}
+          <Logo variant="auto" size="sm" showText={!isCollapsed} />
         </div>
       </SidebarHeader>
 
