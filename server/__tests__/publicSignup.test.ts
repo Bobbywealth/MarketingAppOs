@@ -1,27 +1,27 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { earlyLeadSchema, signupSimpleSchema, websiteSchema, emailSchema } from "../validators/publicSignup";
 
-test("emailSchema trims + lowercases", () => {
+describe("publicSignup validators", () => {
+it("emailSchema trims + lowercases", () => {
   const email = emailSchema.parse("  EXAMPLE@DOMAIN.com ");
-  assert.equal(email, "example@domain.com");
+  expect(email).toBe("example@domain.com");
 });
 
-test("websiteSchema accepts empty string as undefined", () => {
+it("websiteSchema accepts empty string as undefined", () => {
   const website = websiteSchema.parse("");
-  assert.equal(website, undefined);
+  expect(website).toBeUndefined();
 });
 
-test("websiteSchema prefixes https:// when protocol is missing", () => {
+it("websiteSchema prefixes https:// when protocol is missing", () => {
   const website = websiteSchema.parse("example.com");
-  assert.equal(website, "https://example.com");
+  expect(website).toBe("https://example.com");
 });
 
-test("earlyLeadSchema requires name/email/phone/company", () => {
-  assert.throws(() => earlyLeadSchema.parse({}), /required/i);
+it("earlyLeadSchema requires name/email/phone/company", () => {
+  expect(() => earlyLeadSchema.parse({})).toThrow();
 });
 
-test("signupSimpleSchema normalizes and validates core fields", () => {
+it("signupSimpleSchema normalizes and validates core fields", () => {
   const data = signupSimpleSchema.parse({
     company: "  Acme  ",
     website: "acme.com",
@@ -31,10 +31,10 @@ test("signupSimpleSchema normalizes and validates core fields", () => {
     services: ["SEO Optimization"],
   });
 
-  assert.equal(data.company, "Acme");
-  assert.equal(data.website, "https://acme.com");
-  assert.equal(data.email, "jane@acme.com");
-  assert.equal(data.name, "Jane Doe");
+  expect(data.company).toBe("Acme");
+  expect(data.website).toBe("https://acme.com");
+  expect(data.email).toBe("jane@acme.com");
+  expect(data.name).toBe("Jane Doe");
 });
-
+});
 

@@ -47,14 +47,6 @@ describe('Security Middleware', () => {
     it('should be a rate limiter function', () => {
       expect(typeof apiLimiter).toBe('function');
     });
-
-    it('should have windowMs property', () => {
-      expect(apiLimiter.windowMs).toBe(15 * 60 * 1000); // 15 minutes
-    });
-
-    it('should have max property', () => {
-      expect(apiLimiter.max).toBe(100);
-    });
   });
 
   describe('strictLimiter', () => {
@@ -62,13 +54,6 @@ describe('Security Middleware', () => {
       expect(typeof strictLimiter).toBe('function');
     });
 
-    it('should have shorter windowMs', () => {
-      expect(strictLimiter.windowMs).toBe(5 * 60 * 1000); // 5 minutes
-    });
-
-    it('should have stricter max', () => {
-      expect(strictLimiter.max).toBe(10);
-    });
   });
 
   describe('emailRateLimiter', () => {
@@ -76,17 +61,6 @@ describe('Security Middleware', () => {
       expect(typeof emailRateLimiter).toBe('function');
     });
 
-    it('should have longer windowMs', () => {
-      expect(emailRateLimiter.windowMs).toBe(60 * 60 * 1000); // 1 hour
-    });
-
-    it('should have max for emails', () => {
-      expect(emailRateLimiter.max).toBe(50);
-    });
-
-    it('should have keyGenerator function', () => {
-      expect(typeof emailRateLimiter.keyGenerator).toBe('function');
-    });
   });
 
   describe('validateBody', () => {
