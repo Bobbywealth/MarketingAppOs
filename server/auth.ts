@@ -75,6 +75,9 @@ export function setupAuth(app: Express) {
     ? process.env.COOKIE_DOMAIN.slice(4)
     : process.env.COOKIE_DOMAIN;
 
+  // In production, be more permissive with cookies to ensure cross-subdomain work
+  const isProduction = process.env.NODE_ENV === "production";
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -82,10 +85,11 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      // Only use secure cookies if explicitly in production AND using HTTPS
-      // This prevents login loops when running production builds locally or on HTTP
-      secure: process.env.NODE_ENV === "production" && process.env.DISABLE_SECURE_COOKIES !== "true",
-      sameSite: "lax",
+      // Always use secure in production (required for sameSite none)
+      secure: isProduction,
+      // Use 'none' in production to allow cross-site cookies (requires secure=true)
+      // Use 'lax' in development for easier testing
+      sameSite: isProduction ? "none" : "lax",
       domain: normalizedCookieDomain || undefined, 
       maxAge: sessionTtl,
     },

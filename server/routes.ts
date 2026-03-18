@@ -3009,24 +3009,8 @@ Examples:
     }
   });
 
-  // User management routes (Admin only)
-  app.get("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (_req: Request, res: Response) => {
-    try {
-      const users = await storage.getUsers();
-      // Don't send password hashes to frontend
-      const sanitizedUsers = users.map(({ id, username, role, createdAt }) => ({
-        id,
-        username,
-        role,
-        createdAt,
-      }));
-      res.json(sanitizedUsers);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-
+  // User management routes (Admin only - for creating/updating/deleting users)
+  // Note: GET /api/users is handled earlier (line 2600) for listing all team members
   app.post("/api/users", isAuthenticated, requirePermission("canManageUsers"), async (req: Request, res: Response) => {
     try {
       console.log("Creating user with data:", { username: req.body.username, role: req.body.role });
