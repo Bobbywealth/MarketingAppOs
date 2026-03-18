@@ -24,7 +24,7 @@ export function resolveApiUrl(url: string): string {
   return new URL(url, base).toString();
 }
 
-async function throwIfResNotOk(res: Response) {
+async function throwIfResNotOk(res: Response, url?: string) {
   if (!res.ok) {
     let errorMessage = res.statusText;
 
@@ -47,7 +47,7 @@ async function throwIfResNotOk(res: Response) {
       case 401:
         // For login endpoints, show the actual error message (e.g., "Invalid username or password")
         // For other endpoints, show the generic message
-        if (url.includes('/api/login')) {
+        if (url && url.includes('/api/login')) {
           throw new Error(errorMessage || "Invalid username or password");
         }
         throw new Error(errorMessage || "Authentication required. Please log in again.");
@@ -82,7 +82,7 @@ export async function apiRequest(
 
   clientDebug.apiRequest(method, url, res.status);
 
-  await throwIfResNotOk(res);
+  await throwIfResNotOk(res, url);
   return res;
 }
 
@@ -104,6 +104,6 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    await throwIfResNotOk(res, path);
     return await res.json();
   };
