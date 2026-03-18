@@ -3,7 +3,7 @@
  * Includes rate limiting, input validation, and request sanitization
  */
 
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
@@ -39,7 +39,8 @@ export const emailRateLimiter = rateLimit({
   max: 50, // limit to 50 emails per hour
   message: 'Too many email requests, please try again later.',
   keyGenerator: (req: Request) => {
-    return req.user?.id || req.ip;
+    if (req.user?.id) return String(req.user.id);
+    return ipKeyGenerator(req.ip || "");
   },
 });
 
