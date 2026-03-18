@@ -1,0 +1,1023 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibeCenterStory 1`] = `
+<div
+  class="flex items-center justify-center"
+  data-testid="story-center"
+>
+  <span>
+    Centered
+  </span>
+</div>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibeFlexColStory 1`] = `
+<div
+  class="flex flex-col justify-start items-stretch gap-2"
+  data-testid="story-flex-col"
+>
+  <span>
+    Top
+  </span>
+  <span>
+    Bottom
+  </span>
+</div>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibeFlexRowStory 1`] = `
+<div
+  class="flex justify-between items-center gap-4"
+  data-testid="story-flex-row"
+>
+  <span>
+    Left
+  </span>
+  <span>
+    Right
+  </span>
+</div>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibePageContainerStory 1`] = `
+<div
+  class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 xl:p-12"
+  data-testid="story-page-container"
+>
+  <div>
+    Container content
+  </div>
+</div>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibePageHeaderCompactStory 1`] = `
+<header
+  class="border-b bg-background/95 backdrop-blur"
+>
+  <div
+    class="flex items-center justify-between px-4 py-3 md:px-6"
+  >
+    <div
+      class="flex items-center gap-3"
+    >
+      <a
+        class="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+        href="/tasks"
+      >
+        <svg
+          fill="none"
+          height="16"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="16"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="m15 18-6-6 6-6"
+          />
+        </svg>
+        Back
+      </a>
+      <div>
+        <h1
+          class="text-lg font-semibold"
+        >
+          Task Details
+        </h1>
+        <p
+          class="text-xs text-muted-foreground"
+        >
+          Focused task workspace
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex items-center gap-2"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 bg-primary text-primary-foreground border border-primary-border shadow-sm hover:shadow-md min-h-8 rounded-md px-3 text-xs"
+      >
+        Edit
+      </button>
+    </div>
+  </div>
+</header>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibePageHeaderStory 1`] = `
+<header
+  class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+>
+  <div
+    class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6"
+  >
+    <div
+      class="space-y-1"
+    >
+      <nav
+        aria-label="Breadcrumb"
+        class="text-xs text-muted-foreground mb-1"
+      >
+        <ol
+          class="flex items-center gap-1.5 flex-wrap"
+        >
+          <li
+            class="flex items-center gap-1.5"
+          >
+            <a
+              class="hover:underline hover:text-foreground transition-colors"
+              href="/"
+            >
+              Home
+            </a>
+            <span
+              aria-hidden="true"
+              class="text-muted-foreground/50"
+            >
+              /
+            </span>
+          </li>
+          <li
+            class="flex items-center gap-1.5"
+          >
+            <span
+              class="text-foreground font-medium"
+            >
+              Marketing
+            </span>
+          </li>
+        </ol>
+      </nav>
+      <h1
+        class="text-xl md:text-2xl font-bold tracking-tight"
+      >
+        Marketing Overview
+      </h1>
+      <p
+        class="text-sm text-muted-foreground max-w-2xl"
+      >
+        Track campaign and channel performance in one place.
+      </p>
+    </div>
+    <div
+      class="flex items-center gap-2 flex-wrap"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 bg-primary text-primary-foreground border border-primary-border shadow-sm hover:shadow-md min-h-8 rounded-md px-3 text-xs"
+      >
+        Create campaign
+      </button>
+    </div>
+  </div>
+</header>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibeSectionStory 1`] = `
+<div
+  class="grid gap-6"
+  data-testid="story-section"
+>
+  <div>
+    First section item
+  </div>
+  <div>
+    Second section item
+  </div>
+</div>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibeTaskFilterChipsStory 1`] = `
+<div
+  class="flex flex-wrap items-center gap-2 px-4 py-2 bg-muted/30 border-b"
+>
+  <span
+    class="text-xs text-muted-foreground font-medium"
+  >
+    Active Filters:
+  </span>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <svg
+      class="lucide lucide-tag w-3 h-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+      />
+      <circle
+        cx="7.5"
+        cy="7.5"
+        fill="currentColor"
+        r=".5"
+      />
+    </svg>
+    <span>
+      In Progress
+    </span>
+    <button
+      aria-label="Remove In Progress filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <svg
+      class="lucide lucide-triangle-alert w-3 h-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+      />
+      <path
+        d="M12 9v4"
+      />
+      <path
+        d="M12 17h.01"
+      />
+    </svg>
+    <span>
+      High Priority
+    </span>
+    <button
+      aria-label="Remove High Priority filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <span>
+      "homepage redesign"
+    </span>
+    <button
+      aria-label="Remove "homepage redesign" filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <svg
+      class="lucide lucide-building2 w-3 h-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"
+      />
+      <path
+        d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"
+      />
+      <path
+        d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"
+      />
+      <path
+        d="M10 6h4"
+      />
+      <path
+        d="M10 10h4"
+      />
+      <path
+        d="M10 14h4"
+      />
+      <path
+        d="M10 18h4"
+      />
+    </svg>
+    <span>
+      Acme Inc.
+    </span>
+    <button
+      aria-label="Remove Acme Inc. filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <svg
+      class="lucide lucide-user w-3 h-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"
+      />
+      <circle
+        cx="12"
+        cy="7"
+        r="4"
+      />
+    </svg>
+    <span>
+      Taylor
+    </span>
+    <button
+      aria-label="Remove Taylor filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <svg
+      class="lucide lucide-calendar w-3 h-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 2v4"
+      />
+      <path
+        d="M16 2v4"
+      />
+      <rect
+        height="18"
+        rx="2"
+        width="18"
+        x="3"
+        y="4"
+      />
+      <path
+        d="M3 10h18"
+      />
+    </svg>
+    <span>
+      Due This Week
+    </span>
+    <button
+      aria-label="Remove Due This Week filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <svg
+      class="lucide lucide-tag w-3 h-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"
+      />
+      <circle
+        cx="7.5"
+        cy="7.5"
+        fill="currentColor"
+        r=".5"
+      />
+    </svg>
+    <span>
+      Space Filter Active
+    </span>
+    <button
+      aria-label="Remove Space Filter Active filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <div
+    class="whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-secondary-foreground flex items-center gap-1.5 pr-1.5 text-xs bg-primary/10 hover:bg-primary/20 transition-colors"
+  >
+    <svg
+      class="lucide lucide-clock w-3 h-3"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <polyline
+        points="12 6 12 12 16 14"
+      />
+    </svg>
+    <span>
+      Showing Completed
+    </span>
+    <button
+      aria-label="Remove Showing Completed filter"
+      class="ml-1 rounded-full p-0.5 hover:bg-background/50 transition-colors"
+    >
+      <svg
+        class="lucide lucide-x w-3 h-3"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6 6 18"
+        />
+        <path
+          d="m6 6 12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border border-transparent hover:bg-accent min-h-8 rounded-md h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+  >
+    Clear All
+  </button>
+</div>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibeViewModeDropdownStory 1`] = `
+<button
+  aria-autocomplete="none"
+  aria-controls="radix-:r5:"
+  aria-expanded="false"
+  class="flex h-9 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 w-[140px]"
+  data-state="closed"
+  dir="ltr"
+  role="combobox"
+  type="button"
+>
+  <svg
+    class="lucide lucide-layout-grid h-4 w-4 mr-2"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect
+      height="7"
+      rx="1"
+      width="7"
+      x="3"
+      y="3"
+    />
+    <rect
+      height="7"
+      rx="1"
+      width="7"
+      x="14"
+      y="3"
+    />
+    <rect
+      height="7"
+      rx="1"
+      width="7"
+      x="14"
+      y="14"
+    />
+    <rect
+      height="7"
+      rx="1"
+      width="7"
+      x="3"
+      y="14"
+    />
+  </svg>
+  <span
+    style="pointer-events: none;"
+  >
+    <div
+      class="flex items-center gap-2"
+    >
+      <svg
+        class="lucide lucide-layout-grid h-4 w-4"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="3"
+          y="3"
+        />
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="14"
+          y="3"
+        />
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="14"
+          y="14"
+        />
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="3"
+          y="14"
+        />
+      </svg>
+      <span>
+        Board
+      </span>
+    </div>
+  </span>
+  <svg
+    aria-hidden="true"
+    class="lucide lucide-chevron-down h-4 w-4 opacity-50"
+    fill="none"
+    height="24"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="2"
+    viewBox="0 0 24 24"
+    width="24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="m6 9 6 6 6-6"
+    />
+  </svg>
+</button>
+`;
+
+exports[`Vibe primitives story snapshots > captures snapshots for each Vibe* primitive story > VibeViewModeSwitcherStory 1`] = `
+<div
+  class="flex items-center gap-1 "
+>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 bg-primary text-primary-foreground border border-primary-border shadow-sm hover:shadow-md min-h-8 rounded-md px-3 text-xs gap-1.5"
+    data-state="closed"
+  >
+    <svg
+      class="lucide lucide-list h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 12h.01"
+      />
+      <path
+        d="M3 18h.01"
+      />
+      <path
+        d="M3 6h.01"
+      />
+      <path
+        d="M8 12h13"
+      />
+      <path
+        d="M8 18h13"
+      />
+      <path
+        d="M8 6h13"
+      />
+    </svg>
+    <span
+      class="hidden sm:inline"
+    >
+      List
+    </span>
+  </button>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border border-transparent hover:bg-accent min-h-8 rounded-md px-3 text-xs gap-1.5 text-muted-foreground"
+    data-state="closed"
+  >
+    <svg
+      class="lucide lucide-layout-grid h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        height="7"
+        rx="1"
+        width="7"
+        x="3"
+        y="3"
+      />
+      <rect
+        height="7"
+        rx="1"
+        width="7"
+        x="14"
+        y="3"
+      />
+      <rect
+        height="7"
+        rx="1"
+        width="7"
+        x="14"
+        y="14"
+      />
+      <rect
+        height="7"
+        rx="1"
+        width="7"
+        x="3"
+        y="14"
+      />
+    </svg>
+    <span
+      class="hidden sm:inline"
+    >
+      Board
+    </span>
+  </button>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border border-transparent hover:bg-accent min-h-8 rounded-md px-3 text-xs gap-1.5 text-muted-foreground"
+    data-state="closed"
+  >
+    <svg
+      class="lucide lucide-calendar h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 2v4"
+      />
+      <path
+        d="M16 2v4"
+      />
+      <rect
+        height="18"
+        rx="2"
+        width="18"
+        x="3"
+        y="4"
+      />
+      <path
+        d="M3 10h18"
+      />
+    </svg>
+    <span
+      class="hidden sm:inline"
+    >
+      Calendar
+    </span>
+  </button>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border border-transparent hover:bg-accent min-h-8 rounded-md px-3 text-xs gap-1.5 text-muted-foreground"
+    data-state="closed"
+  >
+    <svg
+      class="lucide lucide-chart-no-axes-gantt h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 6h10"
+      />
+      <path
+        d="M6 12h9"
+      />
+      <path
+        d="M11 18h7"
+      />
+    </svg>
+    <span
+      class="hidden sm:inline"
+    >
+      Timeline
+    </span>
+  </button>
+  <button
+    class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border border-transparent hover:bg-accent min-h-8 rounded-md px-3 text-xs gap-1.5 text-muted-foreground"
+    data-state="closed"
+  >
+    <svg
+      class="lucide lucide-chart-column h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 3v16a2 2 0 0 0 2 2h16"
+      />
+      <path
+        d="M18 17V9"
+      />
+      <path
+        d="M13 17V5"
+      />
+      <path
+        d="M8 17v-3"
+      />
+    </svg>
+    <span
+      class="hidden sm:inline"
+    >
+      Analytics
+    </span>
+  </button>
+</div>
+`;
+
+exports[`Vibe primitives story snapshots > renders snapshots in dark mode without crashing > VibePageHeaderStory-dark 1`] = `
+<header
+  class="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+>
+  <div
+    class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6"
+  >
+    <div
+      class="space-y-1"
+    >
+      <nav
+        aria-label="Breadcrumb"
+        class="text-xs text-muted-foreground mb-1"
+      >
+        <ol
+          class="flex items-center gap-1.5 flex-wrap"
+        >
+          <li
+            class="flex items-center gap-1.5"
+          >
+            <a
+              class="hover:underline hover:text-foreground transition-colors"
+              href="/"
+            >
+              Home
+            </a>
+            <span
+              aria-hidden="true"
+              class="text-muted-foreground/50"
+            >
+              /
+            </span>
+          </li>
+          <li
+            class="flex items-center gap-1.5"
+          >
+            <span
+              class="text-foreground font-medium"
+            >
+              Marketing
+            </span>
+          </li>
+        </ol>
+      </nav>
+      <h1
+        class="text-xl md:text-2xl font-bold tracking-tight"
+      >
+        Marketing Overview
+      </h1>
+      <p
+        class="text-sm text-muted-foreground max-w-2xl"
+      >
+        Track campaign and channel performance in one place.
+      </p>
+    </div>
+    <div
+      class="flex items-center gap-2 flex-wrap"
+    >
+      <button
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 bg-primary text-primary-foreground border border-primary-border shadow-sm hover:shadow-md min-h-8 rounded-md px-3 text-xs"
+      >
+        Create campaign
+      </button>
+    </div>
+  </div>
+</header>
+`;
