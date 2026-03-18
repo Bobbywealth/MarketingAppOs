@@ -38,6 +38,7 @@ import path from "path";
 import fs from "fs/promises";
 import { existsSync } from "fs";
 import { generateApiKey } from "./apiKeys";
+import { pool } from "./db";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -45,6 +46,15 @@ const createApiKeyRequestSchema = z.object({
   name: z.string().min(3).max(100),
   expiresInDays: z.number().int().min(1).max(365).optional(),
   scopes: z.array(z.string().min(1)).min(1).max(20).optional(),
+});
+
+const contactSubmissionSchema = z.object({
+  name: z.string().trim().min(1, "Name is required"),
+  email: z.string().trim().email("Valid email is required"),
+  message: z.string().trim().min(1, "Message is required"),
+  phone: z.string().trim().optional().nullable(),
+  company: z.string().trim().optional().nullable(),
+  smsOptIn: z.boolean().optional(),
 });
 
 // Initialize Stripe if keys are present
@@ -196,6 +206,49 @@ export function registerRoutes(app: Express) {
   // Raw OpenAPI YAML spec:   GET /api/docs/spec.yaml
   // OpenAPI JSON spec:       GET /api/docs/spec.json
   app.use("/api/docs", docsRoutes);
+
+  // Public website contact form
+  app.post("/api/contact", async (req: Request, res: Response) => {
+    try {
+      const validationResult = contactSubmissionSchema.safeParse(req.body ?? {});
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationResult.error.errors.map((error) => ({
+            field: error.path[0],
+            message: error.message,
+          })),
+        });
+      }
+
+      const { name, email, message, phone, company, smsOptIn } = validationResult.data;
+      const normalizedPhone = phone && phone.length > 0 ? phone : null;
+      const normalizedCompany = company && company.length > 0 ? company : null;
+      const userAgentHeader = req.get("user-agent");
+
+      await pool.query(
+        `
+          INSERT INTO contact_submissions (name, email, phone, company, message, sms_opt_in, ip, user_agent)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+        [
+          name,
+          email,
+          normalizedPhone,
+          normalizedCompany,
+          message,
+          smsOptIn ?? false,
+          req.ip ?? null,
+          userAgentHeader ?? null,
+        ],
+      );
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Contact submission failed:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   // File upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), async (req: Request, res: Response) => {
