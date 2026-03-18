@@ -123,6 +123,8 @@ export default function TasksPage() {
   const [search, setSearch] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showNewTask, setShowNewTask] = useState(false);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
   
   // New task form state
   const [newTask, setNewTask] = useState({
@@ -269,6 +271,19 @@ export default function TasksPage() {
 
     try {
       await apiRequest("PATCH", `/api/tasks/${taskId}`, { status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    } catch (error) {
+      toast({ title: "Failed to update task", variant: "destructive" });
+    }
+  };
+
+  // Set task status directly
+  const setTaskStatus = async (taskId: string, nextStatus: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.status === nextStatus) return;
+
+    try {
+      await apiRequest("PATCH", `/api/tasks/${taskId}`, { status: nextStatus });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     } catch (error) {
       toast({ title: "Failed to update task", variant: "destructive" });
@@ -482,11 +497,42 @@ export default function TasksPage() {
                         </div>
                       </div>
 
-                      <div className="max-h-[680px] space-y-3 overflow-auto p-3">
+                      <div
+                        className={`max-h-[680px] space-y-3 overflow-auto p-3 transition ${
+                          dragOverStatus === status ? "bg-indigo-50/70" : ""
+                        }`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          setDragOverStatus(status);
+                        }}
+                        onDragLeave={() => setDragOverStatus((current) => (current === status ? null : current))}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const taskId = e.dataTransfer.getData("text/task-id") || draggedTaskId;
+                          setDragOverStatus(null);
+                          setDraggedTaskId(null);
+                          if (!taskId) return;
+                          const nextStatus = reverseStatusMap[status];
+                          if (!nextStatus) return;
+                          setTaskStatus(taskId, nextStatus);
+                        }}
+                      >
                         {(groupedTasks[status] || []).map((task) => (
                           <button
                             key={task.id}
                             onClick={() => setSelectedTaskId(task.id)}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = "move";
+                              e.dataTransfer.setData("text/task-id", task.id);
+                              setDraggedTaskId(task.id);
+                              setDragOverStatus(null);
+                            }}
+                            onDragEnd={() => {
+                              setDraggedTaskId(null);
+                              setDragOverStatus(null);
+                            }}
                             className={`w-full rounded-3xl border bg-white p-4 text-left shadow-card-elevated transition hover:-translate-y-0.5 hover:shadow-md ${
                               selectedTaskId === task.id ? "border-indigo-500 ring-2 ring-indigo-100" : "border-slate-200"
                             }`}
@@ -576,7 +622,22 @@ export default function TasksPage() {
                           <div className="mt-1 text-sm text-slate-500">{formatDueDate(task.dueDate)}</div>
                         </div>
                         <div className="text-sm text-slate-600">{getCompanyName(task.clientId, clients)}</div>
-                        <div className="text-sm text-slate-600">{mapStatusToUI(task.status)}</div>
+                        <div>
+                          <select
+                            value={task.status}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setTaskStatus(task.id, e.target.value);
+                            }}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 outline-none focus:border-indigo-400"
+                          >
+                            <option value="todo">Inbox</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="review">Review</option>
+                            <option value="completed">Done</option>
+                          </select>
+                        </div>
                         <div>
                           <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${priorityStyles[mapPriorityToUI(task.priority)]}`}>
                             {mapPriorityToUI(task.priority)}
