@@ -181,6 +181,16 @@ router.get("/tasks", isAuthenticated, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
     const tasksList = await storage.getTasks(user);
+    const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
+    const clientId = user?.clientId ? String(user.clientId) : null;
+
+    if (normalizedRole === UserRole.CLIENT) {
+      if (!clientId) {
+        return res.status(400).json({ message: "Client account is not linked to a client profile" });
+      }
+      return res.json(tasksList.filter((task: any) => String(task.clientId || "") === clientId));
+    }
+
     res.json(tasksList);
   } catch (error) {
     console.error("❌ Task fetch error:", error);
@@ -393,10 +403,21 @@ router.post(
   }
 );
 
-router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CLIENT), async (req: Request, res: Response) => {
   try {
     console.log("📥 Backend received task data:", JSON.stringify(req.body, null, 2));
     const validatedData = insertTaskSchema.parse(req.body) as any;
+    const currentUser = req.user as any;
+    const normalizedRole = String(currentUser?.role ?? "").trim().toLowerCase();
+
+    if (normalizedRole === UserRole.CLIENT) {
+      const clientId = currentUser?.clientId ? String(currentUser.clientId) : null;
+      if (!clientId) {
+        return res.status(400).json({ message: "Client account is not linked to a client profile" });
+      }
+      validatedData.clientId = clientId;
+      validatedData.assignedToId = null;
+    }
 
     // Ensure robust recurrence identifiers are present for recurring tasks
     if (validatedData?.isRecurring) {
@@ -643,12 +664,28 @@ Return JSON with:
   }
 });
 
-router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CLIENT), async (req: Request, res: Response) => {
   try {
     const validatedData = insertTaskSchema.partial().strip().parse(req.body) as any;
     const existingTask = await storage.getTask(req.params.id);
     if (!existingTask) {
       return res.status(404).json({ message: "Task not found" });
+    }
+    const currentUser = req.user as any;
+    const normalizedRole = String(currentUser?.role ?? "").trim().toLowerCase();
+    const currentClientId = currentUser?.clientId ? String(currentUser.clientId) : null;
+
+    if (normalizedRole === UserRole.CLIENT) {
+      if (!currentClientId) {
+        return res.status(400).json({ message: "Client account is not linked to a client profile" });
+      }
+      if (String(existingTask.clientId || "") !== currentClientId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // Clients can update workflow progress/status, but cannot reassign or move task ownership
+      delete validatedData.assignedToId;
+      validatedData.clientId = currentClientId;
     }
 
     if (validatedData.status === "completed" && existingTask.status !== "completed") {
@@ -659,7 +696,6 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
 
     const task = await storage.updateTask(req.params.id, validatedData);
     const { userId: currentUserId, role: actorRole } = getCurrentUserContext(req);
-    const currentUser = req.user as any;
     const actorName = currentUser?.firstName || currentUser?.username || 'A team member';
     const { sendPushToUser } = await import('../push');
 
@@ -845,8 +881,23 @@ router.patch("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole
   }
 });
 
-router.delete("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF), async (req: Request, res: Response) => {
+router.delete("/tasks/:id", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANAGER, UserRole.STAFF, UserRole.CLIENT), async (req: Request, res: Response) => {
   try {
+    const existingTask = await storage.getTask(req.params.id);
+    if (!existingTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const currentUser = req.user as any;
+    const normalizedRole = String(currentUser?.role ?? "").trim().toLowerCase();
+    const currentClientId = currentUser?.clientId ? String(currentUser.clientId) : null;
+
+    if (normalizedRole === UserRole.CLIENT) {
+      if (!currentClientId || String(existingTask.clientId || "") !== currentClientId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+    }
+
     await storage.deleteTask(req.params.id);
     res.status(204).send();
   } catch (error) {
@@ -1588,4 +1639,3 @@ router.delete("/tasks/searches/saved/:id", isAuthenticated, async (req: Request,
 });
 
 export default router;
-
