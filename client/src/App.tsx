@@ -16,6 +16,7 @@ import { usePageTracking } from "@/hooks/usePageTracking";
 import AuthPage from "@/pages/auth-page";
 import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
+import ResetPasswordPage from "@/pages/reset-password";
 import PaymentSuccessPage from "@/pages/payment-success";
 import Dashboard from "@/pages/dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
@@ -85,6 +86,7 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/signup" component={SignupPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/payment-success" component={PaymentSuccessPage} />
       {!user && <Route path="/" component={Landing} />}
       {/* Public pages accessible to everyone */}
