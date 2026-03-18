@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getDefaultDashboardPath } from "@/lib/effective-role";
 import { useEffect, useMemo, useState } from "react";
+import { DashboardSwitcher } from "@/components/DashboardSwitcher";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -297,6 +298,9 @@ export default function AdminDashboard() {
               <p className="text-xs md:text-sm text-muted-foreground/80 mt-0.5">
                 {user?.role === 'staff' ? "Here's your daily work overview" : "Here's your agency snapshot"}
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <DashboardSwitcher />
             </div>
           </div>
         </motion.div>
