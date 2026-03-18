@@ -12,6 +12,8 @@ interface PageHeaderProps {
   description?: string;
   actions?: ReactNode;
   breadcrumbs?: BreadcrumbItem[];
+  meta?: ReactNode;
+  variant?: "default" | "premium";
   className?: string;
 }
 
@@ -20,19 +22,43 @@ export function PageHeader({
   description,
   actions,
   breadcrumbs,
+  meta,
+  variant = "default",
   className,
 }: PageHeaderProps) {
+  const isPremium = variant === "premium";
+
   return (
     <header
       className={cn(
-        "border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        className
+        isPremium
+          ? "relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-r from-primary/15 via-violet-500/10 to-transparent shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/70"
+          : "border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        className,
       )}
     >
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6">
+      {isPremium && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-primary/10 via-transparent to-transparent"
+        />
+      )}
+      <div
+        className={cn(
+          "relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 md:px-6",
+          isPremium && "md:gap-6 md:px-8 md:py-6",
+        )}
+      >
         <div className="space-y-1">
           {breadcrumbs && breadcrumbs.length > 0 && (
-            <nav aria-label="Breadcrumb" className="text-xs text-muted-foreground mb-1">
+            <nav
+              aria-label="Breadcrumb"
+              className={cn(
+                "mb-1 text-xs text-muted-foreground",
+                isPremium &&
+                  "text-[11px] uppercase tracking-wide text-muted-foreground/80",
+              )}
+            >
               <ol className="flex items-center gap-1.5 flex-wrap">
                 {breadcrumbs.map((crumb, i) => (
                   <li key={i} className="flex items-center gap-1.5">
@@ -44,10 +70,15 @@ export function PageHeader({
                         {crumb.label}
                       </Link>
                     ) : (
-                      <span className="text-foreground font-medium">{crumb.label}</span>
+                      <span className="text-foreground font-medium">
+                        {crumb.label}
+                      </span>
                     )}
                     {i < breadcrumbs.length - 1 && (
-                      <span className="text-muted-foreground/50" aria-hidden="true">
+                      <span
+                        className="text-muted-foreground/50"
+                        aria-hidden="true"
+                      >
                         /
                       </span>
                     )}
@@ -56,13 +87,37 @@ export function PageHeader({
               </ol>
             </nav>
           )}
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">{title}</h1>
+          <h1
+            className={cn(
+              "font-bold tracking-tight",
+              isPremium
+                ? "text-2xl md:text-3xl lg:text-4xl text-gradient-purple"
+                : "text-xl md:text-2xl",
+            )}
+          >
+            {title}
+          </h1>
           {description && (
-            <p className="text-sm text-muted-foreground max-w-2xl">{description}</p>
+            <p
+              className={cn(
+                "max-w-2xl text-sm text-muted-foreground",
+                isPremium && "text-sm md:text-base lg:text-lg",
+              )}
+            >
+              {description}
+            </p>
           )}
+          {meta && <div className="pt-1">{meta}</div>}
         </div>
         {actions && (
-          <div className="flex items-center gap-2 flex-wrap">{actions}</div>
+          <div
+            className={cn(
+              "flex items-center gap-2 flex-wrap",
+              isPremium && "self-stretch sm:self-auto",
+            )}
+          >
+            {actions}
+          </div>
         )}
       </div>
     </header>
