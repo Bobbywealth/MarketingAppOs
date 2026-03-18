@@ -29,8 +29,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/Logo";
 
 export default function PublicCreatorBooking() {
-  const [, params] = useRoute("/book/:creatorId");
-  const creatorId = params?.creatorId;
+  const [, params] = useRoute("/book/:id");
+  const creatorId = params?.id;
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -393,4 +393,3 @@ export default function PublicCreatorBooking() {
     </div>
   );
 }
-

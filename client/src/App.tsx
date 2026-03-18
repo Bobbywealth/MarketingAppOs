@@ -76,6 +76,7 @@ import Terms from "@/pages/terms";
 import Services from "@/pages/services";
 import About from "@/pages/about";
 import Pricing from "@/pages/pricing";
+import PublicCreatorBooking from "@/pages/public-creator-booking";
 
 function Router() {
   const { user } = useAuth();
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/services" component={Services} />
       <Route path="/about" component={About} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/book/:id" component={PublicCreatorBooking} />
       {/* Client-specific routes */}
       {isClient && <ProtectedRoute path="/" component={ClientDashboard} />}
       {isClient && <ProtectedRoute path="/client-dashboard" component={ClientDashboard} allowedRoles={["client"]} />}
