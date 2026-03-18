@@ -2184,7 +2184,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t pt-8 text-center text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400">
-            Copyright © 2025 Marketing Team App, All rights reserved.
+            Copyright © {new Date().getFullYear()} Marketing Team App, All rights reserved.
           </div>
         </div>
       </footer>

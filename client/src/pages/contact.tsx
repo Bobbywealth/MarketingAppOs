@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { resolveApiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,21 @@ import { HeaderLogo, FooterLogo } from "@/components/Logo";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { BookingModal } from "@/components/BookingModal";
 
+type ContactFormData = {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  message: string;
+  smsOptIn: boolean;
+};
+
+type ContactFieldErrorKey = keyof Pick<ContactFormData, "name" | "email" | "message" | "phone" | "company">;
+
+type ContactApiError = Error & {
+  validationErrors?: Partial<Record<ContactFieldErrorKey, string>>;
+};
+
 export default function ContactPage() {
   useDocumentMeta({
     title: "Contact Marketing Team App | Book a Strategy Call",
@@ -21,6 +36,7 @@ export default function ContactPage() {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<ContactFieldErrorKey, string>>>({});
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -31,24 +47,53 @@ export default function ContactPage() {
   });
 
   const contactMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const response = await apiRequest("POST", "/api/contact", data);
+    mutationFn: async (data: ContactFormData) => {
+      const response = await fetch(resolveApiUrl("/api/contact"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+
       if (!response.ok) {
-        throw new Error("Failed to send message");
+        const parsed = await response.json().catch(() => null);
+        const error = new Error(parsed?.message || "Failed to send message") as ContactApiError;
+
+        if (Array.isArray(parsed?.errors)) {
+          const validationErrors = parsed.errors.reduce(
+            (acc: Partial<Record<ContactFieldErrorKey, string>>, detail: any) => {
+              if (typeof detail?.field === "string" && typeof detail?.message === "string") {
+                const field = detail.field as ContactFieldErrorKey;
+                acc[field] = detail.message;
+              }
+              return acc;
+            },
+            {},
+          );
+
+          if (Object.keys(validationErrors).length > 0) {
+            error.validationErrors = validationErrors;
+          }
+        }
+
+        throw error;
       }
+
       return response.json();
     },
     onSuccess: () => {
+      setFieldErrors({});
       setSubmitted(true);
       toast({
         title: "✅ Message sent!",
         description: "We'll get back to you within 24 hours.",
       });
     },
-    onError: () => {
+    onError: (error: ContactApiError) => {
+      setFieldErrors(error.validationErrors ?? {});
       toast({
         title: "Failed to send message",
-        description: "Please try again or email us directly.",
+        description: error.validationErrors ? "Please fix the highlighted fields and try again." : "Please try again or email us directly.",
         variant: "destructive",
       });
     },
@@ -60,6 +105,11 @@ export default function ContactPage() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const fieldName = e.target.name as ContactFieldErrorKey;
+    if (fieldErrors[fieldName]) {
+      setFieldErrors((prev) => ({ ...prev, [fieldName]: undefined }));
+    }
+
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -151,6 +201,7 @@ export default function ContactPage() {
                           placeholder="Your name"
                           required
                         />
+                        {fieldErrors.name && <p className="text-sm text-red-600 mt-1">{fieldErrors.name}</p>}
                       </div>
 
                       <div>
@@ -165,6 +216,7 @@ export default function ContactPage() {
                           placeholder="your@email.com"
                           required
                         />
+                        {fieldErrors.email && <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>}
                       </div>
 
                       <div>
@@ -178,6 +230,7 @@ export default function ContactPage() {
                           onChange={handleChange}
                           placeholder="(555) 123-4567"
                         />
+                        {fieldErrors.phone && <p className="text-sm text-red-600 mt-1">{fieldErrors.phone}</p>}
                       </div>
 
                       <div>
@@ -190,6 +243,7 @@ export default function ContactPage() {
                           onChange={handleChange}
                           placeholder="Your company name"
                         />
+                        {fieldErrors.company && <p className="text-sm text-red-600 mt-1">{fieldErrors.company}</p>}
                       </div>
 
                       <div>
@@ -204,6 +258,7 @@ export default function ContactPage() {
                           rows={5}
                           required
                         />
+                        {fieldErrors.message && <p className="text-sm text-red-600 mt-1">{fieldErrors.message}</p>}
                       </div>
 
                       {/* SMS Opt-in (Twilio proof-of-consent requirement) */}
@@ -351,5 +406,4 @@ export default function ContactPage() {
     </div>
   );
 }
-
 
