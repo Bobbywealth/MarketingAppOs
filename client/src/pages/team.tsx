@@ -33,6 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, Pencil, Trash2, Shield, Users as UsersIcon, CheckCircle2, Settings2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 
 interface User {
@@ -61,6 +62,9 @@ const SIDEBAR_PERMISSIONS = sidebarPermissionList;
 type PermissionOption = (typeof SIDEBAR_PERMISSIONS)[number];
 
 export default function UserManagementPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [permissionsDialogUser, setPermissionsDialogUser] = useState<User | null>(null);
@@ -642,19 +646,21 @@ export default function UserManagementPage() {
                         </DialogContent>
                       </Dialog>
 
-                      {/* Delete Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete ${user.username}?`)) {
-                            deleteUserMutation.mutate(user.id);
-                          }
-                        }}
-                        disabled={user.role === "admin" && users.filter((u) => u.role === "admin").length === 1}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      {/* Delete Button - only visible to admins */}
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete ${user.username}?`)) {
+                              deleteUserMutation.mutate(user.id);
+                            }
+                          }}
+                          disabled={user.role === "admin" && users.filter((u) => u.role === "admin").length === 1}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
