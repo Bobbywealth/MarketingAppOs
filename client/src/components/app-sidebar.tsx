@@ -21,7 +21,25 @@ import {
   Settings,
   Sparkles,
   FileText,
-  BookOpen
+  BookOpen,
+  CreditCard,
+  Building2,
+  Briefcase,
+  Send,
+  Smartphone,
+  Folder,
+  Target,
+  Star,
+  Award,
+  GraduationCap,
+  Bell,
+  Activity,
+  FileCode,
+  Wallet,
+  Tags,
+  Zap,
+  PanelLeft,
+  Bug
 } from "lucide-react";
 import {
   Sidebar,
@@ -62,54 +80,23 @@ type NavItem = {
 const navigationItems: NavItem[] = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    title: "CRM",
-    url: "/crm",
-    icon: Users,
-    items: [
-      { title: "Leads", url: "/leads", icon: UserPlus },
-      { title: "Contacts", url: "/contacts", icon: Users },
-      { title: "Deals", url: "/deals", icon: DollarSign },
-      { title: "Accounts", url: "/accounts", icon: Package },
-    ]
+    title: "Clients",
+    url: "/clients",
+    icon: Building2,
   },
   {
-    title: "Marketing",
-    url: "/marketing",
+    title: "Leads",
+    url: "/leads",
+    icon: Target,
+  },
+  {
+    title: "Campaigns",
+    url: "/campaigns",
     icon: Megaphone,
-    items: [
-      { title: "Campaigns", url: "/campaigns", icon: Megaphone },
-      { title: "Email", url: "/email-marketing", icon: Mail },
-      { title: "SMS", url: "/sms", icon: MessageSquare },
-      { title: "Social", url: "/social", icon: Globe },
-    ]
-  },
-  {
-    title: "Sales",
-    url: "/sales",
-    icon: TrendingUp,
-    items: [
-      { title: "Pipeline", url: "/pipeline", icon: TrendingUp },
-      { title: "Quotes", url: "/quotes", icon: FileText },
-      { title: "Orders", url: "/orders", icon: ClipboardCheck },
-    ]
-  },
-  {
-    title: "Support",
-    url: "/support",
-    icon: Ticket,
-    items: [
-      { title: "Tickets", url: "/tickets", icon: Ticket },
-      { title: "Knowledge Base", url: "/knowledge-base", icon: BookOpen },
-    ]
-  },
-  {
-    title: "Calendar",
-    url: "/calendar",
-    icon: Calendar,
   },
   {
     title: "Tasks",
@@ -117,18 +104,54 @@ const navigationItems: NavItem[] = [
     icon: ListTodo,
   },
   {
-    title: "Reports",
-    url: "/reports",
-    icon: BarChart3,
-    items: [
-      { title: "Analytics", url: "/analytics", icon: BarChart3 },
-      { title: "Performance", url: "/performance", icon: TrendingUp },
-    ]
+    title: "Pipeline",
+    url: "/pipeline",
+    icon: TrendingUp,
   },
   {
-    title: "AI Assistant",
-    url: "/ai-assistant",
-    icon: Sparkles,
+    title: "Content",
+    url: "/content",
+    icon: Folder,
+  },
+  {
+    title: "Invoices",
+    url: "/invoices",
+    icon: CreditCard,
+  },
+  {
+    title: "Website Projects",
+    url: "/website-projects",
+    icon: Globe,
+  },
+  {
+    title: "Analytics",
+    url: "/analytics",
+    icon: BarChart3,
+  },
+  {
+    title: "Messages",
+    url: "/messages",
+    icon: MessageSquare,
+  },
+  {
+    title: "Emails",
+    url: "/emails",
+    icon: Mail,
+  },
+  {
+    title: "Phone",
+    url: "/phone",
+    icon: Smartphone,
+  },
+  {
+    title: "Calendar",
+    url: "/company-calendar",
+    icon: Calendar,
+  },
+  {
+    title: "Marketing Center",
+    url: "/marketing-center",
+    icon: Zap,
   },
   {
     title: "Team",
@@ -136,9 +159,9 @@ const navigationItems: NavItem[] = [
     icon: UsersRound,
   },
   {
-    title: "Phone",
-    url: "/phone",
-    icon: Phone,
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
   },
 ];
 
