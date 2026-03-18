@@ -21,12 +21,15 @@ import { DashboardSwitcher } from "@/components/DashboardSwitcher";
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
-  const { role, isAdmin } = usePermissions();
+  const { role, isAdmin, isLoading: permissionsLoading } = usePermissions();
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
+    // Only redirect after permissions are loaded and user is confirmed not to be admin
+    if (permissionsLoading) return;
+    if (!user) return;
     if (!isAdmin) navigate(getDefaultDashboardPath(role));
-  }, [isAdmin, navigate, role]);
+  }, [isAdmin, navigate, role, user, permissionsLoading]);
   
   const { data: stats, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/dashboard/admin-stats"],
