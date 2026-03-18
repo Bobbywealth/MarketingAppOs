@@ -71,6 +71,7 @@ import Demo from "@/pages/demo";
 import Blog from "@/pages/blog";
 import Contact from "@/pages/contact";
 import CreatorSignup from "@/pages/creator-signup";
+import CreatorSignupRedirectPage from "@/pages/creator-signup-redirect";
 import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import Services from "@/pages/services";
@@ -93,7 +94,10 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:slug" component={Blog} />
       <Route path="/contact" component={Contact} />
-      <Route path="/become-creator" component={CreatorSignup} />
+      <Route path="/signup/creator" component={CreatorSignup} />
+      {/* Legacy aliases redirect to canonical creator signup URL */}
+      <Route path="/become-creator" component={CreatorSignupRedirectPage} />
+      <Route path="/creator-signup" component={CreatorSignupRedirectPage} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
       <Route path="/services" component={Services} />

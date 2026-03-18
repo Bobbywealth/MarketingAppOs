@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 
 /**
- * Backwards-compatible route: /creator-signup
+ * Backwards-compatible routes: /creator-signup, /become-creator
  * Canonical route: /signup/creator
  */
 export default function CreatorSignupRedirectPage() {
@@ -12,7 +12,7 @@ export default function CreatorSignupRedirectPage() {
     // Replace the URL in-place so shared links converge on the canonical route.
     try {
       const { pathname, search, hash } = window.location;
-      if (pathname === "/creator-signup") {
+      if (pathname === "/creator-signup" || pathname === "/become-creator") {
         window.history.replaceState(null, "", `/signup/creator${search}${hash}`);
       }
     } catch {
@@ -24,5 +24,4 @@ export default function CreatorSignupRedirectPage() {
 
   return null;
 }
-
 
