@@ -3398,16 +3398,16 @@ export default function LeadsPage() {
               <PipelineCard
                 title="New Leads"
                 value={leadStats.new}
-                change="12%"
-                trend="up"
+                change={leadStats.new > 0 ? "+12%" : "N/A"}
+                trend={leadStats.new > 0 ? "up" : "neutral"}
                 color="bg-blue-50 text-blue-600"
                 icon={Target}
               />
               <PipelineCard
                 title="Engaged"
                 value={leadStats.contacted}
-                change="Interactions"
-                trend="up"
+                change={leadStats.contacted > 0 ? "Interactions" : "N/A"}
+                trend={leadStats.contacted > 0 ? "up" : "neutral"}
                 timeframe="Pipeline"
                 color="bg-emerald-50 text-emerald-600"
                 icon={Zap}
@@ -3415,19 +3415,19 @@ export default function LeadsPage() {
               <PipelineCard
                 title="Active Deals"
                 value={leadStats.qualified}
-                change="321+"
-                trend="up"
+                change={leadStats.qualified > 0 ? "Deals" : "N/A"}
+                trend={leadStats.qualified > 0 ? "up" : "neutral"}
                 color="bg-indigo-50 text-indigo-600"
                 icon={Calendar}
               />
               <PipelineCard
                 title="Revenue Potential"
                 value={`$${(leads.reduce((sum, l) => sum + (Number(l.value) || 0), 0) / 100).toLocaleString()}`}
-                change="AI Score"
-                trend="up"
+                change={leads.length > 0 ? "Total Value" : "N/A"}
+                trend={leads.length > 0 ? "up" : "neutral"}
                 color="bg-slate-50 text-slate-600"
                 icon={TrendingUp}
-                score="54"
+                score={leads.length > 0 ? "54" : undefined}
               />
             </div>
           </div>

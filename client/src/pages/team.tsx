@@ -518,12 +518,21 @@ export default function UserManagementPage() {
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${user.isActive !== false ? 'bg-green-500' : 'bg-gray-300'}`} />
-                        <span className="text-sm text-muted-foreground">
-                          {user.lastLogin 
-                            ? `${new Date(user.lastLogin).toLocaleDateString()}` 
-                            : 'Never'}
-                        </span>
+                        {user.lastLogin ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(user.lastLogin).toLocaleDateString()}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-gray-300" />
+                            <span className="text-sm text-muted-foreground">
+                              Never logged in
+                            </span>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>

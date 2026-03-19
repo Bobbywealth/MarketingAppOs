@@ -1486,15 +1486,48 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       const limit = parseInt(_req.query.limit as string) || 100;
       const offset = parseInt(_req.query.offset as string) || 0;
       
-      // Only fetch lightweight data and minimal records for activity feed
-      const [clients, campaigns, leads, tasks, invoices] = await Promise.all([
-        storage.getClients(), // Small dataset, usually < 100 records
-        storage.getCampaigns(), // Small dataset
-        storage.getLeads(), // Could be large, but we need value calc
-        storage.getTasks(), // Could be large
-        storage.getInvoices(),
-        // storage.getActivityLogs(15), // DISABLED - causing database errors
-      ]);
+      // Fetch data with individual try-catch for each to isolate failures
+      let clients, campaigns, leads, tasks, invoices;
+      
+      try {
+        clients = await storage.getClients();
+        console.log("✅ Clients fetched:", clients?.length || 0);
+      } catch (err: any) {
+        console.error("❌ Error fetching clients:", err.message);
+        clients = [];
+      }
+      
+      try {
+        campaigns = await storage.getCampaigns();
+        console.log("✅ Campaigns fetched:", campaigns?.length || 0);
+      } catch (err: any) {
+        console.error("❌ Error fetching campaigns:", err.message);
+        campaigns = [];
+      }
+      
+      try {
+        leads = await storage.getLeads();
+        console.log("✅ Leads fetched:", leads?.length || 0);
+      } catch (err: any) {
+        console.error("❌ Error fetching leads:", err.message);
+        leads = [];
+      }
+      
+      try {
+        tasks = await storage.getTasks();
+        console.log("✅ Tasks fetched:", tasks?.length || 0);
+      } catch (err: any) {
+        console.error("❌ Error fetching tasks:", err.message);
+        tasks = [];
+      }
+      
+      try {
+        invoices = await storage.getInvoices();
+        console.log("✅ Invoices fetched:", invoices?.length || 0);
+      } catch (err: any) {
+        console.error("❌ Error fetching invoices:", err.message);
+        invoices = [];
+      }
       
       // Create empty activity logs to prevent errors
       const activityLogs: any[] = [];

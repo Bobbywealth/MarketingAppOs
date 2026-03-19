@@ -1,0 +1,2 @@
+{"timestamp":1773930984874,"level":"error","location":"telegram:mtproto","message":"Failed to initialize MTProto","data":{"correlationId":"mmxkpg2w-q7abuqm5","error":"Not a valid string","initFailureCount":1}}
+{"timestamp":1773930984872,"level":"info","location":"telegram:mtproto","message":"Initializing Telegram MTProto client","data":{"correlationId":"mmxkpg2w-q7abuqm5","apiIdConfigured":true,"sessionConfigured":true,"initAttemptCount":1}}
