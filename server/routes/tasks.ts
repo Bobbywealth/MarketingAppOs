@@ -923,6 +923,12 @@ router.patch("/tasks/bulk", isAuthenticated, requireRole(UserRole.ADMIN, UserRol
       return res.status(400).json({ message: "updates object is required" });
     }
     
+    // Validate taskIds are valid UUIDs before using in query
+    const validTaskIds = taskIds.filter((id: string) => /^[a-f0-9-]{36}$/.test(id));
+    if (validTaskIds.length === 0) {
+      return res.status(400).json({ message: "Invalid task IDs format" });
+    }
+    
     // Validate updates against schema
     const validatedUpdates = insertTaskSchema.partial().strip().parse(updates) as any;
     
@@ -936,11 +942,11 @@ router.patch("/tasks/bulk", isAuthenticated, requireRole(UserRole.ADMIN, UserRol
     // Add updated timestamp
     validatedUpdates.updatedAt = new Date();
     
-    // Perform bulk update
+    // Perform bulk update using safe parameterized query with sql()
     const results = await db
       .update(tasks)
       .set(validatedUpdates)
-      .where(sql`${tasks.id} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`)
+      .where(sql`${tasks.id} IN (${sql.join(validTaskIds.map(id => sql`${id}`), sql`, `)})`)
       .returning();
     
     res.json({
@@ -963,19 +969,25 @@ router.delete("/tasks/bulk", isAuthenticated, requireRole(UserRole.ADMIN, UserRo
       return res.status(400).json({ message: "taskIds must be a non-empty array" });
     }
     
-    // Delete task comments first (cascade)
-    await db.delete(taskComments).where(sql`${taskComments.taskId} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+    // Validate taskIds are valid UUIDs before using in query
+    const validTaskIds = taskIds.filter((id: string) => /^[a-f0-9-]{36}$/.test(id));
+    if (validTaskIds.length === 0) {
+      return res.status(400).json({ message: "Invalid task IDs format" });
+    }
     
-    // Delete task dependencies
-    await db.delete(taskDependencies).where(sql`${taskDependencies.taskId} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+    // Delete task comments first (cascade) - use parameterized query
+    await db.delete(taskComments).where(sql`${taskComments.taskId} IN (${sql.join(validTaskIds.map(id => sql`${id}`), sql`, `)})`);
     
-    // Delete task attachments
-    await db.delete(taskAttachments).where(sql`${taskAttachments.taskId} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+    // Delete task dependencies - use parameterized query
+    await db.delete(taskDependencies).where(sql`${taskDependencies.taskId} IN (${sql.join(validTaskIds.map(id => sql`${id}`), sql`, `)})`);
     
-    // Delete the tasks
+    // Delete task attachments - use parameterized query
+    await db.delete(taskAttachments).where(sql`${taskAttachments.taskId} IN (${sql.join(validTaskIds.map(id => sql`${id}`), sql`, `)})`);
+    
+    // Delete the tasks - use parameterized query
     const result = await db
       .delete(tasks)
-      .where(sql`${tasks.id} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`)
+      .where(sql`${tasks.id} IN (${sql.join(validTaskIds.map(id => sql`${id}`), sql`, `)})`)
       .returning({ id: tasks.id });
     
     res.json({
@@ -999,11 +1011,17 @@ router.post("/tasks/duplicate", isAuthenticated, requireRole(UserRole.ADMIN, Use
       return res.status(400).json({ message: "taskIds must be a non-empty array" });
     }
     
-    // Fetch original tasks
+    // Validate taskIds are valid UUIDs before using in query
+    const validTaskIds = taskIds.filter((id: string) => /^[a-f0-9-]{36}$/.test(id));
+    if (validTaskIds.length === 0) {
+      return res.status(400).json({ message: "Invalid task IDs format" });
+    }
+    
+    // Fetch original tasks - use parameterized query
     const originalTasks = await db
       .select()
       .from(tasks)
-      .where(sql`${tasks.id} IN ${sql.raw(`(${taskIds.map(id => `'${id}'`).join(',')})`)}`);
+      .where(sql`${tasks.id} IN (${sql.join(validTaskIds.map(id => sql`${id}`), sql`, `)})`);
     
     if (originalTasks.length === 0) {
       return res.status(404).json({ message: "No tasks found" });

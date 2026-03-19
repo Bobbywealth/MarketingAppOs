@@ -91,6 +91,7 @@ export default function Clients() {
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("none");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -918,11 +919,7 @@ export default function Clients() {
                 variant="destructive"
                 size="sm"
                 onClick={() => {
-                  if (confirm(`Delete ${selectedClients.size} clients?`)) {
-                    bulkDeleteClientsMutation.mutate(
-                      Array.from(selectedClients),
-                    );
-                  }
+                  setBulkDeleteDialogOpen(true);
                 }}
                 disabled={bulkDeleteClientsMutation.isPending}
               >
@@ -1911,6 +1908,33 @@ export default function Clients() {
                 }}
               >
                 Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedClients.size} Clients?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This is a bulk action and cannot be undone. You are about to permanently delete {selectedClients.size} clients and all their associated data. This could include tasks, invoices, content, and other records.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setBulkDeleteDialogOpen(false)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  bulkDeleteClientsMutation.mutate(Array.from(selectedClients));
+                  setBulkDeleteDialogOpen(false);
+                }}
+                disabled={bulkDeleteClientsMutation.isPending}
+              >
+                {bulkDeleteClientsMutation.isPending ? "Deleting..." : `Delete ${selectedClients.size} Clients`}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

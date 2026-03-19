@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,13 +15,14 @@ export function DashboardSwitcher() {
   const [activeRole, setActiveRole] = useState<string | null>(
     localStorage.getItem("admin_role_override")
   );
+  const [, setLocation] = useLocation();
 
   const roles = [
-    { id: "admin", label: "Admin View", icon: Shield },
-    { id: "staff", label: "Staff View", icon: Users },
-    { id: "client", label: "Client View", icon: User },
-    { id: "sales_agent", label: "Sales Agent View", icon: UserPlus },
-    { id: "creator", label: "Creator View", icon: Star },
+    { id: "admin", label: "Admin View", icon: Shield, path: "/dashboard" },
+    { id: "staff", label: "Staff View", icon: Users, path: "/dashboard-staff" },
+    { id: "client", label: "Client View", icon: User, path: "/dashboard-client" },
+    { id: "sales_agent", label: "Sales Agent View", icon: UserPlus, path: "/dashboard-sales" },
+    { id: "creator", label: "Creator View", icon: Star, path: "/dashboard-creator" },
   ];
 
   const handleRoleChange = (roleId: string) => {
@@ -31,7 +33,14 @@ export function DashboardSwitcher() {
       localStorage.setItem("admin_role_override", roleId);
       setActiveRole(roleId);
     }
-    window.location.reload();
+    // Find the target path and navigate without full page reload
+    const targetRole = roles.find((r) => r.id === roleId);
+    if (targetRole) {
+      setLocation(targetRole.path);
+    } else {
+      // Default to admin dashboard
+      setLocation("/dashboard");
+    }
   };
 
   const currentRoleLabel = roles.find((r) => r.id === (activeRole || "admin"))?.label;
