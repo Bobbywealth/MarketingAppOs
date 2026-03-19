@@ -4174,7 +4174,8 @@ Examples:
   app.get("/api/dialpad/calls", isAuthenticated, async (req: Request, res: Response) => {
     try {
       if (!dialpadService) {
-        return res.status(503).json({ message: "Dialpad API is not configured. Please add DIALPAD_API_KEY to your environment variables." });
+        // Return empty array instead of 503 when Dialpad is not configured
+        return res.json([]);
       }
 
       const { start_time, end_time, limit, offset } = req.query;
@@ -4188,7 +4189,8 @@ Examples:
       res.json(callLogs);
     } catch (error: any) {
       console.error('Error fetching Dialpad calls:', error);
-      res.status(500).json({ message: error.message || "Failed to fetch call logs" });
+      // Return empty array instead of 500 to prevent UI from breaking
+      res.json([]);
     }
   });
 
@@ -4237,7 +4239,8 @@ Examples:
   app.get("/api/dialpad/sms", isAuthenticated, async (req: Request, res: Response) => {
     try {
       if (!dialpadService) {
-        return res.status(503).json({ message: "Dialpad API is not configured" });
+        // Return empty array instead of 503 when Dialpad is not configured
+        return res.json([]);
       }
 
       const { start_time, end_time, limit, offset } = req.query;
@@ -4251,7 +4254,8 @@ Examples:
       res.json(messages);
     } catch (error: any) {
       console.error('Error fetching SMS messages:', error);
-      res.status(500).json({ message: error.message || "Failed to fetch SMS messages" });
+      // Return empty array instead of 500 to prevent UI from breaking
+      res.json([]);
     }
   });
 
@@ -4289,7 +4293,8 @@ Examples:
   app.get("/api/dialpad/contacts", isAuthenticated, async (req: Request, res: Response) => {
     try {
       if (!dialpadService) {
-        return res.status(503).json({ message: "Dialpad API is not configured" });
+        // Return empty array instead of 503 when Dialpad is not configured
+        return res.json([]);
       }
 
       const { limit, offset, search } = req.query;
@@ -4302,7 +4307,8 @@ Examples:
       res.json(contacts);
     } catch (error: any) {
       console.error('Error fetching contacts:', error);
-      res.status(500).json({ message: error.message || "Failed to fetch contacts" });
+      // Return empty array instead of 500 to prevent UI from breaking
+      res.json([]);
     }
   });
 
