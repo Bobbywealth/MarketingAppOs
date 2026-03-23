@@ -38,6 +38,20 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
   const correlationId = buildCorrelationId();
   mtprotoEventCounters.initAttempts += 1;
 
+  // Debug: Log raw environment variables
+  debugLog({
+    level: 'info',
+    location: 'telegram:mtproto',
+    message: 'Environment variables check',
+    data: {
+      correlationId,
+      rawApiIdEnv: process.env.TELEGRAM_API_ID,
+      rawApiHashEnv: process.env.TELEGRAM_API_HASH ? '[REDACTED]' : 'UNDEFINED',
+      rawPhoneEnv: process.env.TELEGRAM_PHONE_NUMBER ? '[REDACTED]' : 'UNDEFINED',
+      rawSessionEnv: process.env.TELEGRAM_SESSION_STRING ? `${process.env.TELEGRAM_SESSION_STRING.substring(0, 10)}...` : 'UNDEFINED',
+    },
+  });
+
   if (!apiId || !apiHash) {
     debugLog({
       level: 'warn',
@@ -47,6 +61,7 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
         correlationId,
         hasApiId: Boolean(apiId),
         hasApiHash: Boolean(apiHash),
+        apiIdValue: apiId,
         eventCount: mtprotoEventCounters.initAttempts,
       },
     });
@@ -72,10 +87,30 @@ async function initializeMTProto(): Promise<TelegramClient | null> {
         data: {
           correlationId,
           apiIdConfigured: Boolean(apiId),
+          apiIdValue: apiId,
           sessionConfigured: sessionString.length > 0,
+          sessionStringLength: sessionString.length,
+          sessionStringPreview: sessionString.substring(0, 20) + '...',
+          sessionStringFirstChar: sessionString.charAt(0),
           initAttemptCount: mtprotoEventCounters.initAttempts,
         },
       });
+      
+      // Validate session string format before creating StringSession
+      if (!sessionString || sessionString.length < 10) {
+        debugLog({
+          level: 'error',
+          location: 'telegram:mtproto',
+          message: 'Session string invalid - too short or empty',
+          data: {
+            correlationId,
+            sessionStringLength: sessionString?.length || 0,
+            sessionStringValue: sessionString || 'EMPTY/UNDEFINED',
+          },
+        });
+        clientInitializing = null;
+        return null;
+      }
       
       // Properly deserialize the session string using StringSession
       const session = new StringSession(sessionString);
