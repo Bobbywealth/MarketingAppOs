@@ -67,7 +67,6 @@ export default function Pipeline() {
   const { data: leads, isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
   });
-  console.log("DEBUG: pipeline leads received:", leads?.length, leads);
 
   const createLeadMutation = useMutation({
     mutationFn: async (data: InsertLead) => {

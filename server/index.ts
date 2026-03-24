@@ -46,6 +46,11 @@ app.get("/uploads/:filename", (req, res, next) => {
     const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
     const filePath = path.join(UPLOAD_DIR, req.params.filename);
 
+    // Path traversal protection: ensure resolved path is within UPLOAD_DIR
+    if (!filePath.startsWith(UPLOAD_DIR)) {
+      return res.status(403).send('Forbidden');
+    }
+
     if (existsSync(filePath)) {
       const ext = path.extname(req.params.filename).toLowerCase();
       const mimeTypes: Record<string, string> = {

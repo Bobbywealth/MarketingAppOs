@@ -43,9 +43,6 @@ router.get("/task-spaces", isAuthenticated, async (req: Request, res: Response) 
     const normalizedRole = String(user?.role ?? "").trim().toLowerCase();
     const userId = user?.id ? Number(user.id) : null;
     
-    // DEBUG: Log spaces fetch
-    console.log(`📋 Spaces fetch for user: id=${userId}, role=${normalizedRole}`);
-
     // Admin and Managers see all spaces
     const isAllAccess = normalizedRole === "admin" || normalizedRole === "manager" || normalizedRole === "creator_manager";
     
@@ -53,7 +50,6 @@ router.get("/task-spaces", isAuthenticated, async (req: Request, res: Response) 
       ? await storage.getTaskSpaces()
       : (userId ? await storage.getTaskSpacesForAssignee(userId) : []);
 
-    console.log(`📋 Returning ${spaces.length} spaces for ${normalizedRole}`);
     res.json(spaces);
   } catch (error) {
     console.error("❌ Task spaces fetch error:", error);
@@ -454,9 +450,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
 
       // Email notification
       try {
-        console.log(`📧 Task assignment email check - Task ID: ${task.id}, Assigned to: ${task.assignedToId}`);
         const assignee = await storage.getUser(String(task.assignedToId));
-        console.log(`📧 Assignee found:`, assignee ? { id: assignee.id, email: assignee.email, name: assignee.firstName || assignee.username } : 'Not found');
         
         if (assignee?.email) {
           const { emailNotifications } = await import('../emailService');
@@ -464,10 +458,8 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
           
           // Respect preferences
           const prefs = await storage.getUserNotificationPreferences(assignee.id);
-          console.log(`📧 User notification preferences:`, prefs);
           
           if (prefs?.emailNotifications !== false && prefs?.taskUpdates !== false) {
-            console.log(`📧 Sending task assignment email to ${assignee.email}...`);
             void emailNotifications.sendTaskAssignedEmail(
               assigneeName,
               assignee.email,
@@ -477,11 +469,7 @@ router.post("/tasks", isAuthenticated, requireRole(UserRole.ADMIN, UserRole.MANA
               task.dueDate ? task.dueDate.toISOString() : null,
               creatorName
             ).catch(err => console.error('Failed to send task assignment email:', err));
-          } else {
-            console.log(`📧 Email not sent - User has disabled email notifications or task updates`);
           }
-        } else {
-          console.log(`📧 Email not sent - Assignee has no email address`);
         }
       } catch (emailErr) {
         console.error('Error triggered during task assignment email:', emailErr);

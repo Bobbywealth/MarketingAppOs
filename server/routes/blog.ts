@@ -116,23 +116,13 @@ router.post(
   requirePermission("canManageContent"),
   async (req: Request, res: Response) => {
     try {
-      const user = req.user as any;
-      console.log(`📝 POST /api/admin/blog-posts by user: ${user?.username} (Role: ${user?.role})`);
       const body = req.body ?? {};
-      console.log("Payload body:", JSON.stringify(body, null, 2));
       
       const title = String(body.title || "");
-      console.log("Processing title:", title);
       const desiredSlug = String(body.slug || slugify(title));
-      console.log("Desired slug:", desiredSlug);
       const slug = await ensureUniqueSlug(desiredSlug);
-      console.log("Final unique slug:", slug);
-      
-      console.log("DB object status:", !!db ? "Defined" : "UNDEFINED!");
-      console.log("blogPosts table status:", !!blogPosts ? "Defined" : "UNDEFINED!");
 
       const tags = normalizeTags(body.tags);
-      console.log("Normalized tags:", tags);
 
       const validated = insertBlogPostSchema.parse({
         ...body,
@@ -140,7 +130,6 @@ router.post(
         tags,
         publishedAt: body.publishedAt ?? null,
       });
-      console.log("Zod validation successful");
 
       const shouldAutoPublishAt =
         validated.status === "published" && (validated.publishedAt == null);

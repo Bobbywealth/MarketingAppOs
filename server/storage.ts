@@ -604,8 +604,6 @@ export class DatabaseStorage implements IStorage {
     }
     
     const clientList = await query;
-    console.log("🔍 getClients() called - Found", clientList.length, "clients");
-    console.log("   Client IDs:", clientList.map(c => c.id).join(", "));
     return clientList;
   }
 
@@ -1595,7 +1593,6 @@ export class DatabaseStorage implements IStorage {
   }> {
     // For now, return default preferences (all enabled)
     // In the future, this should query a notification_preferences table
-    console.log(`📧 Getting notification preferences for user ${userId} - returning defaults (all enabled)`);
     return {
       emailNotifications: true,
       taskUpdates: true,

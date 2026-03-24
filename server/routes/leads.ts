@@ -29,7 +29,6 @@ const router = Router();
 router.get("/", isAuthenticated, requirePermission("canManageLeads"), async (_req: Request, res: Response) => {
   try {
     const all = await storage.getLeads();
-    console.log("DEBUG: API /api/leads returning", all.length, "leads");
     res.json(all);
   } catch (error) {
     console.error(error);

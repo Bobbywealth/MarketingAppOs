@@ -732,8 +732,6 @@ export const marketingTemplates = {
 
 // Send email function
 export async function sendEmail(to: string | string[], subject: string, html: string, options?: { from?: string, fromName?: string }) {
-  console.log(`📧 sendEmail called - To: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject}`);
-  
   if (!transporter) {
     console.warn('⚠️  Email not sent - service not configured (transporter is null)');
     return { success: false, message: 'Email service not configured' };
@@ -741,14 +739,11 @@ export async function sendEmail(to: string | string[], subject: string, html: st
 
   // Log circuit breaker state
   const circuitState = emailCircuit.getState();
-  console.log(`📧 Email send attempt - Circuit state: ${circuitState}, To: ${Array.isArray(to) ? to.join(', ') : to}, Subject: ${subject}`);
   
   try {
     const fromEmail = options?.from || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'business@marketingteam.app';
     const fromName = options?.fromName || process.env.SMTP_FROM_NAME || 'Marketing Team';
     const logoAttachment = maybeGetLogoAttachment();
-    
-    console.log(`📧 Attempting to send email via SMTP... From: ${fromName} <${fromEmail}>`);
     
     const info = await emailCircuit.execute(() =>
       transporter!.sendMail({
@@ -762,7 +757,6 @@ export async function sendEmail(to: string | string[], subject: string, html: st
     );
     
     log(`✅ Email sent successfully: ${info.messageId}`, "email");
-    console.log(`✅ Email sent successfully - Message ID: ${info.messageId}, To: ${Array.isArray(to) ? to.join(', ') : to}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

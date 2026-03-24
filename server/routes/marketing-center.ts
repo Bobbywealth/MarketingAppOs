@@ -433,7 +433,15 @@ router.get("/db-status", async (_req: Request, res: Response) => {
       return out;
     }
 
+    // Whitelist of allowed table names to prevent SQL injection
+    const ALLOWED_AUDIENCE_TABLES = ['leads', 'clients'];
+    
     async function safeCountsForAudienceTable(table: string) {
+      // Validate table name against whitelist to prevent SQL injection
+      if (!ALLOWED_AUDIENCE_TABLES.includes(table)) {
+        return { exists: false, total: null as number | null, optedIn: null as number | null, optedInSupported: false, error: 'Invalid table name' };
+      }
+      
       const exists = await tableExists(table);
       if (!exists) {
         return { exists: false, total: null as number | null, optedIn: null as number | null, optedInSupported: false, error: null as string | null };

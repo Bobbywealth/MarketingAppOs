@@ -88,18 +88,12 @@ export async function checkAndNotifyTaskDeadlines(userId: number) {
 
       // Send Email
       if (emailEnabled && userEmail) {
-        console.log(`📧 Sending task due reminder email to ${userEmail} for task "${task.title}" (${hoursDiff} hours until due)`);
         void emailNotifications
           .sendTaskDueReminder(userName, userEmail, task.title, task.dueDate.toISOString())
-          .then((result) => {
-            console.log(`📧 Task reminder email result:`, result);
-          })
           .catch((err) => {
             console.error(`❌ Failed to send task reminder email:`, err);
             log(`Failed to send task reminder email: ${err.message}`, "notifications");
           });
-      } else {
-        console.log(`📧 Task reminder email not sent - emailEnabled: ${emailEnabled}, userEmail: ${userEmail ? 'set' : 'not set'}`);
       }
 
       // Send Push

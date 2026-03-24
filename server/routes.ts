@@ -615,17 +615,11 @@ This lead will be updated if they complete the full signup process.`,
         // clientId column doesn't exist yet, skip it
       }
 
-      console.log('📝 Creating early lead with data:', leadData);
       const lead = await storage.createLead(leadData);
-      console.log('✅ Early lead created successfully:', lead.id);
       
       res.json({ success: true, leadId: lead.id });
     } catch (error) {
       console.error('❌ Early lead capture error:', error);
-      console.error('Error details:', {
-        message: error?.message,
-        stack: error?.stack,
-      });
       return res.status(500).json({ 
         success: false, 
         message: "Failed to create lead. Please try again." 
@@ -644,7 +638,6 @@ This lead will be updated if they complete the full signup process.`,
       });
 
       const data = auditSchema.parse(req.body);
-      console.log('🔍 Running social media audit for:', data.website);
 
       // Generate audit report using existing AuditService
       const auditReport = await AuditService.generateAuditReport({
@@ -658,7 +651,6 @@ This lead will be updated if they complete the full signup process.`,
         youtubeUrl: "",
       });
 
-      console.log('✅ Social media audit completed');
       res.json({
         success: true,
         ...auditReport,
@@ -705,8 +697,6 @@ This lead will be updated if they complete the full signup process.`,
       });
 
       const data = signupSchema.parse(req.body);
-      console.log('📝 Processing simplified signup for:', data.email);
-
       // Check for existing lead and update it
       const existingLeads = await storage.getLeads();
       const existingLead = existingLeads.find(l => l.email === data.email);
@@ -954,7 +944,6 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
             },
           });
           leadId = existingLead.id;
-          console.log(`✅ Updated existing lead ${existingLead.id} with complete audit data`);
         } else {
           // Create new lead if somehow early capture didn't work
           const leadScore = auditReport ? (auditReport.summary.totalIssues >= 5 ? "hot" : "warm") : "warm";
@@ -980,7 +969,6 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
           };
           const newLead = await storage.createLead(leadData);
           leadId = newLead.id;
-          console.log(`✅ Created new lead ${newLead.id} with complete audit data`);
         }
         
         res.json({ 
@@ -1116,12 +1104,9 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
         return res.status(404).json({ message: "No active email account found" });
       }
 
-      console.log(`✓ Found email account: ${account.email}`);
-
       // Check if token is expired and refresh if needed
       let accessToken = account.accessToken;
       if (account.tokenExpiresAt && new Date(account.tokenExpiresAt) < new Date()) {
-        console.log(`🔄 Token expired, refreshing...`);
         const refreshed = await microsoftAuth.refreshAccessToken(account.refreshToken!);
         accessToken = refreshed.accessToken;
         
@@ -1130,7 +1115,6 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
           refreshToken: refreshed.refreshToken,
           tokenExpiresAt: refreshed.expiresOn,
         });
-        console.log(`✓ Token refreshed successfully`);
       }
 
       // Fetch emails from Microsoft
@@ -1138,9 +1122,7 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
       let syncedCount = 0;
 
       for (const folder of folders) {
-        console.log(`📥 Fetching emails from ${folder}...`);
         const messages = await microsoftAuth.getEmails(accessToken!, folder, 50);
-        console.log(`✓ Fetched ${messages.length} emails from ${folder}`);
 
         // Batch check existing emails by message IDs
         const messageIds = messages.map(m => m.id);
@@ -1185,17 +1167,9 @@ ${data.notes ? `\n💬 ADDITIONAL NOTES:\n${data.notes}` : ''}`;
         lastSyncedAt: new Date(),
       });
 
-      console.log(`✅ Email sync completed: ${syncedCount} new emails synced`);
       res.json({ success: true, syncedCount });
     } catch (error: any) {
       console.error('❌ Error syncing emails:', error);
-      console.error('Error details:', {
-        name: error?.name,
-        message: error?.message,
-        stack: error?.stack,
-        code: error?.code,
-        statusCode: error?.statusCode,
-      });
       res.status(500).json({ 
         message: "Failed to sync emails", 
         error: error?.message || 'Unknown error'
@@ -1480,8 +1454,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
   // Dashboard stats - OPTIMIZED
   const dashboardStatsHandler = async (_req: Request, res: Response) => {
     try {
-      console.log("🔍 Dashboard API called - fetching data...");
-      
       // Parse pagination parameters from query string
       const limit = parseInt(_req.query.limit as string) || 100;
       const offset = parseInt(_req.query.offset as string) || 0;
@@ -1491,39 +1463,30 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       try {
         clients = await storage.getClients();
-        console.log("✅ Clients fetched:", clients?.length || 0);
       } catch (err: any) {
-        console.error("❌ Error fetching clients:", err.message);
         clients = [];
       }
       
       try {
         campaigns = await storage.getCampaigns();
-        console.log("✅ Campaigns fetched:", campaigns?.length || 0);
       } catch (err: any) {
-        console.error("❌ Error fetching campaigns:", err.message);
         campaigns = [];
       }
       
       try {
         leads = await storage.getLeads();
-        console.log("✅ Leads fetched:", leads?.length || 0);
       } catch (err: any) {
-        console.error("❌ Error fetching leads:", err.message);
         leads = [];
       }
       
       try {
         tasks = await storage.getTasks();
-        console.log("✅ Tasks fetched:", tasks?.length || 0);
       } catch (err: any) {
-        console.error("❌ Error fetching tasks:", err.message);
         tasks = [];
       }
       
       try {
         invoices = await storage.getInvoices();
-        console.log("✅ Invoices fetched:", invoices?.length || 0);
       } catch (err: any) {
         console.error("❌ Error fetching invoices:", err.message);
         invoices = [];
@@ -1531,12 +1494,6 @@ Body: ${emailBody.replace(/<[^>]*>/g, '').substring(0, 3000)}`;
       
       // Create empty activity logs to prevent errors
       const activityLogs: any[] = [];
-
-      console.log("📊 Dashboard Stats (Optimized):");
-      console.log("  - Total Clients:", clients.length);
-      console.log("  - Total Campaigns:", campaigns.length);
-      console.log("  - Total Leads:", leads.length);
-      console.log("  - Total Tasks:", tasks.length);
 
       // Quick counts and aggregates
       const activeCampaigns = campaigns.filter((c) => c.status === "active").length;
@@ -3674,11 +3631,10 @@ Examples:
         try {
           const username = client.socialLinks.instagram.split('/').pop()?.replace('@', '');
           if (username) {
-            console.log(`🔍 Scraping public Instagram data for @${username}`);
             instagramData = await InstagramService.scrapePublicData(username);
           }
         } catch (error) {
-          console.error('Failed to scrape Instagram data:', error);
+          // Silently fail - scraping is optional
         }
       }
 
@@ -3820,7 +3776,6 @@ Examples:
         instagramConnectedAt: new Date(),
       });
 
-      console.log(`✅ Instagram connected successfully for client ${clientId}`);
       // Redirect back to analytics page with success message
       res.redirect('/client-analytics?instagram=connected');
     } catch (error) {
